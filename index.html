@@ -28,7 +28,6 @@
     box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
   }
 
-  /* header */
   .header {
     display: flex;
     align-items: center;
@@ -53,25 +52,6 @@
     line-height: 1;
     text-shadow: 2px 2px 0 #FFE0E8;
     flex: none;
-  }
-
-  .title-block {
-    display: flex;
-    flex-direction: column;
-    gap: 0px;
-  }
-
-  .title-block .sub {
-    font-family: 'Baloo 2', sans-serif;
-    font-weight: 700;
-    font-size: 18px;
-    color: #FF8FA3;
-  }
-  .title-block .main {
-    font-family: 'Baloo 2', sans-serif;
-    font-weight: 800;
-    font-size: 21px;
-    color: #6b5a4f;
   }
 
   .title-img {
@@ -114,10 +94,8 @@
   }
   .status.error { color: #e0654f; }
 
-  /* weekday header */
   .weekdays {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 5px;
     margin-bottom: 6px;
   }
@@ -138,7 +116,6 @@
   .wd-5 { background: #B79AE8; }
   .wd-6 { background: #FF8FA3; }
 
-  /* month grid: stack of week rows */
   .month-grid {
     border-top: 2px solid #F3E2D3;
     border-left: 2px solid #F3E2D3;
@@ -148,7 +125,6 @@
 
   .week {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
     border-bottom: 2px solid #F3E2D3;
   }
 
@@ -167,76 +143,76 @@
   }
   .daycell.dim .daynum { color: #ddd0c2; }
 
-  /* ===== 簡化後的活動橫條 =====
-     左側色塊編號 + 中間標題(主) + 日期(次，灰色小字) + 右側標籤
-     底色統一淺白，僅靠左側色條 + 編號圓圈辨色，降低視覺噪音 */
+  .daycell-list {
+    border-right: 2px solid #F3E2D3;
+    background: #FFFDFA;
+    padding: 5px 4px 6px;
+    min-height: 30px;
+  }
+  .daycell-list.dim { background: #FBF6EF; }
+  .daycell-list .events-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 3px;
+  }
+
   .ebar {
-    margin: 2px 2px;
-    border-radius: 8px;
-    padding: 0 6px 0 0;
+    margin: 3px 2px;
+    border-radius: 999px;
+    padding: 2px 8px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     overflow: hidden;
+    white-space: nowrap;
+    font-size: 11px;
     align-self: center;
     z-index: 2;
-    background: #FFFFFF;
-    border-left: 4px solid transparent;
-    box-shadow: 0 1px 2px rgba(150,120,100,0.08);
   }
   .badge {
     flex: none;
-    width: 16px;
-    height: 16px;
+    width: 17px;
+    height: 17px;
     border-radius: 50%;
     color: #fff;
     font-weight: 800;
-    font-size: 9px;
+    font-size: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 4px;
   }
-  .ev-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    line-height: 1.15;
+  .ev-date {
+    flex: none;
+    font-weight: 800;
+    color: #fff;
+    font-size: 11px;
   }
   .ev-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #4a3a30;
-    font-weight: 700;
-    font-size: 11px;
-  }
-  .ev-date {
-    flex: none;
+    color: #fff;
     font-weight: 500;
-    color: #b5a89c;
-    font-size: 9px;
   }
   .ev-tag {
     flex: none;
+    background: #FF5C8A;
     color: #fff;
     font-weight: 800;
-    font-size: 8.5px;
+    font-size: 9px;
     border-radius: 999px;
     padding: 1px 6px;
     margin-left: auto;
   }
 
-  /* 同色系深淺：左側border + 編號圓圈用深色，標籤用同色系，底色保持白 */
-  .c0 { border-left-color: #FF8FA3; } .c0 .badge { background: #FF8FA3; } .c0 .ev-tag { background: #FF8FA3; }
-  .c1 { border-left-color: #FFB37A; } .c1 .badge { background: #FFB37A; } .c1 .ev-tag { background: #FFB37A; }
-  .c2 { border-left-color: #9ACB85; } .c2 .badge { background: #9ACB85; } .c2 .ev-tag { background: #9ACB85; }
-  .c3 { border-left-color: #6FC8C2; } .c3 .badge { background: #6FC8C2; } .c3 .ev-tag { background: #6FC8C2; }
-  .c4 { border-left-color: #7AAEEB; } .c4 .badge { background: #7AAEEB; } .c4 .ev-tag { background: #7AAEEB; }
-  .c5 { border-left-color: #B79AE8; } .c5 .badge { background: #B79AE8; } .c5 .ev-tag { background: #B79AE8; }
-  .c6 { border-left-color: #FF8FA3; } .c6 .badge { background: #FF8FA3; } .c6 .ev-tag { background: #FF8FA3; }
+  .c0 .badge { background: #FFE6EC; color: #FF8FA3; } .c0.ebar { background: #FF8FA3; }
+  .c1 .badge { background: #FFEcD6; color: #FFB37A; } .c1.ebar { background: #FFB37A; }
+  .c2 .badge { background: #E4F5DF; color: #9ACB85; } .c2.ebar { background: #9ACB85; }
+  .c3 .badge { background: #DEF5F4; color: #6FC8C2; } .c3.ebar { background: #6FC8C2; }
+  .c4 .badge { background: #E2EBFD; color: #7AAEEB; } .c4.ebar { background: #7AAEEB; }
+  .c5 .badge { background: #EFE4FB; color: #B79AE8; } .c5.ebar { background: #B79AE8; }
+  .c6 .badge { background: #FFE4DA; color: #FF8FA3; } .c6.ebar { background: #FF8FA3; }
 
   .footer {
     text-align: center;
@@ -248,14 +224,11 @@
 
   @media (max-width: 480px) {
     .month-num { font-size: 36px; }
-    .title-block .main { font-size: 16px; }
-    .title-block .sub { font-size: 14px; }
     .weekday { font-size: 10px; }
     .daynum { font-size: 11px; }
-    .ebar { padding-right: 4px; }
-    .badge { width: 14px; height: 14px; font-size: 8px; }
-    .ev-title { font-size: 10px; }
-    .ev-date { font-size: 8.5px; }
+    .ebar { font-size: 9.5px; padding: 2px 6px; }
+    .badge { width: 14px; height: 14px; font-size: 8.5px; }
+    .ev-date { font-size: 9.5px; }
     .ev-tag { font-size: 8px; }
   }
 </style>
@@ -270,6 +243,11 @@
     <div class="month-num" id="monthNum">7月</div>
     <img class="title-img" id="titleImg" alt="雪莉與朵栗 團購行事曆" src="">
     <div class="controls">
+      <select id="modeSelect">
+        <option value="all">顯示全部</option>
+        <option value="start">開團日</option>
+        <option value="end">結團日</option>
+      </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
     </div>
@@ -277,15 +255,7 @@
 
   <div class="status" id="status">資料載入中…</div>
 
-  <div class="weekdays">
-    <div class="weekday wd-0">日</div>
-    <div class="weekday wd-1">一</div>
-    <div class="weekday wd-2">二</div>
-    <div class="weekday wd-3">三</div>
-    <div class="weekday wd-4">四</div>
-    <div class="weekday wd-5">五</div>
-    <div class="weekday wd-6">六</div>
-  </div>
+  <div class="weekdays" id="weekdays"></div>
 
   <div class="month-grid" id="grid"></div>
 
@@ -296,9 +266,17 @@
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 const COLORS = 7;
+const WD_LABEL = ['日','一','二','三','四','五','六'];
 
 let allEvents = [];
 let currentYear, currentMonth;
+let currentMode = 'all';
+
+const MODE_VISIBLE_DAYS = {
+  all:   [0,1,2,3,4,5,6],
+  start: [1,2,3,4,5],
+  end:   [0,1,2,3,4]
+};
 
 function parseDateStr(s) {
   if (!s) return null;
@@ -315,6 +293,10 @@ function parseDateStr(s) {
 function fmtDateLabel(start, end) {
   const f = d => `${d.getMonth()+1}/${d.getDate()}`;
   return `${f(start)}–${f(end)}`;
+}
+
+function fmtSingleDate(d) {
+  return `${d.getMonth()+1}/${d.getDate()}`;
 }
 
 function daysBetween(a, b) {
@@ -401,10 +383,33 @@ function populateMonthSelect() {
   };
 }
 
+function renderWeekdayHeader() {
+  const wdEl = document.getElementById('weekdays');
+  const days = MODE_VISIBLE_DAYS[currentMode];
+  wdEl.innerHTML = '';
+  wdEl.style.gridTemplateColumns = `repeat(${days.length}, minmax(0, 1fr))`;
+  days.forEach(wd => {
+    const div = document.createElement('div');
+    div.className = `weekday wd-${wd}`;
+    div.textContent = WD_LABEL[wd];
+    wdEl.appendChild(div);
+  });
+}
+
 function render() {
   if (currentYear === undefined) return;
   document.getElementById('monthNum').textContent = (currentMonth + 1) + '月';
 
+  renderWeekdayHeader();
+
+  if (currentMode === 'all') {
+    renderAllMode();
+  } else {
+    renderSingleDayMode(currentMode);
+  }
+}
+
+function renderAllMode() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
 
@@ -443,7 +448,8 @@ function render() {
 
     const weekEl = document.createElement('div');
     weekEl.className = 'week';
-    weekEl.style.gridTemplateRows = `22px repeat(${maxLanes}, 24px) 4px`;
+    weekEl.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+    weekEl.style.gridTemplateRows = `22px repeat(${maxLanes}, 21px) 4px`;
 
     weekDays.forEach((d, i) => {
       const cell = document.createElement('div');
@@ -470,20 +476,15 @@ function render() {
       badge.textContent = item.ev.id;
       bar.appendChild(badge);
 
-      const textWrap = document.createElement('span');
-      textWrap.className = 'ev-text';
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'ev-date';
+      dateSpan.textContent = fmtDateLabel(item.ev.start, item.ev.end);
+      bar.appendChild(dateSpan);
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'ev-title';
       titleSpan.textContent = item.ev.title;
-      textWrap.appendChild(titleSpan);
-
-      const dateSpan = document.createElement('span');
-      dateSpan.className = 'ev-date';
-      dateSpan.textContent = fmtDateLabel(item.ev.start, item.ev.end);
-      textWrap.appendChild(dateSpan);
-
-      bar.appendChild(textWrap);
+      bar.appendChild(titleSpan);
 
       if (item.ev.tag) {
         const tagSpan = document.createElement('span');
@@ -499,7 +500,101 @@ function render() {
   }
 }
 
+function renderSingleDayMode(mode) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const visibleDays = MODE_VISIBLE_DAYS[mode];
+  const colCount = visibleDays.length;
+
+  const firstOfMonth = new Date(currentYear, currentMonth, 1);
+  const startOffset = firstOfMonth.getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const gridStart = new Date(currentYear, currentMonth, 1 - startOffset);
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const numWeeks = totalCells / 7;
+
+  const dateKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const eventsByDate = {};
+  allEvents.forEach(ev => {
+    const targetDate = mode === 'start' ? ev.start : ev.end;
+    const wd = targetDate.getDay();
+    if (!visibleDays.includes(wd)) return;
+    const key = dateKey(targetDate);
+    if (!eventsByDate[key]) eventsByDate[key] = [];
+    eventsByDate[key].push(ev);
+  });
+
+  for (let w = 0; w < numWeeks; w++) {
+    const weekStart = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + w * 7);
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      weekDays.push(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i));
+    }
+
+    const weekEl = document.createElement('div');
+    weekEl.className = 'week';
+    weekEl.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+    weekEl.style.gridTemplateRows = 'auto';
+
+    visibleDays.forEach((wd, colIdx) => {
+      const d = weekDays[wd];
+      const dim = d.getMonth() !== currentMonth;
+      const cell = document.createElement('div');
+      cell.className = 'daycell-list' + (dim ? ' dim' : '');
+      cell.style.gridColumn = `${colIdx + 1}`;
+
+      const dn = document.createElement('div');
+      dn.className = 'daynum';
+      dn.textContent = d.getDate();
+      cell.appendChild(dn);
+
+      const key = dateKey(d);
+      const dayEvents = eventsByDate[key] || [];
+      if (dayEvents.length) {
+        const stack = document.createElement('div');
+        stack.className = 'events-stack';
+        dayEvents.forEach(ev => {
+          const colorIdx = (ev.id - 1) % COLORS;
+          const bar = document.createElement('div');
+          bar.className = `ebar c${colorIdx}`;
+          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.end)})`;
+
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = ev.id;
+          bar.appendChild(badge);
+
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'ev-title';
+          titleSpan.textContent = ev.title;
+          bar.appendChild(titleSpan);
+
+          if (ev.tag) {
+            const tagSpan = document.createElement('span');
+            tagSpan.className = 'ev-tag';
+            tagSpan.textContent = ev.tag;
+            bar.appendChild(tagSpan);
+          }
+
+          stack.appendChild(bar);
+        });
+        cell.appendChild(stack);
+      }
+
+      weekEl.appendChild(cell);
+    });
+
+    grid.appendChild(weekEl);
+  }
+}
+
 document.getElementById('refreshBtn').addEventListener('click', loadData);
+document.getElementById('modeSelect').addEventListener('change', (e) => {
+  currentMode = e.target.value;
+  render();
+});
+
 loadData();
 setInterval(loadData, 60000);
 </script>
