@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 團購行事曆</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    color: #5a4a3f;
+    padding: 24px 12px 60px;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    background: #FFFBF5;
+    border-radius: 28px;
+    border: 3px solid #FFE3CC;
+    padding: 28px 28px 36px;
+    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+
+  .month-num {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 64px;
+    color: #FF8FA3;
+    line-height: 1;
+    text-shadow: 2px 2px 0 #FFE0E8;
+  }
+
+  .title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .title-block .sub {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    color: #FF8FA3;
+  }
+  .title-block .main {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 30px;
+    color: #6b5a4f;
+  }
+
+  .controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .controls select, .controls button {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 999px;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #b5755a;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .controls button:hover { background: #FFF1E6; }
+
+  .status {
+    font-size: 12px;
+    color: #b39a8b;
+    margin-bottom: 14px;
+  }
+  .status.error { color: #e0654f; }
+
+  /* weekday header */
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .weekday {
+    text-align: center;
+    padding: 9px 0;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 2px;
+  }
+  .wd-0 { background: #FF8FA3; }
+  .wd-1 { background: #FFB37A; }
+  .wd-2 { background: #9ACB85; }
+  .wd-3 { background: #6FC8C2; }
+  .wd-4 { background: #7AAEEB; }
+  .wd-5 { background: #B79AE8; }
+  .wd-6 { background: #FF8FA3; }
+
+  /* grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-top: 2px solid #F3E2D3;
+    border-left: 2px solid #F3E2D3;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .cell {
+    border-right: 2px solid #F3E2D3;
+    border-bottom: 2px solid #F3E2D3;
+    min-height: 120px;
+    padding: 8px 7px;
+    background: #FFFDFA;
+    position: relative;
+  }
+  .cell.dim { background: #FBF6EF; }
+  .cell .daynum {
+    font-weight: 700;
+    font-size: 15px;
+    color: #a89888;
+    margin-bottom: 5px;
+  }
+  .cell.dim .daynum { color: #d8c9ba; }
+
+  .event {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 4px 9px 4px 4px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #fff;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .badge {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    color: #fff;
+    font-weight: 800;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ev-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tag {
+    flex: none;
+    background: rgba(255,255,255,0.85);
+    color: #e0654f;
+    font-weight: 800;
+    font-size: 10px;
+    border-radius: 999px;
+    padding: 1px 7px;
+    margin-left: auto;
+  }
+
+  /* color palette cycling by id */
+  .c0 { background: #FF8FA3; }
+  .c1 { background: #FFB37A; }
+  .c2 { background: #9ACB85; }
+  .c3 { background: #6FC8C2; }
+  .c4 { background: #7AAEEB; }
+  .c5 { background: #B79AE8; }
+  .c6 { background: #FF9E80; }
+
+  .badge.c0, .ev-title.c0 {}
+  .badge { color: inherit; }
+
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  @media (max-width: 700px) {
+    .month-num { font-size: 44px; }
+    .title-block .main { font-size: 20px; }
+    .title-block .sub { font-size: 17px; }
+    .weekday { font-size: 12px; padding: 6px 0; }
+    .cell { min-height: 90px; padding: 5px; }
+    .event { font-size: 10px; padding: 3px 6px 3px 3px; }
+    .badge { width: 16px; height: 16px; font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <div class="month-num" id="monthNum">7</div>
+    <div class="title-block">
+      <div class="sub">雪莉與朵栗</div>
+      <div class="main">團購行事曆</div>
+    </div>
+    <div class="controls">
+      <select id="monthSelect"></select>
+      <button id="refreshBtn">重新整理</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">資料載入中…</div>
+
+  <div class="weekdays">
+    <div class="weekday wd-0">日</div>
+    <div class="weekday wd-1">一</div>
+    <div class="weekday wd-2">二</div>
+    <div class="weekday wd-3">三</div>
+    <div class="weekday wd-4">四</div>
+    <div class="weekday wd-5">五</div>
+    <div class="weekday wd-6">六</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">IG @dondon0813 ♥</div>
+</div>
+
+<script>
+const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+const COLORS = 7; // c0..c6 cycle
+
+let allEvents = [];
+let currentYear, currentMonth; // currentMonth: 0-indexed
+
+function parseDateStr(s) {
+  // expects formats like "2026/7/1" or Date(2026,6,1) from gviz
+  if (!s) return null;
+  s = String(s).trim();
+  const gvizMatch = s.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (gvizMatch) {
+    return new Date(parseInt(gvizMatch[1]), parseInt(gvizMatch[2]), parseInt(gvizMatch[3]));
+  }
+  const parts = s.split(/[\/\-]/).map(p => parseInt(p, 10));
+  if (parts.length === 3) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return null;
+}
+
+function fmtDateLabel(start, end) {
+  const f = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${f(start)}–${f(end)}`;
+}
+
+async function loadData() {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = '資料載入中…';
+  statusEl.classList.remove('error');
+  try {
+    const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('網路錯誤 ' + res.status);
+    const text = await res.text();
+    const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    const data = JSON.parse(jsonStr);
+    const rows = data.table.rows;
+
+    const events = [];
+    rows.forEach((row) => {
+      const c = row.c;
+      if (!c || !c[0] || c[0].v === null || c[0].v === '') return;
+      const id = c[0].v;
+      const startRaw = c[1] ? c[1].v : null;
+      const endRaw = c[2] ? c[2].v : null;
+      const title = c[3] ? c[3].v : '';
+      const tag = c[4] ? c[4].v : '';
+      const start = parseDateStr(startRaw);
+      const end = parseDateStr(endRaw);
+      if (!start || !end || !title) return;
+      events.push({ id, start, end, title, tag });
+    });
+
+    allEvents = events;
+    statusEl.textContent = `已同步 ${events.length} 檔活動 · ${new Date().toLocaleString('zh-TW')}`;
+    populateMonthSelect();
+    render();
+  } catch (err) {
+    statusEl.textContent = '讀取試算表失敗，請確認試算表已設定「知道連結的人可檢視」。(' + err.message + ')';
+    statusEl.classList.add('error');
+  }
+}
+
+function populateMonthSelect() {
+  const sel = document.getElementById('monthSelect');
+  const monthsSet = new Set();
+  allEvents.forEach(ev => {
+    let d = new Date(ev.start.getFullYear(), ev.start.getMonth(), 1);
+    const endD = new Date(ev.end.getFullYear(), ev.end.getMonth(), 1);
+    while (d <= endD) {
+      monthsSet.add(`${d.getFullYear()}-${d.getMonth()}`);
+      d.setMonth(d.getMonth() + 1);
+    }
+  });
+  let months = Array.from(monthsSet).map(s => {
+    const [y, m] = s.split('-').map(Number);
+    return { y, m };
+  }).sort((a, b) => a.y - b.y || a.m - b.m);
+
+  if (months.length === 0) {
+    const now = new Date();
+    months = [{ y: now.getFullYear(), m: now.getMonth() }];
+  }
+
+  sel.innerHTML = '';
+  months.forEach(({ y, m }) => {
+    const opt = document.createElement('option');
+    opt.value = `${y}-${m}`;
+    opt.textContent = `${y}年 ${m + 1}月`;
+    sel.appendChild(opt);
+  });
+
+  if (currentYear === undefined) {
+    currentYear = months[0].y;
+    currentMonth = months[0].m;
+  }
+  sel.value = `${currentYear}-${currentMonth}`;
+  sel.onchange = () => {
+    const [y, m] = sel.value.split('-').map(Number);
+    currentYear = y; currentMonth = m;
+    render();
+  };
+}
+
+function render() {
+  if (currentYear === undefined) return;
+  document.getElementById('monthNum').textContent = currentMonth + 1;
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const firstOfMonth = new Date(currentYear, currentMonth, 1);
+  const startOffset = firstOfMonth.getDay(); // 0=Sun
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+
+    let dayNum, cellDate, dim = false;
+    if (i < startOffset) {
+      dayNum = daysInPrevMonth - startOffset + i + 1;
+      cellDate = new Date(currentYear, currentMonth - 1, dayNum);
+      dim = true;
+    } else if (i >= startOffset + daysInMonth) {
+      dayNum = i - startOffset - daysInMonth + 1;
+      cellDate = new Date(currentYear, currentMonth + 1, dayNum);
+      dim = true;
+    } else {
+      dayNum = i - startOffset + 1;
+      cellDate = new Date(currentYear, currentMonth, dayNum);
+    }
+
+    if (dim) cell.classList.add('dim');
+
+    const dnum = document.createElement('div');
+    dnum.className = 'daynum';
+    dnum.textContent = dayNum;
+    cell.appendChild(dnum);
+
+    // events that START on this exact date (one row per event, like reference image)
+    const todays = allEvents.filter(ev => sameDate(ev.start, cellDate));
+    todays.sort((a, b) => a.id - b.id);
+    todays.forEach(ev => {
+      const evEl = document.createElement('div');
+      const colorIdx = (ev.id - 1) % COLORS;
+      evEl.className = `event c${colorIdx}`;
+
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = ev.id;
+      evEl.appendChild(badge);
+
+      const dateSpan = document.createElement('span');
+      dateSpan.style.opacity = '0.95';
+      dateSpan.style.fontWeight = '700';
+      dateSpan.textContent = fmtDateLabel(ev.start, ev.end) + '  ';
+      evEl.appendChild(dateSpan);
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'ev-title';
+      titleSpan.textContent = ev.title;
+      evEl.appendChild(titleSpan);
+
+      if (ev.tag) {
+        const tagSpan = document.createElement('span');
+        tagSpan.className = 'tag';
+        tagSpan.textContent = ev.tag;
+        evEl.appendChild(tagSpan);
+      }
+
+      evEl.title = `${ev.title} (${fmtDateLabel(ev.start, ev.end)})`;
+      cell.appendChild(evEl);
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+function sameDate(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+loadData();
+// auto-refresh every 60 seconds for near-real-time updates
+setInterval(loadData, 60000);
+</script>
+
+</body>
+</html>
