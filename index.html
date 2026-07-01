@@ -228,11 +228,13 @@
     border: 1.5px solid #B8AC9C;
     color: #7A7166;
   }
-  /* 冷凍團：固定藍色，疊加極淺雪花底紋 */
+  /* 冷凍團：固定藍色，右下角淺色雪花浮水印 */
   .ebar-wrap.cat-frozen {
     background-color: #E6F1FC;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'><text x='3' y='22' font-size='15' fill='%23CFE4F8'>%E2%9D%84</text></svg>");
-    background-repeat: repeat;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
+    background-repeat: no-repeat;
+    background-position: bottom right;
+    background-size: 34px 34px;
     border: 1.5px solid #4F91D9;
     color: #2F6FB0;
   }
@@ -363,6 +365,39 @@
     font-weight: 700;
     font-size: 14px;
   }
+
+  .legend {
+    display: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1.5px dashed #F3E2D3;
+  }
+  .legend.show {
+    display: flex;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #a89888;
+  }
+  .legend-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    display: inline-block;
+    flex: none;
+  }
+  .legend-upcoming { background: #FFF6DD; border: 1.5px solid #E8B93D; }
+  .legend-active { background: #FFEcD9; border: 1.5px solid #FF9F4A; }
+  .legend-closingSoon { background: #FFE1E8; border: 1.5px solid #FF6F91; }
+  .legend-ended { background: #EFEBE5; border: 1.5px solid #B8AC9C; }
+  .legend-frozen { background: #E6F1FC; border: 1.5px solid #4F91D9; }
   .footer a {
     color: inherit;
     text-decoration: none;
@@ -407,6 +442,14 @@
   <div class="weekdays" id="weekdays"></div>
 
   <div class="month-grid" id="grid"></div>
+
+  <div class="legend" id="legend">
+    <span class="legend-item"><span class="legend-dot legend-upcoming"></span>開團預告</span>
+    <span class="legend-item"><span class="legend-dot legend-active"></span>開團中</span>
+    <span class="legend-item"><span class="legend-dot legend-closingSoon"></span>即將結單</span>
+    <span class="legend-item"><span class="legend-dot legend-ended"></span>已結單</span>
+    <span class="legend-item"><span class="legend-dot legend-frozen"></span>冷凍團</span>
+  </div>
 
   <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer">IG @dondon0813 ♥</a></div>
 </div>
@@ -681,6 +724,9 @@ function render() {
   document.getElementById('monthNum').textContent = (currentMonth + 1) + '月';
 
   renderWeekdayHeader();
+
+  const legendEl = document.getElementById('legend');
+  legendEl.classList.toggle('show', currentMode !== 'all');
 
   if (currentMode === 'all') {
     renderAllMode();
