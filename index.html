@@ -170,6 +170,19 @@
     align-self: center;
     z-index: 2;
   }
+
+  /* 開團日 / 結團日 模式：讓長條寬度跟著格子走，文字換行不外溢 */
+  .ebar-wrap {
+    align-self: stretch;
+    align-items: flex-start;
+    white-space: normal;
+    border-radius: 10px;
+  }
+  .ebar-wrap .badge,
+  .ebar-wrap .ev-tag {
+    margin-top: 1px;
+  }
+
   .badge {
     flex: none;
     width: 17px;
@@ -195,6 +208,16 @@
     color: #fff;
     font-weight: 500;
   }
+  .ev-title-wrap {
+    flex: 1 1 0%;
+    min-width: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.3;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
   .ev-tag {
     flex: none;
     background: #FF5C8A;
@@ -212,7 +235,7 @@
   .c3 .badge { background: #DEF5F4; color: #6FC8C2; } .c3.ebar { background: #6FC8C2; }
   .c4 .badge { background: #E2EBFD; color: #7AAEEB; } .c4.ebar { background: #7AAEEB; }
   .c5 .badge { background: #EFE4FB; color: #B79AE8; } .c5.ebar { background: #B79AE8; }
-  .c6 .badge { background: #FFE4DA; color: #FF8FA3; } .c6.ebar { background: #FF8FA3; }
+  .c6 .badge { background: #FBEFD9; color: #D9A441; } .c6.ebar { background: #F0C36D; }
 
   .footer {
     text-align: center;
@@ -220,6 +243,13 @@
     color: #FF8FA3;
     font-weight: 700;
     font-size: 14px;
+  }
+  .footer a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
   }
 
   @media (max-width: 480px) {
@@ -259,7 +289,7 @@
 
   <div class="month-grid" id="grid"></div>
 
-  <div class="footer">IG @dondon0813 ♥</div>
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer">IG @dondon0813 ♥</a></div>
 </div>
 
 <script>
@@ -303,6 +333,39 @@ function daysBetween(a, b) {
   const A = new Date(a.getFullYear(), a.getMonth(), a.getDate());
   const B = new Date(b.getFullYear(), b.getMonth(), b.getDate());
   return Math.round((B - A) / 86400000);
+}
+
+// 將標題切成「詞」，盡量避免拆散同一個詞，再依每行最多字數組行
+function segmentTitle(title) {
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    try {
+      const seg = new Intl.Segmenter('zh', { granularity: 'word' });
+      const parts = [];
+      for (const s of seg.segment(title)) {
+        if (s.segment && s.segment.trim() !== '') parts.push(s.segment);
+      }
+      if (parts.length) return parts;
+    } catch (e) { /* fallback below */ }
+  }
+  return title.split('');
+}
+
+function wrapTitleLines(title, maxCharsPerLine) {
+  const words = segmentTitle(title);
+  const lines = [];
+  let current = '';
+  words.forEach(w => {
+    if (current === '') {
+      current = w;
+    } else if (current.length + w.length <= maxCharsPerLine) {
+      current += w;
+    } else {
+      lines.push(current);
+      current = w;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
 }
 
 async function loadData() {
@@ -557,7 +620,7 @@ function renderSingleDayMode(mode) {
         dayEvents.forEach(ev => {
           const colorIdx = (ev.id - 1) % COLORS;
           const bar = document.createElement('div');
-          bar.className = `ebar c${colorIdx}`;
+          bar.className = `ebar ebar-wrap c${colorIdx}`;
           bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.end)})`;
 
           const badge = document.createElement('span');
@@ -566,8 +629,12 @@ function renderSingleDayMode(mode) {
           bar.appendChild(badge);
 
           const titleSpan = document.createElement('span');
-          titleSpan.className = 'ev-title';
-          titleSpan.textContent = ev.title;
+          titleSpan.className = 'ev-title ev-title-wrap';
+          const lines = wrapTitleLines(ev.title, 4);
+          lines.forEach((line, idx) => {
+            if (idx > 0) titleSpan.appendChild(document.createElement('br'));
+            titleSpan.appendChild(document.createTextNode(line));
+          });
           bar.appendChild(titleSpan);
 
           if (ev.tag) {
