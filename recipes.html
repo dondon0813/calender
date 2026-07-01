@@ -407,6 +407,12 @@
     <div class="card-tags" id="ingModalTags"></div>
     <table class="spec-table" id="ingModalSpecs"></table>
     <div class="modal-desc" id="ingModalDesc"></div>
+
+    <div class="modal-actions">
+      <button class="action-btn" id="ingBuyBtn">🛒 前往購買</button>
+    </div>
+    <div class="buy-status-list" id="ingBuyStatusList" style="display:none;"></div>
+
     <div class="related-recipes" id="ingModalRelated" style="display:none;">
       <div class="rr-label">🍽 使用這個食材的食譜</div>
       <div id="ingModalRelatedList"></div>
@@ -569,9 +575,22 @@ function ingredientsOfType(type) {
   return INGREDIENTS.filter(i => (i['類型'] || '食材').trim() === type);
 }
 
+// 支援「使用食材ID」欄位帶分量：格式為 ing001:50g/ing003:1包（冒號後面是分量，可省略）
+// 也支援直接打一般食材文字（例如「雞蛋」），對不到資料庫ID的就當純文字顯示，不會有小卡/購買按鈕
 function getRecipeIngredients(recipe) {
-  const ids = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
-  return ids.map(id => INGREDIENTS.find(i => i['食材ID'] === id)).filter(Boolean);
+  const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
+  const result = [];
+  tokens.forEach(token => {
+    const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
+    const ing = INGREDIENTS.find(i => i['食材ID'] === idOrName);
+    if (ing) {
+      result.push(Object.assign({}, ing, { _quantity: qty || '' }));
+    } else if (idOrName) {
+      // 找不到對應ID，視為一般食材（純文字，沒有品牌/小卡/購買按鈕）
+      result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
+    }
+  });
+  return result;
 }
 
 function getRecipeBrands(recipe) {
@@ -597,7 +616,10 @@ function getRecipeIngredientKeys(recipe) {
 }
 
 function getRecipesUsingIngredientId(ingId) {
-  return RECIPES.filter(r => String(r['使用食材ID'] || '').split('/').map(s => s.trim()).includes(ingId));
+  return RECIPES.filter(r => {
+    const ids = String(r['使用食材ID'] || '').split('/').map(s => s.trim().split(':')[0]);
+    return ids.includes(ingId);
+  });
 }
 
 // ===== 篩選標籤初始化 =====
@@ -817,6 +839,26 @@ function openIngredientModal(item) {
 
   document.getElementById('ingModalDesc').textContent = item['簡短介紹'] || '';
 
+  const ingBuyBtn = document.getElementById('ingBuyBtn');
+  const ingBuyStatusEl = document.getElementById('ingBuyStatusList');
+  ingBuyStatusEl.style.display = 'none';
+  ingBuyStatusEl.innerHTML = '';
+  ingBuyBtn.onclick = () => {
+    const brand = item['品牌'];
+    if (!brand) {
+      ingBuyStatusEl.innerHTML = `<div class="buy-status-item"><span class="bsi-text">尚未設定這個食材的品牌資訊</span></div>`;
+      ingBuyStatusEl.style.display = 'block';
+      return;
+    }
+    const status = getBrandStatus(brand);
+    if (status.status === 'open') {
+      window.open(status.url, '_blank', 'noopener,noreferrer');
+      ingBuyStatusEl.style.display = 'none';
+    } else {
+      renderBuyStatusList([status], ingBuyStatusEl);
+    }
+  };
+
   const relatedBox = document.getElementById('ingModalRelated');
   const relatedList = document.getElementById('ingModalRelatedList');
   if (!isProduct) {
@@ -864,17 +906,26 @@ function openRecipeModal(recipe) {
   ingTagsEl.innerHTML = '';
   ingList.forEach(i => {
     const span = document.createElement('span');
-    span.className = 'mini-tag tag-brand';
-    span.style.cursor = 'pointer';
-    span.textContent = `${i['食材名稱']}（${i['品牌']}）`;
-    span.addEventListener('click', () => {
-      closeModal('recipeModal');
-      openIngredientModal(i);
-    });
+    const qtyText = i._quantity ? ` × ${i._quantity}` : '';
+    if (i._generic) {
+      span.className = 'mini-tag';
+      span.style.background = '#EFEBE5';
+      span.style.color = '#8C8378';
+      span.textContent = `${i['食材名稱']}${qtyText}`;
+    } else {
+      span.className = 'mini-tag tag-brand';
+      span.style.cursor = 'pointer';
+      span.textContent = `${i['食材名稱']}（${i['品牌']}）${qtyText}`;
+      span.addEventListener('click', () => {
+        closeModal('recipeModal');
+        openIngredientModal(i);
+      });
+    }
     ingTagsEl.appendChild(span);
   });
 
-  document.getElementById('recModalSteps').textContent = recipe['做法步驟'] || '（尚未提供做法）';
+  const stepsRaw = String(recipe['做法步驟'] || '').replace(/\\n/g, '\n'); // 相容「不小心打成文字\n」的情況
+  document.getElementById('recModalSteps').textContent = stepsRaw || '（尚未提供做法）';
 
   const videoBtn = document.getElementById('recVideoBtn');
   if (isValidUrl(recipe['影片連結'])) {
