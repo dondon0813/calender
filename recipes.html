@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 食材與食譜</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    color: #5a4a3f;
+    padding: 16px 8px 50px;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    background: #FFFBF5;
+    border-radius: 22px;
+    border: 3px solid #FFE3CC;
+    padding: 18px 14px 26px;
+    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+  }
+
+  .page-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    color: #FF8FA3;
+    text-align: center;
+    margin: 4px 0 16px;
+  }
+
+  /* 主分頁切換：食材介紹 / 觀看食譜 */
+  .main-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .main-tab {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    border-radius: 999px;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #b5755a;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+  .main-tab.active {
+    background: #FF8FA3;
+    border-color: #FF8FA3;
+    color: #fff;
+  }
+
+  /* 篩選標籤區 */
+  .filter-section {
+    margin-bottom: 16px;
+  }
+  .filter-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #a89888;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .chip {
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 999px;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #b5755a;
+    padding: 6px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active {
+    background: #FF8FA3;
+    border-color: #FF8FA3;
+    color: #fff;
+  }
+  .chip-clear {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #c99a3a;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 6px 4px;
+  }
+
+  /* 卡片格線 */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .item-card {
+    background: #FFFDFA;
+    border: 2px solid #F3E2D3;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    text-align: center;
+    transition: transform .15s ease, box-shadow .15s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(230,160,120,0.2);
+  }
+  .item-card img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    background: #FFF1E6;
+  }
+  .item-card .card-body {
+    padding: 8px 8px 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .item-card .card-name {
+    font-weight: 800;
+    font-size: 13px;
+    color: #5a4a3f;
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
+  }
+  .mini-tag {
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .tag-brand { background: #E2EBFD; color: #5F87C9; }
+  .tag-age { background: #E4F5DF; color: #5C9147; }
+  .tag-type-product { background: #EFE4FB; color: #8E6BB5; }
+
+  .empty-state {
+    text-align: center;
+    color: #b39a8b;
+    font-size: 13px;
+    padding: 40px 0;
+  }
+
+  .status-msg {
+    text-align: center;
+    color: #b39a8b;
+    font-size: 12px;
+    padding: 20px 0;
+  }
+
+  /* 彈窗 */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(90, 74, 63, 0.45);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal-box {
+    position: relative;
+    background: #FFFBF5;
+    border-radius: 18px;
+    border: 3px solid #FFE3CC;
+    padding: 22px 20px;
+    max-width: 92%;
+    width: 400px;
+    max-height: 86vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    color: #b5755a;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .modal-img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #FFF1E6;
+    margin-bottom: 12px;
+  }
+  .modal-box h3 {
+    margin: 0 0 6px;
+    color: #FF8FA3;
+    font-size: 18px;
+  }
+  .spec-table {
+    width: 100%;
+    font-size: 12.5px;
+    color: #5a4a3f;
+    margin: 10px 0;
+    border-collapse: collapse;
+  }
+  .spec-table td {
+    padding: 4px 0;
+    border-bottom: 1px dashed #F3E2D3;
+    vertical-align: top;
+  }
+  .spec-table td:first-child {
+    color: #a89888;
+    font-weight: 700;
+    width: 76px;
+    white-space: nowrap;
+  }
+  .modal-desc {
+    font-size: 13px;
+    color: #5a4a3f;
+    line-height: 1.7;
+    margin: 8px 0 14px;
+    white-space: pre-wrap;
+  }
+  .related-recipes {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1.5px dashed #F3E2D3;
+  }
+  .related-recipes .rr-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #a89888;
+    margin-bottom: 8px;
+  }
+  .rr-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 10px;
+    background: #FFF6EC;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .rr-item:hover { background: #FFEDDB; }
+  .rr-item img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex: none;
+    background: #FFF1E6;
+  }
+  .rr-item .rr-name {
+    font-weight: 700;
+    font-size: 12.5px;
+    color: #5a4a3f;
+  }
+
+  .steps-box {
+    font-size: 13px;
+    color: #5a4a3f;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    background: #FFF6EC;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 8px 0 14px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 13.5px;
+    border: none;
+    border-radius: 999px;
+    padding: 11px 12px;
+    background: #FF8FA3;
+    color: #fff;
+    cursor: pointer;
+  }
+  .action-btn:hover { background: #FF7391; }
+  .action-btn-alt { background: #7AAEEB; }
+  .action-btn-alt:hover { background: #5F97DB; }
+
+  .buy-status-list { margin-top: 12px; }
+  .buy-status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #FFF6EC;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .buy-status-item .bsi-brand { font-weight: 800; color: #5a4a3f; }
+  .buy-status-item .bsi-text { color: #a89888; font-size: 12px; }
+  .buy-status-item .bsi-btn {
+    flex: none;
+    border: none;
+    border-radius: 999px;
+    background: #FF8FA3;
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  @media (max-width: 480px) {
+    .page-title { font-size: 22px; }
+    .card-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="page-title">🥕 食材與食譜</div>
+
+  <div class="main-tabs">
+    <button class="main-tab" id="tabIngredients">食材介紹</button>
+    <button class="main-tab" id="tabRecipes">觀看食譜</button>
+  </div>
+
+  <div id="statusMsg" class="status-msg">資料載入中…</div>
+
+  <!-- 食材介紹畫面 -->
+  <div id="ingredientsView" style="display:none;">
+    <div class="filter-section">
+      <div class="filter-label">品牌</div>
+      <div class="filter-chips" id="ingBrandChips"></div>
+    </div>
+    <div class="card-grid" id="ingredientGrid"></div>
+    <div class="empty-state" id="ingredientEmpty" style="display:none;">這個篩選條件下沒有找到食材</div>
+  </div>
+
+  <!-- 觀看食譜畫面 -->
+  <div id="recipesView" style="display:none;">
+    <div class="filter-section">
+      <div class="filter-label">品牌</div>
+      <div class="filter-chips" id="recBrandChips"></div>
+      <div class="filter-label">食材（可複選，會篩出同時包含所選食材的食譜）</div>
+      <div class="filter-chips" id="recIngredientChips"></div>
+      <div class="filter-label">適合月齡</div>
+      <div class="filter-chips" id="recAgeChips"></div>
+      <button class="chip-clear" id="clearFiltersBtn">清除所有篩選</button>
+    </div>
+    <div class="card-grid" id="recipeGrid"></div>
+    <div class="empty-state" id="recipeEmpty" style="display:none;">這個篩選條件下沒有找到食譜</div>
+  </div>
+
+  <div class="footer">雪莉與朵栗 ♥</div>
+</div>
+
+<!-- 食材彈窗 -->
+<div class="modal-backdrop" id="ingredientModal" onclick="if(event.target===this) closeModal('ingredientModal')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('ingredientModal')">✕</button>
+    <img class="modal-img" id="ingModalImg" src="" alt="">
+    <h3 id="ingModalName"></h3>
+    <div class="card-tags" id="ingModalTags"></div>
+    <table class="spec-table" id="ingModalSpecs"></table>
+    <div class="modal-desc" id="ingModalDesc"></div>
+    <div class="related-recipes" id="ingModalRelated" style="display:none;">
+      <div class="rr-label">🍽 使用這個食材的食譜</div>
+      <div id="ingModalRelatedList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 食譜彈窗 -->
+<div class="modal-backdrop" id="recipeModal" onclick="if(event.target===this) closeModal('recipeModal')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('recipeModal')">✕</button>
+    <img class="modal-img" id="recModalImg" src="" alt="">
+    <h3 id="recModalName"></h3>
+    <div class="card-tags" id="recModalTags"></div>
+    <div class="filter-label" style="margin-top:10px;">使用食材</div>
+    <div class="card-tags" id="recModalIngredients"></div>
+    <div class="filter-label" style="margin-top:12px;">做法</div>
+    <div class="steps-box" id="recModalSteps"></div>
+    <div class="modal-actions">
+      <button class="action-btn" id="recBuyBtn">🛒 前往購買食材</button>
+      <a class="action-btn action-btn-alt" id="recVideoBtn" style="display:none;" target="_blank" rel="noopener noreferrer">🎬 觀看影片</a>
+    </div>
+    <div class="buy-status-list" id="recBuyStatusList" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+// ===== 設定 =====
+const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+// 請把 Apps Script 部署後的網址貼在這裡（跟 admin.html 用同一組網址）
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+
+const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>🍽</text></svg>";
+
+let BRANDS = [];
+let INGREDIENTS = [];
+let RECIPES = [];
+let CALENDAR_EVENTS = [];
+
+let currentView = 'ingredients'; // 'ingredients' | 'recipes'
+let ingSelectedBrands = [];
+let recSelectedBrands = [];
+let recSelectedIngredients = []; // 用食材名稱
+let recSelectedAges = [];
+
+const urlParams = new URLSearchParams(window.location.search);
+const presetBrand = urlParams.get('brand') || '';
+const presetView = urlParams.get('view') || 'ingredients';
+
+// ===== 日期輔助（跟客人版行事曆共用邏輯） =====
+function parseDateStr(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  const gvizMatch = s.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (gvizMatch) {
+    return new Date(parseInt(gvizMatch[1]), parseInt(gvizMatch[2]), parseInt(gvizMatch[3]));
+  }
+  const parts = s.split(/[\/\-]/).map(p => parseInt(p, 10));
+  if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
+  return null;
+}
+function fmtSingleDate(d) {
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function parseExtendRaw(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (typeof raw === 'number') return { type: 'days', value: raw };
+  const s = String(raw).trim();
+  if (s === '') return null;
+  if (/^\d+$/.test(s)) return { type: 'days', value: parseInt(s, 10) };
+  const d = parseDateStr(s);
+  if (d) return { type: 'date', value: d };
+  return null;
+}
+function computeDisplayEnd(end, extend) {
+  if (!extend) return end;
+  const today = new Date();
+  const todayStart = startOfDay(today);
+  const endStart = startOfDay(end);
+  if (todayStart <= endStart) return end;
+  if (extend.type === 'days') {
+    return new Date(end.getFullYear(), end.getMonth(), end.getDate() + extend.value);
+  }
+  return extend.value;
+}
+
+// ===== 載入資料 =====
+async function loadAll() {
+  const statusEl = document.getElementById('statusMsg');
+  try {
+    await Promise.all([loadRecipeDb(), loadCalendar()]);
+    statusEl.style.display = 'none';
+    initFilters();
+    applyPresetView();
+    renderIngredients();
+    renderRecipes();
+  } catch (err) {
+    statusEl.textContent = '資料載入失敗，請稍後重新整理再試一次';
+    console.error(err);
+  }
+}
+
+async function loadRecipeDb() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+    throw new Error('尚未設定 APPS_SCRIPT_URL');
+  }
+  const noCacheUrl = APPS_SCRIPT_URL + '?scope=public&t=' + Date.now();
+  const res = await fetch(noCacheUrl, { cache: 'no-store' });
+  const data = await res.json();
+  BRANDS = (data.brands || []).map(b => String(b['品牌名稱'] || '').trim()).filter(Boolean);
+  INGREDIENTS = (data.ingredients || []).filter(i => i['食材ID']);
+  RECIPES = (data.recipes || []).filter(r => r['食譜ID']);
+}
+
+async function loadCalendar() {
+  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  const text = await res.text();
+  const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  const data = JSON.parse(jsonStr);
+  const rows = data.table.rows;
+  const events = [];
+  rows.forEach(row => {
+    const c = row.c;
+    if (!c || !c[0] || c[0].v === null || c[0].v === '') return;
+    const startRaw = c[1] ? c[1].v : null;
+    const endRaw = c[2] ? c[2].v : null;
+    const extendRaw = c[3] ? c[3].v : null;
+    const title = c[4] ? c[4].v : '';
+    const url = c[7] ? c[7].v : '';
+    const start = parseDateStr(startRaw);
+    const end = parseDateStr(endRaw);
+    if (!start || !end || !title) return;
+    const extend = parseExtendRaw(extendRaw);
+    const displayEnd = computeDisplayEnd(end, extend);
+    events.push({ title, start, displayEnd, url });
+  });
+  CALENDAR_EVENTS = events;
+}
+
+// ===== 品牌開團狀態 =====
+function getBrandStatus(brandName) {
+  const today = startOfDay(new Date());
+  const matches = CALENDAR_EVENTS.filter(ev => ev.title.includes(brandName));
+  const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
+  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url };
+  const future = matches
+    .filter(ev => startOfDay(ev.start) > today)
+    .sort((a, b) => a.start - b.start);
+  if (future.length) return { brand: brandName, status: 'upcoming', nextDate: future[0].start };
+  return { brand: brandName, status: 'ended' };
+}
+
+// ===== 資料整理 =====
+function ingredientsOfType(type) {
+  return INGREDIENTS.filter(i => (i['類型'] || '食材').trim() === type);
+}
+
+function getRecipeIngredients(recipe) {
+  const ids = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
+  return ids.map(id => INGREDIENTS.find(i => i['食材ID'] === id)).filter(Boolean);
+}
+
+function getRecipeBrands(recipe) {
+  const set = new Set();
+  getRecipeIngredients(recipe).forEach(i => { if (i['品牌']) set.add(i['品牌']); });
+  return Array.from(set);
+}
+
+// 篩選用的分類key：優先用「簡稱」，沒填才用「食材名稱」
+// 這樣不同品牌/不同完整商品名稱，只要簡稱打一樣，就會被歸成同一個篩選標籤
+function ingredientFilterKey(ing) {
+  const short = String(ing['簡稱'] || '').trim();
+  return short || ing['食材名稱'] || '';
+}
+
+function getRecipeIngredientKeys(recipe) {
+  const set = new Set();
+  getRecipeIngredients(recipe).forEach(i => {
+    const key = ingredientFilterKey(i);
+    if (key) set.add(key);
+  });
+  return Array.from(set);
+}
+
+function getRecipesUsingIngredientId(ingId) {
+  return RECIPES.filter(r => String(r['使用食材ID'] || '').split('/').map(s => s.trim()).includes(ingId));
+}
+
+// ===== 篩選標籤初始化 =====
+function initFilters() {
+  // 食材介紹的品牌篩選
+  const ingBrandChipsEl = document.getElementById('ingBrandChips');
+  ingBrandChipsEl.innerHTML = '';
+  BRANDS.forEach(b => {
+    const chip = makeChip(b, ingSelectedBrands.includes(b), () => {
+      toggleInArray(ingSelectedBrands, b);
+      initFilters();
+      renderIngredients();
+    });
+    ingBrandChipsEl.appendChild(chip);
+  });
+
+  // 觀看食譜的品牌篩選
+  const recBrandChipsEl = document.getElementById('recBrandChips');
+  recBrandChipsEl.innerHTML = '';
+  BRANDS.forEach(b => {
+    const chip = makeChip(b, recSelectedBrands.includes(b), () => {
+      toggleInArray(recSelectedBrands, b);
+      initFilters();
+      renderRecipes();
+    });
+    recBrandChipsEl.appendChild(chip);
+  });
+
+  // 觀看食譜的食材篩選：用「簡稱優先」的分類key去重
+  // 不同品牌/不同完整食材名稱，只要簡稱一樣，就會合併成同一個標籤
+  const foodIngredients = ingredientsOfType('食材');
+  const ingKeys = Array.from(new Set(foodIngredients.map(ingredientFilterKey))).filter(Boolean);
+  const recIngChipsEl = document.getElementById('recIngredientChips');
+  recIngChipsEl.innerHTML = '';
+  ingKeys.forEach(key => {
+    const chip = makeChip(key, recSelectedIngredients.includes(key), () => {
+      toggleInArray(recSelectedIngredients, key);
+      initFilters();
+      renderRecipes();
+    });
+    chip.title = key;
+    recIngChipsEl.appendChild(chip);
+  });
+
+  // 觀看食譜的月齡篩選
+  const AGE_ORDER = ['6m+', '8m+', '10m+', '1y+', '2y+', '成人'];
+  const ages = Array.from(new Set(RECIPES.map(r => r['適合月齡']).filter(Boolean)));
+  ages.sort((a, b) => AGE_ORDER.indexOf(a) - AGE_ORDER.indexOf(b));
+  const recAgeChipsEl = document.getElementById('recAgeChips');
+  recAgeChipsEl.innerHTML = '';
+  ages.forEach(age => {
+    const chip = makeChip(age, recSelectedAges.includes(age), () => {
+      toggleInArray(recSelectedAges, age);
+      initFilters();
+      renderRecipes();
+    });
+    recAgeChipsEl.appendChild(chip);
+  });
+}
+
+function makeChip(label, active, onClick) {
+  const btn = document.createElement('button');
+  btn.className = 'chip' + (active ? ' active' : '');
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function toggleInArray(arr, val) {
+  const idx = arr.indexOf(val);
+  if (idx === -1) arr.push(val); else arr.splice(idx, 1);
+}
+
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  recSelectedBrands = [];
+  recSelectedIngredients = [];
+  recSelectedAges = [];
+  initFilters();
+  renderRecipes();
+});
+
+// ===== 月齡圖標色 =====
+const AGE_COLOR = {
+  '6m+': '#9ACB85', '8m+': '#FFB37A', '10m+': '#FF8FA3',
+  '1y+': '#7AAEEB', '2y+': '#B79AE8', '成人': '#a89888'
+};
+
+function ageTagHtml(age) {
+  if (!age) return '';
+  const color = AGE_COLOR[age] || '#b5755a';
+  return `<span class="mini-tag" style="background:${color}22;color:${color};">👶 ${age}</span>`;
+}
+
+// ===== 渲染：食材介紹 =====
+function renderIngredients() {
+  const grid = document.getElementById('ingredientGrid');
+  const emptyEl = document.getElementById('ingredientEmpty');
+  grid.innerHTML = '';
+
+  let items = INGREDIENTS.filter(i => {
+    if (ingSelectedBrands.length && !ingSelectedBrands.includes(i['品牌'])) return false;
+    return true;
+  });
+
+  if (!items.length) {
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.addEventListener('click', () => openIngredientModal(item));
+
+    const img = document.createElement('img');
+    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    card.appendChild(img);
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    const name = document.createElement('div');
+    name.className = 'card-name';
+    name.textContent = item['食材名稱'] || '';
+    body.appendChild(name);
+
+    const tags = document.createElement('div');
+    tags.className = 'card-tags';
+    tags.innerHTML = `<span class="mini-tag tag-brand">${item['品牌'] || ''}</span>` +
+      ((item['類型'] || '食材') === '成品' ? `<span class="mini-tag tag-type-product">成品</span>` : '');
+    body.appendChild(tags);
+
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+}
+
+function isValidUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+
+// ===== 渲染：觀看食譜 =====
+function renderRecipes() {
+  const grid = document.getElementById('recipeGrid');
+  const emptyEl = document.getElementById('recipeEmpty');
+  grid.innerHTML = '';
+
+  let items = RECIPES.filter(r => {
+    if (recSelectedBrands.length) {
+      const brands = getRecipeBrands(r);
+      if (!brands.some(b => recSelectedBrands.includes(b))) return false;
+    }
+    if (recSelectedIngredients.length) {
+      const keys = getRecipeIngredientKeys(r);
+      if (!recSelectedIngredients.every(sel => keys.includes(sel))) return false;
+    }
+    if (recSelectedAges.length) {
+      if (!recSelectedAges.includes(r['適合月齡'])) return false;
+    }
+    return true;
+  });
+
+  if (!items.length) {
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  items.forEach(recipe => {
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.addEventListener('click', () => openRecipeModal(recipe));
+
+    const img = document.createElement('img');
+    img.src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    card.appendChild(img);
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    const name = document.createElement('div');
+    name.className = 'card-name';
+    name.textContent = recipe['食譜名稱'] || '';
+    body.appendChild(name);
+
+    const tags = document.createElement('div');
+    tags.className = 'card-tags';
+    tags.innerHTML = ageTagHtml(recipe['適合月齡']);
+    body.appendChild(tags);
+
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+}
+
+// ===== 食材彈窗 =====
+function openIngredientModal(item) {
+  document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
+  document.getElementById('ingModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
+  document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
+
+  const tagsEl = document.getElementById('ingModalTags');
+  const isProduct = (item['類型'] || '食材') === '成品';
+  tagsEl.innerHTML = `<span class="mini-tag tag-brand">${item['品牌'] || ''}</span>` +
+    (isProduct ? `<span class="mini-tag tag-type-product">成品</span>` : '');
+
+  const specsEl = document.getElementById('ingModalSpecs');
+  specsEl.innerHTML = '';
+  [['保存期限', item['保存期限']], ['成分', item['成分']], ['產地', item['產地']], ['內容物規格', item['內容物規格']]]
+    .forEach(([label, val]) => {
+      if (!val) return;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${label}</td><td>${val}</td>`;
+      specsEl.appendChild(tr);
+    });
+
+  document.getElementById('ingModalDesc').textContent = item['簡短介紹'] || '';
+
+  const relatedBox = document.getElementById('ingModalRelated');
+  const relatedList = document.getElementById('ingModalRelatedList');
+  if (!isProduct) {
+    const relatedRecipes = getRecipesUsingIngredientId(item['食材ID']);
+    if (relatedRecipes.length) {
+      relatedList.innerHTML = '';
+      relatedRecipes.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'rr-item';
+        row.addEventListener('click', () => {
+          closeModal('ingredientModal');
+          openRecipeModal(r);
+        });
+        const img = document.createElement('img');
+        img.src = isValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PLACEHOLDER_IMG;
+        img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+        row.appendChild(img);
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'rr-name';
+        nameSpan.textContent = r['食譜名稱'] || '';
+        row.appendChild(nameSpan);
+        relatedList.appendChild(row);
+      });
+      relatedBox.style.display = 'block';
+    } else {
+      relatedBox.style.display = 'none';
+    }
+  } else {
+    relatedBox.style.display = 'none';
+  }
+
+  document.getElementById('ingredientModal').classList.add('show');
+}
+
+// ===== 食譜彈窗 =====
+function openRecipeModal(recipe) {
+  document.getElementById('recModalImg').src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
+  document.getElementById('recModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
+  document.getElementById('recModalName').textContent = recipe['食譜名稱'] || '';
+
+  document.getElementById('recModalTags').innerHTML = ageTagHtml(recipe['適合月齡']);
+
+  const ingList = getRecipeIngredients(recipe);
+  const ingTagsEl = document.getElementById('recModalIngredients');
+  ingTagsEl.innerHTML = '';
+  ingList.forEach(i => {
+    const span = document.createElement('span');
+    span.className = 'mini-tag tag-brand';
+    span.style.cursor = 'pointer';
+    span.textContent = `${i['食材名稱']}（${i['品牌']}）`;
+    span.addEventListener('click', () => {
+      closeModal('recipeModal');
+      openIngredientModal(i);
+    });
+    ingTagsEl.appendChild(span);
+  });
+
+  document.getElementById('recModalSteps').textContent = recipe['做法步驟'] || '（尚未提供做法）';
+
+  const videoBtn = document.getElementById('recVideoBtn');
+  if (isValidUrl(recipe['影片連結'])) {
+    videoBtn.href = recipe['影片連結'];
+    videoBtn.style.display = 'block';
+  } else {
+    videoBtn.style.display = 'none';
+  }
+
+  const buyBtn = document.getElementById('recBuyBtn');
+  const statusListEl = document.getElementById('recBuyStatusList');
+  statusListEl.style.display = 'none';
+  statusListEl.innerHTML = '';
+  buyBtn.onclick = () => handleBuyClick(recipe, statusListEl);
+
+  document.getElementById('recipeModal').classList.add('show');
+}
+
+function handleBuyClick(recipe, statusListEl) {
+  const brands = getRecipeBrands(recipe);
+  if (!brands.length) {
+    statusListEl.innerHTML = `<div class="buy-status-item"><span class="bsi-text">尚未設定這道食譜的品牌資訊</span></div>`;
+    statusListEl.style.display = 'block';
+    return;
+  }
+  const statuses = brands.map(getBrandStatus);
+  const openOnes = statuses.filter(s => s.status === 'open');
+
+  if (openOnes.length === 1) {
+    window.open(openOnes[0].url, '_blank', 'noopener,noreferrer');
+    statusListEl.style.display = 'none';
+    return;
+  }
+
+  renderBuyStatusList(statuses, statusListEl);
+}
+
+function renderBuyStatusList(statuses, statusListEl) {
+  statusListEl.innerHTML = '';
+  statuses.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'buy-status-item';
+    let rightHtml = '';
+    if (s.status === 'open') {
+      rightHtml = `<a class="bsi-btn" href="${s.url}" target="_blank" rel="noopener noreferrer">前往下單</a>`;
+    } else if (s.status === 'upcoming') {
+      rightHtml = `<span class="bsi-text">下一團 ${fmtSingleDate(s.nextDate)} 開團</span>`;
+    } else {
+      rightHtml = `<span class="bsi-text">目前已結單</span>`;
+    }
+    row.innerHTML = `<span class="bsi-brand">${s.brand}</span>` + rightHtml;
+    statusListEl.appendChild(row);
+  });
+  statusListEl.style.display = 'block';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ===== 主分頁切換 =====
+function switchView(view) {
+  currentView = view;
+  document.getElementById('tabIngredients').classList.toggle('active', view === 'ingredients');
+  document.getElementById('tabRecipes').classList.toggle('active', view === 'recipes');
+  document.getElementById('ingredientsView').style.display = view === 'ingredients' ? 'block' : 'none';
+  document.getElementById('recipesView').style.display = view === 'recipes' ? 'block' : 'none';
+}
+document.getElementById('tabIngredients').addEventListener('click', () => switchView('ingredients'));
+document.getElementById('tabRecipes').addEventListener('click', () => switchView('recipes'));
+
+function applyPresetView() {
+  if (presetBrand && BRANDS.includes(presetBrand)) {
+    ingSelectedBrands = [presetBrand];
+    recSelectedBrands = [presetBrand];
+    initFilters();
+  }
+  switchView(presetView === 'recipes' ? 'recipes' : 'ingredients');
+}
+
+loadAll();
+</script>
+
+</body>
+</html>
