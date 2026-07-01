@@ -439,6 +439,15 @@
   </div>
 </div>
 
+<!-- 同一食材有多個品牌時，選擇要看哪個品牌介紹用的小彈窗 -->
+<div class="modal-backdrop" id="brandChoiceModal" onclick="if(event.target===this) closeModal('brandChoiceModal')">
+  <div class="modal-box" style="width:320px;">
+    <button class="modal-close" onclick="closeModal('brandChoiceModal')">✕</button>
+    <h3 id="brandChoiceTitle" style="font-size:15px;">這個食材來自多個品牌，選一個看介紹</h3>
+    <div id="brandChoiceList"></div>
+  </div>
+</div>
+
 <script>
 // ===== 設定 =====
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
@@ -817,6 +826,42 @@ function renderRecipes() {
 }
 
 // ===== 食材彈窗 =====
+// 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
+function pickBestBrandIngredient(group) {
+  const withStatus = group.map(item => ({ item, status: getBrandStatus(item['品牌']) }));
+  const open = withStatus.find(w => w.status.status === 'open');
+  if (open) return open.item;
+  const upcoming = withStatus.filter(w => w.status.status === 'upcoming');
+  if (upcoming.length) {
+    upcoming.sort((a, b) => a.status.nextDate - b.status.nextDate);
+    return upcoming[0].item;
+  }
+  return group[0]; // 全部都已結單且沒有下一團資訊，就固定回傳第一個
+}
+
+function openIngredientBrandChoice(group) {
+  const listEl = document.getElementById('brandChoiceList');
+  listEl.innerHTML = '';
+  group.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'rr-item';
+    row.addEventListener('click', () => {
+      closeModal('brandChoiceModal');
+      openIngredientModal(item);
+    });
+    const img = document.createElement('img');
+    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    row.appendChild(img);
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'rr-name';
+    nameSpan.textContent = `${item['品牌']} － ${item['食材名稱']}`;
+    row.appendChild(nameSpan);
+    listEl.appendChild(row);
+  });
+  document.getElementById('brandChoiceModal').classList.add('show');
+}
+
 function openIngredientModal(item) {
   document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
   document.getElementById('ingModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
@@ -904,23 +949,53 @@ function openRecipeModal(recipe) {
   const ingList = getRecipeIngredients(recipe);
   const ingTagsEl = document.getElementById('recModalIngredients');
   ingTagsEl.innerHTML = '';
-  ingList.forEach(i => {
+
+  // 一般食材（純文字）跟品牌食材分開處理
+  const genericItems = ingList.filter(i => i._generic);
+  const brandItems = ingList.filter(i => !i._generic);
+
+  // 品牌食材：用「簡稱優先」的key分組，同一個key（不管幾個品牌）只顯示一個標籤
+  const groups = {};
+  brandItems.forEach(i => {
+    const key = ingredientFilterKey(i);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(i);
+  });
+
+  Object.keys(groups).forEach(key => {
+    const group = groups[key];
+    const first = group[0];
+    const qtyText = first._quantity ? ` × ${first._quantity}` : '';
     const span = document.createElement('span');
-    const qtyText = i._quantity ? ` × ${i._quantity}` : '';
-    if (i._generic) {
-      span.className = 'mini-tag';
-      span.style.background = '#EFEBE5';
-      span.style.color = '#8C8378';
-      span.textContent = `${i['食材名稱']}${qtyText}`;
-    } else {
-      span.className = 'mini-tag tag-brand';
-      span.style.cursor = 'pointer';
-      span.textContent = `${i['食材名稱']}（${i['品牌']}）${qtyText}`;
+    span.className = 'mini-tag tag-brand';
+    span.style.cursor = 'pointer';
+
+    if (group.length === 1) {
+      span.textContent = `${key}${qtyText}`;
+      span.title = first['食材名稱'];
       span.addEventListener('click', () => {
         closeModal('recipeModal');
-        openIngredientModal(i);
+        openIngredientModal(first);
+      });
+    } else {
+      // 同一個簡稱來自多個品牌：標籤只顯示簡稱，點擊時自動挑「開團中，或最接近開團」的那個品牌開啟
+      span.textContent = `${key}${qtyText}`;
+      span.title = `${first['食材名稱']}（可來自：${group.map(g => g['品牌']).join('／')}）`;
+      span.addEventListener('click', () => {
+        closeModal('recipeModal');
+        openIngredientModal(pickBestBrandIngredient(group));
       });
     }
+    ingTagsEl.appendChild(span);
+  });
+
+  genericItems.forEach(i => {
+    const span = document.createElement('span');
+    span.className = 'mini-tag';
+    span.style.background = '#EFEBE5';
+    span.style.color = '#8C8378';
+    const qtyText = i._quantity ? ` × ${i._quantity}` : '';
+    span.textContent = `${i['食材名稱']}${qtyText}`;
     ingTagsEl.appendChild(span);
   });
 
