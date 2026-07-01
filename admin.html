@@ -1301,7 +1301,9 @@ async function fetchMemos() {
     return;
   }
   try {
-    const res = await fetch(APPS_SCRIPT_URL, { cache: 'no-store' });
+    // 加上時間戳記參數強迫略過快取，避免讀到剛儲存前的舊資料
+    const noCacheUrl = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+    const res = await fetch(noCacheUrl, { cache: 'no-store' });
     const data = await res.json();
     appPassword = data.password || FALLBACK_PASSWORD;
     memoMap = data.memos || {};
