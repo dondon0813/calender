@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>雪莉與朵栗 內部後台行事曆</title>
 <style>
-  @import url('https://script.google.com/macros/s/AKfycbxmwjBGlYqWn13rmjpjY1fMXuWPDljEx82xCWdVyIHZNTAltkPJxCo2Pp59u55F-IjO/exec');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
 
   * { box-sizing: border-box; min-width: 0; }
   html, body { width: 100%; overflow-x: hidden; }
@@ -712,7 +712,7 @@ const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
 // 請把 Google Apps Script 部署後的網址貼在這裡（步驟看聊天室裡的說明）
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmwjBGlYqWn13rmjpjY1fMXuWPDljEx82xCWdVyIHZNTAltkPJxCo2Pp59u55F-IjO/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
 // 在完成 Apps Script 設定前，先用這組密碼；設定好後密碼改用試算表管理，這組就不會再用到
 const FALLBACK_PASSWORD = "0000";
 
@@ -1369,16 +1369,18 @@ async function saveMemo() {
   statusEl.textContent = '儲存中…';
   statusEl.style.color = '#a89888';
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免CORS預檢
       body: JSON.stringify({ type: 'memo', key, text })
     });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || '未知錯誤');
     memoMap[key] = text;
     statusEl.textContent = '已儲存 ✓';
     statusEl.style.color = '#9ACB85';
   } catch (err) {
-    statusEl.textContent = '儲存失敗，請檢查網路';
+    statusEl.textContent = '儲存失敗：' + err.message;
     statusEl.style.color = '#e0654f';
   }
   saveBtn.disabled = false;
@@ -1401,11 +1403,13 @@ async function saveBackendUrl() {
   statusEl.textContent = '儲存中…';
   statusEl.style.color = '#a89888';
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ type: 'url', key, text })
     });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || '未知錯誤');
     urlMap[key] = text;
     const backendEl = document.getElementById('adminBackendUrl');
     if (text) {
@@ -1420,7 +1424,7 @@ async function saveBackendUrl() {
     statusEl.textContent = '已儲存 ✓';
     statusEl.style.color = '#9ACB85';
   } catch (err) {
-    statusEl.textContent = '儲存失敗，請檢查網路';
+    statusEl.textContent = '儲存失敗：' + err.message;
     statusEl.style.color = '#e0654f';
   }
   saveBtn.disabled = false;
