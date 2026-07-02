@@ -951,16 +951,33 @@
     text-align: center;
     margin-bottom: 18px;
   }
+  .school-title-badge {
+    display: inline-block;
+    border: 2.5px solid #F0C674;
+    border-radius: 999px;
+    padding: 10px 22px;
+    position: relative;
+  }
   .school-title {
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 800;
     font-size: 22px;
-    color: #5F87C9;
+    color: #5a4a3f;
   }
   .school-subtitle {
     font-size: 12.5px;
     color: #8a7462;
-    margin-top: 6px;
+    margin-top: 10px;
+    position: relative;
+    padding-bottom: 8px;
+  }
+  .school-subtitle::after {
+    content: '';
+    display: block;
+    width: 70%;
+    height: 0;
+    border-bottom: 2px dashed #9ACB85;
+    margin: 8px auto 0;
   }
   .school-category-title {
     font-size: 13.5px;
@@ -1037,12 +1054,13 @@
   }
   .school-card.checked .school-card-name { color: #5C9147; }
   .school-reminder-box {
-    border: 2px dashed #FFC7D3;
-    border-radius: 18px;
-    padding: 14px 16px;
+    border: 2px dashed #9ACB85;
+    border-radius: 999px;
+    padding: 14px 20px;
     margin-top: 22px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
   }
   .school-reminder-text {
@@ -1260,8 +1278,10 @@
   <div id="schoolListView" style="display:none;">
     <button class="back-btn" id="backFromSchoolList">← 返回首頁</button>
     <div class="school-header">
-      <div class="school-title">🎒 開學用品清單</div>
-      <div class="school-subtitle">開學前一起檢查，準備好上學囉！</div>
+      <div class="school-title-badge">
+        <div class="school-title">🍎 開學用品清單</div>
+      </div>
+      <div class="school-subtitle">一起準備上學去！♥</div>
     </div>
     <div class="school-progress" id="schoolProgress"></div>
     <div id="schoolListContent"></div>
@@ -1269,8 +1289,9 @@
     <button class="school-removed-toggle" id="schoolRemovedToggle" style="display:none;"></button>
     <div class="school-removed-box" id="schoolRemovedBox" style="display:none;"></div>
     <div class="school-reminder-box">
-      <span style="font-size:20px;">🌸</span>
+      <span style="font-size:16px;">♥</span>
       <div class="school-reminder-text"><b>小提醒：</b>所有物品都記得寫上名字，才不會弄丟喔！</div>
+      <span style="font-size:16px;">🌱</span>
     </div>
   </div>
 
@@ -1444,8 +1465,8 @@ async function loadAll() {
   try {
     await Promise.all([loadRecipeDb(), loadCalendar()]);
     statusEl.style.display = 'none';
+    applyPresetBrandFilter();
     initFilters();
-    applyPresetView();
     renderIngredients();
     renderRecipes();
     renderSchoolList();
@@ -2349,14 +2370,10 @@ document.getElementById('backFromIngredients').addEventListener('click', () => s
 document.getElementById('backFromRecipes').addEventListener('click', () => switchView('home'));
 document.getElementById('backFromSchoolList').addEventListener('click', () => switchView('home'));
 
-function applyPresetView() {
-  if (presetBrand && BRANDS.includes(presetBrand)) {
-    ingSelectedBrand = presetBrand;
-    recSelectedBrands = [presetBrand];
-    initFilters();
-  }
+function applyInitialRoute() {
   // 完全沒帶網址參數（直接打開 recipes.html）才停在首頁；
   // 從客人版行事曆帶 brand/view 參數點進來的話，直接跳到對應畫面
+  // 這一步只負責切換畫面，不需要等資料載入完成
   if (!presetBrand && presetViewRaw === null) {
     switchView('home');
   } else {
@@ -2364,6 +2381,18 @@ function applyPresetView() {
   }
 }
 
+function applyPresetBrandFilter() {
+  // 品牌是否存在要等 BRANDS 資料載入完成才能驗證，所以這段要在資料載入後才執行
+  if (presetBrand && BRANDS.includes(presetBrand)) {
+    ingSelectedBrand = presetBrand;
+    recSelectedBrands = [presetBrand];
+  }
+}
+
+// 網頁一打開就先決定要顯示哪一頁（首頁 / 食材介紹 / 觀看食譜），
+// 這一步不需要等資料載入完成，所以要在 loadAll() 之前就執行，
+// 避免資料讀取完成後又把使用者已經手動點開的畫面切回首頁
+applyInitialRoute();
 loadAll();
 </script>
 
