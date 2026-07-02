@@ -136,6 +136,111 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
   }
+
+  /* 選擇食材：圖示格子（4欄），仿手繪食材選單風格 */
+  .ing-select-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #5a4a3f;
+    margin: 6px 0 10px;
+  }
+  .ing-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .ing-tile {
+    background: #FFFDFA;
+    border: 2px solid #FFE3CC;
+    border-radius: 16px;
+    padding: 10px 6px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .ing-tile:hover { transform: translateY(-2px); }
+  .ing-tile.active {
+    border-color: #FF8FA3;
+    background: #FFF0F3;
+    box-shadow: 0 4px 12px rgba(255,143,163,0.25);
+  }
+  .ing-tile-icon {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #FFF1E6;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .ing-tile-icon.emoji-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+  }
+  .ing-tile-name {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #8a7462;
+  }
+  .ing-tile.active .ing-tile-name { color: #FF7391; }
+
+  /* 食譜推薦：兩欄大圖卡 */
+  .recipe-reco-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #5a4a3f;
+    margin: 6px 0 12px;
+  }
+  .recipe-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .recipe-reco-card {
+    background: #FFFDFA;
+    border: 2px solid #FFE3CC;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(230,160,120,0.12);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .recipe-reco-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 18px rgba(230,160,120,0.25);
+  }
+  .recipe-reco-card img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    background: #FFF1E6;
+    display: block;
+  }
+  .recipe-reco-card .rrc-body {
+    padding: 10px 10px 12px;
+  }
+  .recipe-reco-card .rrc-name {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #5a4a3f;
+    margin-bottom: 6px;
+  }
+  .recipe-reco-card .rrc-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  @media (max-width: 420px) {
+    .ing-tile-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
   .item-card {
     background: #FFFDFA;
     border: 2px solid #FFE3CC;
@@ -658,13 +763,16 @@
     <div class="filter-section">
       <div class="filter-label">品牌</div>
       <div class="filter-chips" id="recBrandChips"></div>
-      <div class="filter-label">食材（可複選，會篩出同時包含所選食材的食譜）</div>
-      <div class="filter-chips" id="recIngredientChips"></div>
       <div class="filter-label">適合月齡</div>
       <div class="filter-chips" id="recAgeChips"></div>
       <button class="chip-clear" id="clearFiltersBtn">清除所有篩選</button>
     </div>
-    <div class="card-grid" id="recipeGrid"></div>
+
+    <div class="ing-select-title">🥕 選擇食材</div>
+    <div class="ing-tile-grid" id="recIngredientChips"></div>
+
+    <div class="recipe-reco-title" id="recipeRecoTitle">🍽 食譜推薦（共 0 道）</div>
+    <div class="recipe-card-grid" id="recipeGrid"></div>
     <div class="empty-state" id="recipeEmpty" style="display:none;">這個篩選條件下沒有找到食譜</div>
   </div>
 
@@ -980,13 +1088,35 @@ function initFilters() {
   const recIngChipsEl = document.getElementById('recIngredientChips');
   recIngChipsEl.innerHTML = '';
   ingKeys.forEach(key => {
-    const chip = makeChip(key, recSelectedIngredients.includes(key), () => {
+    const representative = foodIngredients.find(i => ingredientFilterKey(i) === key);
+    const tile = document.createElement('div');
+    tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
+    tile.title = key;
+
+    const hasImg = representative && isValidUrl(representative['圖片網址']);
+    if (hasImg) {
+      const img = document.createElement('img');
+      img.className = 'ing-tile-icon';
+      img.src = representative['圖片網址'];
+      img.onerror = function() {
+        this.replaceWith(makeEmojiIconFallback());
+      };
+      tile.appendChild(img);
+    } else {
+      tile.appendChild(makeEmojiIconFallback());
+    }
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ing-tile-name';
+    nameEl.textContent = key;
+    tile.appendChild(nameEl);
+
+    tile.addEventListener('click', () => {
       toggleInArray(recSelectedIngredients, key);
       initFilters();
       renderRecipes();
     });
-    chip.title = key;
-    recIngChipsEl.appendChild(chip);
+    recIngChipsEl.appendChild(tile);
   });
 
   // 觀看食譜的月齡篩選
@@ -1003,6 +1133,13 @@ function initFilters() {
     });
     recAgeChipsEl.appendChild(chip);
   });
+}
+
+function makeEmojiIconFallback() {
+  const div = document.createElement('div');
+  div.className = 'ing-tile-icon emoji-fallback';
+  div.textContent = '🥕';
+  return div;
 }
 
 function makeChip(label, active, onClick) {
@@ -1091,6 +1228,7 @@ function isValidUrl(s) {
 function renderRecipes() {
   const grid = document.getElementById('recipeGrid');
   const emptyEl = document.getElementById('recipeEmpty');
+  const titleEl = document.getElementById('recipeRecoTitle');
   grid.innerHTML = '';
 
   let items = RECIPES.filter(r => {
@@ -1108,6 +1246,8 @@ function renderRecipes() {
     return true;
   });
 
+  titleEl.textContent = `🍽 食譜推薦（共 ${items.length} 道）`;
+
   if (!items.length) {
     emptyEl.style.display = 'block';
     return;
@@ -1116,43 +1256,31 @@ function renderRecipes() {
 
   items.forEach(recipe => {
     const card = document.createElement('div');
-    card.className = 'item-card recipe-card';
+    card.className = 'recipe-reco-card';
     card.addEventListener('click', () => openRecipeModal(recipe));
-
-    const imgWrap = document.createElement('div');
-    imgWrap.className = 'rc-img-wrap';
 
     const img = document.createElement('img');
     img.src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
     img.onerror = () => { img.src = PLACEHOLDER_IMG; };
-    imgWrap.appendChild(img);
+    card.appendChild(img);
 
-    const age = recipe['適合月齡'];
-    if (age) {
-      const ageBadge = document.createElement('div');
-      ageBadge.className = 'rc-age-badge';
-      ageBadge.style.background = AGE_COLOR[age] || '#b5755a';
-      ageBadge.textContent = `👶 ${age}`;
-      imgWrap.appendChild(ageBadge);
-    }
+    const body = document.createElement('div');
+    body.className = 'rrc-body';
 
-    const titleOverlay = document.createElement('div');
-    titleOverlay.className = 'rc-title-overlay';
     const name = document.createElement('div');
-    name.className = 'card-name';
+    name.className = 'rrc-name';
     name.textContent = recipe['食譜名稱'] || '';
-    titleOverlay.appendChild(name);
-    imgWrap.appendChild(titleOverlay);
+    body.appendChild(name);
 
-    card.appendChild(imgWrap);
+    const tags = document.createElement('div');
+    tags.className = 'rrc-tags';
+    const age = recipe['適合月齡'];
+    if (age) tags.innerHTML += ageTagHtml(age);
+    const method = String(recipe['料理方式'] || '').trim();
+    if (method) tags.innerHTML += `<span class="mini-tag" style="background:#FFEcD9;color:#B5601C;">${method}</span>`;
+    body.appendChild(tags);
 
-    const metaRow = document.createElement('div');
-    metaRow.className = 'rc-meta-row';
-    const ingCount = getRecipeIngredients(recipe).length;
-    const hasVideo = isValidUrl(recipe['影片連結']);
-    metaRow.innerHTML = `<span>🥕 ${ingCount} 種食材</span>` + (hasVideo ? `<span>🎬 有影片</span>` : '<span></span>');
-    card.appendChild(metaRow);
-
+    card.appendChild(body);
     grid.appendChild(card);
   });
 }
