@@ -793,6 +793,45 @@
     background: #FFEcD9;
     border-color: #FFD3AC;
   }
+  .home-card-mint {
+    background: #E4F5DF;
+    border-color: #B9E3AC;
+  }
+  .home-card-mint .home-card-title { color: #5C9147; }
+  .home-card-mint .home-card-title-divider { border-color: #5C9147; }
+  .home-card-blue {
+    background: #E2EBFD;
+    border-color: #B9CDF5;
+  }
+  .home-card-blue .home-card-title { color: #5F87C9; }
+  .home-card-blue .home-card-title-divider { border-color: #5F87C9; }
+  .home-card-purple {
+    background: #EFE4FB;
+    border-color: #D5BCF0;
+  }
+  .home-card-purple .home-card-title { color: #8E6BB5; }
+  .home-card-purple .home-card-title-divider { border-color: #8E6BB5; }
+  .home-card-yellow {
+    background: #FFF6DD;
+    border-color: #F0DBA0;
+  }
+  .home-card-yellow .home-card-title { color: #C99A3A; }
+  .home-card-yellow .home-card-title-divider { border-color: #C99A3A; }
+  .soon-card {
+    position: relative;
+    opacity: 0.92;
+  }
+  .soon-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+    background: #C9A66B;
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
   .home-card-icon { font-size: 34px; margin-bottom: 8px; }
   .home-card-title {
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
@@ -889,6 +928,34 @@
         <div class="home-card-title">觀看食譜</div>
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">瀏覽美味的食譜 💗</div>
+      </div>
+      <div class="home-card home-card-mint soon-card">
+        <div class="soon-badge">即將推出</div>
+        <div class="home-card-icon">🍽️</div>
+        <div class="home-card-title">每日餐盤</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">探索餐盤靈感 💗</div>
+      </div>
+      <div class="home-card home-card-blue soon-card">
+        <div class="soon-badge">即將推出</div>
+        <div class="home-card-icon">🎒</div>
+        <div class="home-card-title">開學清單</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">開學用品清單參考 💗</div>
+      </div>
+      <div class="home-card home-card-purple soon-card">
+        <div class="soon-badge">即將推出</div>
+        <div class="home-card-icon">📚</div>
+        <div class="home-card-title">教材分享</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">豐富有趣的免費教材 💗</div>
+      </div>
+      <div class="home-card home-card-yellow soon-card">
+        <div class="soon-badge">即將推出</div>
+        <div class="home-card-icon">🧸</div>
+        <div class="home-card-title">玩具繪本</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">精選童書與玩具，陪孩子玩出想像力 💗</div>
       </div>
     </div>
 
@@ -1768,6 +1835,11 @@ function switchView(view) {
 }
 document.getElementById('tabIngredients').addEventListener('click', () => switchView('ingredients'));
 document.getElementById('tabRecipes').addEventListener('click', () => switchView('recipes'));
+document.querySelectorAll('.soon-card').forEach(card => {
+  card.addEventListener('click', () => {
+    alert('這個功能還在準備中，敬請期待！🩷');
+  });
+});
 document.getElementById('backFromIngredients').addEventListener('click', () => switchView('home'));
 document.getElementById('backFromRecipes').addEventListener('click', () => switchView('home'));
 
