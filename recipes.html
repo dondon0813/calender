@@ -28,13 +28,35 @@
     box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
   }
 
+  .page-title-wrap {
+    text-align: center;
+    margin: 4px 0 18px;
+  }
+  .page-title-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    color: #FF8FA3;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 5px 14px;
+    margin-bottom: 6px;
+  }
   .page-title {
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 800;
     font-size: 28px;
-    color: #FF8FA3;
-    text-align: center;
-    margin: 4px 0 16px;
+    color: #5a4a3f;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .page-title::after {
+    content: '';
+    display: block;
+    width: 120px;
+    height: 0;
+    border-bottom: 2px dashed #FFC2CE;
+    margin: 8px auto 0;
   }
 
   /* 主分頁切換：食材介紹 / 觀看食譜 */
@@ -52,13 +74,16 @@
     border: 2px solid #FFD3B6;
     background: #fff;
     color: #b5755a;
-    padding: 10px 20px;
+    padding: 10px 22px;
     cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
   }
   .main-tab.active {
     background: #FF8FA3;
     border-color: #FF8FA3;
     color: #fff;
+    box-shadow: 0 4px 10px rgba(255,143,163,0.4);
+    transform: translateY(-1px);
   }
 
   /* 篩選標籤區 */
@@ -113,18 +138,19 @@
   }
   .item-card {
     background: #FFFDFA;
-    border: 2px solid #F3E2D3;
-    border-radius: 14px;
+    border: 2px solid #FFE3CC;
+    border-radius: 20px;
     overflow: hidden;
     cursor: pointer;
     text-align: center;
     transition: transform .15s ease, box-shadow .15s ease;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 3px 8px rgba(230,160,120,0.12);
   }
   .item-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(230,160,120,0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 18px rgba(230,160,120,0.25);
   }
   .item-card img {
     width: 100%;
@@ -140,8 +166,9 @@
     gap: 4px;
   }
   .item-card .card-name {
-    font-weight: 800;
-    font-size: 13px;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 13.5px;
     color: #5a4a3f;
   }
   .card-tags {
@@ -319,12 +346,12 @@
     padding-bottom: 10px;
   }
   .rc-title::after {
-    content: '🌿 · · · · · · · · · · 🌿';
+    content: '';
     display: block;
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: #FFC2CE;
-    margin-top: 6px;
+    width: 78%;
+    height: 0;
+    border-bottom: 2px dashed #FFC2CE;
+    margin: 8px auto 0;
   }
   .rc-subtitle {
     text-align: center;
@@ -604,7 +631,10 @@
 <body>
 
 <div class="wrap">
-  <div class="page-title">🥕 食材與食譜</div>
+  <div class="page-title-wrap">
+    <div class="page-title-badge">🩷 雪莉與朵栗</div>
+    <div class="page-title">🥕 食材與食譜</div>
+  </div>
 
   <div class="main-tabs">
     <button class="main-tab" id="tabIngredients">食材介紹</button>
@@ -643,23 +673,39 @@
 
 <!-- 食材彈窗 -->
 <div class="modal-backdrop" id="ingredientModal" onclick="if(event.target===this) closeModal('ingredientModal')">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('ingredientModal')">✕</button>
-    <img class="modal-img" id="ingModalImg" src="" alt="">
-    <h3 id="ingModalName"></h3>
-    <div class="card-tags" id="ingModalTags"></div>
-    <table class="spec-table" id="ingModalSpecs"></table>
-    <div class="modal-desc" id="ingModalDesc"></div>
+  <div class="modal-box recipe-card-modal">
+    <div class="rc-header">
+      <span class="rc-badge-pill">🩷 雪莉與朵栗 の食材小卡</span>
+      <button class="rc-close-btn" onclick="closeModal('ingredientModal')">✕</button>
+    </div>
+
+    <div class="rc-photo-wrap">
+      <img class="rc-photo" id="ingModalImg" src="" alt="">
+    </div>
+
+    <h2 class="rc-title" id="ingModalName"></h2>
+    <div class="rc-subtitle" id="ingModalBrandLine" style="display:none;"></div>
+
+    <div class="rc-info-row" id="ingModalInfoRow"></div>
+
+    <div class="rc-tip-box" id="ingModalDescBox" style="display:none;">
+      <div class="rc-tip-title">📝 食材介紹</div>
+      <div class="rc-tip-text" id="ingModalDesc"></div>
+    </div>
 
     <div class="modal-actions">
       <button class="action-btn" id="ingBuyBtn">🛒 前往購買</button>
     </div>
     <div class="buy-status-list" id="ingBuyStatusList" style="display:none;"></div>
 
-    <div class="related-recipes" id="ingModalRelated" style="display:none;">
-      <div class="rr-label">🍽 使用這個食材的食譜</div>
+    <div class="rc-section" id="ingModalRelated" style="display:none;">
+      <div class="rc-section-head">
+        <span class="rc-section-title">🍽 使用這個食材的食譜</span>
+      </div>
       <div id="ingModalRelatedList"></div>
     </div>
+
+    <div class="rc-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
   </div>
 </div>
 
@@ -1153,22 +1199,43 @@ function openIngredientModal(item) {
   document.getElementById('ingModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
   document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
 
-  const tagsEl = document.getElementById('ingModalTags');
   const isProduct = (item['類型'] || '食材') === '成品';
-  tagsEl.innerHTML = `<span class="mini-tag tag-brand">${item['品牌'] || ''}</span>` +
-    (isProduct ? `<span class="mini-tag tag-type-product">成品</span>` : '');
+  const brandLineEl = document.getElementById('ingModalBrandLine');
+  if (item['品牌']) {
+    brandLineEl.textContent = (isProduct ? '🍽 成品・' : '🌿 食材・') + item['品牌'];
+    brandLineEl.style.display = 'block';
+  } else {
+    brandLineEl.style.display = 'none';
+  }
 
-  const specsEl = document.getElementById('ingModalSpecs');
-  specsEl.innerHTML = '';
-  [['保存期限', item['保存期限']], ['成分', item['成分']], ['產地', item['產地']], ['內容物規格', item['內容物規格']]]
-    .forEach(([label, val]) => {
-      if (!val) return;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${label}</td><td>${val}</td>`;
-      specsEl.appendChild(tr);
-    });
+  const infoRowEl = document.getElementById('ingModalInfoRow');
+  const specs = [
+    ['⏳', '保存期限', item['保存期限']],
+    ['🧾', '成分', item['成分']],
+    ['📍', '產地', item['產地']],
+    ['⚖️', '規格', item['內容物規格']]
+  ].filter(([, , val]) => val);
+  if (specs.length) {
+    infoRowEl.innerHTML = specs.map(([icon, label, val]) => `
+      <div class="rc-info-item">
+        <div class="rc-info-icon">${icon}</div>
+        <div class="rc-info-label">${label}</div>
+        <div class="rc-info-value" style="font-size:11px;">${val}</div>
+      </div>
+    `).join('');
+    infoRowEl.style.display = 'flex';
+  } else {
+    infoRowEl.style.display = 'none';
+  }
 
-  document.getElementById('ingModalDesc').textContent = item['簡短介紹'] || '';
+  const descBox = document.getElementById('ingModalDescBox');
+  const desc = item['簡短介紹'] || '';
+  if (desc) {
+    document.getElementById('ingModalDesc').textContent = desc;
+    descBox.style.display = 'block';
+  } else {
+    descBox.style.display = 'none';
+  }
 
   const ingBuyBtn = document.getElementById('ingBuyBtn');
   const ingBuyStatusEl = document.getElementById('ingBuyStatusList');
