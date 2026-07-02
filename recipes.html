@@ -91,7 +91,7 @@
     margin-bottom: 16px;
   }
   .filter-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 800;
     color: #a89888;
     margin-bottom: 6px;
@@ -135,7 +135,7 @@
   /* 卡片格線 */
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
 
@@ -241,7 +241,7 @@
   }
 
   @media (max-width: 420px) {
-    .ing-tile-grid { grid-template-columns: repeat(3, 1fr); }
+    .ing-tile-name { font-size: 10px; }
   }
 
   .item-card {
@@ -491,6 +491,30 @@
     font-size: 12.5px;
     font-weight: 800;
     color: #FF8FA3;
+  }
+  .spec-list {
+    background: #FFF6EC;
+    border-radius: 16px;
+    padding: 4px 14px;
+    margin-bottom: 16px;
+  }
+  .spec-list-item {
+    padding: 9px 0;
+    border-bottom: 1px dotted #F0DFCB;
+  }
+  .spec-list-item:last-child { border-bottom: none; }
+  .spec-list-label {
+    font-size: 11px;
+    color: #a89888;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .spec-list-value {
+    font-size: 12.5px;
+    color: #5a4a3f;
+    font-weight: 700;
+    line-height: 1.5;
+    word-break: break-word;
   }
   .rc-section { margin-bottom: 16px; }
   .rc-section-head {
@@ -948,12 +972,12 @@
       <div class="rc-tip-text" id="ingModalDesc"></div>
     </div>
 
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-bottom: 6px;">
       <button class="action-btn" id="ingBuyBtn">🛒 前往購買</button>
     </div>
     <div class="buy-status-list" id="ingBuyStatusList" style="display:none;"></div>
 
-    <div class="rc-section" id="ingModalRelated" style="display:none;">
+    <div class="rc-section" id="ingModalRelated" style="display:none; margin-top:20px;">
       <div class="rc-section-head">
         <span class="rc-section-title">🍽 使用這個食材的食譜</span>
       </div>
@@ -1493,14 +1517,14 @@ function openIngredientModal(item) {
     ['⚖️', '規格', item['內容物規格']]
   ].filter(([, , val]) => val);
   if (specs.length) {
+    infoRowEl.className = 'spec-list';
     infoRowEl.innerHTML = specs.map(([icon, label, val]) => `
-      <div class="rc-info-item">
-        <div class="rc-info-icon">${icon}</div>
-        <div class="rc-info-label">${label}</div>
-        <div class="rc-info-value" style="font-size:11px;">${val}</div>
+      <div class="spec-list-item">
+        <div class="spec-list-label">${icon} ${label}</div>
+        <div class="spec-list-value">${val}</div>
       </div>
     `).join('');
-    infoRowEl.style.display = 'flex';
+    infoRowEl.style.display = 'block';
   } else {
     infoRowEl.style.display = 'none';
   }
