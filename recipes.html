@@ -160,6 +160,57 @@
   .tag-age { background: #E4F5DF; color: #5C9147; }
   .tag-type-product { background: #EFE4FB; color: #8E6BB5; }
 
+  /* 食譜卡片：圖片4:3、名稱疊字在圖片底部、月齡浮貼左上角 */
+  .recipe-card {
+    text-align: left;
+  }
+  .recipe-card .rc-img-wrap {
+    position: relative;
+  }
+  .recipe-card .rc-img-wrap img {
+    aspect-ratio: 4 / 3;
+  }
+  .recipe-card .rc-age-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 10.5px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 3px 10px;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .recipe-card .rc-title-overlay {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 22px 10px 8px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(60,40,25,0.72) 100%);
+  }
+  .recipe-card .rc-title-overlay .card-name {
+    color: #fff;
+    font-size: 13.5px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .recipe-card .rc-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 9px 9px;
+    font-size: 10.5px;
+    color: #a89888;
+    font-weight: 700;
+  }
+  .recipe-card .rc-meta-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
   .empty-state {
     text-align: center;
     color: #b39a8b;
@@ -208,6 +259,197 @@
     color: #b5755a;
     cursor: pointer;
     z-index: 2;
+  }
+
+  /* ===== 食譜卡片彈窗：手繪貼紙感風格 ===== */
+  .recipe-card-modal {
+    width: 380px;
+    padding: 16px 18px 20px;
+    background: #FFFCF7;
+    border-radius: 26px;
+    border: none;
+    box-shadow: 0 16px 40px rgba(210,150,110,0.28);
+  }
+  .rc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .rc-badge-pill {
+    font-size: 12px;
+    font-weight: 800;
+    color: #FF8FA3;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .rc-close-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: #FF8FA3;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    flex: none;
+  }
+  .rc-photo-wrap {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .rc-photo {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+    background: #FFF1E6;
+  }
+  .rc-title {
+    text-align: center;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: #5a4a3f;
+    margin: 4px 0 6px;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .rc-title::after {
+    content: '🌿 · · · · · · · · · · 🌿';
+    display: block;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #FFC2CE;
+    margin-top: 6px;
+  }
+  .rc-subtitle {
+    text-align: center;
+    font-size: 12.5px;
+    color: #a89888;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .rc-info-row {
+    display: flex;
+    justify-content: space-around;
+    background: #FFF6EC;
+    border-radius: 16px;
+    padding: 10px 6px;
+    margin-bottom: 16px;
+  }
+  .rc-info-item {
+    text-align: center;
+    flex: 1;
+  }
+  .rc-info-item .rc-info-icon { font-size: 15px; }
+  .rc-info-item .rc-info-label {
+    font-size: 10px;
+    color: #a89888;
+    font-weight: 700;
+    margin: 2px 0;
+  }
+  .rc-info-item .rc-info-value {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #FF8FA3;
+  }
+  .rc-section { margin-bottom: 16px; }
+  .rc-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .rc-section-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    background: #FFE9CE;
+    border-radius: 999px;
+    padding: 5px 14px;
+  }
+  .rc-ing-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    font-size: 12.5px;
+    color: #5a4a3f;
+  }
+  .rc-ing-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 3px 0;
+    border-bottom: 1px dotted #F0DFCB;
+    cursor: pointer;
+  }
+  .rc-ing-item .rc-ing-name { font-weight: 700; }
+  .rc-ing-item .rc-ing-name::before {
+    content: '🔸';
+    font-size: 9px;
+    margin-right: 4px;
+  }
+  .rc-ing-item .rc-ing-qty { color: #b5755a; font-weight: 700; white-space: nowrap; }
+  .rc-steps-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: rc-step;
+  }
+  .rc-steps-list li {
+    counter-increment: rc-step;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: #5a4a3f;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .rc-steps-list li::before {
+    content: counter(rc-step);
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #FF8FA3;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+  .rc-tip-box {
+    background: #FFF6EC;
+    border: 1.5px dashed #FFC79A;
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 4px;
+  }
+  .rc-tip-title {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #E0954A;
+    margin-bottom: 4px;
+  }
+  .rc-tip-text {
+    font-size: 12px;
+    color: #8a7462;
+    line-height: 1.6;
+  }
+  .rc-footer {
+    text-align: center;
+    font-size: 11.5px;
+    color: #FFB4C2;
+    font-weight: 700;
+    margin-top: 14px;
   }
   .modal-img {
     width: 100%;
@@ -318,6 +560,7 @@
   .action-btn-alt:hover { background: #5F97DB; }
 
   .buy-status-list { margin-top: 12px; }
+
   .buy-status-item {
     display: flex;
     align-items: center;
@@ -422,20 +665,47 @@
 
 <!-- 食譜彈窗 -->
 <div class="modal-backdrop" id="recipeModal" onclick="if(event.target===this) closeModal('recipeModal')">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('recipeModal')">✕</button>
-    <img class="modal-img" id="recModalImg" src="" alt="">
-    <h3 id="recModalName"></h3>
-    <div class="card-tags" id="recModalTags"></div>
-    <div class="filter-label" style="margin-top:10px;">使用食材</div>
-    <div class="card-tags" id="recModalIngredients"></div>
-    <div class="filter-label" style="margin-top:12px;">做法</div>
-    <div class="steps-box" id="recModalSteps"></div>
-    <div class="modal-actions">
+  <div class="modal-box recipe-card-modal">
+    <div class="rc-header">
+      <span class="rc-badge-pill">🩷 雪莉與朵栗 の食譜卡</span>
+      <button class="rc-close-btn" onclick="closeModal('recipeModal')">✕</button>
+    </div>
+
+    <div class="rc-photo-wrap">
+      <img class="rc-photo" id="recModalImg" src="" alt="">
+    </div>
+
+    <h2 class="rc-title" id="recModalName"></h2>
+    <div class="rc-subtitle" id="recModalSubtitle" style="display:none;"></div>
+
+    <div class="rc-info-row" id="recModalInfoRow"></div>
+
+    <div class="rc-section" id="recModalIngSection">
+      <div class="rc-section-head">
+        <span class="rc-section-title">🌿 食材準備</span>
+      </div>
+      <div class="rc-ing-list" id="recModalIngredients"></div>
+    </div>
+
+    <div class="rc-section">
+      <div class="rc-section-head">
+        <span class="rc-section-title">🥄 料理步驟</span>
+      </div>
+      <ol class="rc-steps-list" id="recModalSteps"></ol>
+    </div>
+
+    <div class="rc-tip-box" id="recModalTipBox" style="display:none;">
+      <div class="rc-tip-title">💡 雪莉小提醒</div>
+      <div class="rc-tip-text" id="recModalTipText"></div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:14px;">
       <button class="action-btn" id="recBuyBtn">🛒 前往購買食材</button>
       <a class="action-btn action-btn-alt" id="recVideoBtn" style="display:none;" target="_blank" rel="noopener noreferrer">🎬 觀看影片</a>
     </div>
     <div class="buy-status-list" id="recBuyStatusList" style="display:none;"></div>
+
+    <div class="rc-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
   </div>
 </div>
 
@@ -800,27 +1070,43 @@ function renderRecipes() {
 
   items.forEach(recipe => {
     const card = document.createElement('div');
-    card.className = 'item-card';
+    card.className = 'item-card recipe-card';
     card.addEventListener('click', () => openRecipeModal(recipe));
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'rc-img-wrap';
 
     const img = document.createElement('img');
     img.src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
     img.onerror = () => { img.src = PLACEHOLDER_IMG; };
-    card.appendChild(img);
+    imgWrap.appendChild(img);
 
-    const body = document.createElement('div');
-    body.className = 'card-body';
+    const age = recipe['適合月齡'];
+    if (age) {
+      const ageBadge = document.createElement('div');
+      ageBadge.className = 'rc-age-badge';
+      ageBadge.style.background = AGE_COLOR[age] || '#b5755a';
+      ageBadge.textContent = `👶 ${age}`;
+      imgWrap.appendChild(ageBadge);
+    }
+
+    const titleOverlay = document.createElement('div');
+    titleOverlay.className = 'rc-title-overlay';
     const name = document.createElement('div');
     name.className = 'card-name';
     name.textContent = recipe['食譜名稱'] || '';
-    body.appendChild(name);
+    titleOverlay.appendChild(name);
+    imgWrap.appendChild(titleOverlay);
 
-    const tags = document.createElement('div');
-    tags.className = 'card-tags';
-    tags.innerHTML = ageTagHtml(recipe['適合月齡']);
-    body.appendChild(tags);
+    card.appendChild(imgWrap);
 
-    card.appendChild(body);
+    const metaRow = document.createElement('div');
+    metaRow.className = 'rc-meta-row';
+    const ingCount = getRecipeIngredients(recipe).length;
+    const hasVideo = isValidUrl(recipe['影片連結']);
+    metaRow.innerHTML = `<span>🥕 ${ingCount} 種食材</span>` + (hasVideo ? `<span>🎬 有影片</span>` : '<span></span>');
+    card.appendChild(metaRow);
+
     grid.appendChild(card);
   });
 }
@@ -944,17 +1230,49 @@ function openRecipeModal(recipe) {
   document.getElementById('recModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
   document.getElementById('recModalName').textContent = recipe['食譜名稱'] || '';
 
-  document.getElementById('recModalTags').innerHTML = ageTagHtml(recipe['適合月齡']);
+  // 簡介（選填欄位，沒填就不顯示）
+  const subtitleEl = document.getElementById('recModalSubtitle');
+  const subtitle = String(recipe['簡介'] || '').trim();
+  if (subtitle) {
+    subtitleEl.textContent = subtitle;
+    subtitleEl.style.display = 'block';
+  } else {
+    subtitleEl.style.display = 'none';
+  }
 
+  // 資訊列：烹調時間／適合月齡／難易度，三個都選填，有填才顯示對應的格子
+  const infoRowEl = document.getElementById('recModalInfoRow');
+  const infoItems = [];
+  const cookTime = String(recipe['烹調時間'] || '').trim();
+  if (cookTime) infoItems.push({ icon: '⏱', label: '烹調時間', value: cookTime });
+  const age = recipe['適合月齡'];
+  if (age) infoItems.push({ icon: '👶', label: '適合年齡', value: age });
+  const diffRaw = parseInt(recipe['難易度'], 10);
+  if (diffRaw >= 1 && diffRaw <= 5) {
+    infoItems.push({ icon: '🩷', label: '難易度', value: '★'.repeat(diffRaw) + '☆'.repeat(5 - diffRaw) });
+  }
+  if (infoItems.length) {
+    infoRowEl.innerHTML = infoItems.map(it => `
+      <div class="rc-info-item">
+        <div class="rc-info-icon">${it.icon}</div>
+        <div class="rc-info-label">${it.label}</div>
+        <div class="rc-info-value">${it.value}</div>
+      </div>
+    `).join('');
+    infoRowEl.style.display = 'flex';
+  } else {
+    infoRowEl.style.display = 'none';
+  }
+
+  // 食材準備：雙欄清單
   const ingList = getRecipeIngredients(recipe);
-  const ingTagsEl = document.getElementById('recModalIngredients');
-  ingTagsEl.innerHTML = '';
+  const ingListEl = document.getElementById('recModalIngredients');
+  ingListEl.innerHTML = '';
 
-  // 一般食材（純文字）跟品牌食材分開處理
   const genericItems = ingList.filter(i => i._generic);
   const brandItems = ingList.filter(i => !i._generic);
 
-  // 品牌食材：用「簡稱優先」的key分組，同一個key（不管幾個品牌）只顯示一個標籤
+  // 品牌食材：用「簡稱優先」的key分組，同一個key（不管幾個品牌）只顯示一次
   const groups = {};
   brandItems.forEach(i => {
     const key = ingredientFilterKey(i);
@@ -965,42 +1283,54 @@ function openRecipeModal(recipe) {
   Object.keys(groups).forEach(key => {
     const group = groups[key];
     const first = group[0];
-    const qtyText = first._quantity ? ` × ${first._quantity}` : '';
-    const span = document.createElement('span');
-    span.className = 'mini-tag tag-brand';
-    span.style.cursor = 'pointer';
-
-    if (group.length === 1) {
-      span.textContent = `${key}${qtyText}`;
-      span.title = first['食材名稱'];
-      span.addEventListener('click', () => {
-        closeModal('recipeModal');
-        openIngredientModal(first);
-      });
-    } else {
-      // 同一個簡稱來自多個品牌：標籤只顯示簡稱，點擊時自動挑「開團中，或最接近開團」的那個品牌開啟
-      span.textContent = `${key}${qtyText}`;
-      span.title = `${first['食材名稱']}（可來自：${group.map(g => g['品牌']).join('／')}）`;
-      span.addEventListener('click', () => {
-        closeModal('recipeModal');
-        openIngredientModal(pickBestBrandIngredient(group));
-      });
-    }
-    ingTagsEl.appendChild(span);
+    const row = document.createElement('div');
+    row.className = 'rc-ing-item';
+    row.innerHTML = `<span class="rc-ing-name">${key}</span><span class="rc-ing-qty">${first._quantity || ''}</span>`;
+    row.addEventListener('click', () => {
+      closeModal('recipeModal');
+      openIngredientModal(group.length === 1 ? first : pickBestBrandIngredient(group));
+    });
+    ingListEl.appendChild(row);
   });
 
   genericItems.forEach(i => {
-    const span = document.createElement('span');
-    span.className = 'mini-tag';
-    span.style.background = '#EFEBE5';
-    span.style.color = '#8C8378';
-    const qtyText = i._quantity ? ` × ${i._quantity}` : '';
-    span.textContent = `${i['食材名稱']}${qtyText}`;
-    ingTagsEl.appendChild(span);
+    const row = document.createElement('div');
+    row.className = 'rc-ing-item';
+    row.style.cursor = 'default';
+    row.innerHTML = `<span class="rc-ing-name" style="color:#8C8378;">${i['食材名稱']}</span><span class="rc-ing-qty">${i._quantity || ''}</span>`;
+    ingListEl.appendChild(row);
   });
 
+  if (!ingList.length) {
+    ingListEl.innerHTML = `<div class="rc-ing-item" style="cursor:default;"><span class="rc-ing-name">（尚未提供食材清單）</span></div>`;
+  }
+
+  // 料理步驟：每一行變成一個編號項目
   const stepsRaw = String(recipe['做法步驟'] || '').replace(/\\n/g, '\n'); // 相容「不小心打成文字\n」的情況
-  document.getElementById('recModalSteps').textContent = stepsRaw || '（尚未提供做法）';
+  const stepsEl = document.getElementById('recModalSteps');
+  stepsEl.innerHTML = '';
+  const stepLines = stepsRaw.split('\n').map(s => s.replace(/^\s*\d+[.、)]\s*/, '').trim()).filter(Boolean);
+  if (stepLines.length) {
+    stepLines.forEach(line => {
+      const li = document.createElement('li');
+      li.textContent = line;
+      stepsEl.appendChild(li);
+    });
+  } else {
+    const li = document.createElement('li');
+    li.textContent = '（尚未提供做法）';
+    stepsEl.appendChild(li);
+  }
+
+  // 雪莉小提醒（選填）
+  const tipBox = document.getElementById('recModalTipBox');
+  const tip = String(recipe['小提醒'] || '').trim();
+  if (tip) {
+    document.getElementById('recModalTipText').textContent = tip;
+    tipBox.style.display = 'block';
+  } else {
+    tipBox.style.display = 'none';
+  }
 
   const videoBtn = document.getElementById('recVideoBtn');
   if (isValidUrl(recipe['影片連結'])) {
