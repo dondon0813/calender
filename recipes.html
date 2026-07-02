@@ -945,6 +945,184 @@
     border: 2px dashed #FFD3AC;
     border-radius: 18px;
   }
+
+  /* ===== 開學清單 ===== */
+  .school-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .school-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: #5F87C9;
+  }
+  .school-subtitle {
+    font-size: 12.5px;
+    color: #8a7462;
+    margin-top: 6px;
+  }
+  .school-category-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    background: #E2EBFD;
+    border-radius: 999px;
+    padding: 5px 14px;
+    display: inline-block;
+    margin: 18px 0 12px;
+  }
+  .school-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .school-card {
+    position: relative;
+    background: #FFFDFA;
+    border: 2px solid #FFE3CC;
+    border-radius: 16px;
+    padding: 14px 6px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .school-card:hover { transform: translateY(-2px); }
+  .school-card.checked {
+    border-color: #9ACB85;
+    background: #F2FAEF;
+  }
+  .school-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 2px solid #E0C9B0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+  }
+  .school-card.checked .school-checkbox {
+    background: #9ACB85;
+    border-color: #9ACB85;
+  }
+  .school-icon-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    background: #FFF1E6;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .school-icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .school-icon-wrap.emoji-icon {
+    font-size: 34px;
+  }
+  .school-card-name {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #8a7462;
+  }
+  .school-card.checked .school-card-name { color: #5C9147; }
+  .school-reminder-box {
+    border: 2px dashed #FFC7D3;
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .school-reminder-text {
+    font-size: 12px;
+    color: #8a7462;
+    line-height: 1.6;
+  }
+  .school-reminder-text b {
+    color: #FF6F91;
+  }
+  .school-progress {
+    text-align: center;
+    font-size: 12px;
+    color: #a89888;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .school-remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    color: #c99a3a;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .school-remove-btn:hover { background: #FFE3CC; }
+  .school-removed-toggle {
+    display: block;
+    margin: 18px auto 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #b5755a;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .school-removed-box {
+    margin-top: 10px;
+    border: 2px dashed #E0C9B0;
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+  .school-removed-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 4px;
+    border-bottom: 1px dotted #F0DFCB;
+    font-size: 12.5px;
+    color: #8a7462;
+  }
+  .school-removed-item:last-child { border-bottom: none; }
+  .school-restore-btn {
+    flex: none;
+    border: none;
+    border-radius: 999px;
+    background: #9ACB85;
+    color: #fff;
+    font-weight: 800;
+    font-size: 11.5px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  @media (max-width: 420px) {
+    .school-grid { grid-template-columns: repeat(3, 1fr); }
+    .school-icon-wrap.emoji-icon { font-size: 26px; }
+  }
 </style>
 </head>
 <body>
@@ -978,8 +1156,7 @@
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">探索餐盤靈感 💗</div>
       </div>
-      <div class="home-card home-card-blue soon-card">
-        <div class="soon-badge">即將推出</div>
+      <div class="home-card home-card-blue" id="tabSchoolList">
         <div class="home-card-icon">🎒</div>
         <div class="home-card-title">開學清單</div>
         <div class="home-card-title-divider"></div>
@@ -1077,6 +1254,24 @@
     <div class="recipe-reco-title" id="recipeRecoTitle">🍽 食譜推薦（共 0 道）</div>
     <div class="recipe-card-grid" id="recipeGrid"></div>
     <div class="empty-state" id="recipeEmpty" style="display:none;">這個篩選條件下沒有找到食譜</div>
+  </div>
+
+  <!-- 開學清單畫面 -->
+  <div id="schoolListView" style="display:none;">
+    <button class="back-btn" id="backFromSchoolList">← 返回首頁</button>
+    <div class="school-header">
+      <div class="school-title">🎒 開學用品清單</div>
+      <div class="school-subtitle">開學前一起檢查，準備好上學囉！</div>
+    </div>
+    <div class="school-progress" id="schoolProgress"></div>
+    <div id="schoolListContent"></div>
+    <div class="empty-state" id="schoolListEmpty" style="display:none;">目前還沒有設定開學清單項目</div>
+    <button class="school-removed-toggle" id="schoolRemovedToggle" style="display:none;"></button>
+    <div class="school-removed-box" id="schoolRemovedBox" style="display:none;"></div>
+    <div class="school-reminder-box">
+      <span style="font-size:20px;">🌸</span>
+      <div class="school-reminder-text"><b>小提醒：</b>所有物品都記得寫上名字，才不會弄丟喔！</div>
+    </div>
   </div>
 
   <div class="footer">雪莉與朵栗 ♥</div>
@@ -1189,6 +1384,7 @@ let BRANDS = [];
 let BRAND_INTRO = {}; // 品牌名稱 -> 品牌介紹文字
 let INGREDIENTS = [];
 let RECIPES = [];
+let SCHOOL_ITEMS = [];
 let CALENDAR_EVENTS = [];
 
 let currentView = 'ingredients'; // 'ingredients' | 'recipes'
@@ -1252,6 +1448,7 @@ async function loadAll() {
     applyPresetView();
     renderIngredients();
     renderRecipes();
+    renderSchoolList();
   } catch (err) {
     statusEl.style.display = 'block';
     statusEl.textContent = '資料載入失敗，請稍後重新整理再試一次';
@@ -1276,6 +1473,14 @@ async function loadRecipeDb() {
   });
   INGREDIENTS = (data.ingredients || []).filter(i => i['食材ID']);
   RECIPES = (data.recipes || []).filter(r => r['食譜ID']);
+  SCHOOL_ITEMS = (data.schoolList || []).filter(s => s['編號']);
+  SCHOOL_ITEMS.sort((a, b) => {
+    const oa = parseFloat(a['排序']); const ob = parseFloat(b['排序']);
+    if (!isNaN(oa) && !isNaN(ob)) return oa - ob;
+    if (!isNaN(oa)) return -1;
+    if (!isNaN(ob)) return 1;
+    return 0;
+  });
 }
 
 async function loadCalendar() {
@@ -1346,17 +1551,25 @@ function getRecipeBrands(recipe) {
 }
 
 // 篩選用的分類key：優先用「簡稱」，沒填才用「食材名稱」
-// 這樣不同品牌/不同完整商品名稱，只要簡稱打一樣，就會被歸成同一個篩選標籤
+// 簡稱可以用「/」填多個，例如「牛高湯/高湯」，代表這個食材同時屬於「牛高湯」跟「高湯」兩個篩選標籤
+// 這樣食譜用到牛高湯的話，篩選點「牛高湯」或籠統的「高湯」都找得到；
+// 但如果食譜寫的是別的食材，簡稱只填「高湯」，就只有點「高湯」才找得到，不會出現在「牛高湯」篩選裡
+function ingredientFilterKeys(ing) {
+  const raw = String(ing['簡稱'] || '').trim();
+  if (!raw) return ing['食材名稱'] ? [ing['食材名稱']] : [];
+  return raw.split('/').map(s => s.trim()).filter(Boolean);
+}
+
+// 顯示用的「主要」簡稱（例如食譜食材清單、篩選磚的圖示標籤文字）：取第一個標籤
 function ingredientFilterKey(ing) {
-  const short = String(ing['簡稱'] || '').trim();
-  return short || ing['食材名稱'] || '';
+  const keys = ingredientFilterKeys(ing);
+  return keys[0] || '';
 }
 
 function getRecipeIngredientKeys(recipe) {
   const set = new Set();
   getRecipeIngredients(recipe).forEach(i => {
-    const key = ingredientFilterKey(i);
-    if (key) set.add(key);
+    ingredientFilterKeys(i).forEach(key => { if (key) set.add(key); });
   });
   return Array.from(set);
 }
@@ -1394,14 +1607,15 @@ function initFilters() {
     recBrandChipsEl.appendChild(chip);
   });
 
-  // 觀看食譜的食材篩選：用「簡稱優先」的分類key去重
-  // 不同品牌/不同完整食材名稱，只要簡稱一樣，就會合併成同一個標籤
+  // 觀看食譜的食材篩選：把每個食材的「所有簡稱標籤」都攤平出來去重
+  // 例如牛肉湯簡稱填「牛高湯/高湯」，篩選磚就會同時出現「牛高湯」跟「高湯」兩顆
+  // 不同品牌/不同完整食材名稱，只要簡稱有一樣的，就會合併成同一個標籤
   const foodIngredients = ingredientsOfType('食材');
-  const ingKeys = Array.from(new Set(foodIngredients.map(ingredientFilterKey))).filter(Boolean);
+  const ingKeys = Array.from(new Set(foodIngredients.flatMap(ingredientFilterKeys))).filter(Boolean);
   const recIngChipsEl = document.getElementById('recIngredientChips');
   recIngChipsEl.innerHTML = '';
   ingKeys.forEach(key => {
-    const representative = foodIngredients.find(i => ingredientFilterKey(i) === key);
+    const representative = foodIngredients.find(i => ingredientFilterKeys(i).includes(key));
     const tile = document.createElement('div');
     tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
     tile.title = key;
@@ -1618,7 +1832,209 @@ function renderRecipes() {
   });
 }
 
-// ===== 食材彈窗 =====
+// ===== 開學清單：打勾狀態 + 移除狀態都存在瀏覽器本機（localStorage），同裝置下次打開會記得 =====
+const SCHOOL_STORAGE_KEY = 'yc_school_checklist_v1';
+const SCHOOL_REMOVED_KEY = 'yc_school_removed_v1';
+let schoolRemovedExpanded = false;
+
+function getCheckedSchoolIds() {
+  try {
+    const raw = localStorage.getItem(SCHOOL_STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveCheckedSchoolIds(set) {
+  try {
+    localStorage.setItem(SCHOOL_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) { /* 瀏覽器不支援或被封鎖時，安靜地放棄儲存，不影響畫面操作 */ }
+}
+
+function getRemovedSchoolIds() {
+  try {
+    const raw = localStorage.getItem(SCHOOL_REMOVED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveRemovedSchoolIds(set) {
+  try {
+    localStorage.setItem(SCHOOL_REMOVED_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) { /* 同上，安靜放棄 */ }
+}
+
+function toggleSchoolItem(id) {
+  const checked = getCheckedSchoolIds();
+  if (checked.has(id)) checked.delete(id); else checked.add(id);
+  saveCheckedSchoolIds(checked);
+  renderSchoolList();
+}
+
+function removeSchoolItem(id) {
+  const removed = getRemovedSchoolIds();
+  removed.add(id);
+  saveRemovedSchoolIds(removed);
+  // 移除的項目如果原本有打勾，也順便清掉勾選狀態，避免加回來時顯示奇怪的已完成狀態
+  const checked = getCheckedSchoolIds();
+  if (checked.has(id)) { checked.delete(id); saveCheckedSchoolIds(checked); }
+  renderSchoolList();
+}
+
+function restoreSchoolItem(id) {
+  const removed = getRemovedSchoolIds();
+  removed.delete(id);
+  saveRemovedSchoolIds(removed);
+  renderSchoolList();
+}
+
+function renderSchoolList() {
+  const contentEl = document.getElementById('schoolListContent');
+  const emptyEl = document.getElementById('schoolListEmpty');
+  const progressEl = document.getElementById('schoolProgress');
+  const removedToggleEl = document.getElementById('schoolRemovedToggle');
+  const removedBoxEl = document.getElementById('schoolRemovedBox');
+  contentEl.innerHTML = '';
+
+  if (!SCHOOL_ITEMS.length) {
+    emptyEl.style.display = 'block';
+    progressEl.style.display = 'none';
+    removedToggleEl.style.display = 'none';
+    removedBoxEl.style.display = 'none';
+    return;
+  }
+
+  const removedIds = getRemovedSchoolIds();
+  const visibleItems = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
+  const removedItems = SCHOOL_ITEMS.filter(it => removedIds.has(it['編號']));
+
+  if (!visibleItems.length) {
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = '這個裝置的清單項目都被移除囉，可以到下面「已移除的項目」加回來';
+  } else {
+    emptyEl.style.display = 'none';
+  }
+
+  const checked = getCheckedSchoolIds();
+  const totalChecked = visibleItems.filter(it => checked.has(it['編號'])).length;
+  progressEl.style.display = visibleItems.length ? 'block' : 'none';
+  progressEl.textContent = `已準備 ${totalChecked} / ${visibleItems.length} 項`;
+
+  // 有填「分類」的話依分類分組顯示，順序依第一次出現的分類為準；完全沒填分類就整批平鋪
+  const hasCategory = visibleItems.some(it => String(it['分類'] || '').trim());
+
+  if (visibleItems.length) {
+    if (!hasCategory) {
+      contentEl.appendChild(buildSchoolGrid(visibleItems, checked));
+    } else {
+      const groups = [];
+      const groupIndex = {};
+      visibleItems.forEach(it => {
+        const cat = String(it['分類'] || '').trim() || '其他';
+        if (!(cat in groupIndex)) {
+          groupIndex[cat] = groups.length;
+          groups.push({ cat, items: [] });
+        }
+        groups[groupIndex[cat]].items.push(it);
+      });
+      groups.forEach(g => {
+        const head = document.createElement('div');
+        head.className = 'school-category-title';
+        head.textContent = g.cat;
+        contentEl.appendChild(head);
+        contentEl.appendChild(buildSchoolGrid(g.items, checked));
+      });
+    }
+  }
+
+  // 已移除的項目：收合區塊，展開才看得到，點「加回來」可以恢復顯示
+  if (!removedItems.length) {
+    removedToggleEl.style.display = 'none';
+    removedBoxEl.style.display = 'none';
+    return;
+  }
+  removedToggleEl.style.display = 'block';
+  removedToggleEl.textContent = (schoolRemovedExpanded ? '▲ ' : '▼ ') + `已移除的項目（${removedItems.length}）`;
+  removedToggleEl.onclick = () => {
+    schoolRemovedExpanded = !schoolRemovedExpanded;
+    renderSchoolList();
+  };
+
+  if (!schoolRemovedExpanded) {
+    removedBoxEl.style.display = 'none';
+    return;
+  }
+  removedBoxEl.style.display = 'block';
+  removedBoxEl.innerHTML = '';
+  removedItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'school-removed-item';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = item['項目名稱'] || '';
+    row.appendChild(nameSpan);
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'school-restore-btn';
+    restoreBtn.textContent = '＋ 加回來';
+    restoreBtn.addEventListener('click', () => restoreSchoolItem(item['編號']));
+    row.appendChild(restoreBtn);
+    removedBoxEl.appendChild(row);
+  });
+}
+
+function buildSchoolGrid(items, checkedSet) {
+  const grid = document.createElement('div');
+  grid.className = 'school-grid';
+  items.forEach(item => {
+    const id = item['編號'];
+    const isChecked = checkedSet.has(id);
+
+    const card = document.createElement('div');
+    card.className = 'school-card' + (isChecked ? ' checked' : '');
+    card.addEventListener('click', () => toggleSchoolItem(id));
+
+    const box = document.createElement('div');
+    box.className = 'school-checkbox';
+    box.textContent = isChecked ? '✓' : '';
+    card.appendChild(box);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'school-remove-btn';
+    removeBtn.textContent = '✕';
+    removeBtn.title = '這個項目我們學校不需要';
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeSchoolItem(id);
+    });
+    card.appendChild(removeBtn);
+
+    const iconWrap = document.createElement('div');
+    const iconRaw = String(item['圖示'] || '').trim();
+    if (isValidUrl(iconRaw)) {
+      iconWrap.className = 'school-icon-wrap';
+      const img = document.createElement('img');
+      img.src = iconRaw;
+      img.onerror = () => { iconWrap.className = 'school-icon-wrap emoji-icon'; iconWrap.textContent = '🎒'; };
+      iconWrap.appendChild(img);
+    } else {
+      iconWrap.className = 'school-icon-wrap emoji-icon';
+      iconWrap.textContent = iconRaw || '🎒';
+    }
+    card.appendChild(iconWrap);
+
+    const name = document.createElement('div');
+    name.className = 'school-card-name';
+    name.textContent = item['項目名稱'] || '';
+    card.appendChild(name);
+
+    grid.appendChild(card);
+  });
+  return grid;
+}
+
+
 // 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
 function pickBestBrandIngredient(group) {
   const withStatus = group.map(item => ({ item, status: getBrandStatus(item['品牌']) }));
@@ -1919,9 +2335,11 @@ function switchView(view) {
   document.getElementById('homeView').style.display = view === 'home' ? 'block' : 'none';
   document.getElementById('ingredientsView').style.display = view === 'ingredients' ? 'block' : 'none';
   document.getElementById('recipesView').style.display = view === 'recipes' ? 'block' : 'none';
+  document.getElementById('schoolListView').style.display = view === 'schoolList' ? 'block' : 'none';
 }
 document.getElementById('tabIngredients').addEventListener('click', () => switchView('ingredients'));
 document.getElementById('tabRecipes').addEventListener('click', () => switchView('recipes'));
+document.getElementById('tabSchoolList').addEventListener('click', () => switchView('schoolList'));
 document.querySelectorAll('.soon-card').forEach(card => {
   card.addEventListener('click', () => {
     alert('這個功能還在準備中，敬請期待！🩷');
@@ -1929,6 +2347,7 @@ document.querySelectorAll('.soon-card').forEach(card => {
 });
 document.getElementById('backFromIngredients').addEventListener('click', () => switchView('home'));
 document.getElementById('backFromRecipes').addEventListener('click', () => switchView('home'));
+document.getElementById('backFromSchoolList').addEventListener('click', () => switchView('home'));
 
 function applyPresetView() {
   if (presetBrand && BRANDS.includes(presetBrand)) {
