@@ -128,21 +128,24 @@
     cursor: pointer;
     text-decoration: underline;
     padding: 6px 4px;
+    display: block;
+    margin-bottom: 18px;
   }
 
   /* 卡片格線 */
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
   }
 
   /* 選擇食材：圖示格子（4欄），仿手繪食材選單風格 */
   .ing-select-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    color: #5a4a3f;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    color: #a89888;
+    letter-spacing: 1px;
     margin: 6px 0 10px;
   }
   .ing-tile-grid {
@@ -729,27 +732,170 @@
 
   @media (max-width: 480px) {
     .page-title { font-size: 22px; }
-    .card-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+    .item-card .card-name { font-size: 11px; }
+  }
+
+  /* ===== 首頁 ===== */
+  .home-subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #b5755a;
+    font-weight: 700;
+    margin-bottom: 22px;
+  }
+  .home-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .home-card {
+    border-radius: 22px;
+    padding: 26px 12px 20px;
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .home-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(230,160,110,0.22);
+  }
+  .home-card-pink {
+    background: #FFE7ED;
+    border-color: #FFC7D3;
+  }
+  .home-card-peach {
+    background: #FFEcD9;
+    border-color: #FFD3AC;
+  }
+  .home-card-icon { font-size: 34px; margin-bottom: 8px; }
+  .home-card-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 17px;
+  }
+  .home-card-pink .home-card-title { color: #FF6F91; }
+  .home-card-peach .home-card-title { color: #E0954A; }
+  .home-card-title-divider {
+    width: 60%;
+    height: 0;
+    border-bottom: 2px dashed;
+    margin: 8px auto;
+    opacity: .5;
+  }
+  .home-card-pink .home-card-title-divider { border-color: #FF8FA3; }
+  .home-card-peach .home-card-title-divider { border-color: #E0954A; }
+  .home-card-desc {
+    font-size: 11.5px;
+    color: #8a7462;
+  }
+  .home-explore-box {
+    border: 2px dashed #FFD3AC;
+    border-radius: 22px;
+    padding: 20px 14px;
+    margin-bottom: 20px;
+  }
+  .home-explore-title {
+    text-align: center;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #FF7391;
+    margin-bottom: 16px;
+  }
+  .home-explore-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .home-explore-item { text-align: center; }
+  .home-explore-icon { font-size: 24px; margin-bottom: 6px; }
+  .home-explore-item-title {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    margin-bottom: 4px;
+  }
+  .home-explore-item-desc {
+    font-size: 9.5px;
+    color: #a89888;
+    line-height: 1.5;
+  }
+  .back-btn {
+    display: inline-block;
+    background: none;
+    border: none;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #b5755a;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 14px;
+  }
+  .back-btn:hover { color: #FF8FA3; }
+
+  @media (max-width: 420px) {
+    .home-card-icon { font-size: 28px; }
+    .home-card-title { font-size: 15px; }
+    .home-explore-item-desc { font-size: 8.5px; }
   }
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <div class="page-title-wrap">
-    <div class="page-title-badge">🩷 雪莉與朵栗</div>
-    <div class="page-title">🥕 食材與食譜</div>
+  <!-- 首頁 -->
+  <div id="homeView">
+    <div class="page-title-wrap">
+      <div class="page-title-badge">💗 雪莉與朵栗</div>
+      <div class="page-title">🥕 食材與食譜</div>
+    </div>
+    <div class="home-subtitle">🌸 選擇食材，發現美味食譜 🌸</div>
+
+    <div class="home-cards">
+      <div class="home-card home-card-pink" id="tabIngredients">
+        <div class="home-card-icon">🥗</div>
+        <div class="home-card-title">食材介紹</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">認識豐富的食材 💗</div>
+      </div>
+      <div class="home-card home-card-peach" id="tabRecipes">
+        <div class="home-card-icon">📖</div>
+        <div class="home-card-title">觀看食譜</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">瀏覽美味的食譜 💗</div>
+      </div>
+    </div>
+
+    <div class="home-explore-box">
+      <div class="home-explore-title">🌸 開始探索美味食譜吧！ 🌸</div>
+      <div class="home-explore-grid">
+        <div class="home-explore-item">
+          <div class="home-explore-icon">🔍</div>
+          <div class="home-explore-item-title">選擇喜愛食材</div>
+          <div class="home-explore-item-desc">挑選食材，<br>為家人準備營養餐點</div>
+        </div>
+        <div class="home-explore-item">
+          <div class="home-explore-icon">👩‍🍳</div>
+          <div class="home-explore-item-title">豐富食譜推薦</div>
+          <div class="home-explore-item-desc">依食材推薦適合的<br>美味食譜</div>
+        </div>
+        <div class="home-explore-item">
+          <div class="home-explore-icon">✨</div>
+          <div class="home-explore-item-title">輕鬆學習料理</div>
+          <div class="home-explore-item-desc">簡單步驟，<br>新手也能輕鬆上手</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <div class="main-tabs">
-    <button class="main-tab" id="tabIngredients">食材介紹</button>
-    <button class="main-tab" id="tabRecipes">觀看食譜</button>
-  </div>
-
-  <div id="statusMsg" class="status-msg">資料載入中…</div>
+  <div id="statusMsg" class="status-msg" style="display:none;">資料載入中…</div>
 
   <!-- 食材介紹畫面 -->
   <div id="ingredientsView" style="display:none;">
+    <button class="back-btn" id="backFromIngredients">← 返回首頁</button>
     <div class="filter-section">
       <div class="filter-label">品牌</div>
       <div class="filter-chips" id="ingBrandChips"></div>
@@ -760,16 +906,17 @@
 
   <!-- 觀看食譜畫面 -->
   <div id="recipesView" style="display:none;">
+    <button class="back-btn" id="backFromRecipes">← 返回首頁</button>
     <div class="filter-section">
       <div class="filter-label">品牌</div>
       <div class="filter-chips" id="recBrandChips"></div>
       <div class="filter-label">適合月齡</div>
       <div class="filter-chips" id="recAgeChips"></div>
-      <button class="chip-clear" id="clearFiltersBtn">清除所有篩選</button>
     </div>
 
-    <div class="ing-select-title">🥕 選擇食材</div>
+    <div class="ing-select-title">選擇食材</div>
     <div class="ing-tile-grid" id="recIngredientChips"></div>
+    <button class="chip-clear" id="clearFiltersBtn">清除所有篩選</button>
 
     <div class="recipe-reco-title" id="recipeRecoTitle">🍽 食譜推薦（共 0 道）</div>
     <div class="recipe-card-grid" id="recipeGrid"></div>
@@ -895,7 +1042,8 @@ let recSelectedAges = [];
 
 const urlParams = new URLSearchParams(window.location.search);
 const presetBrand = urlParams.get('brand') || '';
-const presetView = urlParams.get('view') || 'ingredients';
+const presetViewRaw = urlParams.get('view'); // null 代表完全沒帶參數，要停在首頁
+const presetView = presetViewRaw || 'ingredients';
 
 // ===== 日期輔助（跟客人版行事曆共用邏輯） =====
 function parseDateStr(s) {
@@ -948,6 +1096,7 @@ async function loadAll() {
     renderIngredients();
     renderRecipes();
   } catch (err) {
+    statusEl.style.display = 'block';
     statusEl.textContent = '資料載入失敗，請稍後重新整理再試一次';
     console.error(err);
   }
@@ -1589,13 +1738,14 @@ function closeModal(id) {
 // ===== 主分頁切換 =====
 function switchView(view) {
   currentView = view;
-  document.getElementById('tabIngredients').classList.toggle('active', view === 'ingredients');
-  document.getElementById('tabRecipes').classList.toggle('active', view === 'recipes');
+  document.getElementById('homeView').style.display = view === 'home' ? 'block' : 'none';
   document.getElementById('ingredientsView').style.display = view === 'ingredients' ? 'block' : 'none';
   document.getElementById('recipesView').style.display = view === 'recipes' ? 'block' : 'none';
 }
 document.getElementById('tabIngredients').addEventListener('click', () => switchView('ingredients'));
 document.getElementById('tabRecipes').addEventListener('click', () => switchView('recipes'));
+document.getElementById('backFromIngredients').addEventListener('click', () => switchView('home'));
+document.getElementById('backFromRecipes').addEventListener('click', () => switchView('home'));
 
 function applyPresetView() {
   if (presetBrand && BRANDS.includes(presetBrand)) {
@@ -1603,7 +1753,13 @@ function applyPresetView() {
     recSelectedBrands = [presetBrand];
     initFilters();
   }
-  switchView(presetView === 'recipes' ? 'recipes' : 'ingredients');
+  // 完全沒帶網址參數（直接打開 recipes.html）才停在首頁；
+  // 從客人版行事曆帶 brand/view 參數點進來的話，直接跳到對應畫面
+  if (!presetBrand && presetViewRaw === null) {
+    switchView('home');
+  } else {
+    switchView(presetView === 'recipes' ? 'recipes' : 'ingredients');
+  }
 }
 
 loadAll();
