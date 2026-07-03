@@ -2122,9 +2122,10 @@ function openSchoolItemModal(item) {
   const noBrandBox = document.getElementById('schoolModalNoBrand');
   const listEl = document.getElementById('schoolModalBrandList');
 
-  const brands = brandRaw.split('/').map(s => s.trim()).filter(Boolean);
-  // 蝦皮連結也用「/」分隔，跟品牌推薦照順序一一對應；沒填或數量對不上的部分，用預設的分潤連結頂替
-  const shopeeLinks = shopeeRaw.split('/').map(s => s.trim());
+  const brands = brandRaw.split('|').map(s => s.trim()).filter(Boolean);
+  // 蝦皮連結也用「｜」分隔（不能用「/」，因為網址本身就有很多斜線，用/分隔會把網址切爛）
+  // 跟品牌推薦照順序一一對應；沒填或數量對不上的部分，用預設的分潤連結頂替
+  const shopeeLinks = shopeeRaw.split('|').map(s => s.trim());
 
   if (brands.length) {
     listEl.innerHTML = '';
