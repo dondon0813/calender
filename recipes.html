@@ -1206,37 +1206,18 @@
     text-align: center;
     margin-bottom: 26px;
   }
-  .a4-badge {
-    display: inline-block;
-    font-size: 14px;
-    font-weight: 800;
-    color: #FF8FA3;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 6px 18px;
-    margin-bottom: 10px;
-  }
-  .a4-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 34px;
-    color: #5a4a3f;
-    padding-bottom: 12px;
-    position: relative;
-  }
-  .a4-title::after {
-    content: '';
+  .a4-title-img {
+    max-width: 480px;
+    width: 68%;
+    height: auto;
     display: block;
-    width: 160px;
-    height: 0;
-    border-bottom: 3px dashed #FFC2CE;
-    margin: 10px auto 0;
+    margin: 0 auto;
   }
   .a4-subtitle {
-    font-size: 13px;
+    font-size: 14px;
     color: #b5755a;
     font-weight: 700;
-    margin-top: 10px;
+    margin-top: 14px;
   }
   .a4-category-title {
     font-size: 16px;
@@ -1254,11 +1235,36 @@
     gap: 16px;
   }
   .a4-item {
+    position: relative;
     background: #FFFDFA;
     border: 2px solid #FFD9BB;
     border-radius: 16px;
     padding: 14px 8px 10px;
     text-align: center;
+  }
+  .a4-item.checked {
+    border-color: #9ACB85;
+    background: #EBF7E6;
+  }
+  .a4-item-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #E0C9B0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .a4-item.checked .a4-item-checkbox {
+    background: #9ACB85;
+    border-color: #9ACB85;
   }
   .a4-item-icon-wrap {
     width: 100%;
@@ -1286,6 +1292,13 @@
     color: #FF8FA3;
     font-weight: 700;
     font-size: 13px;
+  }
+  .a4-footer-img {
+    max-width: 360px;
+    width: 60%;
+    height: auto;
+    display: block;
+    margin: 0 auto 12px;
   }
   .a4-footer .a4-date {
     display: block;
@@ -1441,7 +1454,7 @@
 
     <div class="school-generate-box" id="schoolGenerateBox" style="display:none;">
       <button class="school-generate-btn" id="generateA4Btn">📸 產生我的專屬清單圖片</button>
-      <div class="school-generate-hint">會把你打勾「已準備」的項目做成一張 A4 圖片，方便下載、列印或帶去購物</div>
+      <div class="school-generate-hint">會把清單上的項目（不含已移除的）做成一張 A4 圖片，已打勾的項目圖片上也會顯示 ✓，方便下載、列印或帶去購物</div>
     </div>
 
     <div class="school-reminder-box">
@@ -1577,12 +1590,12 @@
 <div id="a4PosterRoot">
   <div class="a4-poster" id="a4Poster">
     <div class="a4-header">
-      <div class="a4-badge">💗 雪莉與朵栗</div>
-      <div class="a4-title">🎒 我的開學用品清單</div>
+      <img class="a4-title-img" src="icons/title-header.png" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
       <div class="a4-subtitle" id="a4Subtitle"></div>
     </div>
     <div id="a4Body"></div>
     <div class="a4-footer">
+      <img class="a4-footer-img" src="icons/reminder-footer.png" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
       🩷 雪莉與朵栗・@dondon0813 🩷
       <span class="a4-date" id="a4Date"></span>
     </div>
@@ -2380,9 +2393,11 @@ function preloadImage(src) {
 async function buildA4Poster() {
   const checked = getCheckedSchoolIds();
   const removedIds = getRemovedSchoolIds();
-  const items = SCHOOL_ITEMS.filter(it => checked.has(it['編號']) && !removedIds.has(it['編號']));
+  // 產生的圖片是「挑選好的清單」：把打叉移除的項目排除掉，其餘全部列出（不管有沒有打勾）
+  const items = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
+  const checkedCount = items.filter(it => checked.has(it['編號'])).length;
 
-  document.getElementById('a4Subtitle').textContent = `已準備 ${items.length} 項 ・ 一起準備上學去 🎒`;
+  document.getElementById('a4Subtitle').textContent = `共 ${items.length} 項 ・ 已準備 ${checkedCount} 項 ・ 一起準備上學去 🎒`;
   const now = new Date();
   document.getElementById('a4Date').textContent = `製作日期：${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
 
@@ -2419,8 +2434,15 @@ async function buildA4Poster() {
     const grid = document.createElement('div');
     grid.className = 'a4-grid';
     g.items.forEach(item => {
+      const id = item['編號'];
+      const isChecked = checked.has(id);
       const cell = document.createElement('div');
-      cell.className = 'a4-item';
+      cell.className = 'a4-item' + (isChecked ? ' checked' : '');
+
+      const box = document.createElement('div');
+      box.className = 'a4-item-checkbox';
+      box.textContent = isChecked ? '✓' : '';
+      cell.appendChild(box);
 
       const iconRaw = String(item['圖示'] || '').trim();
       const iconWrap = document.createElement('div');
@@ -2459,7 +2481,7 @@ async function generateA4Image() {
   try {
     const hasItems = await buildA4Poster();
     if (!hasItems) {
-      alert('目前還沒有勾選任何「已準備」的項目唷！先去清單上打勾幾樣，再回來產生圖片吧 🎒');
+      alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
       return;
     }
 
