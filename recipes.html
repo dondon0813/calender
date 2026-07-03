@@ -1145,41 +1145,6 @@
     height: 100%;
     object-fit: contain;
   }
-  .school-modal-brand-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #FFF6EC;
-    border-radius: 14px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
-  }
-  .school-modal-brand-label {
-    font-size: 11.5px;
-    font-weight: 800;
-    color: #a89888;
-  }
-  .school-modal-brand-name {
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #5a4a3f;
-  }
-  .school-modal-buy-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .school-modal-next-date {
-    flex: none;
-    font-size: 11.5px;
-    font-weight: 800;
-    color: #FF7391;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 8px 12px;
-    white-space: nowrap;
-  }
-  .school-modal-buy-row .action-btn { flex: 1; }
 </style>
 </head>
 <body>
@@ -1317,8 +1282,7 @@
   <div id="schoolListView" style="display:none;">
     <button class="back-btn" id="backFromSchoolList">← 返回首頁</button>
     <div class="school-header">
-      <img class="school-title-img" src="icons/title-header.png" alt="開學用品清單" onerror="this.style.display='none';">
-      <img class="school-subtitle-img" src="icons/title-subtitle.png" alt="一起準備上學去" onerror="this.style.display='none';">
+      <img class="school-title-img" src="icons/title-header.png" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
     </div>
     <div class="school-progress" id="schoolProgress"></div>
     <div id="schoolListContent"></div>
@@ -1441,14 +1405,10 @@
     <h2 class="rc-title" id="schoolModalName"></h2>
 
     <div id="schoolModalBrandBox" style="display:none;">
-      <div class="school-modal-brand-row">
-        <div class="school-modal-brand-label">🏷 品牌推薦</div>
-        <div class="school-modal-brand-name" id="schoolModalBrandName"></div>
+      <div class="rc-section-head" style="margin-top:4px;">
+        <span class="rc-section-title">🏷 品牌推薦</span>
       </div>
-      <div class="school-modal-buy-row">
-        <span class="school-modal-next-date" id="schoolModalNextDate" style="display:none;"></span>
-        <a class="action-btn" id="schoolModalBuyBtn" target="_blank" rel="noopener noreferrer">🛒 前往蝦皮下單</a>
-      </div>
+      <div id="schoolModalBrandList"></div>
     </div>
     <div id="schoolModalNoBrand" style="display:none;">
       <a class="action-btn" id="schoolModalBuyBtnAlt" target="_blank" rel="noopener noreferrer">🛒 前往蝦皮下單</a>
@@ -2140,18 +2100,9 @@ function buildSchoolGrid(items, checkedSet) {
   return grid;
 }
 
-// 開學清單品項彈窗：顯示品牌推薦、下一團時間（比對現有行事曆），以及購買按鈕
-// 如果品牌現正開團中，按鈕會自動改連到團購頁面（跟食材小卡的「前往購買」邏輯一樣，抓客人版行事曆的連結）；
-// 沒有開團中就走蝦皮分潤連結
-function getSchoolNextGroupInfo(brandText) {
-  const brand = String(brandText || '').trim();
-  if (!brand) return null;
-  const status = getBrandStatus(brand);
-  if (status.status === 'open') return { label: '🟢 現正開團中', url: status.url };
-  if (status.status === 'upcoming') return { label: `下一團 ${fmtSingleDate(status.nextDate)} 開團`, url: null };
-  return null;
-}
-
+// 開學清單品項彈窗：品牌推薦可以用「/」填多個品牌，例如「Aribebe/永圻魚湯」，
+// 每個品牌都會各自列出自己的狀態（現正開團中／下一團幾號／目前尚無安排）跟對應的按鈕：
+// 開團中 → 按鈕直接連到那個品牌的團購頁面；不是開團中 → 按鈕走蝦皮分潤連結
 function openSchoolItemModal(item) {
   const iconRaw = String(item['圖示'] || '').trim();
   const imgEl = document.getElementById('schoolModalImg');
@@ -2164,38 +2115,40 @@ function openSchoolItemModal(item) {
 
   document.getElementById('schoolModalName').textContent = item['項目名稱'] || '';
 
-  const brand = String(item['品牌推薦'] || '').trim();
-  const shopeeUrl = String(item['蝦皮連結'] || '').trim() || SHOPEE_AFFILIATE_URL;
+  const brandRaw = String(item['品牌推薦'] || '').trim();
+  const shopeeRaw = String(item['蝦皮連結'] || '').trim();
 
   const brandBox = document.getElementById('schoolModalBrandBox');
   const noBrandBox = document.getElementById('schoolModalNoBrand');
+  const listEl = document.getElementById('schoolModalBrandList');
 
-  if (brand) {
-    document.getElementById('schoolModalBrandName').textContent = brand;
-    const info = getSchoolNextGroupInfo(brand);
-    const dateEl = document.getElementById('schoolModalNextDate');
-    const buyBtn = document.getElementById('schoolModalBuyBtn');
-    if (info) {
-      dateEl.textContent = info.label;
-      dateEl.style.display = 'inline-block';
-      if (info.url) {
-        // 現正開團中：直接連到團購頁面，比蝦皮划算
-        buyBtn.href = info.url;
-        buyBtn.textContent = '🛒 前往團購下單';
+  const brands = brandRaw.split('/').map(s => s.trim()).filter(Boolean);
+  // 蝦皮連結也用「/」分隔，跟品牌推薦照順序一一對應；沒填或數量對不上的部分，用預設的分潤連結頂替
+  const shopeeLinks = shopeeRaw.split('/').map(s => s.trim());
+
+  if (brands.length) {
+    listEl.innerHTML = '';
+    brands.forEach((brand, idx) => {
+      const shopeeUrl = shopeeLinks[idx] && isValidUrl(shopeeLinks[idx]) ? shopeeLinks[idx] : SHOPEE_AFFILIATE_URL;
+      const status = getBrandStatus(brand);
+      const row = document.createElement('div');
+      row.className = 'buy-status-item';
+
+      let rightHtml = '';
+      if (status.status === 'open') {
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><a class="bsi-btn" href="${status.url}" target="_blank" rel="noopener noreferrer">🟢 現正開團中・前往下單</a></div>`;
+      } else if (status.status === 'upcoming') {
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(status.nextDate)} 開團</span><a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a></div>`;
       } else {
-        // 還沒開團：先讓客人走蝦皮分潤連結買
-        buyBtn.href = shopeeUrl;
-        buyBtn.textContent = '🛒 前往蝦皮下單';
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前尚無安排開團</span><a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a></div>`;
       }
-    } else {
-      dateEl.style.display = 'none';
-      buyBtn.href = shopeeUrl;
-      buyBtn.textContent = '🛒 前往蝦皮下單';
-    }
+      row.innerHTML = `<span class="bsi-brand">${brand}</span>` + rightHtml;
+      listEl.appendChild(row);
+    });
     brandBox.style.display = 'block';
     noBrandBox.style.display = 'none';
   } else {
-    document.getElementById('schoolModalBuyBtnAlt').href = shopeeUrl;
+    document.getElementById('schoolModalBuyBtnAlt').href = (shopeeLinks[0] && isValidUrl(shopeeLinks[0])) ? shopeeLinks[0] : SHOPEE_AFFILIATE_URL;
     brandBox.style.display = 'none';
     noBrandBox.style.display = 'block';
   }
