@@ -1167,16 +1167,17 @@
   .school-generate-btn {
     display: inline-block;
     border: none;
-    border-radius: 999px;
-    background: #7AAEEB;
-    color: #fff;
-    font-weight: 800;
-    font-size: 14px;
-    padding: 12px 26px;
+    background: none;
+    padding: 0;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(122,174,235,0.35);
   }
-  .school-generate-btn:hover { background: #5F97DB; }
+  .school-generate-btn-img {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    margin: 0 auto;
+  }
   .school-generate-btn:disabled {
     opacity: 0.6;
     cursor: default;
@@ -1229,6 +1230,18 @@
     display: inline-block;
     margin: 22px 0 14px;
   }
+  .a4-cat-header {
+    grid-column: 1 / -1;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    background: #5a4a3f;
+    border-radius: 999px;
+    padding: 7px 18px;
+    width: fit-content;
+    margin: 18px 0 4px;
+  }
+  .a4-cat-header:first-child { margin-top: 0; }
   .a4-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -1453,7 +1466,7 @@
     <div class="school-removed-box" id="schoolRemovedBox" style="display:none;"></div>
 
     <div class="school-generate-box" id="schoolGenerateBox" style="display:none;">
-      <button class="school-generate-btn" id="generateA4Btn">📸 產生我的專屬清單圖片</button>
+      <button class="school-generate-btn" id="generateA4Btn"><img class="school-generate-btn-img" src="icons/btn-generate.png" alt="產生我的專屬用品清單"></button>
       <div class="school-generate-hint">會把清單上的項目（不含已移除的）做成一張 A4 圖片，已打勾的項目圖片上也會顯示 ✓，方便下載、列印或帶去購物</div>
     </div>
 
@@ -2423,17 +2436,54 @@ async function buildA4Poster() {
   }
 
   const imgChecks = [];
+  const COLS = 5;
 
-  for (const g of groups) {
-    if (g.cat) {
-      const head = document.createElement('div');
-      head.className = 'a4-category-title';
-      head.textContent = g.cat;
-      bodyEl.appendChild(head);
+  // 全域湊行：處理每個分類時，先由前往後檢查「所有」還沒排滿的既有行，
+  // 有空位就優先塞進去填滿（不只看緊接在後面那一行），剩下塞不進既有行的部分才另外開新的一行；
+  // 分類標題只會出現在「這個分類真正拿到自己專屬新行」的地方——
+  // 如果整批項目都被拆散塞進之前幾個分類的空位裡，就不會再顯示這個分類的標題
+  const rows = []; // 每個元素是 { items: [...] }，items.length 最多 COLS
+  const headerByRowIndex = new Map(); // rowIndex -> 分類名稱
+
+  groups.forEach(g => {
+    let remaining = g.items.slice();
+
+    // 第一步：由前往後掃過所有既有行，能塞多少先塞多少
+    for (let r = 0; r < rows.length && remaining.length; r++) {
+      const row = rows[r];
+      const cap = COLS - row.items.length;
+      if (cap > 0) {
+        row.items.push(...remaining.splice(0, cap));
+      }
     }
-    const grid = document.createElement('div');
-    grid.className = 'a4-grid';
-    g.items.forEach(item => {
+
+    // 第二步：塞不進既有行的剩餘項目，另外開新的一行（每行最多 COLS 個）
+    let firstNewRowIndex = null;
+    while (remaining.length) {
+      const row = { items: remaining.splice(0, COLS) };
+      rows.push(row);
+      if (firstNewRowIndex === null) firstNewRowIndex = rows.length - 1;
+    }
+
+    // 只有「真的拿到自己專屬新行」的分類才顯示標題；全部被塞進別行的話就不顯示
+    if (g.cat && firstNewRowIndex !== null) {
+      headerByRowIndex.set(firstNewRowIndex, g.cat);
+    }
+  });
+
+  const gridEl = document.createElement('div');
+  gridEl.className = 'a4-grid';
+  bodyEl.appendChild(gridEl);
+
+  rows.forEach((row, rowIndex) => {
+    if (headerByRowIndex.has(rowIndex)) {
+      const head = document.createElement('div');
+      head.className = 'a4-cat-header';
+      head.textContent = headerByRowIndex.get(rowIndex);
+      gridEl.appendChild(head);
+    }
+
+    row.items.forEach(item => {
       const id = item['編號'];
       const isChecked = checked.has(id);
       const cell = document.createElement('div');
@@ -2463,10 +2513,9 @@ async function buildA4Poster() {
       name.textContent = item['項目名稱'] || '';
       cell.appendChild(name);
 
-      grid.appendChild(cell);
+      gridEl.appendChild(cell);
     });
-    bodyEl.appendChild(grid);
-  }
+  });
 
   await Promise.all(imgChecks);
   return true;
@@ -2474,9 +2523,7 @@ async function buildA4Poster() {
 
 async function generateA4Image() {
   const btn = document.getElementById('generateA4Btn');
-  const originalText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '產生中，請稍候…';
 
   try {
     const hasItems = await buildA4Poster();
@@ -2489,14 +2536,35 @@ async function generateA4Image() {
     await new Promise(r => setTimeout(r, 150));
 
     const posterEl = document.getElementById('a4Poster');
-    const canvas = await html2canvas(posterEl, {
-      scale: 2,
+    const outputScale = 2;
+    const capturedCanvas = await html2canvas(posterEl, {
+      scale: outputScale,
       backgroundColor: '#FFFBF5',
       useCORS: true,
       allowTaint: true
     });
 
-    canvas.toBlob((blob) => {
+    // A4 比例（794 x 1123，跟樣板寬度一致）＊輸出倍率
+    const a4W = 794 * outputScale;
+    const a4H = 1123 * outputScale;
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = a4W;
+    finalCanvas.height = a4H;
+    const ctx = finalCanvas.getContext('2d');
+    ctx.fillStyle = '#FFFBF5';
+    ctx.fillRect(0, 0, a4W, a4H);
+
+    // 項目太多、內容比一張A4還高的話，整張等比例縮小塞進A4裡；
+    // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準A4尺寸
+    const fitScale = Math.min(1, a4H / capturedCanvas.height, a4W / capturedCanvas.width);
+    const drawW = capturedCanvas.width * fitScale;
+    const drawH = capturedCanvas.height * fitScale;
+    const dx = (a4W - drawW) / 2;
+    const dy = (a4H - drawH) / 2;
+    ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
+
+    finalCanvas.toBlob((blob) => {
       if (!blob) {
         alert('圖片產生失敗，請再試一次');
         return;
@@ -2517,7 +2585,6 @@ async function generateA4Image() {
     alert('圖片產生失敗，請再試一次');
   } finally {
     btn.disabled = false;
-    btn.textContent = originalText;
   }
 }
 
