@@ -1143,6 +1143,21 @@
     height: 100%;
     object-fit: contain;
   }
+  .school-brand-block {
+    margin-bottom: 8px;
+  }
+  .school-brand-block .buy-status-item {
+    margin-bottom: 0;
+    border-radius: 10px 10px 0 0;
+  }
+  .school-brand-note {
+    font-size: 11.5px;
+    color: #8a7462;
+    line-height: 1.6;
+    background: #FFF6EC;
+    border-radius: 0 0 10px 10px;
+    padding: 2px 12px 10px;
+  }
 </style>
 </head>
 <body>
@@ -2116,6 +2131,7 @@ function openSchoolItemModal(item) {
 
   const brandRaw = String(item['品牌推薦'] || '').trim();
   const shopeeRaw = String(item['蝦皮連結'] || '').trim();
+  const noteRaw = String(item['品牌介紹'] || '').trim();
 
   const brandBox = document.getElementById('schoolModalBrandBox');
   const noBrandBox = document.getElementById('schoolModalNoBrand');
@@ -2123,15 +2139,25 @@ function openSchoolItemModal(item) {
 
   const brands = brandRaw.split(/[|｜]/).map(s => s.trim()).filter(Boolean);
   // 蝦皮連結也支援「｜」或「|」分隔（不能用「/」，因為網址本身就有很多斜線，用/分隔會把網址切爛）
-  // 跟品牌推薦照順序一一對應；沒填或數量對不上的部分，用預設的分潤連結頂替
+  // 跟品牌推薦照順序一一對應；如果中間某個品牌沒有蝦皮連結，要留空位佔位置，例如：
+  // 品牌推薦「A｜B｜C」但B沒有連結，蝦皮連結要打成「連結A｜｜連結C」（中間兩個分隔符號中間留空），
+  // 不能直接省略只打兩個連結，不然順序會全部錯位對到錯的品牌
+  // 沒填或數量對不上的部分，就不會顯示蝦皮下單按鈕（除非該品牌剛好開團中，那時候一定會顯示真正的團購連結）
   const shopeeLinks = shopeeRaw.split(/[|｜]/).map(s => s.trim());
+  // 品牌介紹/心得也是同樣規則：跟品牌推薦照順序對應，中間沒有的話一樣要留空位佔位置
+  const brandNotes = noteRaw.split(/[|｜]/).map(s => s.trim());
 
   if (brands.length) {
     listEl.innerHTML = '';
     brands.forEach((brand, idx) => {
       const hasOwnShopeeLink = shopeeLinks[idx] && isValidUrl(shopeeLinks[idx]);
       const shopeeUrl = hasOwnShopeeLink ? shopeeLinks[idx] : '';
+      const note = brandNotes[idx] || '';
       const status = getBrandStatus(brand);
+
+      const block = document.createElement('div');
+      block.className = 'school-brand-block';
+
       const row = document.createElement('div');
       row.className = 'buy-status-item';
 
@@ -2145,7 +2171,17 @@ function openSchoolItemModal(item) {
         rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前尚無安排開團</span>${hasOwnShopeeLink ? `<a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>` : ''}</div>`;
       }
       row.innerHTML = `<span class="bsi-brand">${brand}</span>` + rightHtml;
-      listEl.appendChild(row);
+      block.appendChild(row);
+
+      // 品牌介紹/心得：有填才顯示，沒填就不會多出空白區塊
+      if (note) {
+        const noteEl = document.createElement('div');
+        noteEl.className = 'school-brand-note';
+        noteEl.textContent = note;
+        block.appendChild(noteEl);
+      }
+
+      listEl.appendChild(block);
     });
     brandBox.style.display = 'block';
     noBrandBox.style.display = 'none';
