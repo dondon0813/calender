@@ -1426,8 +1426,9 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9
 
 const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>🍽</text></svg>";
 
-// 開學清單品項彈窗裡「前往蝦皮下單」按鈕預設連結的蝦皮分潤網址
-// 如果某個品項想連到不同的蝦皮商品頁，可以在試算表「開學清單」分頁該列加一欄「蝦皮連結」，網頁會優先用那個
+// 開學清單品項彈窗的蝦皮連結：如果該品項/品牌沒有填自己的「蝦皮連結」，就不會顯示前往購買按鈕
+// （之前會自動用下面這個預設連結頂替，現在改成沒填就不顯示，避免導去還沒設定好的連結）
+// 這個常數先保留著，如果之後想恢復「沒填就用預設連結」的行為，可以再改回來
 const SHOPEE_AFFILIATE_URL = "https://shopee.tw/PASTE_YOUR_AFFILIATE_LINK_HERE";
 
 let BRANDS = [];
@@ -2128,18 +2129,20 @@ function openSchoolItemModal(item) {
   if (brands.length) {
     listEl.innerHTML = '';
     brands.forEach((brand, idx) => {
-      const shopeeUrl = shopeeLinks[idx] && isValidUrl(shopeeLinks[idx]) ? shopeeLinks[idx] : SHOPEE_AFFILIATE_URL;
+      const hasOwnShopeeLink = shopeeLinks[idx] && isValidUrl(shopeeLinks[idx]);
+      const shopeeUrl = hasOwnShopeeLink ? shopeeLinks[idx] : '';
       const status = getBrandStatus(brand);
       const row = document.createElement('div');
       row.className = 'buy-status-item';
 
       let rightHtml = '';
       if (status.status === 'open') {
+        // 開團中一定有真實的團購連結，不受蝦皮連結有沒有填影響，一定顯示按鈕
         rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><a class="bsi-btn" href="${status.url}" target="_blank" rel="noopener noreferrer">🟢 現正開團中・前往下單</a></div>`;
       } else if (status.status === 'upcoming') {
-        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(status.nextDate)} 開團</span><a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a></div>`;
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(status.nextDate)} 開團</span>${hasOwnShopeeLink ? `<a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>` : ''}</div>`;
       } else {
-        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前尚無安排開團</span><a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a></div>`;
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前尚無安排開團</span>${hasOwnShopeeLink ? `<a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>` : ''}</div>`;
       }
       row.innerHTML = `<span class="bsi-brand">${brand}</span>` + rightHtml;
       listEl.appendChild(row);
@@ -2147,7 +2150,15 @@ function openSchoolItemModal(item) {
     brandBox.style.display = 'block';
     noBrandBox.style.display = 'none';
   } else {
-    document.getElementById('schoolModalBuyBtnAlt').href = (shopeeLinks[0] && isValidUrl(shopeeLinks[0])) ? shopeeLinks[0] : SHOPEE_AFFILIATE_URL;
+    // 完全沒有品牌推薦時，也要有自己填的蝦皮連結才顯示按鈕
+    const altUrl = shopeeLinks[0] && isValidUrl(shopeeLinks[0]) ? shopeeLinks[0] : '';
+    const altBtn = document.getElementById('schoolModalBuyBtnAlt');
+    if (altUrl) {
+      altBtn.href = altUrl;
+      altBtn.style.display = 'block';
+    } else {
+      altBtn.style.display = 'none';
+    }
     brandBox.style.display = 'none';
     noBrandBox.style.display = 'block';
   }
@@ -2498,4 +2509,3 @@ loadAll();
 
 </body>
 </html>
-
