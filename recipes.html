@@ -850,6 +850,19 @@
     padding: 20px 14px;
     margin-bottom: 20px;
   }
+  .home-calendar-btn {
+    display: inline-block;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: #fff;
+    background: #FF8FA3;
+    border-radius: 999px;
+    padding: 13px 30px;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(255,143,163,0.35);
+  }
+  .home-calendar-btn:hover { background: #FF7391; }
   .home-explore-title {
     text-align: center;
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
@@ -1243,15 +1256,14 @@
   }
   .a4-cat-header:first-child { margin-top: 0; }
   .a4-inline-tag {
-    align-self: center;
-    justify-self: center;
-    font-size: 12px;
+    display: inline-block;
+    font-size: 10.5px;
     font-weight: 800;
     color: #fff;
     background: #5a4a3f;
     border-radius: 999px;
-    padding: 5px 10px;
-    text-align: center;
+    padding: 4px 10px;
+    margin: 0 0 6px;
     line-height: 1.3;
   }
   .a4-grid {
@@ -1344,7 +1356,7 @@
   <div id="homeView">
     <div class="page-title-wrap">
       <div class="page-title-badge">💗 雪莉與朵栗</div>
-      <div class="page-title">🥕 食材與食譜</div>
+      <div class="page-title">👶 育兒小幫手</div>
     </div>
     <div class="home-subtitle">🌸 選擇食材，發現美味食譜 🌸</div>
 
@@ -1409,6 +1421,10 @@
           <div class="home-explore-item-desc">簡單步驟，<br>新手也能輕鬆上手</div>
         </div>
       </div>
+    </div>
+
+    <div style="text-align:center; margin-bottom: 6px;">
+      <a class="home-calendar-btn" href="index.html">📅 前往團購行事曆</a>
     </div>
 
   </div>
@@ -1490,7 +1506,7 @@
     </div>
   </div>
 
-  <div class="footer">雪莉與朵栗 ♥</div>
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
 </div>
 
 <!-- 食材彈窗 -->
@@ -2409,11 +2425,11 @@ function openSchoolItemModal(item) {
 // ===== 產生我的清單 A4 圖片 =====
 function preloadImage(src) {
   return new Promise((resolve) => {
-    if (!src) { resolve(false); return; }
+    if (!src) { resolve({ ok: false }); return; }
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
+    img.onload = () => resolve({ ok: true, w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ ok: false });
     img.src = src;
   });
 }
@@ -2521,12 +2537,6 @@ async function buildA4Poster() {
 
     row.items.forEach((item, pos) => {
       const tagsHere = inlineTags.filter(t => t.pos === pos);
-      tagsHere.forEach(t => {
-        const tag = document.createElement('div');
-        tag.className = 'a4-inline-tag';
-        tag.textContent = t.text;
-        gridEl.appendChild(tag);
-      });
 
       const id = item['編號'];
       const isChecked = checked.has(id);
@@ -2538,6 +2548,13 @@ async function buildA4Poster() {
       box.textContent = isChecked ? '✓' : '';
       cell.appendChild(box);
 
+      tagsHere.forEach(t => {
+        const tag = document.createElement('div');
+        tag.className = 'a4-inline-tag';
+        tag.textContent = t.text;
+        cell.appendChild(tag);
+      });
+
       const iconRaw = String(item['圖示'] || '').trim();
       const iconWrap = document.createElement('div');
       if (isValidUrl(iconRaw)) {
@@ -2545,7 +2562,26 @@ async function buildA4Poster() {
         const img = document.createElement('img');
         img.src = iconRaw;
         iconWrap.appendChild(img);
-        imgChecks.push(preloadImage(iconRaw).then(ok => { if (!ok) { iconWrap.className = 'a4-item-icon-wrap emoji'; iconWrap.textContent = '🎒'; } }));
+        imgChecks.push(preloadImage(iconRaw).then(res => {
+          if (!res.ok) {
+            iconWrap.className = 'a4-item-icon-wrap emoji';
+            iconWrap.textContent = '🎒';
+            return;
+          }
+          // 手動依容器實際尺寸＋圖片原始長寬比算出縮小後的寬高（依長邊為主等比縮放），
+          // 不依賴 object-fit / aspect-ratio 百分比，因為截圖工具對這兩個 CSS 屬性支援不穩定，
+          // 遇到長條圖會直接抓不到高度、上下被裁掉
+          const boxSize = iconWrap.getBoundingClientRect().width || iconWrap.offsetWidth || 0;
+          if (boxSize && res.w && res.h) {
+            iconWrap.style.height = boxSize + 'px';
+            const ratio = res.w / res.h;
+            let drawW, drawH;
+            if (ratio >= 1) { drawW = boxSize; drawH = boxSize / ratio; }
+            else { drawH = boxSize; drawW = boxSize * ratio; }
+            img.style.width = drawW + 'px';
+            img.style.height = drawH + 'px';
+          }
+        }));
       } else {
         iconWrap.className = 'a4-item-icon-wrap emoji';
         iconWrap.textContent = iconRaw || '🎒';
