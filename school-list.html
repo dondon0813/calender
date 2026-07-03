@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 開學用品清單</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    color: #5a4a3f;
+    padding: 16px 8px 50px;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    background: #FFFBF5;
+    border-radius: 22px;
+    border: 3px solid #FFE3CC;
+    padding: 18px 14px 26px;
+    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+  }
+  .empty-state {
+    text-align: center;
+    color: #b39a8b;
+    font-size: 13px;
+    padding: 40px 0;
+  }
+  .status-msg {
+    text-align: center;
+    color: #b39a8b;
+    font-size: 12px;
+    padding: 20px 0;
+  }
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(90, 74, 63, 0.45);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal-box {
+    position: relative;
+    background: #FFFBF5;
+    border-radius: 18px;
+    border: 3px solid #FFE3CC;
+    padding: 22px 20px;
+    max-width: 92%;
+    width: 400px;
+    max-height: 86vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    color: #b5755a;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .recipe-card-modal {
+    width: 380px;
+    padding: 16px 18px 20px;
+    background: #FFFCF7;
+    border-radius: 26px;
+    border: none;
+    box-shadow: 0 16px 40px rgba(210,150,110,0.28);
+  }
+  .rc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .rc-badge-pill {
+    font-size: 12px;
+    font-weight: 800;
+    color: #FF8FA3;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .rc-close-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: #FF8FA3;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    flex: none;
+  }
+  .rc-photo-wrap {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .rc-title {
+    text-align: center;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: #5a4a3f;
+    margin: 4px 0 6px;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .rc-title::after {
+    content: '';
+    display: block;
+    width: 78%;
+    height: 0;
+    border-bottom: 2px dashed #FFC2CE;
+    margin: 8px auto 0;
+  }
+  .rc-section { margin-bottom: 16px; }
+  .rc-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .rc-section-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    background: #FFE9CE;
+    border-radius: 999px;
+    padding: 5px 14px;
+  }
+  .rc-footer {
+    text-align: center;
+    font-size: 11.5px;
+    color: #FFB4C2;
+    font-weight: 700;
+    margin-top: 14px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 13.5px;
+    border: none;
+    border-radius: 999px;
+    padding: 11px 12px;
+    background: #FF8FA3;
+    color: #fff;
+    cursor: pointer;
+  }
+  .action-btn:hover { background: #FF7391; }
+  .action-btn-alt { background: #7AAEEB; }
+  .action-btn-alt:hover { background: #5F97DB; }
+  .buy-status-list { margin-top: 12px; }
+  .buy-status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #FFF6EC;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .buy-status-item .bsi-brand { font-weight: 800; color: #5a4a3f; }
+  .buy-status-item .bsi-text { color: #a89888; font-size: 12px; }
+  .buy-status-item .bsi-btn {
+    flex: none;
+    border: none;
+    border-radius: 999px;
+    background: #FF8FA3;
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .back-btn {
+    display: inline-block;
+    background: none;
+    border: none;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #b5755a;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 14px;
+  }
+  .back-btn:hover { color: #FF8FA3; }
+  .school-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .school-title-img {
+    max-width: 90%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .school-subtitle-img {
+    max-width: 70%;
+    height: auto;
+    display: block;
+    margin: 10px auto 0;
+  }
+  .school-category-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #fff;
+    background: #5a4a3f;
+    border-radius: 999px;
+    padding: 5px 14px;
+    display: inline-block;
+    margin: 18px 0 12px;
+  }
+  .school-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .school-card {
+    position: relative;
+    background: #FFEDE0;
+    border: 2px solid #FFD9BB;
+    border-radius: 16px;
+    padding: 16px 8px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .school-card:hover { transform: translateY(-2px); }
+  .school-card.checked {
+    border-color: #9ACB85;
+    background: #EBF7E6;
+  }
+  .school-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 2px solid #E0C9B0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+  }
+  .school-card.checked .school-checkbox {
+    background: #9ACB85;
+    border-color: #9ACB85;
+  }
+  .school-icon-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    background: transparent;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 11%;
+  }
+  .school-icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .school-icon-wrap.emoji-icon {
+    font-size: 34px;
+    padding: 0;
+  }
+  .school-card-name {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #8a7462;
+  }
+  .school-card.checked .school-card-name { color: #5C9147; }
+  .school-reminder-box {
+    padding: 10px 20px;
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .school-reminder-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  .school-reminder-text {
+    font-size: 12px;
+    color: #8a7462;
+    line-height: 1.6;
+  }
+  .school-reminder-text b {
+    color: #FF6F91;
+  }
+  .school-progress {
+    text-align: center;
+    font-size: 12px;
+    color: #a89888;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .school-remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    color: #c99a3a;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .school-remove-btn:hover { background: #FFE3CC; }
+  .school-removed-toggle {
+    display: block;
+    margin: 18px auto 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #b5755a;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .school-removed-box {
+    margin-top: 10px;
+    border: 2px dashed #E0C9B0;
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+  .school-removed-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 4px;
+    border-bottom: 1px dotted #F0DFCB;
+    font-size: 12.5px;
+    color: #8a7462;
+  }
+  .school-removed-item:last-child { border-bottom: none; }
+  .school-restore-btn {
+    flex: none;
+    border: none;
+    border-radius: 999px;
+    background: #9ACB85;
+    color: #fff;
+    font-weight: 800;
+    font-size: 11.5px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  .school-modal-icon-wrap {
+    width: 60%;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .school-modal-icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .school-brand-block {
+    margin-bottom: 8px;
+  }
+  .school-brand-block .buy-status-item {
+    margin-bottom: 0;
+    border-radius: 10px 10px 0 0;
+  }
+  .school-brand-note {
+    font-size: 11.5px;
+    color: #8a7462;
+    line-height: 1.6;
+    background: #FFF6EC;
+    border-radius: 0 0 10px 10px;
+    padding: 2px 12px 10px;
+  }
+  .school-generate-box {
+    text-align: center;
+    margin: 18px 0 6px;
+  }
+  .school-generate-btn {
+    display: inline-block;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .school-generate-btn-img {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    margin: 0 auto;
+  }
+  .school-generate-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .school-generate-hint {
+    font-size: 11px;
+    color: #a89888;
+    margin-top: 8px;
+  }
+  #a4PosterRoot {
+    position: fixed;
+    left: -99999px;
+    top: 0;
+    width: 794px;
+    background: #FFFBF5;
+  }
+  .a4-poster {
+    width: 794px;
+    min-height: 1123px;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    padding: 44px 46px 40px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: #5a4a3f;
+  }
+  .a4-header {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+  .a4-title-img {
+    max-width: 480px;
+    width: 68%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .a4-subtitle {
+    font-size: 14px;
+    color: #b5755a;
+    font-weight: 700;
+    margin-top: 14px;
+  }
+  .a4-category-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    background: #5a4a3f;
+    border-radius: 999px;
+    padding: 7px 18px;
+    display: inline-block;
+    margin: 22px 0 14px;
+  }
+  .a4-cat-header {
+    grid-column: 1 / -1;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    background: #5a4a3f;
+    border-radius: 999px;
+    padding: 7px 18px;
+    width: fit-content;
+    margin: 18px 0 4px;
+  }
+  .a4-cat-header:first-child { margin-top: 0; }
+  .a4-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  .a4-item {
+    position: relative;
+    background: #FFFDFA;
+    border: 2px solid #FFD9BB;
+    border-radius: 16px;
+    padding: 14px 8px 10px;
+    text-align: center;
+  }
+  .a4-item.checked {
+    border-color: #9ACB85;
+    background: #EBF7E6;
+  }
+  .a4-item-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #E0C9B0;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .a4-item.checked .a4-item-checkbox {
+    background: #9ACB85;
+    border-color: #9ACB85;
+  }
+  .a4-item-icon-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .a4-item-icon-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .a4-item-icon-wrap.emoji { font-size: 36px; }
+  .a4-item-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #5a4a3f;
+  }
+  .a4-footer {
+    text-align: center;
+    margin-top: 36px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .a4-footer-img {
+    max-width: 360px;
+    width: 60%;
+    height: auto;
+    display: block;
+    margin: 0 auto 12px;
+  }
+  .a4-footer .a4-date {
+    display: block;
+    color: #a89888;
+    font-weight: 700;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <button class="back-btn" id="backToHome">← 返回首頁</button>
+  <div class="school-header">
+    <img class="school-title-img" src="icons/title-header.png" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
+  </div>
+  <div id="statusMsg" class="status-msg" style="display:none;">資料載入中…</div>
+  <div class="school-progress" id="schoolProgress"></div>
+  <div id="schoolListContent"></div>
+  <div class="empty-state" id="schoolListEmpty" style="display:none;">目前還沒有設定開學清單項目</div>
+  <button class="school-removed-toggle" id="schoolRemovedToggle" style="display:none;"></button>
+  <div class="school-removed-box" id="schoolRemovedBox" style="display:none;"></div>
+
+  <div class="school-generate-box" id="schoolGenerateBox" style="display:none;">
+    <button class="school-generate-btn" id="generateA4Btn"><img class="school-generate-btn-img" src="icons/btn-generate.png" alt="產生我的專屬用品清單"></button>
+    <div class="school-generate-hint">會把清單上的項目（不含已移除的）做成一張 A4 圖片，已打勾的項目圖片上也會顯示 ✓，方便下載、列印或帶去購物</div>
+  </div>
+
+  <div class="school-reminder-box">
+    <img class="school-reminder-img" src="icons/reminder-footer.png" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<!-- 開學清單品項彈窗：品牌推薦 + 下一團時間 + 前往蝦皮下單 -->
+<div class="modal-backdrop" id="schoolItemModal" onclick="if(event.target===this) closeModal('schoolItemModal')">
+  <div class="modal-box recipe-card-modal">
+    <div class="rc-header">
+      <span class="rc-badge-pill">🎒 開學小卡</span>
+      <button class="rc-close-btn" onclick="closeModal('schoolItemModal')">✕</button>
+    </div>
+
+    <div class="school-modal-icon-wrap">
+      <img id="schoolModalImg" src="" alt="" onerror="this.style.display='none';">
+    </div>
+
+    <h2 class="rc-title" id="schoolModalName"></h2>
+
+    <div id="schoolModalBrandBox" style="display:none;">
+      <div class="rc-section-head" style="margin-top:4px;">
+        <span class="rc-section-title">🏷 品牌推薦</span>
+      </div>
+      <div id="schoolModalBrandList"></div>
+    </div>
+    <div id="schoolModalNoBrand" style="display:none;">
+      <a class="action-btn" id="schoolModalBuyBtnAlt" target="_blank" rel="noopener noreferrer">🛒 前往蝦皮下單</a>
+    </div>
+
+    <div class="rc-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
+  </div>
+</div>
+
+<!-- 產生 A4 清單圖片：離畫面外的樣板，只用來截圖，使用者看不到 -->
+<div id="a4PosterRoot">
+  <div class="a4-poster" id="a4Poster">
+    <div class="a4-header">
+      <img class="a4-title-img" src="icons/title-header.png" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
+      <div class="a4-subtitle" id="a4Subtitle"></div>
+    </div>
+    <div id="a4Body"></div>
+    <div class="a4-footer">
+      <img class="a4-footer-img" src="icons/reminder-footer.png" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
+      🩷 雪莉與朵栗・@dondon0813 🩷
+      <span class="a4-date" id="a4Date"></span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// ===== 設定 =====
+const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+// 請把 Apps Script 部署後的網址貼在這裡（跟 admin.html / recipes.html 用同一組網址）
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+
+let SCHOOL_ITEMS = [];
+let CALENDAR_EVENTS = [];
+
+// ===== 載入資料 =====
+async function loadAll() {
+  const statusEl = document.getElementById('statusMsg');
+  statusEl.style.display = 'block';
+  try {
+    await Promise.all([loadSchoolItems(), loadCalendar()]);
+    statusEl.style.display = 'none';
+    renderSchoolList();
+  } catch (err) {
+    statusEl.style.display = 'block';
+    statusEl.textContent = '資料載入失敗，請稍後重新整理再試一次';
+    console.error(err);
+  }
+}
+
+async function loadSchoolItems() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+    throw new Error('尚未設定 APPS_SCRIPT_URL');
+  }
+  const noCacheUrl = APPS_SCRIPT_URL + '?scope=public&t=' + Date.now();
+  const res = await fetch(noCacheUrl, { cache: 'no-store' });
+  const data = await res.json();
+  const rawSchoolList = (data.schoolList || []).filter(s => s['編號']);
+  // 「顯示」欄位是店家控制的預設隱藏（填「否」就對所有人隱藏），
+  // 跟客人自己點✕移除（存在客人自己裝置）是兩回事：這裡先把店家設定隱藏的項目整個濾掉
+  SCHOOL_ITEMS = rawSchoolList.filter(s => {
+    const show = String(s['顯示'] || '').trim().toUpperCase();
+    return show !== '否' && show !== 'FALSE' && show !== 'N' && show !== '0';
+  });
+  SCHOOL_ITEMS.sort((a, b) => {
+    const oa = parseFloat(a['排序']); const ob = parseFloat(b['排序']);
+    if (!isNaN(oa) && !isNaN(ob)) return oa - ob;
+    if (!isNaN(oa)) return -1;
+    if (!isNaN(ob)) return 1;
+    return 0;
+  });
+}
+
+function parseDateStr(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  const gvizMatch = s.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (gvizMatch) {
+    return new Date(parseInt(gvizMatch[1]), parseInt(gvizMatch[2]), parseInt(gvizMatch[3]));
+  }
+  const parts = s.split(/[\/\-]/).map(p => parseInt(p, 10));
+  if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
+  return null;
+}
+
+function fmtSingleDate(d) {
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function parseExtendRaw(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (typeof raw === 'number') return { type: 'days', value: raw };
+  const s = String(raw).trim();
+  if (s === '') return null;
+  if (/^\d+$/.test(s)) return { type: 'days', value: parseInt(s, 10) };
+  const d = parseDateStr(s);
+  if (d) return { type: 'date', value: d };
+  return null;
+}
+
+function computeDisplayEnd(end, extend) {
+  if (!extend) return end;
+  const today = new Date();
+  const todayStart = startOfDay(today);
+  const endStart = startOfDay(end);
+  if (todayStart <= endStart) return end;
+  if (extend.type === 'days') {
+    return new Date(end.getFullYear(), end.getMonth(), end.getDate() + extend.value);
+  }
+  return extend.value;
+}
+
+async function loadCalendar() {
+  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  const text = await res.text();
+  const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  const data = JSON.parse(jsonStr);
+  const rows = data.table.rows;
+  const events = [];
+  rows.forEach(row => {
+    const c = row.c;
+    if (!c || !c[0] || c[0].v === null || c[0].v === '') return;
+    const startRaw = c[1] ? c[1].v : null;
+    const endRaw = c[2] ? c[2].v : null;
+    const extendRaw = c[3] ? c[3].v : null;
+    const title = c[4] ? c[4].v : '';
+    const url = c[7] ? c[7].v : '';
+    const start = parseDateStr(startRaw);
+    const end = parseDateStr(endRaw);
+    if (!start || !end || !title) return;
+    const extend = parseExtendRaw(extendRaw);
+    const displayEnd = computeDisplayEnd(end, extend);
+    events.push({ title, start, displayEnd, url });
+  });
+  CALENDAR_EVENTS = events;
+}
+
+function getBrandStatus(brandName) {
+  const today = startOfDay(new Date());
+  const matches = CALENDAR_EVENTS.filter(ev => ev.title.includes(brandName));
+  const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
+  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url };
+  const future = matches
+    .filter(ev => startOfDay(ev.start) > today)
+    .sort((a, b) => a.start - b.start);
+  if (future.length) return { brand: brandName, status: 'upcoming', nextDate: future[0].start };
+  return { brand: brandName, status: 'ended' };
+}
+
+function isValidUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+
+function getCheckedSchoolIds() {
+  try {
+    const raw = localStorage.getItem(SCHOOL_STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveCheckedSchoolIds(set) {
+  try {
+    localStorage.setItem(SCHOOL_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) { /* 瀏覽器不支援或被封鎖時，安靜地放棄儲存，不影響畫面操作 */ }
+}
+
+function getRemovedSchoolIds() {
+  try {
+    const raw = localStorage.getItem(SCHOOL_REMOVED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveRemovedSchoolIds(set) {
+  try {
+    localStorage.setItem(SCHOOL_REMOVED_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) { /* 同上，安靜放棄 */ }
+}
+
+function toggleSchoolItem(id) {
+  const checked = getCheckedSchoolIds();
+  if (checked.has(id)) checked.delete(id); else checked.add(id);
+  saveCheckedSchoolIds(checked);
+  renderSchoolList();
+}
+
+function removeSchoolItem(id) {
+  const removed = getRemovedSchoolIds();
+  removed.add(id);
+  saveRemovedSchoolIds(removed);
+  // 移除的項目如果原本有打勾，也順便清掉勾選狀態，避免加回來時顯示奇怪的已完成狀態
+  const checked = getCheckedSchoolIds();
+  if (checked.has(id)) { checked.delete(id); saveCheckedSchoolIds(checked); }
+  renderSchoolList();
+}
+
+function restoreSchoolItem(id) {
+  const removed = getRemovedSchoolIds();
+  removed.delete(id);
+  saveRemovedSchoolIds(removed);
+  renderSchoolList();
+}
+
+function renderSchoolList() {
+  const contentEl = document.getElementById('schoolListContent');
+  const emptyEl = document.getElementById('schoolListEmpty');
+  const progressEl = document.getElementById('schoolProgress');
+  const removedToggleEl = document.getElementById('schoolRemovedToggle');
+  const removedBoxEl = document.getElementById('schoolRemovedBox');
+  const generateBoxEl = document.getElementById('schoolGenerateBox');
+  contentEl.innerHTML = '';
+
+  if (!SCHOOL_ITEMS.length) {
+    emptyEl.style.display = 'block';
+    progressEl.style.display = 'none';
+    removedToggleEl.style.display = 'none';
+    removedBoxEl.style.display = 'none';
+    generateBoxEl.style.display = 'none';
+    return;
+  }
+
+  const removedIds = getRemovedSchoolIds();
+  const visibleItems = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
+  const removedItems = SCHOOL_ITEMS.filter(it => removedIds.has(it['編號']));
+
+  if (!visibleItems.length) {
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = '這個裝置的清單項目都被移除囉，可以到下面「已移除的項目」加回來';
+  } else {
+    emptyEl.style.display = 'none';
+  }
+
+  const checked = getCheckedSchoolIds();
+  const totalChecked = visibleItems.filter(it => checked.has(it['編號'])).length;
+  progressEl.style.display = visibleItems.length ? 'block' : 'none';
+  progressEl.textContent = `已準備 ${totalChecked} / ${visibleItems.length} 項`;
+
+  generateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
+
+  // 有填「分類」的話依分類分組顯示，順序依第一次出現的分類為準；完全沒填分類就整批平鋪
+  const hasCategory = visibleItems.some(it => String(it['分類'] || '').trim());
+
+  if (visibleItems.length) {
+    if (!hasCategory) {
+      contentEl.appendChild(buildSchoolGrid(visibleItems, checked));
+    } else {
+      const groups = [];
+      const groupIndex = {};
+      visibleItems.forEach(it => {
+        const cat = String(it['分類'] || '').trim() || '其他';
+        if (!(cat in groupIndex)) {
+          groupIndex[cat] = groups.length;
+          groups.push({ cat, items: [] });
+        }
+        groups[groupIndex[cat]].items.push(it);
+      });
+      groups.forEach(g => {
+        const head = document.createElement('div');
+        head.className = 'school-category-title';
+        head.textContent = g.cat;
+        contentEl.appendChild(head);
+        contentEl.appendChild(buildSchoolGrid(g.items, checked));
+      });
+    }
+  }
+
+  // 已移除的項目：收合區塊，展開才看得到，點「加回來」可以恢復顯示
+  if (!removedItems.length) {
+    removedToggleEl.style.display = 'none';
+    removedBoxEl.style.display = 'none';
+    return;
+  }
+  removedToggleEl.style.display = 'block';
+  removedToggleEl.textContent = (schoolRemovedExpanded ? '▲ ' : '▼ ') + `已移除的項目（${removedItems.length}）`;
+  removedToggleEl.onclick = () => {
+    schoolRemovedExpanded = !schoolRemovedExpanded;
+    renderSchoolList();
+  };
+
+  if (!schoolRemovedExpanded) {
+    removedBoxEl.style.display = 'none';
+    return;
+  }
+  removedBoxEl.style.display = 'block';
+  removedBoxEl.innerHTML = '';
+  removedItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'school-removed-item';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = item['項目名稱'] || '';
+    row.appendChild(nameSpan);
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'school-restore-btn';
+    restoreBtn.textContent = '＋ 加回來';
+    restoreBtn.addEventListener('click', () => restoreSchoolItem(item['編號']));
+    row.appendChild(restoreBtn);
+    removedBoxEl.appendChild(row);
+  });
+}
+
+function buildSchoolGrid(items, checkedSet) {
+  const grid = document.createElement('div');
+  grid.className = 'school-grid';
+  items.forEach(item => {
+    const id = item['編號'];
+    const isChecked = checkedSet.has(id);
+
+    const card = document.createElement('div');
+    card.className = 'school-card' + (isChecked ? ' checked' : '');
+
+    const box = document.createElement('div');
+    box.className = 'school-checkbox';
+    box.textContent = isChecked ? '✓' : '';
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSchoolItem(id);
+    });
+    card.appendChild(box);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'school-remove-btn';
+    removeBtn.textContent = '✕';
+    removeBtn.title = '這個項目我們學校不需要';
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeSchoolItem(id);
+    });
+    card.appendChild(removeBtn);
+
+    // 點圖示或名稱：開啟品項小卡（品牌推薦／下一團時間／前往蝦皮下單），不會順便打勾
+    const contentWrap = document.createElement('div');
+    contentWrap.addEventListener('click', () => openSchoolItemModal(item));
+
+    const iconWrap = document.createElement('div');
+    const iconRaw = String(item['圖示'] || '').trim();
+    if (isValidUrl(iconRaw)) {
+      iconWrap.className = 'school-icon-wrap';
+      const img = document.createElement('img');
+      img.src = iconRaw;
+      img.onerror = () => { iconWrap.className = 'school-icon-wrap emoji-icon'; iconWrap.textContent = '🎒'; };
+      iconWrap.appendChild(img);
+    } else {
+      iconWrap.className = 'school-icon-wrap emoji-icon';
+      iconWrap.textContent = iconRaw || '🎒';
+    }
+    contentWrap.appendChild(iconWrap);
+
+    const name = document.createElement('div');
+    name.className = 'school-card-name';
+    name.textContent = item['項目名稱'] || '';
+    contentWrap.appendChild(name);
+
+    card.appendChild(contentWrap);
+    grid.appendChild(card);
+  });
+  return grid;
+}
+
+function openSchoolItemModal(item) {
+  const iconRaw = String(item['圖示'] || '').trim();
+  const imgEl = document.getElementById('schoolModalImg');
+  if (isValidUrl(iconRaw)) {
+    imgEl.src = iconRaw;
+    imgEl.style.display = 'block';
+  } else {
+    imgEl.style.display = 'none';
+  }
+
+  document.getElementById('schoolModalName').textContent = item['項目名稱'] || '';
+
+  const brandRaw = String(item['品牌推薦'] || '').trim();
+  const shopeeRaw = String(item['蝦皮連結'] || '').trim();
+  const noteRaw = String(item['品牌介紹'] || '').trim();
+
+  const brandBox = document.getElementById('schoolModalBrandBox');
+  const noBrandBox = document.getElementById('schoolModalNoBrand');
+  const listEl = document.getElementById('schoolModalBrandList');
+
+  const brands = brandRaw.split(/[|｜]/).map(s => s.trim()).filter(Boolean);
+  // 蝦皮連結也支援「｜」或「|」分隔（不能用「/」，因為網址本身就有很多斜線，用/分隔會把網址切爛）
+  // 跟品牌推薦照順序一一對應；如果中間某個品牌沒有蝦皮連結，要留空位佔位置，例如：
+  // 品牌推薦「A｜B｜C」但B沒有連結，蝦皮連結要打成「連結A｜｜連結C」（中間兩個分隔符號中間留空），
+  // 不能直接省略只打兩個連結，不然順序會全部錯位對到錯的品牌
+  // 沒填或數量對不上的部分，就不會顯示蝦皮下單按鈕（除非該品牌剛好開團中，那時候一定會顯示真正的團購連結）
+  const shopeeLinks = shopeeRaw.split(/[|｜]/).map(s => s.trim());
+  // 品牌介紹/心得也是同樣規則：跟品牌推薦照順序對應，中間沒有的話一樣要留空位佔位置
+  const brandNotes = noteRaw.split(/[|｜]/).map(s => s.trim());
+
+  if (brands.length) {
+    listEl.innerHTML = '';
+    brands.forEach((brand, idx) => {
+      const hasOwnShopeeLink = shopeeLinks[idx] && isValidUrl(shopeeLinks[idx]);
+      const shopeeUrl = hasOwnShopeeLink ? shopeeLinks[idx] : '';
+      const note = brandNotes[idx] || '';
+      const status = getBrandStatus(brand);
+
+      const block = document.createElement('div');
+      block.className = 'school-brand-block';
+
+      const row = document.createElement('div');
+      row.className = 'buy-status-item';
+
+      let rightHtml = '';
+      if (status.status === 'open') {
+        // 開團中一定有真實的團購連結，不受蝦皮連結有沒有填影響，一定顯示按鈕
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><a class="bsi-btn" href="${status.url}" target="_blank" rel="noopener noreferrer">🟢 現正開團中・前往下單</a></div>`;
+      } else if (status.status === 'upcoming') {
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(status.nextDate)} 開團</span>${hasOwnShopeeLink ? `<a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>` : ''}</div>`;
+      } else {
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前尚無安排開團</span>${hasOwnShopeeLink ? `<a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>` : ''}</div>`;
+      }
+      row.innerHTML = `<span class="bsi-brand">${brand}</span>` + rightHtml;
+      block.appendChild(row);
+
+      // 品牌介紹/心得：有填才顯示，沒填就不會多出空白區塊
+      if (note) {
+        const noteEl = document.createElement('div');
+        noteEl.className = 'school-brand-note';
+        noteEl.textContent = note;
+        block.appendChild(noteEl);
+      }
+
+      listEl.appendChild(block);
+    });
+    brandBox.style.display = 'block';
+    noBrandBox.style.display = 'none';
+  } else {
+    // 完全沒有品牌推薦時，也要有自己填的蝦皮連結才顯示按鈕
+    const altUrl = shopeeLinks[0] && isValidUrl(shopeeLinks[0]) ? shopeeLinks[0] : '';
+    const altBtn = document.getElementById('schoolModalBuyBtnAlt');
+    if (altUrl) {
+      altBtn.href = altUrl;
+      altBtn.style.display = 'block';
+    } else {
+      altBtn.style.display = 'none';
+    }
+    brandBox.style.display = 'none';
+    noBrandBox.style.display = 'block';
+  }
+
+  document.getElementById('schoolItemModal').classList.add('show');
+}
+
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    if (!src) { resolve({ ok: false }); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve({ ok: true, w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ ok: false });
+    img.src = src;
+  });
+}
+
+async function buildA4Poster() {
+  const checked = getCheckedSchoolIds();
+  const removedIds = getRemovedSchoolIds();
+  // 產生的圖片是「挑選好的清單」：把打叉移除的項目排除掉，其餘全部列出（不管有沒有打勾）
+  const items = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
+  const checkedCount = items.filter(it => checked.has(it['編號'])).length;
+
+  document.getElementById('a4Subtitle').textContent = `共 ${items.length} 項 ・ 已準備 ${checkedCount} 項 ・ 一起準備上學去 🎒`;
+  const now = new Date();
+  document.getElementById('a4Date').textContent = `製作日期：${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+
+  const bodyEl = document.getElementById('a4Body');
+  bodyEl.innerHTML = '';
+
+  if (!items.length) return false;
+
+  const imgChecks = [];
+
+  const gridEl = document.createElement('div');
+  gridEl.className = 'a4-grid';
+  bodyEl.appendChild(gridEl);
+
+  {
+    items.forEach(item => {
+      const id = item['編號'];
+      const isChecked = checked.has(id);
+      const cell = document.createElement('div');
+      cell.className = 'a4-item' + (isChecked ? ' checked' : '');
+
+      const box = document.createElement('div');
+      box.className = 'a4-item-checkbox';
+      box.textContent = isChecked ? '✓' : '';
+      cell.appendChild(box);
+
+      const iconRaw = String(item['圖示'] || '').trim();
+      const iconWrap = document.createElement('div');
+      if (isValidUrl(iconRaw)) {
+        iconWrap.className = 'a4-item-icon-wrap';
+        const img = document.createElement('img');
+        img.src = iconRaw;
+        iconWrap.appendChild(img);
+        imgChecks.push(preloadImage(iconRaw).then(res => {
+          if (!res.ok) {
+            iconWrap.className = 'a4-item-icon-wrap emoji';
+            iconWrap.textContent = '🎒';
+            return;
+          }
+          // 手動依容器實際尺寸＋圖片原始長寬比算出縮小後的寬高（依長邊為主等比縮放），
+          // 不依賴 object-fit / aspect-ratio 百分比，因為截圖工具對這兩個 CSS 屬性支援不穩定，
+          // 遇到長條圖會直接抓不到高度、上下被裁掉
+          const boxSize = iconWrap.getBoundingClientRect().width || iconWrap.offsetWidth || 0;
+          if (boxSize && res.w && res.h) {
+            iconWrap.style.height = boxSize + 'px';
+            const ratio = res.w / res.h;
+            let drawW, drawH;
+            if (ratio >= 1) { drawW = boxSize; drawH = boxSize / ratio; }
+            else { drawH = boxSize; drawW = boxSize * ratio; }
+            img.style.width = drawW + 'px';
+            img.style.height = drawH + 'px';
+          }
+        }));
+      } else {
+        iconWrap.className = 'a4-item-icon-wrap emoji';
+        iconWrap.textContent = iconRaw || '🎒';
+      }
+      cell.appendChild(iconWrap);
+
+      const name = document.createElement('div');
+      name.className = 'a4-item-name';
+      name.textContent = item['項目名稱'] || '';
+      cell.appendChild(name);
+
+      gridEl.appendChild(cell);
+    });
+  }
+
+  await Promise.all(imgChecks);
+  return true;
+}
+
+async function generateA4Image() {
+  const btn = document.getElementById('generateA4Btn');
+  btn.disabled = true;
+
+  try {
+    const hasItems = await buildA4Poster();
+    if (!hasItems) {
+      alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
+      return;
+    }
+
+    // 等字體 / 版面穩定
+    await new Promise(r => setTimeout(r, 150));
+
+    const posterEl = document.getElementById('a4Poster');
+    const outputScale = 2;
+    const capturedCanvas = await html2canvas(posterEl, {
+      scale: outputScale,
+      backgroundColor: '#FFFBF5',
+      useCORS: true,
+      allowTaint: true
+    });
+
+    // A4 比例（794 x 1123，跟樣板寬度一致）＊輸出倍率
+    const a4W = 794 * outputScale;
+    const a4H = 1123 * outputScale;
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = a4W;
+    finalCanvas.height = a4H;
+    const ctx = finalCanvas.getContext('2d');
+    ctx.fillStyle = '#FFFBF5';
+    ctx.fillRect(0, 0, a4W, a4H);
+
+    // 項目太多、內容比一張A4還高的話，整張等比例縮小塞進A4裡；
+    // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準A4尺寸
+    const fitScale = Math.min(1, a4H / capturedCanvas.height, a4W / capturedCanvas.width);
+    const drawW = capturedCanvas.width * fitScale;
+    const drawH = capturedCanvas.height * fitScale;
+    const dx = (a4W - drawW) / 2;
+    const dy = (a4H - drawH) / 2;
+    ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
+
+    finalCanvas.toBlob((blob) => {
+      if (!blob) {
+        alert('圖片產生失敗，請再試一次');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      a.href = url;
+      a.download = `開學用品清單_${stamp}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }, 'image/png');
+  } catch (err) {
+    console.error(err);
+    alert('圖片產生失敗，請再試一次');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+document.getElementById('generateA4Btn').addEventListener('click', generateA4Image);
+document.getElementById('backToHome').addEventListener('click', () => { window.location.href = 'recipes.html'; });
+
+loadAll();
+</script>
+
+</body>
+</html>
