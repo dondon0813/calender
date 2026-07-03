@@ -1158,6 +1158,142 @@
     border-radius: 0 0 10px 10px;
     padding: 2px 12px 10px;
   }
+
+  /* ===== 產生我的清單圖片 按鈕 + A4 海報樣板 ===== */
+  .school-generate-box {
+    text-align: center;
+    margin: 18px 0 6px;
+  }
+  .school-generate-btn {
+    display: inline-block;
+    border: none;
+    border-radius: 999px;
+    background: #7AAEEB;
+    color: #fff;
+    font-weight: 800;
+    font-size: 14px;
+    padding: 12px 26px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(122,174,235,0.35);
+  }
+  .school-generate-btn:hover { background: #5F97DB; }
+  .school-generate-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .school-generate-hint {
+    font-size: 11px;
+    color: #a89888;
+    margin-top: 8px;
+  }
+
+  #a4PosterRoot {
+    position: fixed;
+    left: -99999px;
+    top: 0;
+    width: 794px;
+    background: #FFFBF5;
+  }
+  .a4-poster {
+    width: 794px;
+    min-height: 1123px;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    padding: 44px 46px 40px;
+    font-family: 'Noto Sans TC', sans-serif;
+    color: #5a4a3f;
+  }
+  .a4-header {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+  .a4-badge {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 800;
+    color: #FF8FA3;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 6px 18px;
+    margin-bottom: 10px;
+  }
+  .a4-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    color: #5a4a3f;
+    padding-bottom: 12px;
+    position: relative;
+  }
+  .a4-title::after {
+    content: '';
+    display: block;
+    width: 160px;
+    height: 0;
+    border-bottom: 3px dashed #FFC2CE;
+    margin: 10px auto 0;
+  }
+  .a4-subtitle {
+    font-size: 13px;
+    color: #b5755a;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .a4-category-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    background: #5a4a3f;
+    border-radius: 999px;
+    padding: 7px 18px;
+    display: inline-block;
+    margin: 22px 0 14px;
+  }
+  .a4-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  .a4-item {
+    background: #FFFDFA;
+    border: 2px solid #FFD9BB;
+    border-radius: 16px;
+    padding: 14px 8px 10px;
+    text-align: center;
+  }
+  .a4-item-icon-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .a4-item-icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .a4-item-icon-wrap.emoji { font-size: 36px; }
+  .a4-item-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #5a4a3f;
+  }
+  .a4-footer {
+    text-align: center;
+    margin-top: 36px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .a4-footer .a4-date {
+    display: block;
+    color: #a89888;
+    font-weight: 700;
+    font-size: 11px;
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
@@ -1302,6 +1438,12 @@
     <div class="empty-state" id="schoolListEmpty" style="display:none;">目前還沒有設定開學清單項目</div>
     <button class="school-removed-toggle" id="schoolRemovedToggle" style="display:none;"></button>
     <div class="school-removed-box" id="schoolRemovedBox" style="display:none;"></div>
+
+    <div class="school-generate-box" id="schoolGenerateBox" style="display:none;">
+      <button class="school-generate-btn" id="generateA4Btn">📸 產生我的專屬清單圖片</button>
+      <div class="school-generate-hint">會把你打勾「已準備」的項目做成一張 A4 圖片，方便下載、列印或帶去購物</div>
+    </div>
+
     <div class="school-reminder-box">
       <img class="school-reminder-img" src="icons/reminder-footer.png" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
     </div>
@@ -1431,6 +1573,23 @@
   </div>
 </div>
 
+<!-- 產生 A4 清單圖片：離畫面外的樣板，只用來截圖，使用者看不到 -->
+<div id="a4PosterRoot">
+  <div class="a4-poster" id="a4Poster">
+    <div class="a4-header">
+      <div class="a4-badge">💗 雪莉與朵栗</div>
+      <div class="a4-title">🎒 我的開學用品清單</div>
+      <div class="a4-subtitle" id="a4Subtitle"></div>
+    </div>
+    <div id="a4Body"></div>
+    <div class="a4-footer">
+      🩷 雪莉與朵栗・@dondon0813 🩷
+      <span class="a4-date" id="a4Date"></span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 // ===== 設定 =====
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
@@ -1969,6 +2128,7 @@ function renderSchoolList() {
   const progressEl = document.getElementById('schoolProgress');
   const removedToggleEl = document.getElementById('schoolRemovedToggle');
   const removedBoxEl = document.getElementById('schoolRemovedBox');
+  const generateBoxEl = document.getElementById('schoolGenerateBox');
   contentEl.innerHTML = '';
 
   if (!SCHOOL_ITEMS.length) {
@@ -1976,6 +2136,7 @@ function renderSchoolList() {
     progressEl.style.display = 'none';
     removedToggleEl.style.display = 'none';
     removedBoxEl.style.display = 'none';
+    generateBoxEl.style.display = 'none';
     return;
   }
 
@@ -1994,6 +2155,8 @@ function renderSchoolList() {
   const totalChecked = visibleItems.filter(it => checked.has(it['編號'])).length;
   progressEl.style.display = visibleItems.length ? 'block' : 'none';
   progressEl.textContent = `已準備 ${totalChecked} / ${visibleItems.length} 項`;
+
+  generateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
 
   // 有填「分類」的話依分類分組顯示，順序依第一次出現的分類為準；完全沒填分類就整批平鋪
   const hasCategory = visibleItems.some(it => String(it['分類'] || '').trim());
@@ -2202,6 +2365,141 @@ function openSchoolItemModal(item) {
   document.getElementById('schoolItemModal').classList.add('show');
 }
 
+// ===== 產生我的清單 A4 圖片 =====
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    if (!src) { resolve(false); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
+}
+
+async function buildA4Poster() {
+  const checked = getCheckedSchoolIds();
+  const removedIds = getRemovedSchoolIds();
+  const items = SCHOOL_ITEMS.filter(it => checked.has(it['編號']) && !removedIds.has(it['編號']));
+
+  document.getElementById('a4Subtitle').textContent = `已準備 ${items.length} 項 ・ 一起準備上學去 🎒`;
+  const now = new Date();
+  document.getElementById('a4Date').textContent = `製作日期：${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+
+  const bodyEl = document.getElementById('a4Body');
+  bodyEl.innerHTML = '';
+
+  if (!items.length) return false;
+
+  const hasCategory = items.some(it => String(it['分類'] || '').trim());
+  const groups = [];
+  if (!hasCategory) {
+    groups.push({ cat: '', items });
+  } else {
+    const groupIndex = {};
+    items.forEach(it => {
+      const cat = String(it['分類'] || '').trim() || '其他';
+      if (!(cat in groupIndex)) {
+        groupIndex[cat] = groups.length;
+        groups.push({ cat, items: [] });
+      }
+      groups[groupIndex[cat]].items.push(it);
+    });
+  }
+
+  const imgChecks = [];
+
+  for (const g of groups) {
+    if (g.cat) {
+      const head = document.createElement('div');
+      head.className = 'a4-category-title';
+      head.textContent = g.cat;
+      bodyEl.appendChild(head);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'a4-grid';
+    g.items.forEach(item => {
+      const cell = document.createElement('div');
+      cell.className = 'a4-item';
+
+      const iconRaw = String(item['圖示'] || '').trim();
+      const iconWrap = document.createElement('div');
+      if (isValidUrl(iconRaw)) {
+        iconWrap.className = 'a4-item-icon-wrap';
+        const img = document.createElement('img');
+        img.src = iconRaw;
+        iconWrap.appendChild(img);
+        imgChecks.push(preloadImage(iconRaw).then(ok => { if (!ok) { iconWrap.className = 'a4-item-icon-wrap emoji'; iconWrap.textContent = '🎒'; } }));
+      } else {
+        iconWrap.className = 'a4-item-icon-wrap emoji';
+        iconWrap.textContent = iconRaw || '🎒';
+      }
+      cell.appendChild(iconWrap);
+
+      const name = document.createElement('div');
+      name.className = 'a4-item-name';
+      name.textContent = item['項目名稱'] || '';
+      cell.appendChild(name);
+
+      grid.appendChild(cell);
+    });
+    bodyEl.appendChild(grid);
+  }
+
+  await Promise.all(imgChecks);
+  return true;
+}
+
+async function generateA4Image() {
+  const btn = document.getElementById('generateA4Btn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '產生中，請稍候…';
+
+  try {
+    const hasItems = await buildA4Poster();
+    if (!hasItems) {
+      alert('目前還沒有勾選任何「已準備」的項目唷！先去清單上打勾幾樣，再回來產生圖片吧 🎒');
+      return;
+    }
+
+    // 等字體 / 版面穩定
+    await new Promise(r => setTimeout(r, 150));
+
+    const posterEl = document.getElementById('a4Poster');
+    const canvas = await html2canvas(posterEl, {
+      scale: 2,
+      backgroundColor: '#FFFBF5',
+      useCORS: true,
+      allowTaint: true
+    });
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert('圖片產生失敗，請再試一次');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      a.href = url;
+      a.download = `開學用品清單_${stamp}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }, 'image/png');
+  } catch (err) {
+    console.error(err);
+    alert('圖片產生失敗，請再試一次');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('generateA4Btn').addEventListener('click', generateA4Image);
 
 // 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
 function pickBestBrandIngredient(group) {
