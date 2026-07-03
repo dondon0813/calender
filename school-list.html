@@ -1118,6 +1118,9 @@ async function buildA4Poster() {
 
   const gridEl = document.createElement('div');
   gridEl.className = 'a4-grid';
+  // 項目不多的話維持一排 5 個比較好看；項目超過 25 個改成一排 6 個，減少行數、比較不容易超出一張 A4 的高度
+  const COLS = items.length > 25 ? 6 : 5;
+  gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
   bodyEl.appendChild(gridEl);
 
   {
