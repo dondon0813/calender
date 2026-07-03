@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 開學用品標籤</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    color: #5a4a3f;
+    padding: 16px 8px 50px;
+  }
+
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    background: #FFFBF5;
+    border-radius: 22px;
+    border: 3px solid #FFE3CC;
+    padding: 18px 14px 26px;
+    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+  }
+
+  .back-btn {
+    display: inline-block;
+    background: none;
+    border: none;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #b5755a;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 14px;
+    text-decoration: none;
+  }
+  .back-btn:hover { color: #FF8FA3; }
+
+  .page-title {
+    text-align: center;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 24px;
+    color: #5a4a3f;
+    margin: 4px 0 6px;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .page-title::after {
+    content: '';
+    display: block;
+    width: 60%;
+    height: 0;
+    border-bottom: 2px dashed #FFC2CE;
+    margin: 8px auto 0;
+  }
+  .page-subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: #a89888;
+    font-weight: 700;
+    margin-bottom: 22px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0 10px;
+  }
+  .section-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    background: #FFE9CE;
+    border-radius: 999px;
+    padding: 5px 14px;
+  }
+
+  .box {
+    background: #FFF6EC;
+    border-radius: 16px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .box .desc {
+    font-size: 13px;
+    color: #8a7462;
+    line-height: 1.7;
+    margin: 0 0 14px;
+  }
+  .box .desc b { color: #FF6F91; }
+
+  .action-btn {
+    display: inline-block;
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+    text-decoration: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 14.5px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 14px;
+    background: #FF8FA3;
+    color: #fff;
+    cursor: pointer;
+  }
+  .action-btn:hover { background: #FF7391; }
+  .action-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .action-btn-alt { background: #7AAEEB; }
+  .action-btn-alt:hover { background: #5F97DB; }
+  .action-btn-alt.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: #a89888;
+    margin-top: 10px;
+    min-height: 16px;
+    line-height: 1.6;
+  }
+  .hint.error { color: #d46a6a; }
+  .hint a { color: #7AAEEB; font-weight: 800; }
+  .hint .open-tag {
+    color: #5C9147;
+    font-weight: 800;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back-btn" href="https://dondon0813.github.io/calender/recipes.html">← 前往雪莉育兒小工具</a>
+
+  <h1 class="page-title">開學用品標籤</h1>
+  <div class="page-subtitle">可愛姓名標籤圖檔，一鍵全部帶回家 🎒</div>
+
+  <div class="section-head"><span class="section-title">⬇️ 下載標籤圖片</span></div>
+  <div class="box">
+    <p class="desc">點下面的按鈕，會把<b>所有標籤圖片</b><br>打包成一個壓縮檔下載到你的裝置喔！</p>
+    <button class="action-btn" id="dlBtn" onclick="downloadAll()">下載所有圖片</button>
+    <div class="hint" id="status"></div>
+  </div>
+
+  <div class="section-head"><span class="section-title">🏷 購買標籤機</span></div>
+  <div class="box">
+    <p class="desc">還沒有標籤機嗎？<br>跟雪莉一起入手 <b>B21pro 標籤機</b> 吧！</p>
+    <a class="action-btn action-btn-alt" id="buyBtn" href="javascript:void(0)" target="_blank" rel="noopener noreferrer">點擊購買標籤機</a>
+    <div class="hint" id="buyStatus"></div>
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<script>
+/* ====== 設定區 ======
+   部署好「標籤打包 Apps Script」後，把網址貼到 LABELS_API_URL（保留引號）
+   如果留空，下載按鈕會改成直接打開雲端資料夾 */
+const LABELS_API_URL = "https://script.google.com/macros/s/AKfycbyO0bXyjGuZU-_lMEoCLV5AK0Uazz6X-_xypJ0QUSg6Sd3WkYGKoRSV_y0S-22s1HuM/exec";
+const DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1Qtqb4YISXPYyFmPBMmgetoV_LURPg7zv";
+
+/* 標籤機購買連結（自動判斷）：
+   1. 先查雪莉行事曆試算表，找標題含「B21」的團購
+   2. 今天在團購期間內（含 D 欄延長）→ 用團購網址（H欄）
+   3. 不在團購期間 → 用後台「開學用品」分頁裡標籤機的蝦皮連結 */
+const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+const BUY_KEYWORD = "b21";
+const ITEM_KEYWORDS = ["標籤機", "b21"];
+const CALENDAR_URL = "https://dondon0813.github.io/calender/";
+/* ==================== */
+
+const btn = document.getElementById('dlBtn');
+const statusEl = document.getElementById('status');
+const buyBtn = document.getElementById('buyBtn');
+const buyStatusEl = document.getElementById('buyStatus');
+
+/* ===== 下載所有標籤圖片 ===== */
+async function downloadAll() {
+  // 沒設定 API 就退回開啟雲端資料夾
+  if (!LABELS_API_URL) {
+    window.open(DRIVE_FOLDER_URL, '_blank', 'noopener');
+    statusEl.className = 'hint';
+    statusEl.textContent = '已為你開啟雲端資料夾，點右上角即可全部下載';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.className = 'hint';
+  statusEl.textContent = '正在打包圖片，請稍等一下下…📦';
+
+  try {
+    const res = await fetch(LABELS_API_URL + '?action=labelzip');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '打包失敗');
+
+    // base64 → Blob → 下載
+    const binStr = atob(data.base64);
+    const bytes = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/zip' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = data.filename || '開學用品標籤.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+    statusEl.textContent = '下載完成！共 ' + (data.count || '') + ' 張圖片 🎉';
+  } catch (err) {
+    console.error(err);
+    statusEl.className = 'hint error';
+    statusEl.innerHTML = '打包失敗了 🥲 你可以<a href="' + DRIVE_FOLDER_URL +
+      '" target="_blank" rel="noopener">直接前往雲端資料夾</a>下載';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ===== 標籤機購買按鈕 ===== */
+function parseDateStr(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  const gvizMatch = s.match(/Date\((\d+),(\d+),(\d+)/);
+  if (gvizMatch) {
+    return new Date(parseInt(gvizMatch[1]), parseInt(gvizMatch[2]), parseInt(gvizMatch[3]));
+  }
+  const parts = s.split(/[\/\-]/).map(p => parseInt(p, 10));
+  if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
+  return null;
+}
+
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// 計算含延長的實際結束日（D欄：可填天數或日期），跟行事曆的邏輯一致
+function effectiveEnd(end, extendRaw) {
+  if (!end) return null;
+  if (extendRaw === null || extendRaw === undefined || String(extendRaw).trim() === '') return end;
+  if (typeof extendRaw === 'number') {
+    return new Date(end.getFullYear(), end.getMonth(), end.getDate() + extendRaw);
+  }
+  const s = String(extendRaw).trim();
+  if (/^\d+$/.test(s)) {
+    return new Date(end.getFullYear(), end.getMonth(), end.getDate() + parseInt(s, 10));
+  }
+  const d = parseDateStr(s);
+  if (d) return startOfDay(d) > startOfDay(end) ? d : end;
+  return end;
+}
+
+// 從行事曆找 B21 團購，回傳「現在開團中」那一場的網址，沒有就回傳 null
+async function findOpenGroupUrl() {
+  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  const text = await res.text();
+  const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  const rows = json.table.rows || [];
+
+  const today = startOfDay(new Date());
+
+  for (const r of rows) {
+    const c = r.c || [];
+    const title = c[4] && c[4].v ? String(c[4].v) : '';   // E欄：標題
+    if (!title.toLowerCase().includes(BUY_KEYWORD)) continue;
+    const url = c[7] && c[7].v ? String(c[7].v) : '';     // H欄：訂購網址
+    if (!url) continue;
+    const start = parseDateStr(c[1] && c[1].v);           // B欄：開始日期
+    const end = effectiveEnd(parseDateStr(c[2] && c[2].v), c[3] ? c[3].v : null); // C欄＋D欄延長
+    if (start && startOfDay(start) <= today && (!end || startOfDay(end) >= today)) return url;
+  }
+  return null;
+}
+
+function isValidUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+
+// 從後台開學用品分頁找標籤機的蝦皮連結（取第一個有效連結）
+async function findShopeeUrl() {
+  const res = await fetch(APPS_SCRIPT_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
+  const data = await res.json();
+  const list = (data.schoolList || []).filter(s => s['編號']);
+
+  const row = list.find(item => {
+    const text = (String(item['項目名稱'] || '') + String(item['品牌推薦'] || '')).toLowerCase();
+    return ITEM_KEYWORDS.some(k => text.includes(k.toLowerCase()));
+  });
+  if (!row) return null;
+
+  // 蝦皮連結支援「｜」或「|」分隔多個品牌，取第一個有效的
+  const links = String(row['蝦皮連結'] || '').split(/[|｜]/).map(s => s.trim());
+  return links.find(isValidUrl) || null;
+}
+
+async function loadBuyLink() {
+  buyBtn.classList.add('disabled');
+  try {
+    // 第一步：檢查是否在團購期間（含延長）
+    let url = null;
+    try { url = await findOpenGroupUrl(); } catch (e) { console.error(e); }
+
+    if (url) {
+      buyBtn.href = url;
+      buyStatusEl.innerHTML = '<span class="open-tag">🟢 現正開團中！</span>';
+    } else {
+      // 第二步：非團購期間 → 用蝦皮連結
+      const shopee = await findShopeeUrl();
+      if (shopee) {
+        buyBtn.href = shopee;
+        buyStatusEl.textContent = '目前非團購期間，帶你前往蝦皮選購～';
+      } else {
+        buyBtn.href = CALENDAR_URL;
+        buyStatusEl.textContent = '目前查不到購買連結，先帶你去看團購行事曆～';
+      }
+    }
+    buyBtn.classList.remove('disabled');
+  } catch (err) {
+    console.error(err);
+    buyBtn.href = CALENDAR_URL;
+    buyBtn.classList.remove('disabled');
+    buyStatusEl.textContent = '目前查不到購買連結，先帶你去看團購行事曆～';
+  }
+}
+loadBuyLink();
+</script>
+
+</body>
+</html>
