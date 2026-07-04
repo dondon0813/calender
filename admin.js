@@ -16,6 +16,7 @@ let appPassword = null;
 let currentUser = null;            // 目前登入者姓名
 let staffList = [];                // [{ name, password }]
 let taskNames = [];                // 派遣任務的任務名稱清單（共用）
+let myTaskNames = [];               // 【新】只有自己看得到的任務名稱（不進共用清單）
 let tasksMap = {};                 // { 姓名: [{ id, taskName, content, urgent, status, ... }] }
 let vendors = [];                  // 廠商名單（廠商選品的下拉選單）
 let prStatusMap = {};              // { getMemoKey(ev): { status, url, location, updated } }
@@ -41,7 +42,8 @@ let currentMode = 'start';
 const MODE_VISIBLE_DAYS = {
   all:   [0,1,2,3,4,5,6],
   start: [1,2,3,4,5],
-  end:   [0,1,2,3,4]
+  end:   [0,1,2,3,4],
+  mytasks: [0,1,2,3,4,5,6]
 };
 
 function parseDateStr(s) {
@@ -288,17 +290,19 @@ function render() {
   renderWeekdayHeader();
 
   const legendEl = document.getElementById('legend');
-  legendEl.classList.toggle('show', currentMode !== 'all');
+  legendEl.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks');
 
   // 公關品狀態小圖示只在開團日／結團日模式有意義，顯示開關並同步開關樣式
   const prWrap = document.getElementById('prToggleWrap');
   if (prWrap) {
-    prWrap.classList.toggle('show', currentMode !== 'all');
+    prWrap.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks');
     document.getElementById('prSwitch').classList.toggle('on', prChipOn);
   }
 
   if (currentMode === 'all') {
     renderAllMode();
+  } else if (currentMode === 'mytasks') {
+    renderWorkMode();
   } else {
     renderSingleDayMode(currentMode);
   }
@@ -489,6 +493,97 @@ function renderSingleDayMode(mode) {
             dot.title = daysLeft === 0 ? '今天結單' : `剩 ${daysLeft} 天結單`;
             bar.appendChild(dot);
           }
+
+          stack.appendChild(bar);
+        });
+        cell.appendChild(stack);
+      }
+
+      weekEl.appendChild(cell);
+    });
+
+    grid.appendChild(weekEl);
+  }
+}
+
+// 把 <input type="date"> 存的 'YYYY-MM-DD' 字串轉成 Date 物件，格式不對就回傳 null
+function parseYmd(s) {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s).trim());
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+// 行事曆「工作表」模式：不顯示團購，改成把自己安排好日期的工作排進對應日期，點擊會前往「我的任務」
+function renderWorkMode() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  const visibleDays = MODE_VISIBLE_DAYS.mytasks;
+  const colCount = visibleDays.length;
+
+  const firstOfMonth = new Date(currentYear, currentMonth, 1);
+  const startOffset = firstOfMonth.getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const gridStart = new Date(currentYear, currentMonth, 1 - startOffset);
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const numWeeks = totalCells / 7;
+
+  const dateKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const tasksByDate = {};
+  myTasks().forEach(t => {
+    const d = parseYmd(t.date);
+    if (!d) return; // 沒有指定日期的工作不會出現在這個檢視裡
+    const key = dateKey(d);
+    if (!tasksByDate[key]) tasksByDate[key] = [];
+    tasksByDate[key].push(t);
+  });
+
+  for (let w = 0; w < numWeeks; w++) {
+    const weekStart = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + w * 7);
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      weekDays.push(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i));
+    }
+
+    const weekEl = document.createElement('div');
+    weekEl.className = 'week';
+    weekEl.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+    weekEl.style.gridTemplateRows = 'auto';
+
+    visibleDays.forEach((wd, colIdx) => {
+      const d = weekDays[wd];
+      const dim = d.getMonth() !== currentMonth;
+      const today = isSameDate(d, new Date());
+      const cell = document.createElement('div');
+      cell.className = 'daycell-list' + (dim ? ' dim' : '') + (today ? ' today' : '');
+      cell.style.gridColumn = `${colIdx + 1}`;
+
+      const dn = document.createElement('div');
+      dn.className = 'daynum';
+      dn.textContent = d.getDate();
+      cell.appendChild(dn);
+
+      const key = dateKey(d);
+      const dayTasks = tasksByDate[key] || [];
+      if (dayTasks.length) {
+        const stack = document.createElement('div');
+        stack.className = 'events-stack';
+        dayTasks.forEach(t => {
+          const bar = document.createElement('div');
+          const catClass = t.done ? 'cat-work-done' : (t.urgent ? 'cat-work-urgent' : 'cat-work');
+          bar.className = `ebar ebar-wrap ${catClass} clickable`;
+          bar.addEventListener('click', () => switchView('myTasks'));
+          bar.title = (t.taskName || '') + (t.done ? '（已完成）' : '') + '（點擊前往我的任務）';
+
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'ev-title ev-title-wrap';
+          const lines = wrapTitleLines(t.taskName || '', 4);
+          lines.forEach((line, idx) => {
+            if (idx > 0) titleSpan.appendChild(document.createElement('br'));
+            titleSpan.appendChild(document.createTextNode(line));
+          });
+          bar.appendChild(titleSpan);
 
           stack.appendChild(bar);
         });
@@ -768,6 +863,7 @@ async function fetchMemos() {
     urlMap = data.urls || {};
     staffList = Array.isArray(data.staff) ? data.staff : [];
     taskNames = Array.isArray(data.taskNames) ? data.taskNames : [];
+    myTaskNames = Array.isArray(data.myTaskNames) ? data.myTaskNames : [];
     tasksMap = data.tasks || {};
     vendors = Array.isArray(data.vendors) ? data.vendors : [];
     prStatusMap = data.prStatus || {};
@@ -1219,15 +1315,14 @@ function renderDispatchForm() {
   });
   if (prevTo && [...toSel.options].some(o => o.value === prevTo)) toSel.value = prevTo;
 
-  fillTaskNameSelect(document.getElementById('dispatchTaskName'), taskNames);
+  // 共用清單 + 自己額外加過的私人任務名稱（只有自己看得到）
+  fillTaskNameSelect(document.getElementById('dispatchTaskName'), taskNames.concat(myTaskNames));
 }
 
 function renderSelfForm() {
-  // 安排工作：預設只有「顧客提問」＋新增更多；之後透過「新增更多」加的名稱也會出現
-  const extra = taskNames.filter(n => !SELF_DEFAULT_TASKS.includes(n) && selfAddedNames.has(n));
-  fillTaskNameSelect(document.getElementById('selfTaskName'), SELF_DEFAULT_TASKS.concat(extra));
+  // 安排工作：預設只有「顧客提問」＋新增更多；自己之前加過的私人任務名稱也會出現
+  fillTaskNameSelect(document.getElementById('selfTaskName'), SELF_DEFAULT_TASKS.concat(myTaskNames));
 }
-const selfAddedNames = new Set(); // 這台裝置透過「安排工作→新增更多」加過的名稱
 
 // 任務名稱選到「新增更多」時顯示輸入列
 function bindTaskNameSelect(selectId, rowId, contentBlockId) {
@@ -1344,40 +1439,58 @@ function extraSummary(task) {
 }
 
 // 新增任務名稱（會同步寫入試算表的任務名稱分頁）
-async function addTaskName(inputId, statusId, selectId, isSelf) {
+// 新增任務名稱：
+// - 如果輸入的名稱剛好跟共用清單一樣 → 直接沿用共用的那一個（同一種格式），不算新增
+// - 如果是全新名稱 → 只記錄在自己底下，其他員工看不到，也不會進入共用清單
+async function addTaskName(inputId, statusId, selectId) {
   const input = document.getElementById(inputId);
   const name = input.value.trim();
   if (!name) return;
-  if (taskNames.includes(name) || SELF_DEFAULT_TASKS.includes(name)) {
-    setFormStatus(statusId, '這個任務名稱已經存在囉', 'error');
+
+  if (taskNames.includes(name)) {
+    const sel = document.getElementById(selectId);
+    sel.value = name;
+    sel.dispatchEvent(new Event('change'));
+    input.value = '';
+    setFormStatus(statusId, '這是大家共用的既有名稱，已經幫你選好了', 'ok');
     return;
   }
+
+  if (myTaskNames.includes(name) || SELF_DEFAULT_TASKS.includes(name)) {
+    const sel = document.getElementById(selectId);
+    sel.value = name;
+    sel.dispatchEvent(new Event('change'));
+    input.value = '';
+    setFormStatus(statusId, '這個名稱你之前加過了，已經幫你選好了', 'ok');
+    return;
+  }
+
   setFormStatus(statusId, '新增任務名稱中…');
   try {
-    await postTask({ type: 'taskname-add', name });
-    taskNames.push(name);
-    if (isSelf) selfAddedNames.add(name);
+    await postTask({ type: 'my-taskname-add', name });
+    myTaskNames.push(name);
     renderDispatchForm();
     renderSelfForm();
     const sel = document.getElementById(selectId);
     sel.value = name;
     sel.dispatchEvent(new Event('change'));
     input.value = '';
-    setFormStatus(statusId, '已新增「' + name + '」✓', 'ok');
+    setFormStatus(statusId, '已新增「' + name + '」（只有你自己看得到）✓', 'ok');
   } catch (err) {
     setFormStatus(statusId, '新增失敗：' + err.message, 'error');
   }
 }
 document.getElementById('dispatchNewNameBtn').addEventListener('click', () =>
-  addTaskName('dispatchNewNameInput', 'dispatchStatus', 'dispatchTaskName', false));
+  addTaskName('dispatchNewNameInput', 'dispatchStatus', 'dispatchTaskName'));
 document.getElementById('selfNewNameBtn').addEventListener('click', () =>
-  addTaskName('selfNewNameInput', 'selfStatus', 'selfTaskName', true));
+  addTaskName('selfNewNameInput', 'selfStatus', 'selfTaskName'));
 
 // ===== 派遣任務 =====
 document.getElementById('dispatchSubmitBtn').addEventListener('click', async () => {
   const to = document.getElementById('dispatchTo').value;
   const taskName = document.getElementById('dispatchTaskName').value;
   const content = document.getElementById('dispatchContent').value.trim();
+  const date = document.getElementById('dispatchDate').value; // 可不填，格式 YYYY-MM-DD
   const urgent = document.getElementById('dispatchUrgent').checked;
   const btn = document.getElementById('dispatchSubmitBtn');
 
@@ -1388,11 +1501,12 @@ document.getElementById('dispatchSubmitBtn').addEventListener('click', async () 
   setFormStatus('dispatchStatus', '派遣中…');
   try {
     const extra = collectExtra('dispatch', taskName);
-    await postTask({ type: 'task-add', to, from: currentUser, taskName, content, urgent, extra });
+    await postTask({ type: 'task-add', to, from: currentUser, taskName, content, urgent, extra, date });
     // 派遣「廠商選品」時，自動把對應團購的公關品狀態設為「選品中」並帶入選品網址
     await syncPrStatusFromDispatch(taskName, extra);
     setFormStatus('dispatchStatus', '已派遣給 ' + to + ' ✓', 'ok');
     document.getElementById('dispatchContent').value = '';
+    document.getElementById('dispatchDate').value = '';
     document.getElementById('dispatchUrgent').checked = false;
     document.getElementById('dispatchTaskName').value = '';
     renderExtraFields('dispatch'); // 清空附加欄位
@@ -1409,6 +1523,7 @@ document.getElementById('dispatchSubmitBtn').addEventListener('click', async () 
 document.getElementById('selfSubmitBtn').addEventListener('click', async () => {
   const taskName = document.getElementById('selfTaskName').value;
   const content = document.getElementById('selfContent').value.trim();
+  const date = document.getElementById('selfDate').value; // 可不填，格式 YYYY-MM-DD
   const btn = document.getElementById('selfSubmitBtn');
 
   if (!taskName || taskName === '__new__') { setFormStatus('selfStatus', '請選擇任務名稱', 'error'); return; }
@@ -1417,10 +1532,11 @@ document.getElementById('selfSubmitBtn').addEventListener('click', async () => {
   setFormStatus('selfStatus', '安排中…');
   try {
     const extra = collectExtra('self', taskName);
-    await postTask({ type: 'task-add', to: currentUser, from: currentUser, taskName, content, urgent: false, extra });
+    await postTask({ type: 'task-add', to: currentUser, from: currentUser, taskName, content, urgent: false, extra, date });
     await syncPrStatusFromDispatch(taskName, extra);
     setFormStatus('selfStatus', '已加入待完成清單 ✓', 'ok');
     document.getElementById('selfContent').value = '';
+    document.getElementById('selfDate').value = '';
     renderExtraFields('self'); // 清空附加欄位
     await fetchMemos();
   } catch (err) {
@@ -1552,7 +1668,7 @@ function buildPendingItem(task) {
   const meta = document.createElement('div');
   meta.className = 'task-meta';
   const fromText = task.from && task.from !== currentUser ? task.from + ' 派遣' : '自己安排';
-  meta.textContent = fromText + (task.created ? '・' + shortTime(task.created) : '');
+  meta.textContent = fromText + (task.created ? '・' + shortTime(task.created) : '') + (task.date ? '・📅 ' + task.date : '');
   body.appendChild(meta);
   item.appendChild(body);
 
@@ -1593,7 +1709,7 @@ function buildDoneItem(task) {
 
   const meta = document.createElement('div');
   meta.className = 'task-meta';
-  meta.textContent = '完成於 ' + shortTime(task.doneAt);
+  meta.textContent = '完成於 ' + shortTime(task.doneAt) + (task.date ? '・📅 ' + task.date : '');
   body.appendChild(meta);
 
   const actions = document.createElement('div');
@@ -1721,7 +1837,7 @@ function renderDispatchedList() {
     const summary = extraSummary(task);
     row.innerHTML =
       `<span class="di-to">👤 ${escHtml(owner)}</span>` +
-      `<span class="di-name">${escHtml(task.taskName || '')}${summary ? '<span style="color:#4a7fb5; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}</span>` +
+      `<span class="di-name">${escHtml(task.taskName || '')}${summary ? '<span style="color:#4a7fb5; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}${task.date ? ' <span style="color:#a89888; font-size:11px;">📅 ' + escHtml(task.date) + '</span>' : ''}</span>` +
       statusTagHtml(taskStatus(task));
     row.addEventListener('click', () => openTaskModal(owner, task, true));
     el.appendChild(row);
@@ -1740,6 +1856,7 @@ function openTaskModal(owner, task, isDispatchView) {
   const metaParts = [];
   if (task.from) metaParts.push(task.from === owner ? owner + ' 自己安排' : '由 ' + task.from + ' 派遣');
   if (task.created) metaParts.push(shortTime(task.created) + ' 建立');
+  if (task.date) metaParts.push('📅 ' + task.date);
   if (task.urgent) metaParts.push('🚨 緊急');
   document.getElementById('taskModalMeta').textContent = metaParts.join('・');
 
