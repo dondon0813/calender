@@ -2794,10 +2794,20 @@ async function postTask(payload) {
   const res = await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免CORS預檢
-    body: JSON.stringify(payload)
+    body: JSON.stringify(withToken(payload))
   });
   const result = await res.json();
-  if (!result.success) throw new Error(result.error || '未知錯誤');
+  if (!result.success) {
+    // token 過期或未登入時，把使用者踢回登入畫面，而不是只顯示錯誤訊息
+    if (result.needLogin) {
+      currentToken = null;
+      sessionStorage.removeItem('admin_unlocked');
+      sessionStorage.removeItem('admin_token');
+      document.getElementById('passwordGate').style.display = 'flex';
+      document.getElementById('mainWrap').style.visibility = 'hidden';
+    }
+    throw new Error(result.error || '未知錯誤');
+  }
   return result;
 }
 
