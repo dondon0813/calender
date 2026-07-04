@@ -1717,6 +1717,7 @@ const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
 // 在完成 Apps Script 設定前，先用這組密碼；設定好後密碼改用試算表管理，這組就不會再用到
 const FALLBACK_PASSWORD = "0000";
+let currentToken = null; // 登入後從後端拿到的通行證，之後每次呼叫後端都要帶著它  
 
 let memoMap = {}; // { key: 備忘錄內容 }
 let urlMap = {}; // { key: 後台網址 }
@@ -2445,17 +2446,36 @@ function fallbackCopy(text, done) {
 
 // ===== 備忘錄：讀取／儲存（透過 Google Apps Script） =====
 
+// 幫每一個要送給後端的物件自動帶上 token，之後所有 POST 都用這個包一下
+function withToken(obj) {
+  return Object.assign({ token: currentToken || '' }, obj);
+}
+
 async function fetchMemos() {
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
     appPassword = FALLBACK_PASSWORD;
     return;
   }
   try {
-    // 加上時間戳記參數強迫略過快取，避免讀到剛儲存前的舊資料
-    const noCacheUrl = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+    let noCacheUrl = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+    if (currentToken) {
+      noCacheUrl += '&token=' + encodeURIComponent(currentToken);
+    }
     const res = await fetch(noCacheUrl, { cache: 'no-store' });
     const data = await res.json();
-    appPassword = data.password || FALLBACK_PASSWORD;
+
+    // 未登入或登入逾時：後端只會回傳公開資料，把使用者踢回登入畫面
+    if (data.unauthorized) {
+      currentToken = null;
+      currentUser = null;
+      sessionStorage.removeItem('admin_unlocked');
+      sessionStorage.removeItem('admin_user');
+      sessionStorage.removeItem('admin_token');
+      document.getElementById('passwordGate').style.display = 'flex';
+      document.getElementById('mainWrap').style.visibility = 'hidden';
+      return;
+    }
+
     memoMap = data.memos || {};
     urlMap = data.urls || {};
     staffList = Array.isArray(data.staff) ? data.staff : [];
@@ -2463,22 +2483,18 @@ async function fetchMemos() {
     tasksMap = data.tasks || {};
     vendors = Array.isArray(data.vendors) ? data.vendors : [];
     prStatusMap = data.prStatus || {};
-    // 每次同步完資料，更新任務相關畫面與緊急提醒
     if (currentUser) {
       renderTaskUI();
     }
-    // 若目前正在看行事曆，重繪以套用最新的公關品狀態小圖示
     if (currentView === 'calendar' && typeof render === 'function') {
       render();
     }
-    // 若任務視窗開著看選品任務，重繪狀態按鈕高亮（行事曆那邊改了也能即時反映）
     const taskModalEl = document.getElementById('taskModal');
     if (taskModalCtx && taskModalEl && taskModalEl.classList.contains('show')) {
       renderStageQuick();
     }
   } catch (err) {
     console.warn('後台資料讀取失敗：', err);
-    if (appPassword === null) appPassword = FALLBACK_PASSWORD; // 網路異常時的保底，避免整個被鎖死
   }
 }
 
@@ -2489,26 +2505,51 @@ async function tryUnlock() {
   btn.disabled = true;
   errEl.textContent = '';
 
-  if (appPassword === null) {
-    errEl.textContent = '確認密碼中，請稍候…';
-    await fetchMemos();
+  // 尚未設定後端網址：走原本的保底密碼，離線也能用
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+    if (input.value === FALLBACK_PASSWORD) {
+      currentUser = '雪莉';
+      currentToken = null;
+      sessionStorage.setItem('admin_unlocked', '1');
+      sessionStorage.setItem('admin_user', currentUser);
+      document.getElementById('passwordGate').style.display = 'none';
+      document.getElementById('mainWrap').style.visibility = 'visible';
+      initAppUI();
+    } else {
+      errEl.textContent = '密碼錯誤，請再試一次';
+      input.value = '';
+      input.focus();
+    }
+    btn.disabled = false;
+    return;
   }
 
-  // 依密碼判斷是誰登入：先比對員工名單，再比對舊的共用密碼（視為雪莉）
-  const staffMatch = staffList.find(s => s.password && input.value === String(s.password));
-  const isLegacy = input.value === appPassword;
+  errEl.textContent = '登入中…';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ type: 'login', password: input.value })
+    });
+    const result = await res.json();
 
-  if (staffMatch || isLegacy) {
-    currentUser = staffMatch ? staffMatch.name : (staffList[0] ? staffList[0].name : '雪莉');
-    sessionStorage.setItem('admin_unlocked', '1');
-    sessionStorage.setItem('admin_user', currentUser);
-    document.getElementById('passwordGate').style.display = 'none';
-    document.getElementById('mainWrap').style.visibility = 'visible';
-    initAppUI();
-  } else {
-    errEl.textContent = '密碼錯誤，請再試一次';
-    input.value = '';
-    input.focus();
+    if (result.success) {
+      currentUser = result.name;
+      currentToken = result.token;
+      sessionStorage.setItem('admin_unlocked', '1');
+      sessionStorage.setItem('admin_user', currentUser);
+      sessionStorage.setItem('admin_token', currentToken);
+      document.getElementById('passwordGate').style.display = 'none';
+      document.getElementById('mainWrap').style.visibility = 'visible';
+      await fetchMemos();
+      initAppUI();
+    } else {
+      errEl.textContent = result.error || '密碼錯誤，請再試一次';
+      input.value = '';
+      input.focus();
+    }
+  } catch (err) {
+    errEl.textContent = '連線失敗，請檢查網路後再試一次';
   }
   btn.disabled = false;
 }
@@ -2520,13 +2561,13 @@ document.getElementById('gatePasswordInput').addEventListener('keydown', (e) => 
 
 if (sessionStorage.getItem('admin_unlocked') === '1') {
   currentUser = sessionStorage.getItem('admin_user') || '雪莉';
+  currentToken = sessionStorage.getItem('admin_token') || null;
   document.getElementById('passwordGate').style.display = 'none';
   document.getElementById('mainWrap').style.visibility = 'visible';
-  initAppUI();
+  fetchMemos().then(() => initAppUI()); // 重新用 token 跟後端要一次資料，順便確認 token 沒過期
 } else {
   document.getElementById('gatePasswordInput').focus();
 }
-
 document.getElementById('refreshBtn').addEventListener('click', loadData);
 
 async function saveMemo() {
