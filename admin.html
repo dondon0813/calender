@@ -2529,7 +2529,7 @@ async function tryUnlock() {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ type: 'login', password: input.value })
+      body: JSON.stringify(withToken({ type: 'login', password: input.value }))
     });
     const result = await res.json();
 
@@ -2590,7 +2590,7 @@ async function saveMemo() {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免CORS預檢
-      body: JSON.stringify({ type: 'memo', key, text })
+      body: JSON.stringify(withToken({ type: 'memo', key, text }))
     });
     const result = await res.json();
     if (!result.success) throw new Error(result.error || '未知錯誤');
@@ -2624,7 +2624,7 @@ async function saveBackendUrl() {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ type: 'url', key, text })
+      body: JSON.stringify(withToken({ type: 'url', key, text }))
     });
     const result = await res.json();
     if (!result.success) throw new Error(result.error || '未知錯誤');
