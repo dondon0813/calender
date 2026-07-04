@@ -1434,6 +1434,7 @@
     <div class="gate-lock">🔒</div>
     <h2>雪莉與朵栗 內部後台</h2>
     <p>請輸入密碼才能進入</p>
+    <input type="text" id="gateNameInput" placeholder="請輸入姓名">
     <input type="password" id="gatePasswordInput" placeholder="請輸入密碼" autocomplete="off">
     <button id="gateSubmitBtn">進入</button>
     <div class="gate-error" id="gateError"></div>
@@ -2529,8 +2530,68 @@ async function tryUnlock() {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(withToken({ type: 'login', password: input.value }))
+      async function tryUnlock() {
+  const nameInput = document.getElementById('gateNameInput');
+  const input = document.getElementById('gatePasswordInput');
+  const errEl = document.getElementById('gateError');
+  const btn = document.getElementById('gateSubmitBtn');
+  btn.disabled = true;
+  errEl.textContent = '';
+
+  const nameValue = nameInput.value.trim();
+  if (!nameValue || !input.value) {
+    errEl.textContent = '請輸入姓名與密碼';
+    btn.disabled = false;
+    return;
+  }
+
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+    if (input.value === FALLBACK_PASSWORD) {
+      currentUser = nameValue || '雪莉';
+      currentToken = null;
+      sessionStorage.setItem('admin_unlocked', '1');
+      sessionStorage.setItem('admin_user', currentUser);
+      document.getElementById('passwordGate').style.display = 'none';
+      document.getElementById('mainWrap').style.visibility = 'visible';
+      initAppUI();
+    } else {
+      errEl.textContent = '密碼錯誤，請再試一次';
+      input.value = '';
+      input.focus();
+    }
+    btn.disabled = false;
+    return;
+  }
+
+  errEl.textContent = '登入中…';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ type: 'login', name: nameValue, password: input.value })
     });
+    const result = await res.json();
+
+    if (result.success) {
+      currentUser = result.name;
+      currentToken = result.token;
+      sessionStorage.setItem('admin_unlocked', '1');
+      sessionStorage.setItem('admin_user', currentUser);
+      sessionStorage.setItem('admin_token', currentToken);
+      document.getElementById('passwordGate').style.display = 'none';
+      document.getElementById('mainWrap').style.visibility = 'visible';
+      await fetchMemos();
+      initAppUI();
+    } else {
+      errEl.textContent = result.error || '姓名或密碼錯誤，請再試一次';
+      input.value = '';
+      input.focus();
+    }
+  } catch (err) {
+    errEl.textContent = '連線失敗，請檢查網路後再試一次';
+  }
+  btn.disabled = false;
+};
     const result = await res.json();
 
     if (result.success) {
