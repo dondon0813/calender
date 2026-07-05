@@ -294,7 +294,7 @@ function render() {
   document.getElementById('monthSelect').style.display = isList ? 'none' : '';
   document.getElementById('weekdays').style.display = isList ? 'none' : '';
   document.getElementById('grid').style.display = isList ? 'none' : '';
-  document.getElementById('calGroupList').style.display = isList ? '' : 'none';
+  document.getElementById('calGroupListWrap').style.display = isList ? '' : 'none';
 
   const legendEl = document.getElementById('legend');
   legendEl.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks' && !isList);
