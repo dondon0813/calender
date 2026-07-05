@@ -222,7 +222,7 @@
   }
   .status.error { color: #e0654f; }
 
-  /* ===== 頂部列：目前身份 + 三條線選單 ===== */
+  /* ===== 頂部列：目前身份 + 小房子 + 三條線選單 ===== */
   .topbar {
     display: flex;
     align-items: center;
@@ -239,6 +239,25 @@
     border-radius: 999px;
     padding: 6px 14px;
   }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .home-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .home-btn:hover { background: #FFF1E6; }
   .menu-wrap { position: relative; }
   .menu-btn {
     width: 42px;
@@ -398,7 +417,7 @@
     margin: 8px auto 0;
   }
 
-  /* ===== 工作首頁四大按鈕 ===== */
+  /* ===== 工作首頁按鈕 ===== */
   .home-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -427,7 +446,7 @@
     font-size: 16px;
   }
 
-  /* ===== 表單（派遣任務／安排工作）===== */
+  /* ===== 表單（派遣任務／安排工作／公關品新增）===== */
   .task-form {
     max-width: 460px;
     margin: 14px auto;
@@ -624,6 +643,7 @@
   .st-pending { color: #8a7462; background: #F0E4D6; }
   .st-working { color: #fff; background: #F5A25D; }
   .st-done { color: #fff; background: #9ACB85; }
+  .st-bounce { color: #fff; background: #B79AE8; }
 
   .task-mini-btn {
     flex: none;
@@ -755,6 +775,17 @@
   .stage-item:last-child { border-bottom: none; }
   .stage-item .stage-dot { flex: none; color: #FF8FA3; font-weight: 900; }
   .stage-item .stage-time { flex: none; font-size: 10.5px; color: #b39a8b; margin-left: auto; }
+  .stage-item .stage-del {
+    flex: none;
+    border: none;
+    background: none;
+    color: #c99;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: 4px;
+  }
+  .stage-item .stage-del:hover { color: #e0654f; }
   .stage-add-row {
     display: flex;
     gap: 8px;
@@ -815,6 +846,22 @@
     outline-offset: 1px;
     box-shadow: 0 0 0 3px rgba(181,117,90,.15);
   }
+
+  /* 回派對話 */
+  .bounce-item {
+    font-size: 12.5px;
+    color: #5a4a3f;
+    padding: 8px 4px;
+    border-bottom: 1px dotted #F0DFCB;
+    line-height: 1.5;
+  }
+  .bounce-item:last-child { border-bottom: none; }
+  .bounce-item .bounce-from { font-weight: 900; color: #4a7fb5; margin-right: 4px; }
+  .bounce-item .bounce-time { font-size: 10.5px; color: #b39a8b; margin-left: 6px; }
+
+  /* 可收折區塊標題（階段紀錄用） */
+  .rc-section-head.collapsible { cursor: pointer; user-select: none; }
+  .rc-section-head.collapsible .pr-arrow { margin-left: auto; color: #c9a892; transition: transform .2s; }
 
   /* ===== 任務視窗小卡樣式 ===== */
   .recipe-card-modal {
@@ -1614,6 +1661,58 @@
   }
   .pnote-card-status.ok { color: #9ACB85; }
   .pnote-card-status.error { color: #e0654f; }
+
+  /* ===== 公關品狀態清單（首頁卡片頁面） ===== */
+  .pri-card {
+    background: #FFF6EC;
+    border: 2px solid #FFE3CC;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .pri-card-title {
+    font-size: 14px;
+    font-weight: 900;
+    color: #5a4a3f;
+    margin-bottom: 4px;
+  }
+  .pri-card-meta {
+    font-size: 12px;
+    color: #a89888;
+    margin-bottom: 8px;
+  }
+  .pri-card-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .pri-card-row input, .pri-card-row select {
+    flex: 1 1 120px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 12.5px;
+    border: 2px solid #FFD3B6;
+    border-radius: 10px;
+    padding: 7px 10px;
+    background: #fff;
+    color: #5a4a3f;
+  }
+  .pri-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .pri-card-status {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #a89888;
+  }
+  .pri-card-status.ok { color: #9ACB85; }
+  .pri-card-status.error { color: #e0654f; }
 </style>
 </head>
 <body>
@@ -1642,17 +1741,21 @@
 
   <div class="topbar">
     <span class="user-chip" id="userChip">👤</span>
-    <div class="menu-wrap">
-      <button class="menu-btn" id="menuBtn" title="選單" aria-label="選單">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="menu-panel" id="menuPanel">
-        <button class="menu-item" data-view="home">🏠 工作首頁</button>
-        <button class="menu-item" data-view="calendar">📅 行事曆</button>
-        <button class="menu-item" data-view="dispatch">📨 派遣任務</button>
-        <button class="menu-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
-        <button class="menu-item" data-view="memo">📝 備忘錄</button>
-        <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
+    <div class="topbar-right">
+      <button class="home-btn" id="homeBtn" title="回到首頁" aria-label="回到首頁">🏠</button>
+      <div class="menu-wrap">
+        <button class="menu-btn" id="menuBtn" title="選單" aria-label="選單">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="menu-panel" id="menuPanel">
+          <button class="menu-item" data-view="home">🏠 工作首頁</button>
+          <button class="menu-item" data-view="calendar">📅 行事曆</button>
+          <button class="menu-item" data-view="dispatch">📨 派遣任務</button>
+          <button class="menu-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
+          <button class="menu-item" data-view="memo">📝 備忘錄</button>
+          <button class="menu-item" data-view="prItems">🎀 公關品狀態</button>
+          <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1673,6 +1776,9 @@
       <div class="home-card" onclick="switchView('myTasks')">
         <span class="hc-icon">📋</span><span class="hc-name">我的任務</span>
         <span class="hc-urgent" id="homeUrgentIcon" style="display:none;">🚨</span>
+      </div>
+      <div class="home-card" onclick="switchView('prItems')">
+        <span class="hc-icon">🎀</span><span class="hc-name">公關品狀態</span>
       </div>
     </div>
   </div>
@@ -1770,6 +1876,35 @@
     <div class="pnote-list" id="pnoteList"></div>
   </div>
 
+  <!-- ===== 公關品狀態列表 ===== -->
+  <div class="view" id="viewPrItems">
+    <h2 class="view-title">公關品狀態</h2>
+
+    <div class="task-form" id="prItemAddForm">
+      <label for="priName">名稱</label>
+      <input type="text" id="priName" placeholder="例如：林貝兒 米餅">
+      <label for="priVendor">廠商</label>
+      <input type="text" id="priVendor" placeholder="廠商名稱（可不填）">
+      <label for="priBrand">品牌</label>
+      <input type="text" id="priBrand" placeholder="品牌名稱（可不填）">
+      <label for="priGroup">屬於哪一團</label>
+      <input type="text" id="priGroup" placeholder="團購標題（可不填）">
+      <label for="priLocation">放置位置</label>
+      <select id="priLocation"></select>
+      <div class="newname-row" id="priLocationNewRow">
+        <input type="text" id="priLocationNewInput" placeholder="輸入新的位置選項…">
+        <button id="priLocationNewBtn">新增</button>
+      </div>
+      <label for="priNote">備註</label>
+      <textarea id="priNote" placeholder="備註…（可不填）"></textarea>
+      <button class="task-submit-btn" id="priAddBtn">➕ 手動新增</button>
+      <div class="form-status" id="priAddStatus"></div>
+    </div>
+
+    <div style="text-align:center;"><span class="task-section-title">🎀 公關品清單</span></div>
+    <div id="priList"></div>
+  </div>
+
   <!-- ===== 行事曆 ===== -->
   <div class="view" id="viewCalendar">
   <div class="header">
@@ -1812,7 +1947,7 @@
   <div class="footer">🔒 內部後台版本・僅供雪莉與員工使用</div>
 </div>
 
-<!-- 任務詳細浮動視窗：狀態切換／備忘錄／階段紀錄 -->
+<!-- 任務詳細浮動視窗：狀態切換／階段紀錄／回派對話／備忘錄 -->
 <div class="modal-backdrop" id="taskModal" onclick="if(event.target===this) closeModal('taskModal')">
   <div class="modal-box recipe-card-modal">
     <div class="rc-header">
@@ -1838,6 +1973,44 @@
 
     <div class="task-modal-content" id="taskModalContent" style="display:none;"></div>
 
+    <!-- 📌 階段紀錄（可收折） -->
+    <div class="rc-section">
+      <div class="rc-section-head collapsible" id="stageSectionHead">
+        <span class="rc-section-title">📌 階段紀錄</span>
+        <span class="pr-arrow" id="stageSectionArrow">▼</span>
+      </div>
+      <div id="stageSectionBody">
+        <div class="stage-list" id="stageList"></div>
+        <div class="stage-quick" id="stageQuick" style="display:none;"></div>
+        <div class="pr-field" id="taskPrLocationField" style="display:none;">
+          <label for="taskPrLocationSelect">📦 公關品位置</label>
+          <select id="taskPrLocationSelect"></select>
+          <div class="newname-row" id="taskPrLocationNewRow">
+            <input type="text" id="taskPrLocationNewInput" placeholder="輸入新的位置選項…">
+            <button id="taskPrLocationNewBtn">新增</button>
+          </div>
+          <span class="pr-save-status" id="taskPrLocationSaveMsg"></span>
+        </div>
+        <div class="stage-add-row">
+          <input type="text" id="stageInput" placeholder="例如：問題已丟給廠商，等待回覆中…">
+          <button id="stageAddBtn">新增階段</button>
+        </div>
+        <div class="form-status" id="stageStatus"></div>
+      </div>
+    </div>
+
+    <!-- 🔁 回派對話 -->
+    <div class="rc-section">
+      <div class="rc-section-head"><span class="rc-section-title">🔁 回派對話</span></div>
+      <div class="stage-list" id="bounceList"></div>
+      <div class="stage-add-row">
+        <input type="text" id="bounceInput" placeholder="輸入要回覆給對方的內容…">
+        <button id="bounceAddBtn">送出並回派</button>
+      </div>
+      <div class="form-status" id="bounceStatus"></div>
+    </div>
+
+    <!-- 📝 任務備忘錄（移到最下面） -->
     <div class="rc-section">
       <div class="rc-section-head"><span class="rc-section-title">📝 任務備忘錄</span></div>
       <textarea id="taskMemoText" rows="4" style="width:100%; font-family:'Noto Sans TC',sans-serif; font-size:13px; font-weight:700; color:#5a4a3f; border:2px solid #FFD3B6; border-radius:12px; padding:10px 12px; outline:none; resize:vertical;" placeholder="記錄這個任務的處理內容、對話或注意事項…"></textarea>
@@ -1845,17 +2018,6 @@
         <button class="action-btn" id="taskMemoSaveBtn" style="flex:none; padding:9px 22px;">儲存</button>
         <span class="form-status" id="taskMemoStatus" style="margin:0; align-self:center;"></span>
       </div>
-    </div>
-
-    <div class="rc-section">
-      <div class="rc-section-head"><span class="rc-section-title">📌 階段紀錄</span></div>
-      <div class="stage-list" id="stageList"></div>
-      <div class="stage-quick" id="stageQuick" style="display:none;"></div>
-      <div class="stage-add-row">
-        <input type="text" id="stageInput" placeholder="例如：問題已丟給廠商，等待回覆中…">
-        <button id="stageAddBtn">新增階段</button>
-      </div>
-      <div class="form-status" id="stageStatus"></div>
     </div>
 
     <div class="rc-footer">🩷 雪莉與朵栗・內部任務 🩷</div>
@@ -1924,12 +2086,15 @@
           </div>
         </div>
 
-        <!-- 已收到／已拍攝：出現倉庫位置 -->
+        <!-- 已收到／已拍攝：出現位置下拉 -->
         <div class="pr-field" id="prLocationField" style="display:none;">
-          <label for="prLocationInput">📦 倉庫位置</label>
-          <input type="text" id="prLocationInput" placeholder="例如：A櫃第2層、辦公室紙箱3…">
+          <label for="prLocationSelect">📦 位置</label>
+          <select id="prLocationSelect"></select>
+          <div class="newname-row" id="prLocationNewRow">
+            <input type="text" id="prLocationNewInput" placeholder="輸入新的位置選項…">
+            <button id="prLocationNewBtn">新增</button>
+          </div>
           <div class="pr-save-row">
-            <button class="pr-save-btn" id="prLocationSaveBtn">儲存</button>
             <span class="pr-save-status" id="prLocationSaveMsg"></span>
           </div>
         </div>
@@ -1959,8 +2124,8 @@
   </div>
 </div>
 
-<script src="admin.js?v=3"></script>
-<script src="memo.js?v=3"></script>
+<script src="admin.js?v=4"></script>
+<script src="memo.js?v=4"></script>
 
 </body>
 </html>
