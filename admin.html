@@ -2197,12 +2197,13 @@
 
   <!-- ===== 抽獎小幫手 ===== -->
   <div class="view" id="viewLotteryTool">
+    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
     <h2 class="view-title">🎉 抽獎小幫手</h2>
     <div class="task-form">
-      <label for="lotteryPrizesInput">獎項清單（每行一個，格式：獎項*數量。由上到下＝大獎到小獎，實際會從最下面開始抽）</label>
+      <label for="lotteryPrizesInput">獎項清單（每行一個，格式：獎項*數量。由上到下＝大獎到小獎，實際會從最下面開始抽；隨時都可以編輯）</label>
       <textarea id="lotteryPrizesInput" rows="5" placeholder="例如：&#10;iPhone*1&#10;悠遊卡*10&#10;美妝組*3"></textarea>
 
-      <label for="lotteryParticipantsInput">參加名單（每行一個，格式：姓名*次數）</label>
+      <label for="lotteryParticipantsInput">參加名單（每行一個，格式：姓名*次數；隨時都可以編輯）</label>
       <textarea id="lotteryParticipantsInput" rows="5" placeholder="例如：&#10;咚咚*3&#10;小美*1"></textarea>
 
       <label for="lotteryRuleSelect">抽獎規則</label>
@@ -2217,6 +2218,7 @@
     <div style="display:flex; gap:10px; justify-content:center; margin:16px 0; flex-wrap:wrap;">
       <button class="task-mini-btn danger" style="font-size:13px; padding:9px 18px;" id="lotteryResetBtn" onclick="resetLottery()">🔄 重新設定</button>
       <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 28px;" id="lotteryDrawBtn" onclick="drawLottery()">🎲 開始抽獎</button>
+      <button class="task-mini-btn" style="font-size:13px; padding:9px 18px; border-color:#B79AE8; color:#7A5AC8;" id="lotteryRedrawBtn" onclick="redrawLottery()">↩️ 重抽</button>
     </div>
 
     <div class="lottery-result-box" id="lotteryResultBox" style="display:none;">
@@ -2230,6 +2232,7 @@
 
   <!-- ===== 轉檔小工具（介面先做好，轉檔功能之後再串） ===== -->
   <div class="view" id="viewConvertTool">
+    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
     <h2 class="view-title">🔄 轉檔小工具</h2>
     <div class="task-form">
       <label for="convertFileInput">選擇檔案（PDF／Excel／JPG）</label>
@@ -2505,7 +2508,7 @@
   </div>
 </div>
 
-<script src="admin.js?v=11"></script>
+<script src="admin.js?v=12"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
