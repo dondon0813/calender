@@ -272,9 +272,6 @@
     background: #7A5A42;
     box-shadow: 0 0 0 3px #FFD3DC;
   }
-  .gs-card.gs-frozen {
-    background: #5F86AE;
-  }
   .gs-card-name {
     font-size: 19px;
     font-weight: 700;
@@ -284,11 +281,16 @@
     opacity: 0.85;
     margin-top: 4px;
   }
-  .gs-today-badge {
+  .gs-badges {
     position: absolute;
     top: -10px;
     right: 12px;
-    background: #FF4D6D;
+    display: flex;
+    gap: 6px;
+  }
+  .gs-today-badge,
+  .gs-frozen-badge {
+    white-space: nowrap;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -296,6 +298,8 @@
     border-radius: 999px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
+  .gs-today-badge { background: #FF4D6D; }
+  .gs-frozen-badge { background: #4F91D9; }
   .gs-empty {
     text-align: center;
     color: #a89787;
@@ -493,9 +497,9 @@
     <div class="controls">
       <select id="modeSelect">
         <option value="all">顯示全部</option>
-        <option value="start" selected>開團日</option>
+        <option value="start">開團日</option>
         <option value="end">結團日</option>
-        <option value="list">現正開團中</option>
+        <option value="list" selected>現正開團中</option>
       </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
@@ -537,7 +541,7 @@ const WD_LABEL = ['日','一','二','三','四','五','六'];
 
 let allEvents = [];
 let currentYear, currentMonth;
-let currentMode = 'start';
+let currentMode = 'list';
 
 const MODE_VISIBLE_DAYS = {
   all:   [0,1,2,3,4,5,6],
@@ -838,7 +842,7 @@ function renderGroupList() {
     const clickable = isLinkUnlocked(ev);
 
     const card = document.createElement(clickable ? 'a' : 'div');
-    card.className = 'gs-card' + (frozen ? ' gs-frozen' : '') + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '');
+    card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '');
     if (clickable) {
       card.href = ev.url;
       card.target = '_blank';
@@ -856,11 +860,22 @@ function renderGroupList() {
     dateEl.textContent = fmtDateLabel(ev.start, ev.displayEnd);
     card.appendChild(dateEl);
 
-    if (isToday) {
-      const badge = document.createElement('span');
-      badge.className = 'gs-today-badge';
-      badge.textContent = '今日截止';
-      card.appendChild(badge);
+    if (frozen || isToday) {
+      const badges = document.createElement('div');
+      badges.className = 'gs-badges';
+      if (frozen) {
+        const frozenBadge = document.createElement('span');
+        frozenBadge.className = 'gs-frozen-badge';
+        frozenBadge.textContent = '❄冷藏冷凍團';
+        badges.appendChild(frozenBadge);
+      }
+      if (isToday) {
+        const todayBadge = document.createElement('span');
+        todayBadge.className = 'gs-today-badge';
+        todayBadge.textContent = '今日截止';
+        badges.appendChild(todayBadge);
+      }
+      card.appendChild(badges);
     }
 
     return card;
