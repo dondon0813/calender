@@ -1494,7 +1494,7 @@
   }
 
   /* ===== 我的備忘錄 / 共用備忘錄 ===== */
-  .pnote-header-wrap { position: relative; max-width: 560px; margin: 0 auto; }
+  .pnote-header-wrap { position: relative; max-width: 900px; margin: 0 auto; }
   .pnote-header-wrap .view-title { margin: 4px 0 6px; }
   .pnote-scope-toggle {
     position: absolute;
@@ -1502,106 +1502,165 @@
     right: 0;
   }
   .pnote-hint {
-    max-width: 560px;
+    max-width: 900px;
     margin: -6px auto 14px;
     text-align: center;
     font-size: 12px;
     color: #a89888;
   }
-  .pnote-breadcrumb {
-    max-width: 560px;
-    margin: 0 auto 8px;
+  /* 搜尋列 + 新增資料夾/備忘錄圖示 */
+  .mtree-toolbar {
+    max-width: 900px;
+    margin: 0 auto 14px;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #b5755a;
-  }
-  .pnote-breadcrumb button {
-    border: none;
-    background: none;
-    color: #b5755a;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 12.5px;
-    cursor: pointer;
-    padding: 2px 2px;
-  }
-  .pnote-breadcrumb button:last-child { color: #FF8FA3; cursor: default; }
-  .pnote-breadcrumb .pnote-crumb-sep { color: #d9c4b3; }
-  .pnote-subfolders {
-    max-width: 560px;
-    margin: 0 auto 10px;
-    display: flex;
-    flex-wrap: wrap;
     gap: 8px;
+    flex-wrap: wrap;
   }
-  .pnote-folder-item {
+  .mtree-search-wrap {
+    flex: 1 1 200px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 2px solid #FFD3B6;
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+  .mtree-search-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13.5px;
+    color: #5a4a3f;
+    background: transparent;
+  }
+  .mtree-search-icon { font-size: 14px; color: #b5755a; }
+  .mtree-icon-btn {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
     border: 2px solid #FFD3B6;
     background: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .mtree-icon-btn:hover { background: #FFF1E6; }
+
+  /* 左右分欄（桌面：列表＋編輯器並排；手機：靠 class 切換全螢幕） */
+  .mtree-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .mtree-list-pane { flex: 1 1 340px; min-width: 0; }
+  .mtree-editor-pane {
+    flex: 1 1 380px;
+    min-width: 0;
+    background: #FFF6EC;
+    border: 2px solid #FFE3CC;
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+  .mtree-back-btn {
+    display: none;
+    border: none;
+    background: none;
     color: #b5755a;
     font-family: 'Noto Sans TC', sans-serif;
     font-weight: 800;
-    font-size: 12.5px;
-    border-radius: 999px;
-    padding: 6px 10px 6px 14px;
+    font-size: 13.5px;
     cursor: pointer;
-    display: inline-flex;
+    padding: 4px 0 10px;
+  }
+  @media (max-width: 860px) {
+    .mtree-wrap { display: block; }
+    .mtree-wrap:not(.show-editor) .mtree-editor-pane { display: none; }
+    .mtree-wrap.show-editor .mtree-list-pane { display: none; }
+    .mtree-wrap.show-editor .mtree-back-btn { display: inline-block; }
+  }
+
+  /* 樹狀節點：資料夾列／備忘錄列 */
+  .mtree-folder-row {
+    display: flex;
     align-items: center;
     gap: 6px;
+    padding: 8px 6px;
+    border-radius: 10px;
+    cursor: pointer;
   }
-  .pnote-folder-item:hover { background: #FFF1E6; }
-  .pnote-folder-item .pnote-folder-del {
+  .mtree-folder-row:hover { background: #FFF1E6; }
+  .mtree-arrow {
+    flex: none;
+    width: 16px;
+    text-align: center;
+    color: #c9a892;
+    font-size: 11px;
+  }
+  .mtree-folder-icon { flex: none; font-size: 14px; }
+  .mtree-folder-name {
+    flex: 1;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mtree-folder-count {
+    flex: none;
+    font-size: 11.5px;
+    color: #b39a8b;
+    font-weight: 700;
+  }
+  .mtree-folder-add, .mtree-folder-del {
+    flex: none;
     border: none;
     background: none;
-    color: #c99;
-    font-size: 12px;
+    color: #c9a892;
+    font-size: 13px;
     cursor: pointer;
-    padding: 0 2px;
+    padding: 2px 4px;
   }
-  .pnote-folder-form { max-width: 560px; }
-  .pnote-toolbar {
-    max-width: 560px;
-    margin: 14px auto 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .mtree-folder-add:hover { color: #7BAF7B; }
+  .mtree-folder-del:hover { color: #e0654f; }
+  .mtree-children {
+    margin-left: 20px;
+    border-left: 1.5px dashed #F0DFCB;
+    padding-left: 10px;
   }
-  .pnote-toolbar .task-submit-btn { width: auto; padding: 10px 20px; }
-  .pnote-list { max-width: 560px; margin: 0 auto; }
-  .pnote-note-row {
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13.5px;
-    font-weight: 700;
-    color: #5a4a3f;
-  }
-  .pnote-note-row .pnote-arrow { color: #b5755a; flex: none; }
-  .pnote-card {
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-  }
-  .pnote-card-collapse {
+  .mtree-note-row {
     display: flex;
     align-items: center;
     gap: 6px;
+    padding: 7px 6px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #b5755a;
-    margin-bottom: 8px;
+    font-size: 13px;
+    color: #5a4a3f;
+  }
+  .mtree-note-row:hover { background: #FFF1E6; }
+  .mtree-note-row.active { background: #FFE9CE; font-weight: 800; }
+  .mtree-note-icon { flex: none; font-size: 12px; }
+  .mtree-note-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mtree-search-path {
+    flex: none;
+    font-size: 10.5px;
+    color: #a89888;
+    margin-left: 6px;
   }
   .pnote-textarea {
     width: 100%;
@@ -1845,7 +1904,7 @@
     <div class="task-list" id="pendingList"></div>
   </div>
 
-  <!-- ===== 我的備忘錄 ===== -->
+  <!-- ===== 我的備忘錄（樹狀結構） ===== -->
   <div class="view" id="viewMemo">
     <div class="pnote-header-wrap">
       <h2 class="view-title" id="pnoteViewTitle">我的備忘錄</h2>
@@ -1856,24 +1915,24 @@
     </div>
     <p class="pnote-hint" id="pnoteHint">只有你自己看得到這裡的資料夾與備忘錄，適合放常常要複製貼上的文字片段。</p>
 
-    <div class="pnote-breadcrumb" id="pnoteBreadcrumb"></div>
-    <div class="pnote-subfolders" id="pnoteSubfolders"></div>
-
-    <div class="task-form pnote-folder-form">
-      <label for="pnoteNewFolderInput">在目前這層新增子資料夾</label>
-      <div class="newname-row show">
-        <input type="text" id="pnoteNewFolderInput" placeholder="輸入資料夾名稱…">
-        <button id="pnoteNewFolderBtn">新增</button>
+    <div class="mtree-toolbar">
+      <div class="mtree-search-wrap">
+        <span class="mtree-search-icon">🔍</span>
+        <input type="text" id="pnoteSearchInput" placeholder="搜尋備忘錄內容…">
       </div>
-      <button class="pnote-btn pnote-btn-delete" id="pnoteDeleteFolderBtn" style="display:none; margin-top:10px;">🗑 刪除目前資料夾</button>
+      <button class="mtree-icon-btn" id="pnoteAddNoteBtn" title="新增備忘錄">📝➕</button>
+      <button class="mtree-icon-btn" id="pnoteAddFolderBtn" title="新增資料夾">📁➕</button>
     </div>
 
-    <div class="pnote-toolbar">
-      <button class="task-submit-btn" id="pnoteAddBtn" style="margin-top:0;">➕ 新增備忘錄</button>
-      <span class="form-status" id="pnoteStatus"></span>
+    <div class="mtree-wrap" id="mtreeWrap">
+      <div class="mtree-list-pane" id="mtreeListPane">
+        <div id="mtreeTree"></div>
+      </div>
+      <div class="mtree-editor-pane" id="mtreeEditorPane">
+        <button class="mtree-back-btn" id="mtreeBackBtn">‹ 返回列表</button>
+        <div id="mtreeEditorBody"></div>
+      </div>
     </div>
-
-    <div class="pnote-list" id="pnoteList"></div>
   </div>
 
   <!-- ===== 公關品狀態列表 ===== -->
@@ -2124,8 +2183,24 @@
   </div>
 </div>
 
-<script src="admin.js?v=4"></script>
-<script src="memo.js?v=4"></script>
+<!-- ===== 備忘錄：新增資料夾浮動視窗 ===== -->
+<div class="modal-backdrop" id="pnoteFolderModal" onclick="if(event.target===this) closePnoteFolderModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePnoteFolderModal()">✕</button>
+    <h3>📁 新增資料夾</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="pnoteFolderNameInput">資料夾名稱</label>
+      <input type="text" id="pnoteFolderNameInput" placeholder="輸入資料夾名稱…">
+      <label for="pnoteFolderParentSelect">上層資料夾</label>
+      <select id="pnoteFolderParentSelect"></select>
+      <button class="task-submit-btn" id="pnoteFolderModalSubmitBtn">新增</button>
+      <div class="form-status" id="pnoteFolderModalStatus"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js?v=5"></script>
+<script src="memo.js?v=5"></script>
 
 </body>
 </html>
