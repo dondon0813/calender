@@ -1772,6 +1772,71 @@
   }
   .pri-card-status.ok { color: #9ACB85; }
   .pri-card-status.error { color: #e0654f; }
+  /* ===== 開團狀態：清單卡片模式 ===== */
+  .group-list {
+    padding: 4px 2px 8px;
+  }
+  .gs-section-title {
+    text-align: center;
+    font-weight: 900;
+    font-size: 20px;
+    margin: 18px 0 12px;
+    letter-spacing: 1px;
+  }
+  .gs-section-title:first-child { margin-top: 4px; }
+  .gs-title-closing { color: #E0405F; }
+  .gs-title-active { color: #C98A3E; }
+  .gs-card {
+    display: block;
+    position: relative;
+    background: #B98868;
+    color: #fff;
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 14px;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    font-family: inherit;
+    transition: transform 0.12s ease;
+  }
+  .gs-card:hover { transform: scale(1.015); }
+  .gs-card.gs-today {
+    background: #7A5A42;
+    box-shadow: 0 0 0 3px #FFD3DC;
+  }
+  .gs-card.gs-frozen {
+    background: #5F86AE;
+  }
+  .gs-card-name {
+    font-size: 19px;
+    font-weight: 700;
+  }
+  .gs-card-date {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+  .gs-today-badge {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    background: #FF4D6D;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .gs-empty {
+    text-align: center;
+    color: #a89787;
+    padding: 30px 0;
+    font-size: 14px;
+  }
 </style>
 </head>
 <body>
@@ -1813,6 +1878,7 @@
           <button class="menu-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
           <button class="menu-item" data-view="memo">📝 備忘錄</button>
           <button class="menu-item" data-view="prItems">🎀 公關品狀態</button>
+          <button class="menu-item" data-view="groupStatus">🌼 開團狀態</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -1962,6 +2028,12 @@
 
     <div style="text-align:center;"><span class="task-section-title">🎀 公關品清單</span></div>
     <div id="priList"></div>
+  </div>
+
+  <!-- ===== 開團狀態（結團倒數／現正團購中） ===== -->
+  <div class="view" id="viewGroupStatus">
+    <h2 class="view-title">開團狀態</h2>
+    <div class="group-list" id="groupStatusList"></div>
   </div>
 
   <!-- ===== 行事曆 ===== -->
