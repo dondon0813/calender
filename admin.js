@@ -16,10 +16,11 @@ let appPassword = null;
 let currentUser = null;            // 目前登入者姓名
 let staffList = [];                // [{ name, password }]
 let taskNames = [];                // 派遣任務的任務名稱清單（共用）
-let myTaskNames = [];               // 【新】只有自己看得到的任務名稱（不進共用清單）
+let myTaskNames = [];               // 只有自己看得到的任務名稱（不進共用清單）
 let tasksMap = {};                 // { 姓名: [{ id, taskName, content, urgent, status, ... }] }
 let vendors = [];                  // 廠商名單（廠商選品的下拉選單）
 let prStatusMap = {};              // { getMemoKey(ev): { status, url, location, updated } }
+let prLocations = [];              // 【新】公關品位置清單（辦公室／倉庫／我家…可自訂新增）
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
 const PR_STATUS_LIST = ['尚未選品', '選品中', '已選品', '已寄出', '已收到', '已拍攝'];
 const PR_STATUS_CLASS = {
@@ -680,7 +681,7 @@ function openAdminModal(ev) {
   document.getElementById('adminModal').classList.add('show');
 }
 
-// 依 key 渲染公關品狀態面板：狀態下拉、選品網址、倉庫位置的顯示與內容
+// 依 key 渲染公關品狀態面板：狀態下拉、選品網址、位置的顯示與內容
 function renderPrPanel(key) {
   const pr = prStatusMap[key] || { status: '', url: '', location: '' };
   const status = pr.status || '尚未選品';
@@ -703,8 +704,9 @@ function renderPrPanel(key) {
 
   // 選品網址
   document.getElementById('prUrlInput').value = pr.url || '';
-  // 倉庫位置
-  document.getElementById('prLocationInput').value = pr.location || '';
+  // 位置（下拉，可能含使用者之前存的自訂值）
+  fillPrLocationSelect(document.getElementById('prLocationSelect'), pr.location || '');
+  document.getElementById('prLocationNewRow').classList.remove('show');
 
   // 清空儲存提示
   ['prStatusSaveMsg', 'prUrlSaveMsg', 'prLocationSaveMsg'].forEach(id => {
@@ -717,7 +719,7 @@ function renderPrPanel(key) {
   document.getElementById('prPanel').classList.remove('open');
 }
 
-// 依狀態切換「選品網址」「倉庫位置」欄位的顯示
+// 依狀態切換「選品網址」「位置」欄位的顯示
 function updatePrConditionalFields(status) {
   const pickField = document.getElementById('prPickField');
   const locField = document.getElementById('prLocationField');
@@ -725,7 +727,7 @@ function updatePrConditionalFields(status) {
   // 選品中 → 顯示選品網址／可選品項
   pickField.style.display = (status === '選品中') ? 'block' : 'none';
 
-  // 已收到 / 已拍攝 → 顯示倉庫位置
+  // 已收到 / 已拍攝 → 顯示位置
   locField.style.display = (status === '已收到' || status === '已拍攝') ? 'block' : 'none';
 
   // 前往選品按鈕：有有效網址才顯示
@@ -737,6 +739,37 @@ function updatePrConditionalFields(status) {
   } else {
     goBtn.style.display = 'none';
   }
+}
+
+// 位置下拉共用小工具：填入清單＋「＋新增更多」，並保留目前值（即使不在清單裡也會顯示）
+function fillPrLocationSelect(selectEl, currentValue) {
+  if (!selectEl) return;
+  const prev = currentValue !== undefined ? currentValue : selectEl.value;
+  selectEl.innerHTML = '';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = '請選擇位置…';
+  selectEl.appendChild(ph);
+  const opts = prLocations.slice();
+  if (prev && opts.indexOf(prev) === -1) opts.unshift(prev); // 保留舊資料裡不在清單中的自訂值
+  opts.forEach(loc => {
+    const o = document.createElement('option');
+    o.value = loc;
+    o.textContent = loc;
+    selectEl.appendChild(o);
+  });
+  const addMore = document.createElement('option');
+  addMore.value = '__new__';
+  addMore.textContent = '＋ 新增更多';
+  selectEl.appendChild(addMore);
+  selectEl.value = prev || '';
+}
+
+function setPrMsg(id, text, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = ok === true ? '#7BAF7B' : (ok === false ? '#d9534f' : '#c9a892');
 }
 
 // 送出公關品狀態更新（樂觀更新，失敗還原）
@@ -754,6 +787,7 @@ async function savePrStatus(key, fields, msgElId) {
     prStatusMap[key] = prev;
     if (msgEl) { msgEl.textContent = '儲存失敗'; msgEl.style.color = '#d9534f'; }
     if (currentView === 'calendar' && prChipOn) render();
+    throw err;
   }
 }
 
@@ -867,6 +901,7 @@ async function fetchMemos() {
     tasksMap = data.tasks || {};
     vendors = Array.isArray(data.vendors) ? data.vendors : [];
     prStatusMap = data.prStatus || {};
+    prLocations = Array.isArray(data.prLocations) ? data.prLocations : [];
     if (currentUser) {
       renderTaskUI();
     }
@@ -1077,7 +1112,7 @@ document.getElementById('prStatusSelect').addEventListener('change', (e) => {
   headChip.textContent = status;
   headChip.className = 'pr-head-chip pr-' + PR_STATUS_CLASS[status];
   updatePrConditionalFields(status);
-  savePrStatus(key, { status }, 'prStatusSaveMsg');
+  savePrStatus(key, { status }, 'prStatusSaveMsg').catch(() => {});
 });
 
 // 選品網址：輸入時更新前往按鈕，失焦或按儲存時儲存
@@ -1087,24 +1122,45 @@ document.getElementById('prUrlInput').addEventListener('input', () => {
 function savePrUrl() {
   if (!currentModalEv) return;
   const key = getMemoKey(currentModalEv);
-  savePrStatus(key, { url: document.getElementById('prUrlInput').value.trim() }, 'prUrlSaveMsg');
+  savePrStatus(key, { url: document.getElementById('prUrlInput').value.trim() }, 'prUrlSaveMsg').catch(() => {});
 }
 document.getElementById('prUrlInput').addEventListener('blur', savePrUrl);
 document.getElementById('prUrlSaveBtn').addEventListener('click', savePrUrl);
 
-// 倉庫位置：失焦或按儲存時儲存
-function savePrLocation() {
+// 位置下拉：選到「＋新增更多」跳出輸入列，否則立即儲存
+document.getElementById('prLocationSelect').addEventListener('change', (e) => {
+  if (e.target.value === '__new__') {
+    document.getElementById('prLocationNewRow').classList.add('show');
+    return;
+  }
+  document.getElementById('prLocationNewRow').classList.remove('show');
   if (!currentModalEv) return;
   const key = getMemoKey(currentModalEv);
-  savePrStatus(key, { location: document.getElementById('prLocationInput').value.trim() }, 'prLocationSaveMsg');
-}
-document.getElementById('prLocationInput').addEventListener('blur', savePrLocation);
-document.getElementById('prLocationSaveBtn').addEventListener('click', savePrLocation);
+  savePrStatus(key, { location: e.target.value }, 'prLocationSaveMsg').catch(() => {});
+});
+document.getElementById('prLocationNewBtn').addEventListener('click', async () => {
+  const input = document.getElementById('prLocationNewInput');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    await postTask({ type: 'pr-location-add', name });
+    if (prLocations.indexOf(name) === -1) prLocations.push(name);
+    fillPrLocationSelect(document.getElementById('prLocationSelect'), name);
+    document.getElementById('prLocationNewRow').classList.remove('show');
+    input.value = '';
+    if (currentModalEv) {
+      const key = getMemoKey(currentModalEv);
+      await savePrStatus(key, { location: name }, 'prLocationSaveMsg');
+    }
+  } catch (err) {
+    setPrMsg('prLocationSaveMsg', err.message || '新增失敗', false);
+  }
+});
 
 // ===== 分頁切換與選單 =====
 function switchView(name) {
   currentView = name;
-  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo' };
+  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems' };
   Object.entries(map).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', key === name);
@@ -1118,7 +1174,14 @@ function switchView(name) {
   if (name === 'calendar' && typeof render === 'function' && allEvents.length) render();
   // 備忘錄頁面的資料由 memo.js 負責讀取（第一次進入時才拉一次）
   if (name === 'memo' && typeof loadPnoteData === 'function') loadPnoteData();
+  // 公關品狀態列表：進入時才拉一次
+  if (name === 'prItems') {
+    renderPriLocationSelect();
+    loadPrItems();
+  }
 }
+
+document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
 
 document.getElementById('menuBtn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -1385,7 +1448,6 @@ function renderExtraFields(prefix) {
   }
 }
 
-// 送出時收集附加欄位的內容
 // 廠商選品下拉：列出行事曆團購，值＝getMemoKey，顯示團名＋開團日；近期優先
 function buildEventOptions_() {
   if (!allEvents.length) return '';
@@ -1439,9 +1501,6 @@ function extraSummary(task) {
 }
 
 // 新增任務名稱（會同步寫入試算表的任務名稱分頁）
-// 新增任務名稱：
-// - 如果輸入的名稱剛好跟共用清單一樣 → 直接沿用共用的那一個（同一種格式），不算新增
-// - 如果是全新名稱 → 只記錄在自己底下，其他員工看不到，也不會進入共用清單
 async function addTaskName(inputId, statusId, selectId) {
   const input = document.getElementById(inputId);
   const name = input.value.trim();
@@ -1572,6 +1631,7 @@ function taskStatus(t) {
 function statusTagHtml(status) {
   if (status === '已完成') return '<span class="task-status-tag st-done">已完成</span>';
   if (status === '處理中') return '<span class="task-status-tag st-working">⏳ 處理中</span>';
+  if (status === '回派中') return '<span class="task-status-tag st-bounce">🔁 回派中</span>';
   return '<span class="task-status-tag st-pending">待完成</span>';
 }
 
@@ -1647,6 +1707,12 @@ function buildPendingItem(task) {
     wt.className = 'task-status-tag st-working';
     wt.textContent = '⏳ 處理中';
     nameLine.appendChild(wt);
+  }
+  if (status === '回派中') {
+    const bt = document.createElement('span');
+    bt.className = 'task-status-tag st-bounce';
+    bt.textContent = '🔁 回派中';
+    nameLine.appendChild(bt);
   }
   body.appendChild(nameLine);
 
@@ -1844,8 +1910,9 @@ function renderDispatchedList() {
   });
 }
 
-// ===== 任務浮動視窗：狀態／備忘錄／階段 =====
+// ===== 任務浮動視窗：狀態／階段／回派／備忘錄 =====
 let taskModalCtx = null; // { owner, task, isDispatchView }
+let stageSectionOpen = true;
 
 function openTaskModal(owner, task, isDispatchView) {
   taskModalCtx = { owner, task, isDispatchView };
@@ -1902,20 +1969,36 @@ function openTaskModal(owner, task, isDispatchView) {
   setFormStatus('taskMemoStatus', '');
   document.getElementById('stageInput').value = '';
   setFormStatus('stageStatus', '');
+  document.getElementById('bounceInput').value = '';
+  setFormStatus('bounceStatus', '');
+
+  // 階段紀錄區塊每次打開都重設為展開
+  stageSectionOpen = true;
+  document.getElementById('stageSectionBody').style.display = 'block';
+  document.getElementById('stageSectionArrow').textContent = '▼';
 
   renderTaskModalStatus();
   renderStageList();
   renderStageQuick();
+  renderBounceList();
   document.getElementById('taskModal').classList.add('show');
 }
+
+document.getElementById('stageSectionHead').addEventListener('click', () => {
+  stageSectionOpen = !stageSectionOpen;
+  document.getElementById('stageSectionBody').style.display = stageSectionOpen ? 'block' : 'none';
+  document.getElementById('stageSectionArrow').textContent = stageSectionOpen ? '▼' : '▶';
+});
 
 // 選品任務的公關品狀態切換：六種狀態，當前高亮，點哪顆就切到那個狀態
 // 與行事曆／團購後台面板同一份 prStatusMap，兩邊串聯同步
 function renderStageQuick() {
   const box = document.getElementById('stageQuick');
+  const locField = document.getElementById('taskPrLocationField');
   if (!taskModalCtx || taskModalCtx.task.taskName !== '廠商選品') {
     box.style.display = 'none';
     box.innerHTML = '';
+    locField.style.display = 'none';
     return;
   }
   const task = taskModalCtx.task;
@@ -1936,6 +2019,17 @@ function renderStageQuick() {
   box.querySelectorAll('.stage-quick-btn').forEach(btn => {
     btn.addEventListener('click', () => setTaskPrStatus(btn.dataset.stage));
   });
+
+  // 已收到／已拍攝才出現位置下拉，並同步進公關品清單
+  document.getElementById('taskPrLocationNewRow').classList.remove('show');
+  if (evKey && (cur === '已收到' || cur === '已拍攝')) {
+    const curLocation = (prStatusMap[evKey] && prStatusMap[evKey].location) || '';
+    fillPrLocationSelect(document.getElementById('taskPrLocationSelect'), curLocation);
+    setPrMsg('taskPrLocationSaveMsg', '');
+    locField.style.display = 'block';
+  } else {
+    locField.style.display = 'none';
+  }
 }
 
 // 點狀態按鈕：把對應團購的公關品狀態切到該狀態，並在任務裡留一筆階段紀錄
@@ -1946,25 +2040,87 @@ async function setTaskPrStatus(stage) {
 
   // 1) 先切換對應團購的公關品狀態（行事曆／後台面板即時反映）
   if (evKey) {
-    savePrStatus(evKey, { status: stage }, null);
+    savePrStatus(evKey, { status: stage }, null).catch(() => {});
   }
-  // 立即更新按鈕高亮
+  // 立即更新按鈕高亮／位置下拉
   renderStageQuick();
 
-  // 2) 順手在任務裡留一筆階段紀錄，方便追進度（樂觀更新）
+  // 2) 到「已收到」／「已拍攝」時，自動新增或更新一筆公關品清單（只有指定了對應團購才能自動同步）
+  if (evKey && (stage === '已收到' || stage === '已拍攝')) {
+    const curLocation = (prStatusMap[evKey] && prStatusMap[evKey].location) || '';
+    syncPrItemFromTask(evKey, curLocation);
+  }
+
+  // 3) 順手在任務裡留一筆階段紀錄，方便追進度（樂觀更新）
   const now = new Date();
-  const stageObj = { text: stage, time: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` };
+  const stageObj = { id: 'L' + Date.now(), text: stage, time: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` };
   task.stages = task.stages || [];
   task.stages.push(stageObj);
   renderStageList();
   setFormStatus('stageStatus', '狀態已更新為「' + stage + '」✓', 'ok');
   try {
-    await postTask({ type: 'task-stage-add', owner, id: task.id, text: stage });
+    const result = await postTask({ type: 'task-stage-add', owner, id: task.id, text: stage });
+    if (result && result.stageId) stageObj.id = result.stageId;
   } catch (err) {
     const i = task.stages.indexOf(stageObj);
     if (i !== -1) task.stages.splice(i, 1);
     renderStageList();
     setFormStatus('stageStatus', '階段紀錄儲存失敗：' + err.message, 'error');
+  }
+}
+
+// 廠商選品任務進到「已收到」／「已拍攝」時，自動同步到公關品清單（只有指定了對應團購才會執行）
+async function syncPrItemFromTask(evKey, location) {
+  const ev = allEvents.find(e => getMemoKey(e) === evKey);
+  const task = taskModalCtx ? taskModalCtx.task : null;
+  const vendor = task && task.extra ? (task.extra['廠商'] || '') : '';
+  const fields = { evKey, name: ev ? ev.title : '', vendor, group: ev ? ev.title : '' };
+  if (location) fields.location = location;
+  try {
+    await postTask(Object.assign({ type: 'pr-item-sync' }, fields));
+    prItemsLoaded = false; // 之後開公關品狀態列表時要重新拉一次
+  } catch (err) {
+    console.warn('公關品清單同步失敗：', err);
+  }
+}
+
+// 位置下拉變更：選到「＋新增更多」跳出輸入列，否則直接儲存
+document.getElementById('taskPrLocationSelect').addEventListener('change', async (e) => {
+  if (e.target.value === '__new__') {
+    document.getElementById('taskPrLocationNewRow').classList.add('show');
+    return;
+  }
+  document.getElementById('taskPrLocationNewRow').classList.remove('show');
+  await saveTaskPrLocation(e.target.value);
+});
+document.getElementById('taskPrLocationNewBtn').addEventListener('click', async () => {
+  const input = document.getElementById('taskPrLocationNewInput');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    await postTask({ type: 'pr-location-add', name });
+    if (prLocations.indexOf(name) === -1) prLocations.push(name);
+    fillPrLocationSelect(document.getElementById('taskPrLocationSelect'), name);
+    document.getElementById('taskPrLocationNewRow').classList.remove('show');
+    input.value = '';
+    await saveTaskPrLocation(name);
+  } catch (err) {
+    setPrMsg('taskPrLocationSaveMsg', err.message || '新增失敗', false);
+  }
+});
+
+async function saveTaskPrLocation(location) {
+  if (!taskModalCtx) return;
+  const task = taskModalCtx.task;
+  const evKey = task.extra && task.extra['團購key'] ? String(task.extra['團購key']).trim() : '';
+  if (!evKey) return;
+  setPrMsg('taskPrLocationSaveMsg', '儲存中…');
+  try {
+    await savePrStatus(evKey, { location }, null);
+    await syncPrItemFromTask(evKey, location);
+    setPrMsg('taskPrLocationSaveMsg', '已儲存 ✓', true);
+  } catch (err) {
+    setPrMsg('taskPrLocationSaveMsg', '儲存失敗', false);
   }
 }
 
@@ -2026,7 +2182,7 @@ function renderStageList() {
     el.innerHTML = '<div class="task-empty" style="padding:8px 0;">還沒有階段紀錄</div>';
     return;
   }
-  stages.forEach(s => {
+  stages.forEach((s, idx) => {
     const row = document.createElement('div');
     row.className = 'stage-item';
     const dot = document.createElement('span');
@@ -2037,11 +2193,37 @@ function renderStageList() {
     const time = document.createElement('span');
     time.className = 'stage-time';
     time.textContent = s.time || '';
+    const del = document.createElement('button');
+    del.className = 'stage-del';
+    del.textContent = '✕';
+    del.title = '刪除這條階段紀錄';
+    del.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteStage(s, idx);
+    });
     row.appendChild(dot);
     row.appendChild(text);
     row.appendChild(time);
+    row.appendChild(del);
     el.appendChild(row);
   });
+}
+
+async function deleteStage(stage, idx) {
+  if (!taskModalCtx) return;
+  const { owner, task } = taskModalCtx;
+  if (!confirm('確定要刪除這條階段紀錄嗎？')) return;
+  const stageId = stage.id;
+  const removed = task.stages.splice(idx, 1)[0];
+  renderStageList();
+  if (!stageId) return; // 舊資料沒有 id，只能從畫面移除，沒法同步刪除試算表裡的紀錄
+  try {
+    await postTask({ type: 'task-stage-delete', owner, id: task.id, stageId });
+  } catch (err) {
+    task.stages.splice(idx, 0, removed);
+    renderStageList();
+    alert('刪除失敗：' + err.message);
+  }
 }
 
 document.getElementById('taskMemoSaveBtn').addEventListener('click', async () => {
@@ -2077,13 +2259,14 @@ async function addStage() {
   setFormStatus('stageStatus', '新增中…');
   // 樂觀更新：先加到畫面
   const now = new Date();
-  const stage = { text, time: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` };
+  const stage = { id: 'L' + Date.now(), text, time: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` };
   task.stages = task.stages || [];
   task.stages.push(stage);
   renderStageList();
   input.value = '';
   try {
-    await postTask({ type: 'task-stage-add', owner, id: task.id, text });
+    const result = await postTask({ type: 'task-stage-add', owner, id: task.id, text });
+    if (result && result.stageId) stage.id = result.stageId;
     setFormStatus('stageStatus', '已新增 ✓', 'ok');
   } catch (err) {
     const i = task.stages.indexOf(stage);
@@ -2091,6 +2274,62 @@ async function addStage() {
     renderStageList();
     input.value = text;
     setFormStatus('stageStatus', '新增失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+}
+
+// ===== 回派對話 =====
+function renderBounceList() {
+  if (!taskModalCtx) return;
+  const el = document.getElementById('bounceList');
+  const bounces = taskModalCtx.task.bounces || [];
+  if (!bounces.length) {
+    el.innerHTML = '<div class="task-empty" style="padding:8px 0;">還沒有回派紀錄</div>';
+    return;
+  }
+  el.innerHTML = bounces.map(b =>
+    `<div class="bounce-item"><span class="bounce-from">${escHtml(b.from || '')}</span>${escHtml(b.text || '')}<span class="bounce-time">${escHtml(b.time || '')}</span></div>`
+  ).join('');
+}
+
+document.getElementById('bounceAddBtn').addEventListener('click', addBounce);
+document.getElementById('bounceInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addBounce();
+});
+
+async function addBounce() {
+  if (!taskModalCtx) return;
+  const { owner, task } = taskModalCtx;
+  const input = document.getElementById('bounceInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const btn = document.getElementById('bounceAddBtn');
+  btn.disabled = true;
+  setFormStatus('bounceStatus', '送出中…');
+
+  const now = new Date();
+  const bounceObj = { from: currentUser, text, time: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}` };
+  const oldStatus = taskStatus(task);
+  task.bounces = task.bounces || [];
+  task.bounces.push(bounceObj);
+  task.status = '回派中';
+  task.done = false;
+  renderBounceList();
+  renderTaskModalStatus();
+  renderTaskUI();
+  input.value = '';
+  try {
+    await postTask({ type: 'task-bounce-add', owner, id: task.id, text });
+    setFormStatus('bounceStatus', '已回派 ✓', 'ok');
+  } catch (err) {
+    task.bounces.pop();
+    task.status = oldStatus;
+    task.done = oldStatus === '已完成';
+    renderBounceList();
+    renderTaskModalStatus();
+    renderTaskUI();
+    input.value = text;
+    setFormStatus('bounceStatus', '回派失敗：' + err.message, 'error');
   }
   btn.disabled = false;
 }
@@ -2107,6 +2346,156 @@ function renderTaskUI() {
   renderDispatchedList();
   updateUrgentUI();
 }
+
+// ===== 公關品狀態列表（首頁「公關品狀態」卡片頁面） =====
+let prItemsLoaded = false;
+let prItemsCache = [];
+
+function cssEscapeAdmin(str) { return String(str).replace(/(["\\])/g, '\\$1'); }
+
+function renderPriLocationSelect() {
+  fillPrLocationSelect(document.getElementById('priLocation'), '');
+}
+
+document.getElementById('priLocation').addEventListener('change', (e) => {
+  document.getElementById('priLocationNewRow').classList.toggle('show', e.target.value === '__new__');
+});
+document.getElementById('priLocationNewBtn').addEventListener('click', async () => {
+  const input = document.getElementById('priLocationNewInput');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    await postTask({ type: 'pr-location-add', name });
+    if (prLocations.indexOf(name) === -1) prLocations.push(name);
+    fillPrLocationSelect(document.getElementById('priLocation'), name);
+    document.getElementById('priLocationNewRow').classList.remove('show');
+    input.value = '';
+  } catch (err) {
+    setFormStatus('priAddStatus', '新增位置失敗：' + err.message, 'error');
+  }
+});
+
+async function loadPrItems(force) {
+  if (prItemsLoaded && !force) { renderPrItemsList(); return; }
+  const listEl = document.getElementById('priList');
+  listEl.innerHTML = '<div class="task-empty">載入中…</div>';
+  try {
+    const result = await postTask({ type: 'pr-item-list' });
+    prItemsCache = Array.isArray(result.items) ? result.items : [];
+    prItemsLoaded = true;
+  } catch (err) {
+    listEl.innerHTML = '<div class="task-empty">讀取失敗：' + escHtml(err.message) + '</div>';
+    return;
+  }
+  renderPrItemsList();
+}
+
+function renderPrItemsList() {
+  const listEl = document.getElementById('priList');
+  if (!prItemsCache.length) {
+    listEl.innerHTML = '<div class="task-empty">目前沒有公關品紀錄</div>';
+    return;
+  }
+  const sorted = prItemsCache.slice().sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  listEl.innerHTML = sorted.map(it => `
+    <div class="pri-card" data-id="${escHtml(it.id)}">
+      <div class="pri-card-title">${escHtml(it.name || '（未命名）')}</div>
+      <div class="pri-card-meta">廠商：${escHtml(it.vendor || '—')}　團購：${escHtml(it.group || '—')}</div>
+      <div class="pri-card-row">
+        <input type="text" class="pri-edit-brand" data-id="${escHtml(it.id)}" placeholder="品牌" value="${escHtml(it.brand || '')}">
+        <select class="pri-edit-location" data-id="${escHtml(it.id)}"></select>
+      </div>
+      <div class="pri-card-row">
+        <input type="text" class="pri-edit-note" data-id="${escHtml(it.id)}" placeholder="備註" value="${escHtml(it.note || '')}" style="flex:1 1 100%;">
+      </div>
+      <div class="pri-card-actions">
+        <button class="pnote-btn pnote-btn-save pri-save-btn" data-id="${escHtml(it.id)}">💾 儲存</button>
+        <button class="pnote-btn pnote-btn-delete pri-delete-btn" data-id="${escHtml(it.id)}">🗑 刪除</button>
+        <span class="pri-card-status" id="priStatus_${escHtml(it.id)}"></span>
+      </div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('.pri-edit-location').forEach(sel => {
+    const id = sel.dataset.id;
+    const item = prItemsCache.find(x => x.id === id);
+    fillPrLocationSelect(sel, item ? item.location : '');
+    sel.addEventListener('change', (e) => {
+      if (e.target.value === '__new__') {
+        const name = prompt('請輸入新的位置選項：');
+        if (name && name.trim()) {
+          const trimmed = name.trim();
+          postTask({ type: 'pr-location-add', name: trimmed }).then(() => {
+            if (prLocations.indexOf(trimmed) === -1) prLocations.push(trimmed);
+            fillPrLocationSelect(e.target, trimmed);
+          }).catch(err => alert('新增位置失敗：' + err.message));
+        } else {
+          e.target.value = '';
+        }
+      }
+    });
+  });
+  listEl.querySelectorAll('.pri-save-btn').forEach(btn => {
+    btn.addEventListener('click', () => savePrItemEdit(btn.dataset.id));
+  });
+  listEl.querySelectorAll('.pri-delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => deletePrItemRow(btn.dataset.id));
+  });
+}
+
+async function savePrItemEdit(id) {
+  const card = document.querySelector(`.pri-card[data-id="${cssEscapeAdmin(id)}"]`);
+  if (!card) return;
+  const brand = card.querySelector('.pri-edit-brand').value.trim();
+  const location = card.querySelector('.pri-edit-location').value;
+  const note = card.querySelector('.pri-edit-note').value.trim();
+  const statusEl = document.getElementById('priStatus_' + id);
+  if (statusEl) { statusEl.textContent = '儲存中…'; statusEl.className = 'pri-card-status'; }
+  try {
+    await postTask({ type: 'pr-item-update', id, brand, location, note });
+    const local = prItemsCache.find(x => x.id === id);
+    if (local) { local.brand = brand; local.location = location; local.note = note; }
+    if (statusEl) { statusEl.textContent = '已儲存 ✓'; statusEl.className = 'pri-card-status ok'; }
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = err.message || '儲存失敗'; statusEl.className = 'pri-card-status error'; }
+  }
+}
+
+async function deletePrItemRow(id) {
+  if (!confirm('確定要刪除這筆公關品紀錄嗎？')) return;
+  try {
+    await postTask({ type: 'pr-item-delete', id });
+    prItemsCache = prItemsCache.filter(x => x.id !== id);
+    renderPrItemsList();
+  } catch (err) {
+    alert('刪除失敗：' + err.message);
+  }
+}
+
+document.getElementById('priAddBtn').addEventListener('click', async () => {
+  const name = document.getElementById('priName').value.trim();
+  const vendor = document.getElementById('priVendor').value.trim();
+  const brand = document.getElementById('priBrand').value.trim();
+  const group = document.getElementById('priGroup').value.trim();
+  const locSel = document.getElementById('priLocation').value;
+  const location = locSel === '__new__' ? '' : locSel;
+  const note = document.getElementById('priNote').value.trim();
+  if (!name) { setFormStatus('priAddStatus', '請至少輸入名稱', 'error'); return; }
+  const btn = document.getElementById('priAddBtn');
+  btn.disabled = true;
+  setFormStatus('priAddStatus', '新增中…');
+  try {
+    const result = await postTask({ type: 'pr-item-add', name, vendor, brand, group, location, note });
+    prItemsCache.unshift({ id: result.id, name, vendor, brand, group, location, note, created: '', updated: '' });
+    renderPrItemsList();
+    ['priName', 'priVendor', 'priBrand', 'priGroup', 'priNote'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('priLocation').value = '';
+    setFormStatus('priAddStatus', '已新增 ✓', 'ok');
+  } catch (err) {
+    setFormStatus('priAddStatus', '新增失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
 
 loadData();
 fetchMemos();
