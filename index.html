@@ -238,6 +238,70 @@
     border: 1.5px solid #4F91D9;
     color: #2F6FB0;
   }
+
+  /* ===== 現正開團中：清單卡片模式 ===== */
+  .group-list {
+    padding: 4px 2px 8px;
+  }
+  .gs-section-title {
+    text-align: center;
+    font-weight: 900;
+    font-size: 20px;
+    margin: 18px 0 12px;
+    letter-spacing: 1px;
+  }
+  .gs-section-title:first-child { margin-top: 4px; }
+  .gs-title-closing { color: #E0405F; }
+  .gs-title-active { color: #C98A3E; }
+  .gs-card {
+    display: block;
+    position: relative;
+    background: #B98868;
+    color: #fff;
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 14px;
+    text-align: center;
+    text-decoration: none;
+    cursor: default;
+    transition: transform 0.12s ease;
+  }
+  .gs-card.clickable { cursor: pointer; }
+  .gs-card.clickable:hover { transform: scale(1.015); }
+  .gs-card.gs-today {
+    background: #7A5A42;
+    box-shadow: 0 0 0 3px #FFD3DC;
+  }
+  .gs-card.gs-frozen {
+    background: #5F86AE;
+  }
+  .gs-card-name {
+    font-size: 19px;
+    font-weight: 700;
+  }
+  .gs-card-date {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+  .gs-today-badge {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    background: #FF4D6D;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .gs-empty {
+    text-align: center;
+    color: #a89787;
+    padding: 30px 0;
+    font-size: 14px;
+  }
   .countdown-dot {
     position: absolute;
     top: -6px;
@@ -431,6 +495,7 @@
         <option value="all">顯示全部</option>
         <option value="start" selected>開團日</option>
         <option value="end">結團日</option>
+        <option value="list">現正開團中</option>
       </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
@@ -442,6 +507,8 @@
   <div class="weekdays" id="weekdays"></div>
 
   <div class="month-grid" id="grid"></div>
+
+  <div class="group-list" id="groupList" style="display:none;"></div>
 
   <div class="legend" id="legend">
     <span class="legend-item"><span class="legend-dot legend-upcoming"></span>開團預告</span>
@@ -721,17 +788,101 @@ function renderWeekdayHeader() {
 
 function render() {
   if (currentYear === undefined) return;
-  document.getElementById('monthNum').textContent = (currentMonth + 1) + '月';
 
-  renderWeekdayHeader();
+  const isList = currentMode === 'list';
+  document.getElementById('monthNum').textContent = isList ? '總覽' : (currentMonth + 1) + '月';
+  document.getElementById('monthSelect').style.display = isList ? 'none' : '';
+  document.getElementById('weekdays').style.display = isList ? 'none' : '';
+  document.getElementById('grid').style.display = isList ? 'none' : '';
+  document.getElementById('groupList').style.display = isList ? '' : 'none';
 
   const legendEl = document.getElementById('legend');
-  legendEl.classList.toggle('show', currentMode !== 'all');
+  legendEl.classList.toggle('show', currentMode !== 'all' && !isList);
+
+  if (isList) {
+    renderGroupList();
+    return;
+  }
+
+  renderWeekdayHeader();
 
   if (currentMode === 'all') {
     renderAllMode();
   } else {
     renderSingleDayMode(currentMode);
+  }
+}
+
+// 「現正開團中」清單模式：把開團中／即將結單的團分區列出，今日結單特別提醒
+function renderGroupList() {
+  const listEl = document.getElementById('groupList');
+  listEl.innerHTML = '';
+
+  const todayStart = startOfDay(new Date());
+  const closingItems = [];
+  const activeItems = [];
+
+  allEvents.forEach(ev => {
+    const status = getEventStatus(ev);
+    if (status === 'closingSoon') closingItems.push(ev);
+    else if (status === 'active') activeItems.push(ev);
+  });
+
+  closingItems.sort((a, b) => a.displayEnd - b.displayEnd);
+  activeItems.sort((a, b) => a.displayEnd - b.displayEnd);
+
+  const buildCard = (ev) => {
+    const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
+    const isToday = daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
+    const frozen = isFrozenEvent(ev);
+    const clickable = isLinkUnlocked(ev);
+
+    const card = document.createElement(clickable ? 'a' : 'div');
+    card.className = 'gs-card' + (frozen ? ' gs-frozen' : '') + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '');
+    if (clickable) {
+      card.href = ev.url;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+    }
+    card.title = ev.title + (ev.url && !clickable ? '（開團後才能點擊連結）' : '');
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'gs-card-name';
+    nameEl.textContent = ev.title;
+    card.appendChild(nameEl);
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'gs-card-date';
+    dateEl.textContent = fmtDateLabel(ev.start, ev.displayEnd);
+    card.appendChild(dateEl);
+
+    if (isToday) {
+      const badge = document.createElement('span');
+      badge.className = 'gs-today-badge';
+      badge.textContent = '今日截止';
+      card.appendChild(badge);
+    }
+
+    return card;
+  };
+
+  const buildSection = (title, arr) => {
+    if (!arr.length) return;
+    const h = document.createElement('div');
+    h.className = 'gs-section-title ' + (title.includes('倒數') ? 'gs-title-closing' : 'gs-title-active');
+    h.textContent = title;
+    listEl.appendChild(h);
+    arr.forEach(ev => listEl.appendChild(buildCard(ev)));
+  };
+
+  buildSection('‼️結團倒數‼️', closingItems);
+  buildSection('🌼現正團購中🌼', activeItems);
+
+  if (!closingItems.length && !activeItems.length) {
+    const empty = document.createElement('div');
+    empty.className = 'gs-empty';
+    empty.textContent = '目前沒有進行中的團購';
+    listEl.appendChild(empty);
   }
 }
 
