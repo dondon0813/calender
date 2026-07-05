@@ -223,6 +223,7 @@ async function loadData() {
     statusEl.textContent = `已同步 ${events.length} 檔活動 · ${new Date().toLocaleString('zh-TW')}`;
     populateMonthSelect();
     render();
+    renderGroupStatusList();
   } catch (err) {
     statusEl.textContent = '讀取試算表失敗，請確認試算表已設定「知道連結的人可檢視」。(' + err.message + ')';
     statusEl.classList.add('error');
@@ -623,6 +624,75 @@ function getEventStatus(ev) {
 function getMemoKey(ev) {
   const s = ev.start;
   return `${ev.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
+}
+
+// 開團狀態清單：結團倒數／現正團購中，卡片點擊直接開啟後台浮動視窗
+function renderGroupStatusList() {
+  const listEl = document.getElementById('groupStatusList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  const todayStart = startOfDay(new Date());
+  const closingItems = [];
+  const activeItems = [];
+
+  allEvents.forEach(ev => {
+    const status = getEventStatus(ev);
+    if (status === 'closingSoon') closingItems.push(ev);
+    else if (status === 'active') activeItems.push(ev);
+  });
+
+  closingItems.sort((a, b) => a.displayEnd - b.displayEnd);
+  activeItems.sort((a, b) => a.displayEnd - b.displayEnd);
+
+  const buildCard = (ev) => {
+    const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
+    const isToday = daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
+    const frozen = isFrozenEvent(ev);
+
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'gs-card' + (frozen ? ' gs-frozen' : '') + (isToday ? ' gs-today' : '');
+    card.addEventListener('click', () => openAdminModal(ev));
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'gs-card-name';
+    nameEl.textContent = ev.title;
+    card.appendChild(nameEl);
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'gs-card-date';
+    dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
+    card.appendChild(dateEl);
+
+    if (isToday) {
+      const badge = document.createElement('span');
+      badge.className = 'gs-today-badge';
+      badge.textContent = '今日截止';
+      card.appendChild(badge);
+    }
+
+    return card;
+  };
+
+  const buildSection = (title, arr) => {
+    if (!arr.length) return;
+    const h = document.createElement('div');
+    h.className = 'gs-section-title ' + (title.includes('倒數') ? 'gs-title-closing' : 'gs-title-active');
+    h.textContent = title;
+    listEl.appendChild(h);
+    arr.forEach(ev => listEl.appendChild(buildCard(ev)));
+  };
+
+  buildSection('‼️結團倒數‼️', closingItems);
+  buildSection('🌼現正團購中🌼', activeItems);
+
+  if (!closingItems.length && !activeItems.length) {
+    const empty = document.createElement('div');
+    empty.className = 'gs-empty';
+    empty.textContent = '目前沒有進行中的團購';
+    listEl.appendChild(empty);
+  }
 }
 
 function openAdminModal(ev) {
@@ -1160,7 +1230,7 @@ document.getElementById('prLocationNewBtn').addEventListener('click', async () =
 // ===== 分頁切換與選單 =====
 function switchView(name) {
   currentView = name;
-  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems' };
+  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', groupStatus: 'viewGroupStatus' };
   Object.entries(map).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', key === name);
@@ -1179,6 +1249,7 @@ function switchView(name) {
     renderPriLocationSelect();
     loadPrItems();
   }
+  if (name === 'groupStatus') renderGroupStatusList();
 }
 
 document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
