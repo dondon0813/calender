@@ -503,6 +503,38 @@
     padding: 8px 16px;
     cursor: pointer;
   }
+  .my-taskname-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .my-taskname-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #F0E4D6;
+    color: #8a7462;
+    font-size: 11.5px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 4px 6px 4px 12px;
+  }
+  .my-taskname-tag button {
+    flex: none;
+    border: none;
+    background: #fff;
+    color: #D63A2E;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 900;
+    cursor: pointer;
+    padding: 0;
+  }
   .urgent-check {
     display: flex;
     align-items: center;
@@ -1925,6 +1957,7 @@
         <input type="text" id="dispatchNewNameInput" placeholder="輸入新的任務名稱…">
         <button id="dispatchNewNameBtn">新增</button>
       </div>
+      <div class="my-taskname-tags" id="dispatchMyNamesTags"></div>
 
       <div id="dispatchContentBlock" style="display:none;">
         <div id="dispatchExtra"></div>
@@ -1956,6 +1989,7 @@
         <input type="text" id="selfNewNameInput" placeholder="輸入新的任務名稱…">
         <button id="selfNewNameBtn">新增</button>
       </div>
+      <div class="my-taskname-tags" id="selfMyNamesTags"></div>
       <div id="selfContentBlock" style="display:none;">
         <div id="selfExtra"></div>
         <label for="selfContent">任務內容</label>
@@ -2037,6 +2071,9 @@
   <!-- ===== 開團狀態（結團倒數／現正團購中） ===== -->
   <div class="view" id="viewGroupStatus">
     <h2 class="view-title">開團狀態</h2>
+    <div style="text-align:center; margin-bottom:14px;">
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openCopyGenModal()">📋 開團文案產生器</button>
+    </div>
     <div class="group-list" id="groupStatusList"></div>
   </div>
 
@@ -2053,6 +2090,7 @@
         <option value="all">顯示全部</option>
         <option value="start" selected>開團日</option>
         <option value="end">結團日</option>
+        <option value="list">現正開團中</option>
         <option value="mytasks">工作表</option>
       </select>
       <select id="monthSelect"></select>
@@ -2069,6 +2107,8 @@
   <div class="weekdays" id="weekdays"></div>
 
   <div class="month-grid" id="grid"></div>
+
+  <div class="group-list" id="calGroupList" style="display:none;"></div>
 
   <div class="legend" id="legend">
     <span class="legend-item"><span class="legend-dot legend-upcoming"></span>開團預告</span>
@@ -2238,6 +2278,22 @@
   </div>
 </div>
 
+<!-- ===== 開團文案產生器浮動視窗 ===== -->
+<div class="modal-backdrop" id="copyGenModal" onclick="if(event.target===this) closeCopyGenModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeCopyGenModal()">✕</button>
+    <h3>📋 開團文案產生器</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="copyGenDate">選擇日期</label>
+      <input type="date" id="copyGenDate">
+      <button class="task-submit-btn" id="copyGenGenerateBtn" onclick="generateCopyGenText()">產生文案</button>
+      <textarea id="copyGenOutput" readonly rows="10" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border:2px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;" placeholder="選好日期後按「產生文案」，內容會出現在這裡"></textarea>
+      <button class="task-mini-btn" id="copyGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;" onclick="copyGenCopyText()">📄 複製文案</button>
+      <div class="form-status" id="copyGenStatus"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 設定：修改密碼彈窗 ===== -->
 <div class="modal-backdrop" id="settingsModal" onclick="if(event.target===this) closeSettingsModal()">
   <div class="modal-box">
@@ -2275,7 +2331,7 @@
   </div>
 </div>
 
-<script src="admin.js?v=6"></script>
+<script src="admin.js?v=9"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
