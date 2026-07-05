@@ -223,7 +223,8 @@ async function loadData() {
     statusEl.textContent = `已同步 ${events.length} 檔活動 · ${new Date().toLocaleString('zh-TW')}`;
     populateMonthSelect();
     render();
-    renderGroupStatusList();
+    renderGroupStatusList('groupStatusList');
+    renderGroupStatusList('calGroupList');
   } catch (err) {
     statusEl.textContent = '讀取試算表失敗，請確認試算表已設定「知道連結的人可檢視」。(' + err.message + ')';
     statusEl.classList.add('error');
@@ -287,19 +288,30 @@ function renderWeekdayHeader() {
 
 function render() {
   if (currentYear === undefined) return;
-  document.getElementById('monthNum').textContent = (currentMonth + 1) + '月';
 
-  renderWeekdayHeader();
+  const isList = currentMode === 'list';
+  document.getElementById('monthNum').textContent = isList ? '總覽' : (currentMonth + 1) + '月';
+  document.getElementById('monthSelect').style.display = isList ? 'none' : '';
+  document.getElementById('weekdays').style.display = isList ? 'none' : '';
+  document.getElementById('grid').style.display = isList ? 'none' : '';
+  document.getElementById('calGroupList').style.display = isList ? '' : 'none';
 
   const legendEl = document.getElementById('legend');
-  legendEl.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks');
+  legendEl.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks' && !isList);
 
   // 公關品狀態小圖示只在開團日／結團日模式有意義，顯示開關並同步開關樣式
   const prWrap = document.getElementById('prToggleWrap');
   if (prWrap) {
-    prWrap.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks');
+    prWrap.classList.toggle('show', currentMode !== 'all' && currentMode !== 'mytasks' && !isList);
     document.getElementById('prSwitch').classList.toggle('on', prChipOn);
   }
+
+  if (isList) {
+    renderGroupStatusList('calGroupList');
+    return;
+  }
+
+  renderWeekdayHeader();
 
   if (currentMode === 'all') {
     renderAllMode();
@@ -627,8 +639,8 @@ function getMemoKey(ev) {
 }
 
 // 開團狀態清單：結團倒數／現正團購中，卡片點擊直接開啟後台浮動視窗
-function renderGroupStatusList() {
-  const listEl = document.getElementById('groupStatusList');
+function renderGroupStatusList(targetId) {
+  const listEl = document.getElementById(targetId || 'groupStatusList');
   if (!listEl) return;
   listEl.innerHTML = '';
 
@@ -1260,7 +1272,7 @@ function switchView(name) {
     renderPriLocationSelect();
     loadPrItems();
   }
-  if (name === 'groupStatus') renderGroupStatusList();
+  if (name === 'groupStatus') renderGroupStatusList('groupStatusList');
 }
 
 document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
@@ -1284,6 +1296,96 @@ function initAppUI() {
   document.getElementById('userChip').textContent = '👤 ' + currentUser;
   switchView('home');
   renderTaskUI();
+}
+
+// ===== 開團文案產生器 =====
+function openCopyGenModal() {
+  document.getElementById('menuPanel').classList.remove('show');
+  const dateInput = document.getElementById('copyGenDate');
+  if (!dateInput.value) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    dateInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  }
+  document.getElementById('copyGenOutput').value = '';
+  setFormStatus('copyGenStatus', '', '');
+  document.getElementById('copyGenModal').classList.add('show');
+}
+
+function closeCopyGenModal() {
+  document.getElementById('copyGenModal').classList.remove('show');
+}
+
+// 依選定日期，把「今日結單」與「現正開團中」的團拆開產生純文字文案
+function generateCopyGenText() {
+  const val = document.getElementById('copyGenDate').value; // YYYY-MM-DD
+  if (!val) {
+    setFormStatus('copyGenStatus', '請先選擇日期', 'error');
+    return;
+  }
+  const [y, m, d] = val.split('-').map(Number);
+  const targetDate = new Date(y, m - 1, d);
+
+  const closingToday = [];
+  const stillOpen = [];
+
+  allEvents.forEach(ev => {
+    const s = startOfDay(ev.start);
+    const e = startOfDay(ev.displayEnd);
+    if (targetDate < s || targetDate > e) return;
+    if (targetDate.getTime() === e.getTime()) closingToday.push(ev);
+    else stillOpen.push(ev);
+  });
+
+  closingToday.sort((a, b) => a.displayEnd - b.displayEnd);
+  stillOpen.sort((a, b) => a.displayEnd - b.displayEnd);
+
+  const dateLabel = `${m}/${d}`;
+  const lines = [];
+
+  if (closingToday.length) {
+    lines.push(`✦ 今日結單 ${dateLabel} ✦`);
+    closingToday.forEach(ev => {
+      lines.push(ev.title || '');
+      lines.push(ev.url || '');
+    });
+  }
+
+  if (stillOpen.length) {
+    if (lines.length) lines.push('');
+    lines.push('✦ 現正開團中✦');
+    stillOpen.forEach(ev => {
+      lines.push(ev.title || '');
+      lines.push(ev.url || '');
+    });
+  }
+
+  const outputEl = document.getElementById('copyGenOutput');
+  if (!lines.length) {
+    outputEl.value = '';
+    setFormStatus('copyGenStatus', '這天沒有進行中的團購', 'error');
+    return;
+  }
+
+  outputEl.value = lines.join('\n');
+  setFormStatus('copyGenStatus', '文案已產生 ✓', 'ok');
+}
+
+async function copyGenCopyText() {
+  const outputEl = document.getElementById('copyGenOutput');
+  const text = outputEl.value;
+  if (!text) {
+    setFormStatus('copyGenStatus', '請先產生文案再複製', 'error');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    setFormStatus('copyGenStatus', '已複製到剪貼簿 ✓', 'ok');
+  } catch (err) {
+    outputEl.select();
+    document.execCommand('copy');
+    setFormStatus('copyGenStatus', '已複製到剪貼簿 ✓', 'ok');
+  }
 }
 
 // ===== 設定：修改密碼 =====
@@ -1469,6 +1571,49 @@ function renderSelfForm() {
   fillTaskNameSelect(document.getElementById('selfTaskName'), SELF_DEFAULT_TASKS.concat(myTaskNames));
 }
 
+// 自己新增的任務名稱標籤（打錯字可以直接刪掉，不會一直卡在下拉選單裡）
+function renderMyTaskNameTags() {
+  [{ id: 'dispatchMyNamesTags' }, { id: 'selfMyNamesTags' }].forEach(({ id }) => {
+    const box = document.getElementById(id);
+    if (!box) return;
+    box.innerHTML = '';
+    myTaskNames.forEach(name => {
+      const tag = document.createElement('span');
+      tag.className = 'my-taskname-tag';
+      const label = document.createElement('span');
+      label.textContent = name;
+      tag.appendChild(label);
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '✕';
+      delBtn.title = '刪除這個自訂任務名稱';
+      delBtn.addEventListener('click', () => deleteMyTaskName(name));
+      tag.appendChild(delBtn);
+      box.appendChild(tag);
+    });
+  });
+}
+
+// 刪除自己加過的任務名稱（僅自己看得到的私人清單，共用清單不受影響）
+async function deleteMyTaskName(name) {
+  if (!confirm('確定要刪除任務名稱「' + name + '」嗎？之後在下拉選單就選不到了')) return;
+  const idx = myTaskNames.indexOf(name);
+  if (idx === -1) return;
+  myTaskNames.splice(idx, 1);
+  renderDispatchForm();
+  renderSelfForm();
+  renderMyTaskNameTags();
+  try {
+    await postTask({ type: 'my-taskname-delete', name });
+  } catch (err) {
+    myTaskNames.splice(idx, 0, name);
+    renderDispatchForm();
+    renderSelfForm();
+    renderMyTaskNameTags();
+    alert('刪除失敗：' + err.message);
+  }
+}
+
 // 任務名稱選到「新增更多」時顯示輸入列
 function bindTaskNameSelect(selectId, rowId, contentBlockId) {
   const sel = document.getElementById(selectId);
@@ -1612,6 +1757,7 @@ async function addTaskName(inputId, statusId, selectId) {
     myTaskNames.push(name);
     renderDispatchForm();
     renderSelfForm();
+    renderMyTaskNameTags();
     const sel = document.getElementById(selectId);
     sel.value = name;
     sel.dispatchEvent(new Event('change'));
@@ -1795,6 +1941,19 @@ function buildPendingItem(task) {
     bt.className = 'task-status-tag st-bounce';
     bt.textContent = '🔁 回派中';
     nameLine.appendChild(bt);
+  }
+  // 刪除按鈕：僅「自己安排」的任務可以刪除，別人派給你的任務不能刪；放在名稱這一行的最右邊
+  if (!task.from || task.from === currentUser) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'task-mini-btn danger';
+    delBtn.textContent = '✕';
+    delBtn.title = '刪除這個任務';
+    delBtn.style.marginLeft = 'auto';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteTask(currentUser, task);
+    });
+    nameLine.appendChild(delBtn);
   }
   body.appendChild(nameLine);
 
@@ -1988,6 +2147,21 @@ function renderDispatchedList() {
       `<span class="di-name">${escHtml(task.taskName || '')}${summary ? '<span style="color:#4a7fb5; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}${task.date ? ' <span style="color:#a89888; font-size:11px;">📅 ' + escHtml(task.date) + '</span>' : ''}</span>` +
       statusTagHtml(taskStatus(task));
     row.addEventListener('click', () => openTaskModal(owner, task, true));
+
+    // 刪除按鈕：這裡的任務都是自己派遣出去的，可以直接刪除；放在名稱右邊、狀態標籤前面
+    if (!task.from || task.from === currentUser) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'task-mini-btn danger';
+      delBtn.textContent = '✕';
+      delBtn.title = '刪除這個任務';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteTask(owner, task);
+      });
+      const nameEl = row.querySelector('.di-name');
+      nameEl.insertAdjacentElement('afterend', delBtn);
+    }
+
     el.appendChild(row);
   });
 }
@@ -2424,6 +2598,7 @@ function closeModal(id) {
 function renderTaskUI() {
   renderDispatchForm();
   renderSelfForm();
+  renderMyTaskNameTags();
   renderMyTaskLists();
   renderDispatchedList();
   updateUrgentUI();
