@@ -652,7 +652,7 @@ function renderGroupStatusList() {
 
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'gs-card' + (frozen ? ' gs-frozen' : '') + (isToday ? ' gs-today' : '');
+    card.className = 'gs-card' + (isToday ? ' gs-today' : '');
     card.addEventListener('click', () => openAdminModal(ev));
 
     const nameEl = document.createElement('div');
@@ -665,11 +665,22 @@ function renderGroupStatusList() {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
-    if (isToday) {
-      const badge = document.createElement('span');
-      badge.className = 'gs-today-badge';
-      badge.textContent = '今日截止';
-      card.appendChild(badge);
+    if (frozen || isToday) {
+      const badges = document.createElement('div');
+      badges.className = 'gs-badges';
+      if (frozen) {
+        const frozenBadge = document.createElement('span');
+        frozenBadge.className = 'gs-frozen-badge';
+        frozenBadge.textContent = '❄冷藏冷凍團';
+        badges.appendChild(frozenBadge);
+      }
+      if (isToday) {
+        const todayBadge = document.createElement('span');
+        todayBadge.className = 'gs-today-badge';
+        todayBadge.textContent = '今日截止';
+        badges.appendChild(todayBadge);
+      }
+      card.appendChild(badges);
     }
 
     return card;
