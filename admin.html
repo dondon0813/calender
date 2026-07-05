@@ -1807,9 +1807,6 @@
     background: #7A5A42;
     box-shadow: 0 0 0 3px #FFD3DC;
   }
-  .gs-card.gs-frozen {
-    background: #5F86AE;
-  }
   .gs-card-name {
     font-size: 19px;
     font-weight: 700;
@@ -1819,11 +1816,16 @@
     opacity: 0.85;
     margin-top: 4px;
   }
-  .gs-today-badge {
+  .gs-badges {
     position: absolute;
     top: -10px;
     right: 12px;
-    background: #FF4D6D;
+    display: flex;
+    gap: 6px;
+  }
+  .gs-today-badge,
+  .gs-frozen-badge {
+    white-space: nowrap;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -1831,6 +1833,8 @@
     border-radius: 999px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
+  .gs-today-badge { background: #FF4D6D; }
+  .gs-frozen-badge { background: #4F91D9; }
   .gs-empty {
     text-align: center;
     color: #a89787;
@@ -2271,7 +2275,7 @@
   </div>
 </div>
 
-<script src="admin.js?v=5"></script>
+<script src="admin.js?v=6"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
