@@ -466,8 +466,9 @@
     width: 58px;
     height: 58px;
     border-radius: 16px;
-    background: linear-gradient(145deg, #FFEDE0, #FFD9BB);
-    box-shadow: 0 3px 8px rgba(180,130,90,0.25);
+    background: #FFFDFB;
+    border: 1.5px solid #F0E4D6;
+    box-shadow: 0 3px 8px rgba(180,130,90,0.18);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -478,7 +479,11 @@
   .tool-icon-img-wrap img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    image-rendering: auto;
   }
   .tool-icon-fallback { font-size: 26px; }
   .tool-icon-label {
