@@ -1390,7 +1390,10 @@ async function copyGenCopyText() {
 }
 
 // ===== 抽獎小幫手 =====
-let lotteryState = null; // null = 尚未開始；開始後存放獎項佇列、名單池、規則、中獎紀錄
+// 設計原則：獎項清單／參加名單隨時可以編輯，不鎖住；每次抽獎都即時重新讀取最新的清單內容，
+// 只用「中獎紀錄 lotteryWinnerLog」記錄已經抽出的結果，靠這份紀錄反推目前剩餘的獎項數量／機會，
+// 這樣「重抽」只要把最後一筆紀錄拿掉再重抽一次就好，也方便隨時修改清單內容（例如多加機會）。
+let lotteryWinnerLog = []; // 新的在最前面：[{prize, winner}, ...]
 
 // 把「名稱*數量」格式的多行文字解析成 [{name, count}]
 function parseLotteryLines_(text) {
@@ -1403,99 +1406,85 @@ function parseLotteryLines_(text) {
   }).filter(x => x.name);
 }
 
-function drawLottery() {
-  if (!lotteryState) {
-    const prizesRaw = parseLotteryLines_(document.getElementById('lotteryPrizesInput').value);
-    const participantsRaw = parseLotteryLines_(document.getElementById('lotteryParticipantsInput').value);
-    if (!prizesRaw.length) { alert('請先輸入獎項清單'); return; }
-    if (!participantsRaw.length) { alert('請先輸入參加名單'); return; }
-    const rule = document.getElementById('lotteryRuleSelect').value;
-
-    // 抽獎順序：清單由上到下＝大獎到小獎，但實際抽獎從「最下面」開始抽到最上面
-    const prizeQueue = prizesRaw.slice().reverse().map(p => ({ name: p.name, remaining: p.count }));
-
-    // 依規則展開參加名單成「機會池」
-    let pool;
-    if (rule === 'removeName') {
-      // 每人只留一筆資格，不論輸入幾次機會
-      pool = participantsRaw.map(p => ({ name: p.name }));
-    } else {
-      pool = [];
-      participantsRaw.forEach(p => {
-        for (let i = 0; i < p.count; i++) pool.push({ name: p.name });
-      });
-    }
-
-    lotteryState = {
-      prizeQueue,
-      pool,
-      rule,
-      wonPrizeByPerson: {}, // { 姓名: Set(已中過的獎項名稱) }，「移除一次機會(獎項不重複)」規則用
-      winnerLog: []
-    };
-
-    document.getElementById('lotteryPrizesInput').disabled = true;
-    document.getElementById('lotteryParticipantsInput').disabled = true;
-    document.getElementById('lotteryRuleSelect').disabled = true;
+// 找出目前該抽哪個獎項（清單最下面先抽、最上面的大獎最後抽；已經抽完的獎項會自動跳過）
+function findNextLotteryPrize_() {
+  const prizesRaw = parseLotteryLines_(document.getElementById('lotteryPrizesInput').value);
+  const queue = prizesRaw.slice().reverse(); // 由下到上
+  for (const p of queue) {
+    const consumed = lotteryWinnerLog.filter(w => w.prize === p.name).length;
+    if (consumed < p.count) return { name: p.name, remaining: p.count - consumed };
   }
-
-  performOneLotteryDraw_();
+  return null;
 }
 
-function performOneLotteryDraw_() {
-  const state = lotteryState;
+// 依規則＋目前的中獎紀錄，算出這次抽獎可以抽的名單池（每個機會展開成一筆）
+function getLotteryEligiblePool_(prizeName) {
+  const participantsRaw = parseLotteryLines_(document.getElementById('lotteryParticipantsInput').value);
+  const rule = document.getElementById('lotteryRuleSelect').value;
 
-  // 找出目前要抽的獎項（佇列裡第一個還有剩餘數量的）
-  let prize = null;
-  while (state.prizeQueue.length && !prize) {
-    if (state.prizeQueue[0].remaining > 0) prize = state.prizeQueue[0];
-    else state.prizeQueue.shift();
-  }
-  if (!prize) {
-    finishLottery_();
-    return;
+  if (rule === 'removeName') {
+    const wonNames = new Set(lotteryWinnerLog.map(w => w.winner));
+    return participantsRaw.filter(p => !wonNames.has(p.name)).map(p => p.name);
   }
 
-  // 依規則篩選這次可以抽的人
-  let eligible = state.pool;
-  if (state.rule === 'removeChanceUniquePrize') {
-    eligible = state.pool.filter(p => !(state.wonPrizeByPerson[p.name] && state.wonPrizeByPerson[p.name].has(prize.name)));
-    if (!eligible.length) eligible = state.pool; // 大家都中過這個獎了，就不設限，避免卡住
-  }
-
-  if (!eligible.length) {
-    alert('目前沒有可以抽獎的參加者了');
-    finishLottery_();
-    return;
-  }
-
-  const winner = eligible[Math.floor(Math.random() * eligible.length)];
-  prize.remaining -= 1;
-
-  if (state.rule === 'removeName') {
-    state.pool = state.pool.filter(p => p.name !== winner.name);
-  } else if (state.rule === 'removeChance' || state.rule === 'removeChanceUniquePrize') {
-    const realIdx = state.pool.indexOf(winner);
-    if (realIdx !== -1) state.pool.splice(realIdx, 1);
-    if (state.rule === 'removeChanceUniquePrize') {
-      if (!state.wonPrizeByPerson[winner.name]) state.wonPrizeByPerson[winner.name] = new Set();
-      state.wonPrizeByPerson[winner.name].add(prize.name);
+  let pool = [];
+  participantsRaw.forEach(p => {
+    let count = p.count;
+    if (rule !== 'keepChance') {
+      const consumed = lotteryWinnerLog.filter(w => w.winner === p.name).length;
+      count = Math.max(0, p.count - consumed);
     }
-  }
-  // rule === 'keepChance'：不做任何移除，機會池維持不變
+    for (let i = 0; i < count; i++) pool.push(p.name);
+  });
 
-  state.winnerLog.unshift({ prize: prize.name, winner: winner.name });
+  if (rule === 'removeChanceUniquePrize') {
+    const wonThisPrize = new Set(lotteryWinnerLog.filter(w => w.prize === prizeName).map(w => w.winner));
+    const filtered = pool.filter(name => !wonThisPrize.has(name));
+    if (filtered.length) pool = filtered; // 篩選後還有人可抽才套用限制，避免大家都中過同個獎時卡住
+  }
+
+  return pool;
+}
+
+function drawLottery() {
+  const prizesRaw = parseLotteryLines_(document.getElementById('lotteryPrizesInput').value);
+  const participantsRaw = parseLotteryLines_(document.getElementById('lotteryParticipantsInput').value);
+  if (!prizesRaw.length) { alert('請先輸入獎項清單'); return; }
+  if (!participantsRaw.length) { alert('請先輸入參加名單'); return; }
+
+  const prize = findNextLotteryPrize_();
+  if (!prize) { finishLottery_(); return; }
+
+  const pool = getLotteryEligiblePool_(prize.name);
+  if (!pool.length) {
+    alert('目前沒有可以抽獎的參加者了');
+    return;
+  }
+
+  const winner = pool[Math.floor(Math.random() * pool.length)];
+  lotteryWinnerLog.unshift({ prize: prize.name, winner: winner });
 
   document.getElementById('lotteryResultBox').style.display = '';
   document.getElementById('lotteryResultPrize').textContent = prize.name;
-  document.getElementById('lotteryResultWinner').textContent = winner.name;
+  document.getElementById('lotteryResultWinner').textContent = winner;
   renderLotteryWinnerList();
 
+  document.getElementById('lotteryDrawBtn').disabled = false;
   document.getElementById('lotteryDrawBtn').textContent = '🎲 繼續抽獎';
 
-  if (state.prizeQueue.every(p => p.remaining <= 0)) {
-    finishLottery_();
+  if (!findNextLotteryPrize_()) finishLottery_();
+}
+
+// 重抽：把最新一筆中獎紀錄收回，重新抽一次（方便「作弊」重來）
+function redrawLottery() {
+  if (!lotteryWinnerLog.length) {
+    alert('還沒有抽過，請先按「開始抽獎」');
+    return;
   }
+  lotteryWinnerLog.shift();
+  document.getElementById('lotteryDrawBtn').disabled = false;
+  document.getElementById('lotteryDrawBtn').textContent = lotteryWinnerLog.length ? '🎲 繼續抽獎' : '🎲 開始抽獎';
+  drawLottery();
 }
 
 function finishLottery_() {
@@ -1508,11 +1497,11 @@ function renderLotteryWinnerList() {
   const el = document.getElementById('lotteryWinnerList');
   if (!el) return;
   el.innerHTML = '';
-  if (!lotteryState || !lotteryState.winnerLog.length) {
+  if (!lotteryWinnerLog.length) {
     el.innerHTML = '<div class="task-empty">還沒有抽出任何獎項</div>';
     return;
   }
-  lotteryState.winnerLog.forEach(entry => {
+  lotteryWinnerLog.forEach(entry => {
     const row = document.createElement('div');
     row.className = 'lottery-winner-row';
     const prizeEl = document.createElement('span');
@@ -1528,13 +1517,10 @@ function renderLotteryWinnerList() {
 }
 
 function resetLottery() {
-  if (lotteryState && !confirm('確定要重新設定嗎？目前的抽獎進度會清空')) return;
-  lotteryState = null;
+  if (lotteryWinnerLog.length && !confirm('確定要重新設定嗎？目前的抽獎進度會清空')) return;
+  lotteryWinnerLog = [];
   document.getElementById('lotteryPrizesInput').value = '';
   document.getElementById('lotteryParticipantsInput').value = '';
-  document.getElementById('lotteryPrizesInput').disabled = false;
-  document.getElementById('lotteryParticipantsInput').disabled = false;
-  document.getElementById('lotteryRuleSelect').disabled = false;
   document.getElementById('lotteryRuleSelect').value = 'removeName';
   document.getElementById('lotteryResultBox').style.display = 'none';
   const btn = document.getElementById('lotteryDrawBtn');
