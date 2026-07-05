@@ -2071,9 +2071,6 @@
   <!-- ===== 開團狀態（結團倒數／現正團購中） ===== -->
   <div class="view" id="viewGroupStatus">
     <h2 class="view-title">開團狀態</h2>
-    <div style="text-align:center; margin-bottom:14px;">
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openCopyGenModal()">📋 開團文案產生器</button>
-    </div>
     <div class="group-list" id="groupStatusList"></div>
   </div>
 
@@ -2108,7 +2105,12 @@
 
   <div class="month-grid" id="grid"></div>
 
-  <div class="group-list" id="calGroupList" style="display:none;"></div>
+  <div id="calGroupListWrap" style="display:none;">
+    <div style="text-align:center; margin:10px 0 4px;">
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openCopyGenModal()">📋 開團文案產生器</button>
+    </div>
+    <div class="group-list" id="calGroupList"></div>
+  </div>
 
   <div class="legend" id="legend">
     <span class="legend-item"><span class="legend-dot legend-upcoming"></span>開團預告</span>
@@ -2331,7 +2333,7 @@
   </div>
 </div>
 
-<script src="admin.js?v=9"></script>
+<script src="admin.js?v=10"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
