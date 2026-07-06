@@ -988,27 +988,25 @@
     margin: 4px auto 12px;
   }
 
-  /* 準備食材：一格一格圖磚 */
+  /* 準備食材：一整塊底色卡片，圖片是去背 PNG 直接放在底色上，一排約 4-5 個 */
   .prep-ing-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 10px;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 14px 6px;
+    background: #FFF6EC;
+    border-radius: 20px;
+    padding: 16px 12px 14px;
     margin-bottom: 4px;
   }
-  .prep-ing-tile {
-    width: 72px;
-    text-align: center;
-  }
+  .prep-ing-tile { text-align: center; }
   .prep-ing-photo {
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
-    object-fit: cover;
-    background: #FFF1E6;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    background: transparent;
+    border: none;
     display: block;
     margin: 0 auto 6px;
-    border: 2px solid #FFE3CC;
   }
   .prep-ing-photo.clickable { cursor: pointer; }
   .prep-ing-label {
@@ -1027,17 +1025,17 @@
   .step-badge-img { height: 40px; }
   .step-badge-count {
     position: absolute;
-    left: 50%;
-    top: 46%;
+    left: 58%;
+    top: 48%;
     transform: translate(-50%, -50%);
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 800;
-    font-size: 15px;
+    font-size: 21px;
     color: #fff;
     /* 圖片中間空白圓圈的實際位置若跟文字對不準，調整這裡的 left / top 即可 */
   }
 
-  /* 步驟卡片：橫向最多 3 格，小提醒會補進最後一排的空格 */
+  /* 步驟卡片：橫向最多 3 格，小提醒一律獨立一整排放在最下面 */
   .steps-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1064,7 +1062,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #FF9F4A;
+    background: #FF8FA3;
     color: #fff;
     font-weight: 800;
     font-size: 12px;
@@ -1079,24 +1077,32 @@
     line-height: 1.45;
   }
 
-  /* 小提醒：會依照步驟排滿情形，用 grid-column 補進步驟格線裡 */
+  /* 小提醒：一律獨立一整排（span 3），圖示標籤蓋在虛線邊框上面 */
   .reminder-box {
     grid-column: span 3;
+    position: relative;
     background: #FFF6EC;
     border: 1.5px dashed #FFC79A;
     border-radius: 16px;
-    padding: 12px 14px;
+    padding: 18px 14px 14px;
     text-align: left;
+    margin-top: 6px;
   }
   .reminder-head {
+    position: absolute;
+    top: -14px;
+    left: 16px;
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 5px 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   }
-  .reminder-head img { width: 18px; height: 18px; }
+  .reminder-head img { width: 16px; height: 16px; }
   .reminder-head span {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 800;
     color: #E0954A;
   }
@@ -1105,16 +1111,16 @@
     display: flex;
     align-items: flex-start;
     gap: 6px;
-    font-size: 11.5px;
+    font-size: 12px;
     color: #8a7462;
-    line-height: 1.6;
-    margin-bottom: 5px;
+    line-height: 1.7;
+    margin-bottom: 6px;
   }
   .reminder-item:last-child { margin-bottom: 0; }
   .reminder-item img {
     width: 12px;
     height: 12px;
-    margin-top: 3px;
+    margin-top: 4px;
     flex: none;
   }
 
@@ -1338,7 +1344,7 @@
 <div class="modal-backdrop" id="brandChoiceModal" onclick="if(event.target===this) closeModal('brandChoiceModal')">
   <div class="modal-box" style="width:320px;">
     <button class="modal-close" onclick="closeModal('brandChoiceModal')">✕</button>
-    <h3 id="brandChoiceTitle" style="font-size:15px;">這個食材來自多個品牌，選一個看介紹</h3>
+    <h3 id="brandChoiceTitle" style="font-size:15px;">這個食材有多個品項，選一個看介紹</h3>
     <div id="brandChoiceList"></div>
   </div>
 </div>
@@ -1832,6 +1838,13 @@ function pickBestBrandIngredient(group) {
   return group[0]; // 全部都已結單且沒有下一團資訊，就固定回傳第一個
 }
 
+// 在「整個」食材資料庫（不只這道食譜用到的）裡找同名／同簡稱的所有品項。
+// 例如「大蝦仁」簡稱是蝦仁，跟一般食材裡的「蝦仁」是同一個篩選key，
+// 只要對到不只一筆，點擊時就該跳出選擇清單，而不是自動幫忙選一個
+function findIngredientsByKey(key) {
+  return INGREDIENTS.filter(i => ingredientFilterKeys(i).includes(key));
+}
+
 function openIngredientBrandChoice(group) {
   const listEl = document.getElementById('brandChoiceList');
   listEl.innerHTML = '';
@@ -1848,7 +1861,7 @@ function openIngredientBrandChoice(group) {
     row.appendChild(img);
     const nameSpan = document.createElement('span');
     nameSpan.className = 'rr-name';
-    nameSpan.textContent = `${item['品牌']} － ${item['食材名稱']}`;
+    nameSpan.textContent = item['品牌'] ? `${item['品牌']} － ${item['食材名稱']}` : item['食材名稱'];
     row.appendChild(nameSpan);
     listEl.appendChild(row);
   });
@@ -2029,8 +2042,17 @@ function openRecipeModal(recipe) {
     const group = groups[key];
     const first = group[0];
     ingGridEl.appendChild(buildPrepTile(key, first._quantity, first['圖片網址'], () => {
+      // 這裡故意用「整個食材資料庫」裡同名/同簡稱的所有品項來判斷，
+      // 不是只看這道食譜用到的那幾筆——因為即使食譜只掛了一筆ID，
+      // 只要資料庫裡還有其他品項共用同一個簡稱（例如品牌商品跟一般食材同名），
+      // 點擊時就該跳出選擇清單，而不是自動幫忙選一個
+      const allMatches = findIngredientsByKey(key);
       closeModal('recipeModal');
-      openIngredientModal(group.length === 1 ? first : pickBestBrandIngredient(group));
+      if (allMatches.length <= 1) {
+        openIngredientModal(first);
+      } else {
+        openIngredientBrandChoice(allMatches);
+      }
     }));
   });
 
@@ -2087,16 +2109,13 @@ function openRecipeModal(recipe) {
 
     document.getElementById('stepBadgeCount').textContent = stepLines.length;
 
-    // 小提醒：整排(3的倍數)就自己獨立一整排；沒滿的話直接補進最後一排的空格
+    // 小提醒：一律自己獨立一整排放在步驟格線最下面
     const tipRaw = String(recipe['小提醒'] || '').replace(/\\n/g, '\n').trim();
     if (tipRaw) {
       const tipLines = tipRaw.split('\n').map(s => s.trim()).filter(Boolean);
-      const remainder = stepLines.length % 3;
-      const span = remainder === 0 ? 3 : (3 - remainder);
 
       const box = document.createElement('div');
       box.className = 'reminder-box';
-      box.style.gridColumn = `span ${span}`;
 
       const head = document.createElement('div');
       head.className = 'reminder-head';
