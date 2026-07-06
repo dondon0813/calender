@@ -187,6 +187,53 @@
   }
   .ing-tile.active .ing-tile-name { color: #FF7391; }
 
+  /* 選擇食材：依分類分組、可摺疊 */
+  .ing-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .ing-category-section {
+    border: 2px solid #FFE3CC;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #FFFDFA;
+  }
+  .ing-category-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: none;
+    border: none;
+    padding: 11px 14px;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .ing-category-toggle-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: #5a4a3f;
+  }
+  .ing-category-count {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #FF7391;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 2px 8px;
+    margin-left: 6px;
+  }
+  .ing-category-arrow {
+    font-size: 11px;
+    color: #b5755a;
+  }
+  .ing-category-body {
+    padding: 4px 12px 12px;
+    margin-bottom: 0;
+  }
+
   .recipe-reco-title {
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 700;
@@ -1025,14 +1072,14 @@
   .step-badge-img { height: 40px; }
   .step-badge-count {
     position: absolute;
-    left: 58%;
-    top: 48%;
+    left: 51%;
+    top: 47%;
     transform: translate(-50%, -50%);
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 800;
-    font-size: 21px;
+    font-size: 19px;
     color: #fff;
-    /* 圖片中間空白圓圈的實際位置若跟文字對不準，調整這裡的 left / top 即可 */
+    /* 圖片中間空白圓圈的實際位置若跟文字對不準，調整這裡的 left / top 即可（百分比，一次微調1-2%就好） */
   }
 
   /* 步驟卡片：橫向最多 3 格，小提醒一律獨立一整排放在最下面 */
@@ -1062,7 +1109,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #FF8FA3;
+    background: #F0B4C2;
     color: #fff;
     font-weight: 800;
     font-size: 12px;
@@ -1077,7 +1124,7 @@
     line-height: 1.45;
   }
 
-  /* 小提醒：一律獨立一整排（span 3），圖示標籤蓋在虛線邊框上面 */
+  /* 小提醒：一律獨立一整排（span 3），標籤圖示(reminder.png，本身已含文字跟底色)蓋在虛線邊框上面 */
   .reminder-box {
     grid-column: span 3;
     position: relative;
@@ -1100,7 +1147,7 @@
     padding: 5px 14px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   }
-  .reminder-head img { width: 16px; height: 16px; }
+  .reminder-head img { height: 24px; width: auto; display: block; }
   .reminder-head span {
     font-size: 12px;
     font-weight: 800;
@@ -1254,7 +1301,7 @@
     </div>
 
     <div class="ing-select-title">選擇食材</div>
-    <div class="ing-tile-grid" id="recIngredientChips"></div>
+    <div class="ing-category-list" id="recIngredientChips"></div>
     <button class="chip-clear" id="clearFiltersBtn">清除所有篩選</button>
 
     <div class="recipe-reco-title" id="recipeRecoTitle">🍽 食譜推薦（共 0 道）</div>
@@ -1375,6 +1422,7 @@ let ingSelectedBrand = ''; // 食材介紹：單選品牌
 let recSelectedBrands = [];
 let recSelectedIngredients = []; // 用食材名稱
 let recSelectedAges = [];
+let recIngCategoryOpen = {}; // 選擇食材各分類目前是展開還是收合，key是分類名稱
 
 const urlParams = new URLSearchParams(window.location.search);
 const presetBrand = urlParams.get('brand') || '';
@@ -1603,40 +1651,105 @@ function initFilters() {
   // 觀看食譜的食材篩選：把每個食材的「所有簡稱標籤」都攤平出來去重
   // 例如牛肉湯簡稱填「牛高湯/高湯」，篩選磚就會同時出現「牛高湯」跟「高湯」兩顆
   // 不同品牌/不同完整食材名稱，只要簡稱有一樣的，就會合併成同一個標籤
-  const foodIngredients = ingredientsOfType('食材');
-  const ingKeys = Array.from(new Set(foodIngredients.flatMap(ingredientFilterKeys))).filter(Boolean);
+  //
+  // 如果目前有選品牌，只顯示該品牌的食材（不含其他品牌、也不含沒有品牌的一般食材），
+  // 並且依「分類」欄位分組成可摺疊的區塊，避免全部食材一次塞在畫面上
+  const foodIngredientsAll = ingredientsOfType('食材');
+  const foodIngredients = recSelectedBrands.length
+    ? foodIngredientsAll.filter(i => recSelectedBrands.includes(i['品牌']))
+    : foodIngredientsAll;
+
+  // 如果之前勾選的食材篩選，在目前的品牌篩選下已經不存在了，順便拿掉，
+  // 避免篩選磚看不到了但篩選條件還卡著、食譜列表一直顯示「找不到食譜」
+  const validKeysNow = new Set(foodIngredients.flatMap(ingredientFilterKeys));
+  recSelectedIngredients = recSelectedIngredients.filter(k => validKeysNow.has(k));
+
+  const CATEGORY_ORDER = ['蔬菜', '水果', '根莖類', '菇類', '肉類', '肉類海鮮', '海鮮', '豆製品', '豆類穀物', '穀物', '蛋類', '辛香料', '堅果乾貨', '芝麻類', '調味料', '乳製品', '粉類', '湯品', '其他'];
+  const categoryKeys = {}; // 分類 -> Set(簡稱)
+  const categoryRepresentative = {}; // "分類|簡稱" -> 代表用的那筆食材資料（拿圖用）
+  foodIngredients.forEach(item => {
+    const cat = String(item['分類'] || '').trim() || '其他';
+    ingredientFilterKeys(item).forEach(key => {
+      if (!key) return;
+      if (!categoryKeys[cat]) categoryKeys[cat] = new Set();
+      categoryKeys[cat].add(key);
+      const repKey = cat + '|' + key;
+      if (!categoryRepresentative[repKey]) categoryRepresentative[repKey] = item;
+    });
+  });
+
+  const categories = Object.keys(categoryKeys).sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a);
+    const ib = CATEGORY_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b, 'zh-Hant');
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
   const recIngChipsEl = document.getElementById('recIngredientChips');
   recIngChipsEl.innerHTML = '';
-  ingKeys.forEach(key => {
-    const representative = foodIngredients.find(i => ingredientFilterKeys(i).includes(key));
-    const tile = document.createElement('div');
-    tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
-    tile.title = key;
 
-    const hasImg = representative && isValidUrl(representative['圖片網址']);
-    if (hasImg) {
-      const img = document.createElement('img');
-      img.className = 'ing-tile-icon';
-      img.src = representative['圖片網址'];
-      img.onerror = function() {
-        this.replaceWith(makeEmojiIconFallback());
-      };
-      tile.appendChild(img);
-    } else {
-      tile.appendChild(makeEmojiIconFallback());
-    }
+  if (!categories.length) {
+    recIngChipsEl.innerHTML = `<div class="empty-state" style="padding:14px 0;">這個品牌目前沒有可篩選的食材</div>`;
+  }
 
-    const nameEl = document.createElement('div');
-    nameEl.className = 'ing-tile-name';
-    nameEl.textContent = key;
-    tile.appendChild(nameEl);
+  categories.forEach(cat => {
+    const keys = Array.from(categoryKeys[cat]);
+    const isOpen = !!recIngCategoryOpen[cat];
+    const selectedCount = keys.filter(k => recSelectedIngredients.includes(k)).length;
 
-    tile.addEventListener('click', () => {
-      toggleInArray(recSelectedIngredients, key);
+    const section = document.createElement('div');
+    section.className = 'ing-category-section';
+
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'ing-category-toggle';
+    head.innerHTML = `<span class="ing-category-toggle-name">${cat}${selectedCount ? `<span class="ing-category-count">已選 ${selectedCount}</span>` : ''}</span><span class="ing-category-arrow">${isOpen ? '▲' : '▼'}</span>`;
+    head.addEventListener('click', () => {
+      recIngCategoryOpen[cat] = !isOpen;
       initFilters();
-      renderRecipes();
     });
-    recIngChipsEl.appendChild(tile);
+    section.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'ing-tile-grid ing-category-body';
+    body.style.display = isOpen ? 'grid' : 'none';
+
+    keys.forEach(key => {
+      const representative = categoryRepresentative[cat + '|' + key];
+      const tile = document.createElement('div');
+      tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
+      tile.title = key;
+
+      const hasImg = representative && isValidUrl(representative['圖片網址']);
+      if (hasImg) {
+        const img = document.createElement('img');
+        img.className = 'ing-tile-icon';
+        img.src = representative['圖片網址'];
+        img.onerror = function() {
+          this.replaceWith(makeEmojiIconFallback());
+        };
+        tile.appendChild(img);
+      } else {
+        tile.appendChild(makeEmojiIconFallback());
+      }
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'ing-tile-name';
+      nameEl.textContent = key;
+      tile.appendChild(nameEl);
+
+      tile.addEventListener('click', () => {
+        toggleInArray(recSelectedIngredients, key);
+        initFilters();
+        renderRecipes();
+      });
+      body.appendChild(tile);
+    });
+
+    section.appendChild(body);
+    recIngChipsEl.appendChild(section);
   });
 
   // 觀看食譜的月齡篩選
@@ -2119,8 +2232,7 @@ function openRecipeModal(recipe) {
 
       const head = document.createElement('div');
       head.className = 'reminder-head';
-      head.innerHTML = `<img src="images/recipes/reminder.png" alt="">
-        <span>小提醒</span>`;
+      head.innerHTML = `<img src="images/recipes/reminder.png" alt="小提醒">`;
       box.appendChild(head);
 
       const list = document.createElement('ul');
