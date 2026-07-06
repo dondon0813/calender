@@ -959,6 +959,165 @@
     border-radius: 18px;
   }
 
+  /* ===== 食譜詳細彈窗 v2：海報風排版 ===== */
+  /* 大圖：她自己做好的整張圖（標題／標籤／料理照全部包在裡面），直接滿版鋪滿卡片上緣 */
+  .rc-hero-wrap {
+    margin: -16px -18px 14px;
+    border-radius: 26px 26px 0 0;
+    overflow: hidden;
+    background: #FFF1E6;
+  }
+  .rc-hero-img {
+    width: 100%;
+    display: block;
+  }
+  .rc-close-floating {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    background: rgba(255,255,255,0.88);
+    color: #FF7391;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+
+  /* 區塊小標籤圖（準備食材 / 簡單N步驟），圖檔本身已經含文字 */
+  .rc-section-badge-img {
+    display: block;
+    height: 34px;
+    margin: 4px auto 12px;
+  }
+
+  /* 準備食材：一格一格圖磚 */
+  .prep-ing-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 10px;
+    justify-content: flex-start;
+    margin-bottom: 4px;
+  }
+  .prep-ing-tile {
+    width: 72px;
+    text-align: center;
+  }
+  .prep-ing-photo {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    object-fit: cover;
+    background: #FFF1E6;
+    display: block;
+    margin: 0 auto 6px;
+    border: 2px solid #FFE3CC;
+  }
+  .prep-ing-photo.clickable { cursor: pointer; }
+  .prep-ing-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #8a7462;
+    line-height: 1.35;
+  }
+
+  /* 簡單N步驟：標題圖上疊步驟數字 */
+  .step-badge-wrap {
+    position: relative;
+    text-align: center;
+    margin: 4px 0 14px;
+  }
+  .step-badge-img { height: 40px; }
+  .step-badge-count {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: #fff;
+    /* 圖片中間空白圓圈的實際位置若跟文字對不準，調整這裡的 left / top 即可 */
+  }
+
+  /* 步驟卡片：橫向最多 3 格，小提醒會補進最後一排的空格 */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 10px;
+  }
+  .step-card { text-align: center; }
+  .step-photo-wrap {
+    position: relative;
+    margin-bottom: 6px;
+  }
+  .step-photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 14px;
+    background: #FFF1E6;
+    display: block;
+    border: 2px solid #FFE3CC;
+  }
+  .step-number-badge {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #FF9F4A;
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+  .step-caption {
+    font-size: 10.5px;
+    color: #8a7462;
+    line-height: 1.45;
+  }
+
+  /* 小提醒：會依照步驟排滿情形，用 grid-column 補進步驟格線裡 */
+  .reminder-box {
+    grid-column: span 3;
+    background: #FFF6EC;
+    border: 1.5px dashed #FFC79A;
+    border-radius: 16px;
+    padding: 12px 14px;
+    text-align: left;
+  }
+  .reminder-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .reminder-head img { width: 18px; height: 18px; }
+  .reminder-head span {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #E0954A;
+  }
+  .reminder-list { list-style: none; margin: 0; padding: 0; }
+  .reminder-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 11.5px;
+    color: #8a7462;
+    line-height: 1.6;
+    margin-bottom: 5px;
+  }
+  .reminder-item:last-child { margin-bottom: 0; }
+  .reminder-item img {
+    width: 12px;
+    height: 12px;
+    margin-top: 3px;
+    flex: none;
+  }
+
 </style>
 </head>
 <body>
@@ -1139,40 +1298,30 @@
   </div>
 </div>
 
-<!-- 食譜彈窗 -->
+<!-- 食譜彈窗（海報風排版：頂部大圖由雪莉自己做好，含標題／標籤／料理照） -->
 <div class="modal-backdrop" id="recipeModal" onclick="if(event.target===this) closeModal('recipeModal')">
   <div class="modal-box recipe-card-modal">
-    <div class="rc-header">
-      <span class="rc-badge-pill">🩷 雪莉與朵栗 の食譜卡</span>
-      <button class="rc-close-btn" onclick="closeModal('recipeModal')">✕</button>
+    <button class="rc-close-btn rc-close-floating" onclick="closeModal('recipeModal')">✕</button>
+
+    <div class="rc-hero-wrap">
+      <img class="rc-hero-img" id="recModalImg" src="" alt="">
     </div>
 
-    <div class="rc-photo-wrap">
-      <img class="rc-photo" id="recModalImg" src="" alt="">
-    </div>
-
-    <h2 class="rc-title" id="recModalName"></h2>
     <div class="rc-subtitle" id="recModalSubtitle" style="display:none;"></div>
 
     <div class="rc-info-row" id="recModalInfoRow"></div>
 
     <div class="rc-section" id="recModalIngSection">
-      <div class="rc-section-head">
-        <span class="rc-section-title">🌿 食材準備</span>
-      </div>
-      <div class="rc-ing-list" id="recModalIngredients"></div>
+      <img class="rc-section-badge-img" src="images/recipes/ingredients.png" alt="準備食材">
+      <div class="prep-ing-grid" id="recModalIngredients"></div>
     </div>
 
     <div class="rc-section">
-      <div class="rc-section-head">
-        <span class="rc-section-title">🥄 料理步驟</span>
+      <div class="step-badge-wrap">
+        <img class="rc-section-badge-img step-badge-img" src="images/recipes/ricipesteps.png" alt="簡單步驟">
+        <span class="step-badge-count" id="stepBadgeCount"></span>
       </div>
-      <ol class="rc-steps-list" id="recModalSteps"></ol>
-    </div>
-
-    <div class="rc-tip-box" id="recModalTipBox" style="display:none;">
-      <div class="rc-tip-title">💡 雪莉小提醒</div>
-      <div class="rc-tip-text" id="recModalTipText"></div>
+      <div class="steps-grid" id="recModalSteps"></div>
     </div>
 
     <div class="modal-actions" style="margin-top:14px;">
@@ -1398,6 +1547,25 @@ function getRecipesUsingIngredientId(ingId) {
     const ids = String(r['使用食材ID'] || '').split('/').map(s => s.trim().split(':')[0]);
     return ids.includes(ingId);
   });
+}
+
+// 依主圖網址自動推算步驟圖片網址：把路徑裡的 images/ 換成 images/recipes/stepimage/，
+// 檔名沿用主圖檔名，後面加上步驟序號（1、2、3...），副檔名不變
+// 例：.../images/combu-congee.jpg → .../images/recipes/stepimage/combu-congee2.jpg（第2步）
+function buildAutoStepImageUrl(mainImgUrl, stepNumber) {
+  if (!isValidUrl(mainImgUrl)) return '';
+  const marker = '/images/';
+  const idx = mainImgUrl.lastIndexOf(marker);
+  if (idx === -1) return '';
+  const prefix = mainImgUrl.slice(0, idx);
+  const rest = mainImgUrl.slice(idx + marker.length);
+  const lastSlash = rest.lastIndexOf('/');
+  const filename = lastSlash === -1 ? rest : rest.slice(lastSlash + 1);
+  const dotIdx = filename.lastIndexOf('.');
+  if (dotIdx === -1) return '';
+  const base = filename.slice(0, dotIdx);
+  const ext = filename.slice(dotIdx);
+  return `${prefix}/images/recipes/stepimage/${base}${stepNumber}${ext}`;
 }
 
 // ===== 篩選標籤初始化 =====
@@ -1786,9 +1954,10 @@ function openIngredientModal(item) {
 
 // ===== 食譜彈窗 =====
 function openRecipeModal(recipe) {
+  // 大圖已經是雪莉自己做好、含標題與標籤的完整海報圖，程式不再另外疊上標題文字
   document.getElementById('recModalImg').src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
   document.getElementById('recModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
-  document.getElementById('recModalName').textContent = recipe['食譜名稱'] || '';
+  document.getElementById('recModalImg').alt = recipe['食譜名稱'] || '';
 
   const subtitleEl = document.getElementById('recModalSubtitle');
   const subtitle = String(recipe['簡介'] || '').trim();
@@ -1822,9 +1991,10 @@ function openRecipeModal(recipe) {
     infoRowEl.style.display = 'none';
   }
 
+  // ===== 準備食材：圖磚樣式（圖片來自食材資料庫的「圖片網址」欄位） =====
   const ingList = getRecipeIngredients(recipe);
-  const ingListEl = document.getElementById('recModalIngredients');
-  ingListEl.innerHTML = '';
+  const ingGridEl = document.getElementById('recModalIngredients');
+  ingGridEl.innerHTML = '';
 
   const genericItems = ingList.filter(i => i._generic);
   const brandItems = ingList.filter(i => !i._generic);
@@ -1836,54 +2006,122 @@ function openRecipeModal(recipe) {
     groups[key].push(i);
   });
 
+  function buildPrepTile(name, qty, imgUrl, onClick) {
+    const tile = document.createElement('div');
+    tile.className = 'prep-ing-tile';
+
+    const img = document.createElement('img');
+    img.className = 'prep-ing-photo' + (onClick ? ' clickable' : '');
+    img.src = isValidUrl(imgUrl) ? imgUrl : PLACEHOLDER_IMG;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    if (onClick) img.addEventListener('click', onClick);
+    tile.appendChild(img);
+
+    const label = document.createElement('div');
+    label.className = 'prep-ing-label';
+    label.textContent = qty ? `${name} ${qty}` : name;
+    tile.appendChild(label);
+
+    return tile;
+  }
+
   Object.keys(groups).forEach(key => {
     const group = groups[key];
     const first = group[0];
-    const row = document.createElement('div');
-    row.className = 'rc-ing-item';
-    row.innerHTML = `<span class="rc-ing-name">${key}</span><span class="rc-ing-qty">${first._quantity || ''}</span>`;
-    row.addEventListener('click', () => {
+    ingGridEl.appendChild(buildPrepTile(key, first._quantity, first['圖片網址'], () => {
       closeModal('recipeModal');
       openIngredientModal(group.length === 1 ? first : pickBestBrandIngredient(group));
-    });
-    ingListEl.appendChild(row);
+    }));
   });
 
   genericItems.forEach(i => {
-    const row = document.createElement('div');
-    row.className = 'rc-ing-item';
-    row.style.cursor = 'default';
-    row.innerHTML = `<span class="rc-ing-name" style="color:#8C8378;">${i['食材名稱']}</span><span class="rc-ing-qty">${i._quantity || ''}</span>`;
-    ingListEl.appendChild(row);
+    ingGridEl.appendChild(buildPrepTile(i['食材名稱'], i._quantity, null, null));
   });
 
   if (!ingList.length) {
-    ingListEl.innerHTML = `<div class="rc-ing-item" style="cursor:default;"><span class="rc-ing-name">（尚未提供食材清單）</span></div>`;
+    ingGridEl.innerHTML = `<div class="empty-state" style="padding:10px 0; width:100%;">（尚未提供食材清單）</div>`;
   }
 
+  // ===== 簡單N步驟：圖片＋編號徽章＋說明文字，最多橫向3格 =====
+  // 圖片來源：優先用試算表「步驟圖片」欄位（用 | 分隔多張，順序對應第1、2、3...行，
+  // 沒有的話會自動依主圖網址規則推算：images/xxx.jpg → images/recipes/stepimage/xxx1.jpg）
   const stepsRaw = String(recipe['做法步驟'] || '').replace(/\\n/g, '\n');
-  const stepsEl = document.getElementById('recModalSteps');
-  stepsEl.innerHTML = '';
   const stepLines = stepsRaw.split('\n').map(s => s.replace(/^\s*\d+[.、)]\s*/, '').trim()).filter(Boolean);
-  if (stepLines.length) {
-    stepLines.forEach(line => {
-      const li = document.createElement('li');
-      li.textContent = line;
-      stepsEl.appendChild(li);
-    });
-  } else {
-    const li = document.createElement('li');
-    li.textContent = '（尚未提供做法）';
-    stepsEl.appendChild(li);
-  }
+  const manualStepImgsRaw = String(recipe['步驟圖片'] || '').trim();
+  const manualStepImgs = manualStepImgsRaw ? manualStepImgsRaw.split('|').map(s => s.trim()) : [];
 
-  const tipBox = document.getElementById('recModalTipBox');
-  const tip = String(recipe['小提醒'] || '').trim();
-  if (tip) {
-    document.getElementById('recModalTipText').textContent = tip;
-    tipBox.style.display = 'block';
+  const stepsGridEl = document.getElementById('recModalSteps');
+  stepsGridEl.innerHTML = '';
+
+  if (stepLines.length) {
+    stepLines.forEach((line, idx) => {
+      const card = document.createElement('div');
+      card.className = 'step-card';
+
+      const photoWrap = document.createElement('div');
+      photoWrap.className = 'step-photo-wrap';
+
+      const img = document.createElement('img');
+      img.className = 'step-photo';
+      const stepNumber = idx + 1;
+      const manualUrl = manualStepImgs[idx];
+      const autoUrl = buildAutoStepImageUrl(recipe['成品圖片網址'], stepNumber);
+      img.src = isValidUrl(manualUrl) ? manualUrl : (isValidUrl(autoUrl) ? autoUrl : PLACEHOLDER_IMG);
+      img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+      photoWrap.appendChild(img);
+
+      const badge = document.createElement('span');
+      badge.className = 'step-number-badge';
+      badge.textContent = stepNumber;
+      photoWrap.appendChild(badge);
+
+      card.appendChild(photoWrap);
+
+      const caption = document.createElement('div');
+      caption.className = 'step-caption';
+      caption.textContent = line;
+      card.appendChild(caption);
+
+      stepsGridEl.appendChild(card);
+    });
+
+    document.getElementById('stepBadgeCount').textContent = stepLines.length;
+
+    // 小提醒：整排(3的倍數)就自己獨立一整排；沒滿的話直接補進最後一排的空格
+    const tipRaw = String(recipe['小提醒'] || '').replace(/\\n/g, '\n').trim();
+    if (tipRaw) {
+      const tipLines = tipRaw.split('\n').map(s => s.trim()).filter(Boolean);
+      const remainder = stepLines.length % 3;
+      const span = remainder === 0 ? 3 : (3 - remainder);
+
+      const box = document.createElement('div');
+      box.className = 'reminder-box';
+      box.style.gridColumn = `span ${span}`;
+
+      const head = document.createElement('div');
+      head.className = 'reminder-head';
+      head.innerHTML = `<img src="images/recipes/reminder.png" alt="">
+        <span>小提醒</span>`;
+      box.appendChild(head);
+
+      const list = document.createElement('ul');
+      list.className = 'reminder-list';
+      tipLines.forEach(t => {
+        const li = document.createElement('li');
+        li.className = 'reminder-item';
+        li.innerHTML = `<img src="images/recipes/heart.png" alt="">`;
+        const textSpan = document.createElement('span');
+        textSpan.textContent = t;
+        li.appendChild(textSpan);
+        list.appendChild(li);
+      });
+      box.appendChild(list);
+
+      stepsGridEl.appendChild(box);
+    }
   } else {
-    tipBox.style.display = 'none';
+    stepsGridEl.innerHTML = `<div class="empty-state" style="grid-column:1/-1; padding:10px 0;">（尚未提供做法）</div>`;
+    document.getElementById('stepBadgeCount').textContent = '';
   }
 
   const videoBtn = document.getElementById('recVideoBtn');
