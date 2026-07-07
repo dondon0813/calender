@@ -1562,44 +1562,11 @@ function pickBestBrandIngredient(group) {
   return group[0]; // 全部都已結單且沒有下一團資訊，就固定回傳第一個
 }
 
-// 支援「使用食材ID」欄位帶分量：格式為 ing001:50g/ing003:1包（冒號後面是分量，可省略）
-// 也支援直接打一般食材文字（例如「雞蛋」），對不到資料庫ID的就當純文字顯示，不會有小卡/購買按鈕
-// 現在多加一層容錯：如果打的不是食材ID，會先試著用「食材名稱」去資料庫比對，
-// 對到的話一樣會有圖片跟品牌小卡；同名有多個品牌版本時，用跟前往購買一樣的邏輯自動挑一個
-function getRecipeIngredients(recipe) {
-  const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
-  const result = [];
-  tokens.forEach(token => {
-    const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
-    let ing = INGREDIENTS.find(i => i['食材ID'] === idOrName);
-    if (!ing && idOrName) {
-      const nameMatches = INGREDIENTS.filter(i => i['食材名稱'] === idOrName);
-      if (nameMatches.length === 1) {
-        ing = nameMatches[0];
-      } else if (nameMatches.length > 1) {
-        ing = pickBestBrandIngredient(nameMatches);
-      }
-    }
-    if (ing) {
-      result.push(Object.assign({}, ing, { _quantity: qty || '' }));
-    } else if (idOrName) {
-      // 資料庫裡完全找不到（ID跟名稱都對不到），視為一般食材（純文字，沒有品牌/小卡/購買按鈕）
-      result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
-    }
-  });
-  return result;
-}
-
-function getRecipeBrands(recipe) {
-  const set = new Set();
-  getRecipeIngredients(recipe).forEach(i => { if (i['品牌']) set.add(i['品牌']); });
-  return Array.from(set);
-}
-
 // 篩選用的分類key：優先用「簡稱」，沒填才用「食材名稱」
 // 簡稱可以用「/」填多個，例如「牛高湯/高湯」，代表這個食材同時屬於「牛高湯」跟「高湯」兩個篩選標籤
 // 這樣食譜用到牛高湯的話，篩選點「牛高湯」或籠統的「高湯」都找得到；
 // 但如果食譜寫的是別的食材，簡稱只填「高湯」，就只有點「高湯」才找得到，不會出現在「牛高湯」篩選裡
+// ↑這個函式放到 getRecipeIngredients() 前面，因為食材ID/名稱比對現在也要用到它
 function ingredientFilterKeys(ing) {
   const raw = String(ing['簡稱'] || '').trim();
   if (!raw) return ing['食材名稱'] ? [ing['食材名稱']] : [];
@@ -1610,6 +1577,46 @@ function ingredientFilterKeys(ing) {
 function ingredientFilterKey(ing) {
   const keys = ingredientFilterKeys(ing);
   return keys[0] || '';
+}
+
+// 支援「使用食材ID」欄位帶分量：格式為 ing001:50g/ing003:1包（冒號後面是分量，可省略）
+// 也支援直接打一般食材文字（例如「雞蛋」），對不到資料庫ID的就當純文字顯示，不會有小卡/購買按鈕
+// 現在多加一層容錯：如果打的不是食材ID，會先試著用「食材名稱」去資料庫比對，
+// 對不到「食材名稱」的話，再用「簡稱」欄位（用 / 分隔的每一個別名）去比對一次
+// （例如食材資料庫「鮭魚一口魚片」的簡稱填「鮭魚片/魚片」，食譜打「鮭魚片」也要能對到）
+// 對到的話一樣會有圖片跟品牌小卡；同名/同簡稱有多個品牌版本時，用跟前往購買一樣的邏輯自動挑一個
+function getRecipeIngredients(recipe) {
+  const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
+  const result = [];
+  tokens.forEach(token => {
+    const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
+    let ing = INGREDIENTS.find(i => i['食材ID'] === idOrName);
+    if (!ing && idOrName) {
+      let nameMatches = INGREDIENTS.filter(i => i['食材名稱'] === idOrName);
+      if (!nameMatches.length) {
+        // 食材名稱對不到，改用簡稱（可能用「/」填了多個別名）去比對
+        nameMatches = INGREDIENTS.filter(i => ingredientFilterKeys(i).includes(idOrName));
+      }
+      if (nameMatches.length === 1) {
+        ing = nameMatches[0];
+      } else if (nameMatches.length > 1) {
+        ing = pickBestBrandIngredient(nameMatches);
+      }
+    }
+    if (ing) {
+      result.push(Object.assign({}, ing, { _quantity: qty || '' }));
+    } else if (idOrName) {
+      // 資料庫裡完全找不到（ID、食材名稱、簡稱都對不到），視為一般食材（純文字，沒有品牌/小卡/購買按鈕）
+      result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
+    }
+  });
+  return result;
+}
+
+function getRecipeBrands(recipe) {
+  const set = new Set();
+  getRecipeIngredients(recipe).forEach(i => { if (i['品牌']) set.add(i['品牌']); });
+  return Array.from(set);
 }
 
 function getRecipeIngredientKeys(recipe) {
