@@ -1787,7 +1787,7 @@ async function pgCopyText() {
   }
 }
 
-// ---- 4:5 貼文圖（沿用現有食譜海報樣式，先用固定模板實作） ----
+// ---- 4:5 貼文圖（沿用現有食譜海報樣式，固定版型：所有食譜都套同一套結構） ----
 function pgBuildBenefitTags(r, ingCount) {
   const tags = [];
   if (r['烹調時間']) tags.push(`⏱ ${r['烹調時間']}`);
@@ -1802,17 +1802,15 @@ function pgBuildBenefitTags(r, ingCount) {
 function pgBuildPosterHtml(r) {
   const title = escHtml(r['食譜名稱'] || '');
   const heroImg = pgIsValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PG_PLACEHOLDER_IMG;
-  const subtitleRaw = String(r['簡介'] || '').trim();
-  const subtitle = escHtml(subtitleRaw.length > 26 ? subtitleRaw.slice(0, 26) + '…' : subtitleRaw);
 
   const fullIngList = pgGetRecipeIngredients(r);
-  const ingList = fullIngList.slice(0, 8);
+  const ingList = fullIngList.slice(0, 8); // 固定版型上限：4欄 x 2排
   const benefitTags = pgBuildBenefitTags(r, fullIngList.length);
 
-  const steps = pgGetStepLines(r).slice(0, 6);
+  const steps = pgGetStepLines(r).slice(0, 4); // 固定版型上限：橫向一排最多4格
   const manualStepImgsRaw = String(r['步驟圖片'] || '').trim();
   const manualStepImgs = manualStepImgsRaw ? manualStepImgsRaw.split('|').map(s => s.trim()) : [];
-  const tips = pgGetTipLines(r).slice(0, 3);
+  const tips = pgGetTipLines(r).slice(0, 3); // 固定版型上限：最多3行
 
   const ingHtml = ingList.map(i => {
     const name = escHtml(pgIngredientFilterKey(i) || i['食材名稱'] || '');
@@ -1830,7 +1828,7 @@ function pgBuildPosterHtml(r) {
     const manualUrl = manualStepImgs[idx];
     const autoUrl = pgBuildAutoStepImageUrl(r['成品圖片網址'], n);
     const imgUrl = pgIsValidUrl(manualUrl) ? manualUrl : (pgIsValidUrl(autoUrl) ? autoUrl : '');
-    const captionRaw = s.length > 18 ? s.slice(0, 18) + '…' : s;
+    const captionRaw = s.length > 22 ? s.slice(0, 22) + '…' : s;
     const caption = escHtml(captionRaw);
     return `
       <div class="pgp-step-card">
@@ -1845,37 +1843,47 @@ function pgBuildPosterHtml(r) {
   const benefitHtml = benefitTags.map(t => `<span class="pgp-benefit-tag">✅ ${escHtml(t)}</span>`).join('');
 
   const tipsHtml = tips.length ? `
-    <div class="pgp-tip-box">
-      <div class="pgp-tip-head">💡 小提醒</div>
-      <ul class="pgp-tip-list">
-        ${tips.map(t => `<li>${escHtml(t)}</li>`).join('')}
-      </ul>
+    <div class="pgp-tip-bar">
+      <span class="pgp-tip-icon">💡</span>
+      <div>
+        <div class="pgp-tip-head">小提醒</div>
+        <ul class="pgp-tip-list">
+          ${tips.map(t => `<li>${escHtml(t)}</li>`).join('')}
+        </ul>
+      </div>
     </div>` : '';
 
   return `
     <div class="pgp-poster">
-      <span class="pgp-doodle" style="top:40px;left:36px;font-size:34px;">🌿</span>
-      <span class="pgp-doodle" style="top:130px;left:74px;font-size:22px;">⭐</span>
-      <span class="pgp-doodle" style="bottom:64px;left:40px;font-size:30px;">🐟</span>
-      <span class="pgp-doodle" style="bottom:150px;left:130px;font-size:20px;">💗</span>
+      <span class="pgp-doodle" style="top:20px;left:20px;font-size:30px;">🌿</span>
+      <span class="pgp-doodle" style="bottom:120px;left:24px;font-size:26px;">🐟</span>
+      <span class="pgp-doodle" style="bottom:40px;right:340px;font-size:20px;">⭐</span>
+      <span class="pgp-doodle" style="top:280px;right:24px;font-size:20px;">💗</span>
 
-      <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
-      <div class="pgp-title">${title}</div>
-      ${subtitle ? `<div class="pgp-subtitle">${subtitle}</div>` : ''}
-
-      <div class="pgp-hero-wrap">
-        <div class="pgp-hero-circle">
-          <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+      <div class="pgp-header-row">
+        <div class="pgp-header-text">
+          <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
+          <div class="pgp-title">${title}</div>
+        </div>
+        <div class="pgp-hero-frame">
+          <span class="pgp-hero-tape">手作食譜</span>
+          <div class="pgp-hero-circle">
+            <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+          </div>
         </div>
       </div>
 
       <div class="pgp-benefit-row">${benefitHtml}</div>
 
-      <div class="pgp-section-label pgp-label-pink">準備食材</div>
-      <div class="pgp-ing-grid">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
+      <div class="pgp-ing-section">
+        <div class="pgp-section-label pgp-label-pink">準備食材</div>
+        <div class="pgp-ing-grid">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
+      </div>
 
-      <div class="pgp-section-label pgp-label-orange">簡單${steps.length || ''}步驟</div>
-      <div class="pgp-step-grid">${stepHtml || '<div class="pgp-empty">（尚未提供做法）</div>'}</div>
+      <div class="pgp-step-section">
+        <div class="pgp-section-label pgp-label-orange">簡單${steps.length || ''}步驟</div>
+        <div class="pgp-step-grid">${stepHtml || '<div class="pgp-empty">（尚未提供做法）</div>'}</div>
+      </div>
 
       ${tipsHtml}
 
