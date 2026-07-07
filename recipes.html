@@ -276,6 +276,7 @@
   }
 
   .item-card {
+    position: relative;
     background: #FFFDFA;
     border: 2px solid #FFE3CC;
     border-radius: 20px;
@@ -296,6 +297,28 @@
     aspect-ratio: 1 / 1;
     object-fit: cover;
     background: #FFF1E6;
+  }
+  /* 縮圖右上角的油品標籤：有底色的小標籤，兩個以上直向往下排列 */
+  .oil-badge-wrap {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+  }
+  .oil-badge {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #8a5a2b;
+    background: rgba(255, 246, 224, 0.95);
+    border: 1px solid #F0C36D;
+    border-radius: 999px;
+    padding: 2px 8px;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   }
   .item-card .card-body {
     padding: 8px 8px 10px;
@@ -2000,6 +2023,23 @@ function renderIngredients() {
   renderIngredientGrid(productItems, document.getElementById('ingProductGrid'), document.getElementById('ingProductEmpty'));
 }
 
+// 已知常見食用油名稱，用來從「成分」欄位裡抓出這個食材實際用了哪些油
+// 「成分」通常是用「、」分隔的清單（例如「水、鱸魚、橄欖油」），
+// 用白名單比對而不是單純看結尾是不是「油」字，是為了避免「醬油」「奶油」這種
+// 不算食用油品的調味料被誤判進來。之後如果有新的油品種類，直接加進這個陣列就好
+const OIL_NAMES = [
+  '橄欖油', '酪梨油', '苦茶油', '葵花油', '椰子油', '葡萄籽油',
+  '亞麻仁油', '亞麻籽油', '芥花油', '玄米油', '花生油', '紫蘇油',
+  '沙拉油', '大豆油', '菜籽油', '紅花籽油', '南瓜籽油', '核桃油', '芝麻油'
+];
+
+// 依「成分」欄位文字，回傳這個食材用到的油品名稱清單（可能是0個、1個或多個）
+function getOilTags(item) {
+  const raw = String(item['成分'] || '');
+  if (!raw) return [];
+  return OIL_NAMES.filter(oil => raw.includes(oil));
+}
+
 function renderIngredientGrid(items, gridEl, emptyEl) {
   gridEl.innerHTML = '';
   if (!items.length) {
@@ -2019,6 +2059,20 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
     img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
     img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     card.appendChild(img);
+
+    // 縮圖右上角：成分裡有用到油品的話，疊上有底色的小標籤，兩個以上就直向往下排
+    const oilTags = getOilTags(item);
+    if (oilTags.length) {
+      const oilWrap = document.createElement('div');
+      oilWrap.className = 'oil-badge-wrap';
+      oilTags.forEach(oil => {
+        const badge = document.createElement('span');
+        badge.className = 'oil-badge';
+        badge.textContent = oil;
+        oilWrap.appendChild(badge);
+      });
+      card.appendChild(oilWrap);
+    }
 
     const body = document.createElement('div');
     body.className = 'card-body';
