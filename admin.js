@@ -1540,6 +1540,404 @@ function runConvertTool() {
   setFormStatus('convertStatus', '轉檔功能尚未串接，之後可以在這裡接上轉檔服務（目前選擇的檔案：' + fileInput.files[0].name + ' → ' + target + '）', '');
 }
 
+// ===== 食譜貼文產生器 =====
+// 讀取跟 recipes.html 同一組食譜資料庫（透過同一個 APPS_SCRIPT_URL，scope=public）
+// 這裡的變數都加 pg 前綴，避免跟其他功能的變數重複
+let pgRecipes = [];
+let pgIngredients = [];
+let pgRecipeDbLoaded = false;
+let pgRecipeDbLoading = false;
+let pgSelectedRecipe = null;
+
+const PG_PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>🍽</text></svg>";
+
+async function pgLoadRecipeDb() {
+  if (pgRecipeDbLoaded || pgRecipeDbLoading) return;
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) return;
+  pgRecipeDbLoading = true;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    pgIngredients = (data.ingredients || []).filter(i => i['食材ID']);
+    pgRecipes = (data.recipes || []).filter(r => r['食譜ID']);
+    pgRecipeDbLoaded = true;
+  } catch (err) {
+    console.warn('食譜資料讀取失敗：', err);
+  }
+  pgRecipeDbLoading = false;
+}
+
+function pgIsValidUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+
+// 食材顯示用的簡短名稱：優先用「簡稱」（可能用 / 分隔多個，取第一個），沒填才用「食材名稱」
+function pgIngredientFilterKey(ing) {
+  const raw = String(ing['簡稱'] || '').trim();
+  if (!raw) return ing['食材名稱'] || '';
+  return raw.split('/')[0].trim();
+}
+
+// 依「使用食材ID」欄位（格式 ing001:50g/ing003:1包）比對出完整食材資料＋分量
+function pgGetRecipeIngredients(recipe) {
+  const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
+  const result = [];
+  tokens.forEach(token => {
+    const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
+    let ing = pgIngredients.find(i => i['食材ID'] === idOrName);
+    if (!ing && idOrName) {
+      const nameMatches = pgIngredients.filter(i => i['食材名稱'] === idOrName);
+      if (nameMatches.length) ing = nameMatches[0];
+    }
+    if (ing) {
+      result.push(Object.assign({}, ing, { _quantity: qty || '' }));
+    } else if (idOrName) {
+      result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
+    }
+  });
+  return result;
+}
+
+// 依主圖網址自動推算步驟圖片網址（跟 recipes.html 用同一套規則）
+function pgBuildAutoStepImageUrl(mainImgUrl, stepNumber) {
+  if (!pgIsValidUrl(mainImgUrl)) return '';
+  const marker = '/images/';
+  const idx = mainImgUrl.lastIndexOf(marker);
+  if (idx === -1) return '';
+  const prefix = mainImgUrl.slice(0, idx);
+  const rest = mainImgUrl.slice(idx + marker.length);
+  const lastSlash = rest.lastIndexOf('/');
+  const filename = lastSlash === -1 ? rest : rest.slice(lastSlash + 1);
+  const dotIdx = filename.lastIndexOf('.');
+  if (dotIdx === -1) return '';
+  const base = filename.slice(0, dotIdx);
+  const ext = filename.slice(dotIdx);
+  return `${prefix}/images/recipes/stepimage/${base}${stepNumber}${ext}`;
+}
+
+function pgGetStepLines(recipe) {
+  const stepsRaw = String(recipe['做法步驟'] || '').replace(/\\n/g, '\n');
+  return stepsRaw.split('\n').map(s => s.replace(/^\s*\d+[.、)]\s*/, '').trim()).filter(Boolean);
+}
+
+function pgGetTipLines(recipe) {
+  const tipRaw = String(recipe['小提醒'] || '').replace(/\\n/g, '\n').trim();
+  if (!tipRaw) return [];
+  return tipRaw.split('\n').map(s => s.trim()).filter(Boolean);
+}
+
+function openRecipePostModal() {
+  document.getElementById('menuPanel').classList.remove('show');
+  pgSelectedRecipe = null;
+  document.getElementById('pgSearchInput').value = '';
+  document.getElementById('pgPickerView').style.display = 'block';
+  document.getElementById('pgActionView').style.display = 'none';
+  document.getElementById('pgOutputArea').style.display = 'none';
+  document.getElementById('recipePostModal').classList.add('show');
+
+  const grid = document.getElementById('pgRecipeGrid');
+  grid.innerHTML = '<div class="task-empty">食譜載入中…</div>';
+  pgLoadRecipeDb().then(() => pgRenderRecipeGrid(''));
+}
+
+function closeRecipePostModal() {
+  document.getElementById('recipePostModal').classList.remove('show');
+}
+
+document.getElementById('pgSearchInput').addEventListener('input', (e) => {
+  pgRenderRecipeGrid(e.target.value.trim());
+});
+
+function pgRenderRecipeGrid(searchText) {
+  const grid = document.getElementById('pgRecipeGrid');
+  grid.innerHTML = '';
+  if (!pgRecipeDbLoaded) {
+    grid.innerHTML = '<div class="task-empty">食譜載入中…</div>';
+    return;
+  }
+  let items = pgRecipes;
+  if (searchText) {
+    items = items.filter(r => String(r['食譜名稱'] || '').includes(searchText));
+  }
+  if (!items.length) {
+    grid.innerHTML = '<div class="task-empty">沒有找到符合的食譜</div>';
+    return;
+  }
+  items.forEach(recipe => {
+    const card = document.createElement('div');
+    card.className = 'recipe-reco-card';
+    card.addEventListener('click', () => pgSelectRecipe(recipe));
+
+    const img = document.createElement('img');
+    img.src = pgIsValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PG_PLACEHOLDER_IMG;
+    img.onerror = () => { img.src = PG_PLACEHOLDER_IMG; };
+    card.appendChild(img);
+
+    const body = document.createElement('div');
+    body.className = 'rrc-body';
+    const name = document.createElement('div');
+    name.className = 'rrc-name';
+    name.textContent = recipe['食譜名稱'] || '';
+    body.appendChild(name);
+
+    if (recipe['適合月齡']) {
+      const tags = document.createElement('div');
+      tags.className = 'rrc-tags';
+      tags.innerHTML = `<span class="mini-tag" style="background:#E4F5DF;color:#5C9147;">👶 ${escHtml(recipe['適合月齡'])}</span>`;
+      body.appendChild(tags);
+    }
+
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+}
+
+function pgSelectRecipe(recipe) {
+  pgSelectedRecipe = recipe;
+  document.getElementById('pgPickerView').style.display = 'none';
+  document.getElementById('pgActionView').style.display = 'block';
+  document.getElementById('pgOutputArea').style.display = 'none';
+  document.getElementById('pgSelectedName').textContent = recipe['食譜名稱'] || '';
+  const imgEl = document.getElementById('pgSelectedImg');
+  imgEl.src = pgIsValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PG_PLACEHOLDER_IMG;
+  imgEl.onerror = () => { imgEl.src = PG_PLACEHOLDER_IMG; };
+  setFormStatus('pgStatus', '', '');
+}
+
+function pgBackToPicker() {
+  document.getElementById('pgPickerView').style.display = 'block';
+  document.getElementById('pgActionView').style.display = 'none';
+  document.getElementById('pgOutputArea').style.display = 'none';
+}
+
+// ---- 貼文文案（固定套版：食譜介紹／食材／做法／小提醒）----
+function pgGenerateText() {
+  const r = pgSelectedRecipe;
+  if (!r) return;
+  const lines = [];
+
+  lines.push(`🍽 ${r['食譜名稱'] || ''}`);
+  lines.push('');
+
+  const intro = String(r['簡介'] || '').trim();
+  if (intro) {
+    lines.push(intro);
+    lines.push('');
+  }
+
+  const metaParts = [];
+  if (r['烹調時間']) metaParts.push(`⏱ ${r['烹調時間']}`);
+  if (r['適合月齡']) metaParts.push(`👶 ${r['適合月齡']}`);
+  if (metaParts.length) {
+    lines.push(metaParts.join('　'));
+    lines.push('');
+  }
+
+  lines.push('—— 準備食材 ——');
+  const ingList = pgGetRecipeIngredients(r);
+  if (ingList.length) {
+    ingList.forEach(i => {
+      const name = pgIngredientFilterKey(i) || i['食材名稱'] || '';
+      lines.push(`・${name}${i._quantity ? ' ' + i._quantity : ''}`);
+    });
+  } else {
+    lines.push('（尚未提供食材清單）');
+  }
+  lines.push('');
+
+  lines.push('—— 簡單做法 ——');
+  const steps = pgGetStepLines(r);
+  if (steps.length) {
+    steps.forEach((s, idx) => lines.push(`${idx + 1}. ${s}`));
+  } else {
+    lines.push('（尚未提供做法）');
+  }
+
+  const tips = pgGetTipLines(r);
+  if (tips.length) {
+    lines.push('');
+    lines.push('—— 小提醒 ——');
+    tips.forEach(t => lines.push(`💡 ${t}`));
+  }
+
+  lines.push('');
+  lines.push('🩷 雪莉與朵栗・@dondon0813 🩷');
+
+  document.getElementById('pgOutputText').value = lines.join('\n');
+  document.getElementById('pgOutputArea').style.display = 'block';
+  document.getElementById('pgOutputTextWrap').style.display = 'block';
+  document.getElementById('pgOutputImgWrap').style.display = 'none';
+  setFormStatus('pgStatus', '文案已產生 ✓', 'ok');
+}
+
+async function pgCopyText() {
+  const ta = document.getElementById('pgOutputText');
+  const text = ta.value;
+  if (!text) {
+    setFormStatus('pgStatus', '請先產生文案再複製', 'error');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    setFormStatus('pgStatus', '已複製到剪貼簿 ✓', 'ok');
+  } catch (err) {
+    ta.select();
+    document.execCommand('copy');
+    setFormStatus('pgStatus', '已複製到剪貼簿 ✓', 'ok');
+  }
+}
+
+// ---- 4:5 貼文圖（沿用現有食譜海報樣式，先用固定模板實作） ----
+function pgBuildBenefitTags(r, ingCount) {
+  const tags = [];
+  if (r['烹調時間']) tags.push(`⏱ ${r['烹調時間']}`);
+  if (r['適合月齡']) tags.push(`👶 ${r['適合月齡']}`);
+  const diff = parseInt(r['難易度'], 10);
+  if (diff >= 1 && diff <= 5) tags.push(`⭐ ${'★'.repeat(diff)}${'☆'.repeat(5 - diff)}`);
+  if (ingCount) tags.push(`🥕 ${ingCount}種食材`);
+  while (tags.length < 4) tags.push('💗 手作安心');
+  return tags.slice(0, 4);
+}
+
+function pgBuildPosterHtml(r) {
+  const title = escHtml(r['食譜名稱'] || '');
+  const heroImg = pgIsValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PG_PLACEHOLDER_IMG;
+  const subtitleRaw = String(r['簡介'] || '').trim();
+  const subtitle = escHtml(subtitleRaw.length > 26 ? subtitleRaw.slice(0, 26) + '…' : subtitleRaw);
+
+  const fullIngList = pgGetRecipeIngredients(r);
+  const ingList = fullIngList.slice(0, 8);
+  const benefitTags = pgBuildBenefitTags(r, fullIngList.length);
+
+  const steps = pgGetStepLines(r).slice(0, 6);
+  const manualStepImgsRaw = String(r['步驟圖片'] || '').trim();
+  const manualStepImgs = manualStepImgsRaw ? manualStepImgsRaw.split('|').map(s => s.trim()) : [];
+  const tips = pgGetTipLines(r).slice(0, 3);
+
+  const ingHtml = ingList.map(i => {
+    const name = escHtml(pgIngredientFilterKey(i) || i['食材名稱'] || '');
+    const qty = escHtml(i._quantity || '');
+    const img = pgIsValidUrl(i['圖片網址']) ? i['圖片網址'] : PG_PLACEHOLDER_IMG;
+    return `
+      <div class="pgp-ing-tile">
+        <img class="pgp-ing-photo" crossorigin="anonymous" src="${img}">
+        <div class="pgp-ing-label">${name}${qty ? ' ' + qty : ''}</div>
+      </div>`;
+  }).join('');
+
+  const stepHtml = steps.map((s, idx) => {
+    const n = idx + 1;
+    const manualUrl = manualStepImgs[idx];
+    const autoUrl = pgBuildAutoStepImageUrl(r['成品圖片網址'], n);
+    const imgUrl = pgIsValidUrl(manualUrl) ? manualUrl : (pgIsValidUrl(autoUrl) ? autoUrl : '');
+    const captionRaw = s.length > 18 ? s.slice(0, 18) + '…' : s;
+    const caption = escHtml(captionRaw);
+    return `
+      <div class="pgp-step-card">
+        <div class="pgp-step-photo-wrap">
+          ${imgUrl ? `<img class="pgp-step-photo" crossorigin="anonymous" src="${imgUrl}">` : `<div class="pgp-step-photo pgp-step-photo-empty">🍳</div>`}
+          <span class="pgp-step-badge">${n}</span>
+        </div>
+        <div class="pgp-step-caption">${caption}</div>
+      </div>`;
+  }).join('');
+
+  const benefitHtml = benefitTags.map(t => `<span class="pgp-benefit-tag">✅ ${escHtml(t)}</span>`).join('');
+
+  const tipsHtml = tips.length ? `
+    <div class="pgp-tip-box">
+      <div class="pgp-tip-head">💡 小提醒</div>
+      <ul class="pgp-tip-list">
+        ${tips.map(t => `<li>${escHtml(t)}</li>`).join('')}
+      </ul>
+    </div>` : '';
+
+  return `
+    <div class="pgp-poster">
+      <span class="pgp-doodle" style="top:40px;left:36px;font-size:34px;">🌿</span>
+      <span class="pgp-doodle" style="top:130px;left:74px;font-size:22px;">⭐</span>
+      <span class="pgp-doodle" style="bottom:64px;left:40px;font-size:30px;">🐟</span>
+      <span class="pgp-doodle" style="bottom:150px;left:130px;font-size:20px;">💗</span>
+
+      <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
+      <div class="pgp-title">${title}</div>
+      ${subtitle ? `<div class="pgp-subtitle">${subtitle}</div>` : ''}
+
+      <div class="pgp-hero-wrap">
+        <div class="pgp-hero-circle">
+          <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+        </div>
+      </div>
+
+      <div class="pgp-benefit-row">${benefitHtml}</div>
+
+      <div class="pgp-section-label pgp-label-pink">準備食材</div>
+      <div class="pgp-ing-grid">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
+
+      <div class="pgp-section-label pgp-label-orange">簡單${steps.length || ''}步驟</div>
+      <div class="pgp-step-grid">${stepHtml || '<div class="pgp-empty">（尚未提供做法）</div>'}</div>
+
+      ${tipsHtml}
+
+      <div class="pgp-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
+    </div>
+  `;
+}
+
+async function pgGeneratePoster() {
+  const r = pgSelectedRecipe;
+  if (!r) return;
+  if (typeof html2canvas === 'undefined') {
+    setFormStatus('pgStatus', '圖片產生工具尚未載入，請重新整理頁面再試一次', 'error');
+    return;
+  }
+  setFormStatus('pgStatus', '海報產生中…請稍候', '');
+
+  const stage = document.getElementById('pgPosterStage');
+  stage.innerHTML = pgBuildPosterHtml(r);
+
+  // 等所有圖片載入完成（或失敗）才截圖，避免拍到空白圖
+  const imgs = Array.from(stage.querySelectorAll('img'));
+  await Promise.all(imgs.map(img => new Promise(resolve => {
+    if (img.complete) return resolve();
+    img.addEventListener('load', resolve);
+    img.addEventListener('error', resolve);
+  })));
+
+  try {
+    const canvas = await html2canvas(stage.firstElementChild, {
+      width: 1080,
+      height: 1350,
+      scale: 1,
+      useCORS: true,
+      backgroundColor: '#FFF7EE'
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+
+    const imgEl = document.getElementById('pgOutputImg');
+    imgEl.src = dataUrl;
+    document.getElementById('pgOutputArea').style.display = 'block';
+    document.getElementById('pgOutputImgWrap').style.display = 'block';
+    document.getElementById('pgOutputTextWrap').style.display = 'none';
+
+    const downloadBtn = document.getElementById('pgDownloadImgBtn');
+    downloadBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = (r['食譜名稱'] || '食譜貼文') + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
+    setFormStatus('pgStatus', '貼文圖已產生，可以下載囉 ✓（若食材圖片是外部網址，遇到跨網域限制可能會顯示空白，之後可以再調整）', 'ok');
+  } catch (err) {
+    setFormStatus('pgStatus', '圖片產生失敗：' + err.message, 'error');
+  } finally {
+    stage.innerHTML = '';
+  }
+}
+
 // ===== 設定：修改密碼 =====
 function openSettingsModal() {
   document.getElementById('menuPanel').classList.remove('show');
