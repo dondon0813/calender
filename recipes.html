@@ -1458,7 +1458,11 @@ function categoryEmojiFor(item) {
   if (!item) return '🍽';
   const cat = String(item['分類'] || '').trim();
   if (CATEGORY_EMOJI_MAP[cat]) return CATEGORY_EMOJI_MAP[cat];
-  const name = String(item['食材名稱'] || '');
+  const name = String(item['食材名稱'] || '').trim();
+  // 食譜有時會直接打籠統的分類詞（例如「蔬菜」「水果」）而不是指定確切食材，
+  // 這種在資料庫裡對不到任何食材項目、也就沒有「分類」欄位可以參考，
+  // 所以額外檢查食材名稱本身是不是剛好就是分類表裡的其中一個分類詞
+  if (CATEGORY_EMOJI_MAP[name]) return CATEGORY_EMOJI_MAP[name];
   if (name.includes('湯')) return '🍲';
   if (name.includes('魚') || name.includes('蝦') || name.includes('干貝') || name.includes('海鮮')) return '🦐';
   if (name.includes('雞') || name.includes('豬') || name.includes('牛') || name.includes('羊') || name.includes('肉')) return '🥩';
@@ -1663,11 +1667,13 @@ function getRecipeIngredients(recipe) {
   tokens.forEach(token => {
     const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
     let ing = INGREDIENTS.find(i => i['食材ID'] === idOrName);
+    let matchedByAlias = false; // 是不是靠「簡稱」欄位比對到的（不是完整食材名稱、也不是ID）
     if (!ing && idOrName) {
       let nameMatches = INGREDIENTS.filter(i => i['食材名稱'] === idOrName);
       if (!nameMatches.length) {
         // 食材名稱對不到，改用簡稱（可能用「/」填了多個別名）去比對
         nameMatches = INGREDIENTS.filter(i => ingredientFilterKeys(i).includes(idOrName));
+        matchedByAlias = nameMatches.length > 0;
       }
       if (nameMatches.length === 1) {
         ing = nameMatches[0];
@@ -1676,7 +1682,11 @@ function getRecipeIngredients(recipe) {
       }
     }
     if (ing) {
-      result.push(Object.assign({}, ing, { _quantity: qty || '' }));
+      // 如果是靠簡稱比對到的（例如食譜打「高湯」，對到簡稱是「魚高湯/高湯」的鱸魚湯），
+      // 顯示標籤要用食譜實際打的文字（高湯），不要自動換成資料庫簡稱清單裡的第一個別名（魚高湯），
+      // 不然會顯示成跟食譜寫的不一樣的字。這個標籤同時也會拿去找「所有簡稱包含高湯」的品項做選擇清單。
+      const displayKey = matchedByAlias ? idOrName : '';
+      result.push(Object.assign({}, ing, { _quantity: qty || '', _displayKey: displayKey }));
     } else if (idOrName) {
       // 資料庫裡完全找不到（ID、食材名稱、簡稱都對不到），視為一般食材（純文字，沒有品牌/小卡/購買按鈕）
       result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
@@ -1699,10 +1709,27 @@ function getRecipeIngredientKeys(recipe) {
   return Array.from(set);
 }
 
+// 判斷食譜裡打的一個食材詞（token，可能是ID、完整食材名稱、或簡稱），
+// 是不是「有可能」對應到某個食材項目——用在「使用這個食材的食譜」，
+// 跟食譜彈窗裡挑代表圖片的邏輯不一樣：這裡不用挑代表，只要有可能符合就算數
+function tokenMatchesIngredient(idOrName, item) {
+  if (!idOrName) return false;
+  if (item['食材ID'] === idOrName) return true;
+  if (item['食材名稱'] === idOrName) return true;
+  return ingredientFilterKeys(item).includes(idOrName);
+}
+
+// 找出「實際使用到」這個食材的所有食譜：不管食譜當初是打食材ID、完整食材名稱、
+// 還是打簡稱（例如「高湯」「鮭魚片」），都算數。
+// 特別是像「高湯」這種同時是好幾個品牌湯品共用簡稱的情況——食譜只打籠統的「高湯」，
+// 代表這道食譜可以彈性使用任何一種高湯，所以要出現在鱸魚湯、雞湯、豬肉湯…
+// 所有簡稱包含「高湯」的食材小卡底下，不會只認定成單一個自動挑出來的代表
 function getRecipesUsingIngredientId(ingId) {
+  const item = INGREDIENTS.find(i => i['食材ID'] === ingId);
+  if (!item) return [];
   return RECIPES.filter(r => {
-    const ids = String(r['使用食材ID'] || '').split('/').map(s => s.trim().split(':')[0]);
-    return ids.includes(ingId);
+    const tokens = String(r['使用食材ID'] || '').split('/').map(s => s.trim().split(':')[0]).filter(Boolean);
+    return tokens.some(t => tokenMatchesIngredient(t, item));
   });
 }
 
@@ -2242,7 +2269,7 @@ function openRecipeModal(recipe) {
 
   const groups = {};
   freshBrandItems.forEach(i => {
-    const key = ingredientFilterKey(i);
+    const key = i._displayKey || ingredientFilterKey(i);
     if (!groups[key]) groups[key] = [];
     groups[key].push(i);
   });
@@ -2296,7 +2323,7 @@ function openRecipeModal(recipe) {
   // 調味料：純文字一行顯示，用「、」分隔，點下去一樣能開食材小卡（同名/同簡稱有多品牌一樣會跳選擇清單）
   const seasoningGroups = {};
   seasoningItems.forEach(i => {
-    const key = ingredientFilterKey(i);
+    const key = i._displayKey || ingredientFilterKey(i);
     if (!seasoningGroups[key]) seasoningGroups[key] = i;
   });
   const seasoningKeys = Object.keys(seasoningGroups);
