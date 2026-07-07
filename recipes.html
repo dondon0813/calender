@@ -1701,10 +1701,24 @@ function getRecipeBrands(recipe) {
   return Array.from(set);
 }
 
+// 這道食譜「可以被篩選到」的所有標籤：跟準備食材圖磚不一樣（圖磚只能挑一張代表圖），
+// 這裡如果食譜打的是模糊簡稱（例如「高湯」，同時對應鱸魚湯/雞湯/豬肉湯…好幾個品項），
+// 要把「所有」符合的品項的完整簡稱都聯集進來，這樣不管使用者是點籠統的「高湯」，
+// 還是點更明確的「雞高湯」「豬高湯」，都篩得到這道食譜（食譜的意思本來就是可以彈性換任何高湯）
 function getRecipeIngredientKeys(recipe) {
   const set = new Set();
-  getRecipeIngredients(recipe).forEach(i => {
-    ingredientFilterKeys(i).forEach(key => { if (key) set.add(key); });
+  const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim().split(':')[0]).filter(Boolean);
+  tokens.forEach(idOrName => {
+    if (!idOrName) return;
+    let matches = INGREDIENTS.filter(i => i['食材ID'] === idOrName);
+    if (!matches.length) matches = INGREDIENTS.filter(i => i['食材名稱'] === idOrName);
+    if (!matches.length) matches = INGREDIENTS.filter(i => ingredientFilterKeys(i).includes(idOrName));
+    if (matches.length) {
+      matches.forEach(m => ingredientFilterKeys(m).forEach(key => { if (key) set.add(key); }));
+    } else {
+      // 資料庫完全對不到，直接用打的文字本身當標籤（跟一般食材篩選一致）
+      set.add(idOrName);
+    }
   });
   return Array.from(set);
 }
