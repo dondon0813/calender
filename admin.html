@@ -1960,6 +1960,177 @@
     padding: 30px 0;
     font-size: 14px;
   }
+
+  /* ===== 食譜貼文產生器：4:5 貼文圖（離畫面外繪製，html2canvas 截圖用） ===== */
+  #pgPosterStage {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 1080px;
+    height: 1350px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .pgp-poster {
+    position: relative;
+    width: 1080px;
+    height: 1350px;
+    background: linear-gradient(180deg, #FFF9F0 0%, #FFF3E8 100%);
+    font-family: 'Noto Sans TC', sans-serif;
+    color: #5a4a3f;
+    box-sizing: border-box;
+    padding: 50px 60px 40px;
+    overflow: hidden;
+  }
+  .pgp-doodle {
+    position: absolute;
+    opacity: 0.35;
+    line-height: 1;
+  }
+  .pgp-tagline {
+    display: inline-block;
+    background: #FFE0E8;
+    color: #FF6F91;
+    font-weight: 800;
+    font-size: 22px;
+    border-radius: 999px;
+    padding: 8px 24px;
+    margin-bottom: 18px;
+  }
+  .pgp-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 56px;
+    color: #E0954A;
+    line-height: 1.25;
+    max-width: 640px;
+  }
+  .pgp-subtitle {
+    display: inline-block;
+    margin-top: 12px;
+    background: #E4F5DF;
+    color: #5C9147;
+    font-weight: 700;
+    font-size: 20px;
+    border-radius: 999px;
+    padding: 6px 18px;
+  }
+  .pgp-hero-wrap {
+    position: absolute;
+    top: 50px;
+    right: 50px;
+  }
+  .pgp-hero-circle {
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    border: 10px solid #fff;
+    box-shadow: 0 10px 24px rgba(230,160,120,0.3);
+    overflow: hidden;
+    background: #FFF1E6;
+  }
+  .pgp-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .pgp-benefit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 28px 0 34px;
+  }
+  .pgp-benefit-tag {
+    background: #EAF6E3;
+    color: #4f7a3a;
+    font-weight: 800;
+    font-size: 19px;
+    border-radius: 999px;
+    padding: 8px 18px;
+  }
+
+  .pgp-section-label {
+    display: inline-block;
+    font-weight: 800;
+    font-size: 24px;
+    border-radius: 999px;
+    padding: 8px 22px;
+    margin-bottom: 18px;
+  }
+  .pgp-label-pink { background: #FFE9CE; color: #B5601C; }
+  .pgp-label-orange { background: #FFE0B2; color: #9a5f14; }
+
+  .pgp-ing-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px 14px;
+    margin-bottom: 34px;
+  }
+  .pgp-ing-tile { text-align: center; }
+  .pgp-ing-photo {
+    width: 100%;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #fff;
+    border: 4px solid #FFE3CC;
+    display: block;
+    margin: 0 auto 8px;
+  }
+  .pgp-ing-label { font-size: 17px; font-weight: 800; color: #8a7462; }
+
+  .pgp-step-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px 16px;
+    margin-bottom: 34px;
+  }
+  .pgp-step-card { text-align: center; }
+  .pgp-step-photo-wrap { position: relative; margin-bottom: 8px; }
+  .pgp-step-photo {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border-radius: 18px;
+    border: 3px solid #FFE3CC;
+    background: #FFF1E6;
+    display: block;
+  }
+  .pgp-step-photo-empty {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+  }
+  .pgp-step-badge {
+    position: absolute;
+    top: -10px; left: -10px;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #F5A25D;
+    color: #fff;
+    font-weight: 800;
+    font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+  }
+  .pgp-step-caption { font-size: 16px; color: #8a7462; line-height: 1.4; }
+
+  .pgp-tip-box {
+    background: #FFF6EC;
+    border: 2px dashed #FFC79A;
+    border-radius: 20px;
+    padding: 18px 22px;
+    max-width: 420px;
+  }
+  .pgp-tip-head { font-weight: 800; font-size: 19px; color: #E0954A; margin-bottom: 8px; }
+  .pgp-tip-list { margin: 0; padding-left: 20px; font-size: 16px; color: #8a7462; line-height: 1.7; }
+
+  .pgp-empty { font-size: 16px; color: #b39a8b; }
+
+  .pgp-footer {
+    position: absolute;
+    bottom: 26px;
+    left: 60px;
+    font-size: 16px;
+    color: #FFB4C2;
+    font-weight: 700;
+  }
 </style>
 </head>
 <body>
@@ -2175,6 +2346,13 @@
           <span class="tool-icon-fallback" style="display:none;">📋</span>
         </div>
         <span class="tool-icon-label">開團文案<br>產生器</span>
+      </div>
+      <div class="tool-icon" onclick="openRecipePostModal()">
+        <div class="tool-icon-img-wrap">
+          <img src="images/tools/recipepost.png" alt="食譜貼文產生器" onerror="this.remove(); this.parentElement.querySelector('.tool-icon-fallback').style.display='flex';">
+          <span class="tool-icon-fallback" style="display:none;">🍽️</span>
+        </div>
+        <span class="tool-icon-label">食譜貼文<br>產生器</span>
       </div>
       <div class="tool-icon" onclick="switchView('lotteryTool')">
         <div class="tool-icon-img-wrap">
@@ -2476,6 +2654,49 @@
   </div>
 </div>
 
+<!-- ===== 食譜貼文產生器浮動視窗 ===== -->
+<div class="modal-backdrop" id="recipePostModal" onclick="if(event.target===this) closeRecipePostModal()">
+  <div class="modal-box" style="width:440px;">
+    <button class="modal-close" onclick="closeRecipePostModal()">✕</button>
+    <h3>🍽 食譜貼文產生器</h3>
+
+    <div id="pgPickerView">
+      <div class="task-form" style="margin:0 0 12px; padding:0; background:none;">
+        <label for="pgSearchInput">搜尋食譜名稱</label>
+        <input type="text" id="pgSearchInput" placeholder="輸入食譜名稱關鍵字…">
+      </div>
+      <div class="recipe-card-grid" id="pgRecipeGrid" style="max-height:360px; overflow-y:auto;"></div>
+    </div>
+
+    <div id="pgActionView" style="display:none;">
+      <button class="task-mini-btn" style="margin-bottom:10px;" onclick="pgBackToPicker()">⬅ 重新選擇食譜</button>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <img id="pgSelectedImg" src="" alt="" style="width:64px; height:64px; border-radius:14px; object-fit:cover; background:#FFF1E6;">
+        <div id="pgSelectedName" style="font-weight:800; font-size:15px; color:#5a4a3f;"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px;" onclick="pgGeneratePoster()">🖼 產生4:5貼文圖</button>
+        <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px; background:#7AAEEB;" onclick="pgGenerateText()">📝 產生貼文文案</button>
+      </div>
+      <div class="form-status" id="pgStatus"></div>
+
+      <div id="pgOutputArea" style="display:none; margin-top:14px;">
+        <div id="pgOutputTextWrap" style="display:none;">
+          <textarea id="pgOutputText" readonly rows="12" style="width:100%; box-sizing:border-box; padding:10px 12px; border:2px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
+          <button class="task-mini-btn" id="pgCopyTextBtn" style="margin-top:10px; width:100%; padding:9px 0;" onclick="pgCopyText()">📄 複製文案</button>
+        </div>
+        <div id="pgOutputImgWrap" style="display:none;">
+          <img id="pgOutputImg" src="" alt="" style="width:100%; border-radius:12px; border:2px solid #FFE3CC;">
+          <button class="task-mini-btn" id="pgDownloadImgBtn" style="margin-top:10px; width:100%; padding:9px 0;">⬇️ 下載圖片</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 食譜貼文產生器：離畫面外的隱藏繪製區，html2canvas 從這裡截圖，不需要另外加樣式進 .wrap -->
+<div id="pgPosterStage"></div>
+
 <!-- ===== 設定：修改密碼彈窗 ===== -->
 <div class="modal-backdrop" id="settingsModal" onclick="if(event.target===this) closeSettingsModal()">
   <div class="modal-box">
@@ -2513,7 +2734,8 @@
   </div>
 </div>
 
-<script src="admin.js?v=12"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="admin.js?v=13"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
