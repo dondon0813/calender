@@ -1055,6 +1055,30 @@
     line-height: 1.35;
   }
 
+  /* 調味料：不放圖片，純文字一行，用頓號分隔，放在食材圖磚區下方 */
+  .prep-seasoning-line {
+    font-size: 12px;
+    color: #5a4a3f;
+    line-height: 1.8;
+    background: #FFF6EC;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-top: 10px;
+  }
+  .prep-seasoning-line::before {
+    content: '🧂 調味料：';
+    font-weight: 800;
+    color: #E0954A;
+  }
+  .prep-seasoning-item {
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .prep-seasoning-item:hover {
+    color: #FF8FA3;
+    text-decoration: underline;
+  }
+
   /* 簡單N步驟：標題圖上疊步驟數字 */
   .step-badge-wrap {
     position: relative;
@@ -1365,6 +1389,7 @@
     <div class="rc-section" id="recModalIngSection">
       <img class="rc-section-badge-img" src="images/recipes/ingredients.png" alt="準備食材">
       <div class="prep-ing-grid" id="recModalIngredients"></div>
+      <div class="prep-seasoning-line" id="recModalSeasonings" style="display:none;"></div>
     </div>
 
     <div class="rc-section">
@@ -1403,6 +1428,53 @@ const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
 
 const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>🍽</text></svg>";
+
+// 食材/成品「分類」欄位 -> 對應表情符號，圖片網址還沒填或載入失敗時，
+// 用比較貼近該食材種類的表情符號代替，不會一律都是同一張空盤子圖
+const CATEGORY_EMOJI_MAP = {
+  '蔬菜': '🥬',
+  '根莖類': '🥔',
+  '水果': '🍎',
+  '蛋類': '🥚',
+  '菇類': '🍄',
+  '辛香料': '🧄',
+  '豆製品': '🧊',
+  '豆類穀物': '🌾',
+  '堅果乾貨': '🌰',
+  '芝麻類': '⚪',
+  '調味料': '🧂',
+  '乳製品': '🧀',
+  '粉類': '🌾',
+  '肉類海鮮': '🍤',
+  '肉類': '🥩',
+  '海鮮': '🦐',
+  '湯品': '🍲',
+  '其他': '🍽'
+};
+
+// 依食材/成品資料回傳最貼近的表情符號：優先看「分類」欄位，
+// 品牌商品（湯品/肉類/海鮮）沒有分類欄位的話，改用名稱關鍵字猜一個
+function categoryEmojiFor(item) {
+  if (!item) return '🍽';
+  const cat = String(item['分類'] || '').trim();
+  if (CATEGORY_EMOJI_MAP[cat]) return CATEGORY_EMOJI_MAP[cat];
+  const name = String(item['食材名稱'] || '');
+  if (name.includes('湯')) return '🍲';
+  if (name.includes('魚') || name.includes('蝦') || name.includes('干貝') || name.includes('海鮮')) return '🦐';
+  if (name.includes('雞') || name.includes('豬') || name.includes('牛') || name.includes('羊') || name.includes('肉')) return '🥩';
+  if (name.includes('飯') || name.includes('米')) return '🍚';
+  return '🍽';
+}
+
+// 依表情符號組出跟 PLACEHOLDER_IMG 同樣格式的預設圖，用在食材/成品圖片網址還沒填或載入失敗的情況
+function emojiPlaceholderImg(emoji) {
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>${emoji}</text></svg>`;
+}
+
+// 食材/成品專用：依項目分類回傳對應表情符號的預設圖（找不到分類就退回通用 🍽）
+function ingredientPlaceholderImg(item) {
+  return emojiPlaceholderImg(categoryEmojiFor(item));
+}
 
 // 開學清單品項彈窗的蝦皮連結：如果該品項/品牌沒有填自己的「蝦皮連結」，就不會顯示前往購買按鈕
 // （之前會自動用下面這個預設連結頂替，現在改成沒填就不顯示，避免導去還沒設定好的連結）
@@ -1780,11 +1852,11 @@ function renderIngredientFilterTiles() {
       img.className = 'ing-tile-icon';
       img.src = representative['圖片網址'];
       img.onerror = function() {
-        this.replaceWith(makeEmojiIconFallback());
+        this.replaceWith(makeEmojiIconFallback(representative));
       };
       tile.appendChild(img);
     } else {
-      tile.appendChild(makeEmojiIconFallback());
+      tile.appendChild(makeEmojiIconFallback(representative));
     }
 
     const nameEl = document.createElement('div');
@@ -1802,10 +1874,10 @@ function renderIngredientFilterTiles() {
   });
 }
 
-function makeEmojiIconFallback() {
+function makeEmojiIconFallback(item) {
   const div = document.createElement('div');
   div.className = 'ing-tile-icon emoji-fallback';
-  div.textContent = '🥕';
+  div.textContent = categoryEmojiFor(item);
   return div;
 }
 
@@ -1903,8 +1975,8 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
     card.addEventListener('click', () => openIngredientModal(item));
 
     const img = document.createElement('img');
-    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
-    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+    img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     card.appendChild(img);
 
     const body = document.createElement('div');
@@ -2005,8 +2077,8 @@ function openIngredientBrandChoice(group) {
       openIngredientModal(item);
     });
     const img = document.createElement('img');
-    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
-    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+    img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     row.appendChild(img);
     const nameSpan = document.createElement('span');
     nameSpan.className = 'rr-name';
@@ -2018,8 +2090,8 @@ function openIngredientBrandChoice(group) {
 }
 
 function openIngredientModal(item) {
-  document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : PLACEHOLDER_IMG;
-  document.getElementById('ingModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
+  document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+  document.getElementById('ingModalImg').onerror = function() { this.src = ingredientPlaceholderImg(item); };
   document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
 
   const isProduct = (item['類型'] || '食材') === '成品';
@@ -2163,21 +2235,27 @@ function openRecipeModal(recipe) {
   const genericItems = ingList.filter(i => i._generic);
   const brandItems = ingList.filter(i => !i._generic);
 
+  // 調味料獨立出來（用食材資料庫「分類」欄位是不是「調味料」判斷），
+  // 不放進圖磚區，改用純文字顯示在下方，避免準備食材那排圖磚太長
+  const seasoningItems = brandItems.filter(i => String(i['分類'] || '').trim() === '調味料');
+  const freshBrandItems = brandItems.filter(i => String(i['分類'] || '').trim() !== '調味料');
+
   const groups = {};
-  brandItems.forEach(i => {
+  freshBrandItems.forEach(i => {
     const key = ingredientFilterKey(i);
     if (!groups[key]) groups[key] = [];
     groups[key].push(i);
   });
 
-  function buildPrepTile(name, qty, imgUrl, onClick) {
+  function buildPrepTile(name, qty, imgUrl, onClick, item) {
     const tile = document.createElement('div');
     tile.className = 'prep-ing-tile';
 
     const img = document.createElement('img');
     img.className = 'prep-ing-photo' + (onClick ? ' clickable' : '');
-    img.src = isValidUrl(imgUrl) ? imgUrl : PLACEHOLDER_IMG;
-    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    const fallbackImg = item ? ingredientPlaceholderImg(item) : PLACEHOLDER_IMG;
+    img.src = isValidUrl(imgUrl) ? imgUrl : fallbackImg;
+    img.onerror = () => { img.src = fallbackImg; };
     if (onClick) img.addEventListener('click', onClick);
     tile.appendChild(img);
 
@@ -2204,15 +2282,49 @@ function openRecipeModal(recipe) {
       } else {
         openIngredientBrandChoice(allMatches);
       }
-    }));
+    }, first));
   });
 
   genericItems.forEach(i => {
-    ingGridEl.appendChild(buildPrepTile(i['食材名稱'], i._quantity, null, null));
+    ingGridEl.appendChild(buildPrepTile(i['食材名稱'], i._quantity, null, null, i));
   });
 
   if (!ingList.length) {
     ingGridEl.innerHTML = `<div class="empty-state" style="padding:10px 0; width:100%;">（尚未提供食材清單）</div>`;
+  }
+
+  // 調味料：純文字一行顯示，用「、」分隔，點下去一樣能開食材小卡（同名/同簡稱有多品牌一樣會跳選擇清單）
+  const seasoningGroups = {};
+  seasoningItems.forEach(i => {
+    const key = ingredientFilterKey(i);
+    if (!seasoningGroups[key]) seasoningGroups[key] = i;
+  });
+  const seasoningKeys = Object.keys(seasoningGroups);
+  const seasoningEl = document.getElementById('recModalSeasonings');
+  seasoningEl.innerHTML = '';
+  if (seasoningKeys.length) {
+    seasoningKeys.forEach((key, idx) => {
+      const item = seasoningGroups[key];
+      const span = document.createElement('span');
+      span.className = 'prep-seasoning-item';
+      span.textContent = item._quantity ? `${key} ${item._quantity}` : key;
+      span.addEventListener('click', () => {
+        const allMatches = findIngredientsByKey(key);
+        closeModal('recipeModal');
+        if (allMatches.length <= 1) {
+          openIngredientModal(item);
+        } else {
+          openIngredientBrandChoice(allMatches);
+        }
+      });
+      seasoningEl.appendChild(span);
+      if (idx < seasoningKeys.length - 1) {
+        seasoningEl.appendChild(document.createTextNode('、'));
+      }
+    });
+    seasoningEl.style.display = 'block';
+  } else {
+    seasoningEl.style.display = 'none';
   }
 
   // ===== 簡單N步驟：圖片＋編號徽章＋說明文字，最多橫向3格 =====
