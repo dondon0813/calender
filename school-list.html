@@ -670,6 +670,11 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9
 
 let SCHOOL_ITEMS = [];
 let CALENDAR_EVENTS = [];
+// 這兩個 key 名稱原本漏掉宣告，導致存 localStorage 一律失敗（錯誤被下面函式的 try/catch 悄悄吞掉，
+// 畫面上完全看不出來），才會出現「打勾／打叉都沒反應」的狀況。這裡補回正式宣告：
+const SCHOOL_STORAGE_KEY = 'school_checked_v1';
+const SCHOOL_REMOVED_KEY = 'school_removed_v1';
+let schoolRemovedExpanded = false;
 
 // ===== 載入資料 =====
 async function loadAll() {
