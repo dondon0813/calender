@@ -1004,6 +1004,23 @@
     border-radius: 999px;
     padding: 6px 16px;
   }
+  .oil-toggle-btn {
+    font-size: 11px;
+    font-weight: 800;
+    color: #8a5a2b;
+    background: #FFF6E4;
+    border: 1.5px solid #F0C36D;
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .oil-toggle-btn:hover { background: #FFEcC4; }
+  .oil-toggle-btn.oil-hidden {
+    color: #a89888;
+    background: #FFFDFA;
+    border-color: #FFD3B6;
+  }
   .ing-category-empty {
     font-size: 12px;
     color: #b39a8b;
@@ -1319,6 +1336,7 @@
       <div class="ing-category-block">
         <div class="ing-category-head">
           <span class="ing-category-title">🍼 副食品</span>
+          <button class="oil-toggle-btn" id="oilToggleBtn">🫒 隱藏油品標籤</button>
         </div>
         <div class="card-grid" id="ingProductGrid"></div>
         <div class="ing-category-empty" id="ingProductEmpty" style="display:none;">這個品牌目前還沒有副食品</div>
@@ -1522,6 +1540,7 @@ let recSelectedAges = [];
 let recIngredientSearchText = ''; // 觀看食譜：選擇食材的搜尋文字
 let recSearchText = ''; // 觀看食譜：食譜名稱搜尋文字
 let RANDOM_BASIC_INGREDIENTS = []; // 沒選品牌、沒搜尋文字時，隨機顯示的基本食材
+let showOilBadges = true; // 縮圖右上角的油品標籤要不要顯示（副食品標題旁邊有開關按鈕可以切換）
 
 const urlParams = new URLSearchParams(window.location.search);
 const presetBrand = urlParams.get('brand') || '';
@@ -1958,6 +1977,18 @@ function toggleInArray(arr, val) {
   if (idx === -1) arr.push(val); else arr.splice(idx, 1);
 }
 
+document.getElementById('oilToggleBtn').addEventListener('click', () => {
+  showOilBadges = !showOilBadges;
+  updateOilToggleBtnLabel();
+  renderIngredients();
+});
+
+function updateOilToggleBtnLabel() {
+  const btn = document.getElementById('oilToggleBtn');
+  btn.textContent = showOilBadges ? '🫒 隱藏油品標籤' : '🫒 顯示油品標籤';
+  btn.classList.toggle('oil-hidden', !showOilBadges);
+}
+
 document.getElementById('clearFiltersBtn').addEventListener('click', () => {
   recSelectedBrands = [];
   recSelectedIngredients = [];
@@ -2061,7 +2092,8 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
     card.appendChild(img);
 
     // 縮圖右上角：成分裡有用到油品的話，疊上有底色的小標籤，兩個以上就直向往下排
-    const oilTags = getOilTags(item);
+    // 開關關閉時（showOilBadges = false）就完全不顯示，避免遮擋圖片
+    const oilTags = showOilBadges ? getOilTags(item) : [];
     if (oilTags.length) {
       const oilWrap = document.createElement('div');
       oilWrap.className = 'oil-badge-wrap';
