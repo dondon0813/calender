@@ -144,6 +144,38 @@
     letter-spacing: 1px;
     margin: 6px 0 10px;
   }
+
+  /* 選擇食材：搜尋框 + 已選擇食材小標籤 + 篩選圖磚（不再依分類摺疊分組） */
+  .ing-search-row {
+    margin-bottom: 10px;
+  }
+  .ing-search-input {
+    width: 100%;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #5a4a3f;
+    border: 2px solid #FFD3B6;
+    border-radius: 999px;
+    padding: 9px 16px;
+    background: #fff;
+    outline: none;
+  }
+  .ing-search-input::placeholder { color: #cbb8a8; }
+  .ing-search-input:focus { border-color: #FF8FA3; }
+
+  .ing-selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .ing-selected-chip {
+    background: #FF8FA3 !important;
+    border-color: #FF8FA3 !important;
+    color: #fff !important;
+  }
+
   .ing-tile-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -187,51 +219,8 @@
   }
   .ing-tile.active .ing-tile-name { color: #FF7391; }
 
-  /* 選擇食材：依分類分組、可摺疊 */
-  .ing-category-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .ing-category-section {
-    border: 2px solid #FFE3CC;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #FFFDFA;
-  }
-  .ing-category-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: none;
-    border: none;
-    padding: 11px 14px;
-    cursor: pointer;
-    font-family: 'Noto Sans TC', sans-serif;
-  }
-  .ing-category-toggle-name {
-    font-size: 13px;
-    font-weight: 800;
-    color: #5a4a3f;
-  }
-  .ing-category-count {
-    font-size: 10.5px;
-    font-weight: 800;
-    color: #FF7391;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 2px 8px;
-    margin-left: 6px;
-  }
-  .ing-category-arrow {
-    font-size: 11px;
-    color: #b5755a;
-  }
-  .ing-category-body {
-    padding: 4px 12px 12px;
-    margin-bottom: 0;
+  .recipe-search-row {
+    margin-bottom: 12px;
   }
 
   .recipe-reco-title {
@@ -1007,15 +996,18 @@
   }
 
   /* ===== 食譜詳細彈窗 v2：海報風排版 ===== */
-  /* 大圖：她自己做好的整張圖（標題／標籤／料理照全部包在裡面），直接滿版鋪滿卡片上緣 */
+  /* 大圖：單張成品照片，滿版鋪滿卡片上緣，標題另外用文字顯示在圖片下方 */
   .rc-hero-wrap {
-    margin: -16px -18px 14px;
+    margin: -16px -18px 0;
     border-radius: 26px 26px 0 0;
     overflow: hidden;
     background: #FFF1E6;
   }
   .rc-hero-img {
     width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: #FFF1E6;
     display: block;
   }
   .rc-close-floating {
@@ -1035,10 +1027,10 @@
     margin: 4px auto 12px;
   }
 
-  /* 準備食材：一整塊底色卡片，圖片是去背 PNG 直接放在底色上，一排約 4-5 個 */
+  /* 準備食材：一整塊底色卡片，圖片是去背 PNG 直接放在底色上，固定一排 5 個 */
   .prep-ing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 14px 6px;
     background: #FFF6EC;
     border-radius: 20px;
@@ -1109,7 +1101,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #F0B4C2;
+    background: #EB99AC;
     color: #fff;
     font-weight: 800;
     font-size: 12px;
@@ -1124,7 +1116,8 @@
     line-height: 1.45;
   }
 
-  /* 小提醒：一律獨立一整排（span 3），標籤圖示(reminder.png，本身已含文字跟底色)蓋在虛線邊框上面 */
+  /* 小提醒：一律獨立一整排（span 3），標籤圖示(reminder.png，本身已含文字跟底色)蓋在虛線邊框上面，
+     圖示本身已經有底色，這裡不再額外加粉色橢圓底 */
   .reminder-box {
     grid-column: span 3;
     position: relative;
@@ -1142,10 +1135,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 5px 14px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   }
   .reminder-head img { height: 24px; width: auto; display: block; }
   .reminder-head span {
@@ -1301,9 +1290,16 @@
     </div>
 
     <div class="ing-select-title">選擇食材</div>
-    <div class="ing-category-list" id="recIngredientChips"></div>
+    <div class="ing-search-row">
+      <input type="text" id="recIngredientSearch" class="ing-search-input" placeholder="🔍 輸入食材名稱搜尋...">
+    </div>
+    <div class="ing-selected-chips" id="recSelectedIngChips" style="display:none;"></div>
+    <div class="ing-tile-grid" id="recIngredientChips"></div>
     <button class="chip-clear" id="clearFiltersBtn">清除所有篩選</button>
 
+    <div class="recipe-search-row">
+      <input type="text" id="recipeSearchInput" class="ing-search-input" placeholder="🔍 搜尋食譜名稱...">
+    </div>
     <div class="recipe-reco-title" id="recipeRecoTitle">🍽 食譜推薦（共 0 道）</div>
     <div class="recipe-card-grid" id="recipeGrid"></div>
     <div class="empty-state" id="recipeEmpty" style="display:none;">這個篩選條件下沒有找到食譜</div>
@@ -1351,7 +1347,7 @@
   </div>
 </div>
 
-<!-- 食譜彈窗（海報風排版：頂部大圖由雪莉自己做好，含標題／標籤／料理照） -->
+<!-- 食譜彈窗（海報風排版：上方單張成品照片，標題文字另外顯示） -->
 <div class="modal-backdrop" id="recipeModal" onclick="if(event.target===this) closeModal('recipeModal')">
   <div class="modal-box recipe-card-modal">
     <button class="rc-close-btn rc-close-floating" onclick="closeModal('recipeModal')">✕</button>
@@ -1359,6 +1355,8 @@
     <div class="rc-hero-wrap">
       <img class="rc-hero-img" id="recModalImg" src="" alt="">
     </div>
+
+    <h2 class="rc-title" id="recModalTitle"></h2>
 
     <div class="rc-subtitle" id="recModalSubtitle" style="display:none;"></div>
 
@@ -1420,9 +1418,11 @@ let CALENDAR_EVENTS = [];
 let currentView = 'ingredients'; // 'ingredients' | 'recipes'
 let ingSelectedBrand = ''; // 食材介紹：單選品牌
 let recSelectedBrands = [];
-let recSelectedIngredients = []; // 用食材名稱
+let recSelectedIngredients = []; // 用食材名稱（簡稱）
 let recSelectedAges = [];
-let recIngCategoryOpen = {}; // 選擇食材各分類目前是展開還是收合，key是分類名稱
+let recIngredientSearchText = ''; // 觀看食譜：選擇食材的搜尋文字
+let recSearchText = ''; // 觀看食譜：食譜名稱搜尋文字
+let RANDOM_BASIC_INGREDIENTS = []; // 沒選品牌、沒搜尋文字時，隨機顯示的基本食材
 
 const urlParams = new URLSearchParams(window.location.search);
 const presetBrand = urlParams.get('brand') || '';
@@ -1476,6 +1476,7 @@ async function loadAll() {
     await Promise.all([loadRecipeDb(), loadCalendar()]);
     statusEl.style.display = 'none';
     applyPresetBrandFilter();
+    pickRandomBasicIngredients();
     initFilters();
     renderIngredients();
     renderRecipes();
@@ -1548,18 +1549,41 @@ function ingredientsOfType(type) {
   return INGREDIENTS.filter(i => (i['類型'] || '食材').trim() === type);
 }
 
+// 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
+function pickBestBrandIngredient(group) {
+  const withStatus = group.map(item => ({ item, status: getBrandStatus(item['品牌']) }));
+  const open = withStatus.find(w => w.status.status === 'open');
+  if (open) return open.item;
+  const upcoming = withStatus.filter(w => w.status.status === 'upcoming');
+  if (upcoming.length) {
+    upcoming.sort((a, b) => a.status.nextDate - b.status.nextDate);
+    return upcoming[0].item;
+  }
+  return group[0]; // 全部都已結單且沒有下一團資訊，就固定回傳第一個
+}
+
 // 支援「使用食材ID」欄位帶分量：格式為 ing001:50g/ing003:1包（冒號後面是分量，可省略）
 // 也支援直接打一般食材文字（例如「雞蛋」），對不到資料庫ID的就當純文字顯示，不會有小卡/購買按鈕
+// 現在多加一層容錯：如果打的不是食材ID，會先試著用「食材名稱」去資料庫比對，
+// 對到的話一樣會有圖片跟品牌小卡；同名有多個品牌版本時，用跟前往購買一樣的邏輯自動挑一個
 function getRecipeIngredients(recipe) {
   const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
   const result = [];
   tokens.forEach(token => {
     const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
-    const ing = INGREDIENTS.find(i => i['食材ID'] === idOrName);
+    let ing = INGREDIENTS.find(i => i['食材ID'] === idOrName);
+    if (!ing && idOrName) {
+      const nameMatches = INGREDIENTS.filter(i => i['食材名稱'] === idOrName);
+      if (nameMatches.length === 1) {
+        ing = nameMatches[0];
+      } else if (nameMatches.length > 1) {
+        ing = pickBestBrandIngredient(nameMatches);
+      }
+    }
     if (ing) {
       result.push(Object.assign({}, ing, { _quantity: qty || '' }));
     } else if (idOrName) {
-      // 找不到對應ID，視為一般食材（純文字，沒有品牌/小卡/購買按鈕）
+      // 資料庫裡完全找不到（ID跟名稱都對不到），視為一般食材（純文字，沒有品牌/小卡/購買按鈕）
       result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
     }
   });
@@ -1582,7 +1606,7 @@ function ingredientFilterKeys(ing) {
   return raw.split('/').map(s => s.trim()).filter(Boolean);
 }
 
-// 顯示用的「主要」簡稱（例如食譜食材清單、篩選磚的圖示標籤文字）：取第一個標籤
+// 顯示用的「主要」簡稱（例如食譜食材清單的標籤文字）：取第一個標籤
 function ingredientFilterKey(ing) {
   const keys = ingredientFilterKeys(ing);
   return keys[0] || '';
@@ -1622,6 +1646,13 @@ function buildAutoStepImageUrl(mainImgUrl, stepNumber) {
   return `${prefix}/images/recipes/stepimage/${base}${stepNumber}${ext}`;
 }
 
+// ===== 選擇食材：隨機基本食材（沒選品牌、沒打搜尋文字時顯示） =====
+function pickRandomBasicIngredients() {
+  const pool = ingredientsOfType('食材');
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  RANDOM_BASIC_INGREDIENTS = shuffled.slice(0, 6);
+}
+
 // ===== 篩選標籤初始化 =====
 function initFilters() {
   // 食材介紹的品牌篩選（單選：點同一個品牌可以取消回到「請選擇品牌」）
@@ -1648,110 +1679,6 @@ function initFilters() {
     recBrandChipsEl.appendChild(chip);
   });
 
-  // 觀看食譜的食材篩選：把每個食材的「所有簡稱標籤」都攤平出來去重
-  // 例如牛肉湯簡稱填「牛高湯/高湯」，篩選磚就會同時出現「牛高湯」跟「高湯」兩顆
-  // 不同品牌/不同完整食材名稱，只要簡稱有一樣的，就會合併成同一個標籤
-  //
-  // 如果目前有選品牌，只顯示該品牌的食材（不含其他品牌、也不含沒有品牌的一般食材），
-  // 並且依「分類」欄位分組成可摺疊的區塊，避免全部食材一次塞在畫面上
-  const foodIngredientsAll = ingredientsOfType('食材');
-  const foodIngredients = recSelectedBrands.length
-    ? foodIngredientsAll.filter(i => recSelectedBrands.includes(i['品牌']))
-    : foodIngredientsAll;
-
-  // 如果之前勾選的食材篩選，在目前的品牌篩選下已經不存在了，順便拿掉，
-  // 避免篩選磚看不到了但篩選條件還卡著、食譜列表一直顯示「找不到食譜」
-  const validKeysNow = new Set(foodIngredients.flatMap(ingredientFilterKeys));
-  recSelectedIngredients = recSelectedIngredients.filter(k => validKeysNow.has(k));
-
-  const CATEGORY_ORDER = ['蔬菜', '水果', '根莖類', '菇類', '肉類', '肉類海鮮', '海鮮', '豆製品', '豆類穀物', '穀物', '蛋類', '辛香料', '堅果乾貨', '芝麻類', '調味料', '乳製品', '粉類', '湯品', '其他'];
-  const categoryKeys = {}; // 分類 -> Set(簡稱)
-  const categoryRepresentative = {}; // "分類|簡稱" -> 代表用的那筆食材資料（拿圖用）
-  foodIngredients.forEach(item => {
-    const cat = String(item['分類'] || '').trim() || '其他';
-    ingredientFilterKeys(item).forEach(key => {
-      if (!key) return;
-      if (!categoryKeys[cat]) categoryKeys[cat] = new Set();
-      categoryKeys[cat].add(key);
-      const repKey = cat + '|' + key;
-      if (!categoryRepresentative[repKey]) categoryRepresentative[repKey] = item;
-    });
-  });
-
-  const categories = Object.keys(categoryKeys).sort((a, b) => {
-    const ia = CATEGORY_ORDER.indexOf(a);
-    const ib = CATEGORY_ORDER.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b, 'zh-Hant');
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-
-  const recIngChipsEl = document.getElementById('recIngredientChips');
-  recIngChipsEl.innerHTML = '';
-
-  if (!categories.length) {
-    recIngChipsEl.innerHTML = `<div class="empty-state" style="padding:14px 0;">這個品牌目前沒有可篩選的食材</div>`;
-  }
-
-  categories.forEach(cat => {
-    const keys = Array.from(categoryKeys[cat]);
-    const isOpen = !!recIngCategoryOpen[cat];
-    const selectedCount = keys.filter(k => recSelectedIngredients.includes(k)).length;
-
-    const section = document.createElement('div');
-    section.className = 'ing-category-section';
-
-    const head = document.createElement('button');
-    head.type = 'button';
-    head.className = 'ing-category-toggle';
-    head.innerHTML = `<span class="ing-category-toggle-name">${cat}${selectedCount ? `<span class="ing-category-count">已選 ${selectedCount}</span>` : ''}</span><span class="ing-category-arrow">${isOpen ? '▲' : '▼'}</span>`;
-    head.addEventListener('click', () => {
-      recIngCategoryOpen[cat] = !isOpen;
-      initFilters();
-    });
-    section.appendChild(head);
-
-    const body = document.createElement('div');
-    body.className = 'ing-tile-grid ing-category-body';
-    body.style.display = isOpen ? 'grid' : 'none';
-
-    keys.forEach(key => {
-      const representative = categoryRepresentative[cat + '|' + key];
-      const tile = document.createElement('div');
-      tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
-      tile.title = key;
-
-      const hasImg = representative && isValidUrl(representative['圖片網址']);
-      if (hasImg) {
-        const img = document.createElement('img');
-        img.className = 'ing-tile-icon';
-        img.src = representative['圖片網址'];
-        img.onerror = function() {
-          this.replaceWith(makeEmojiIconFallback());
-        };
-        tile.appendChild(img);
-      } else {
-        tile.appendChild(makeEmojiIconFallback());
-      }
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'ing-tile-name';
-      nameEl.textContent = key;
-      tile.appendChild(nameEl);
-
-      tile.addEventListener('click', () => {
-        toggleInArray(recSelectedIngredients, key);
-        initFilters();
-        renderRecipes();
-      });
-      body.appendChild(tile);
-    });
-
-    section.appendChild(body);
-    recIngChipsEl.appendChild(section);
-  });
-
   // 觀看食譜的月齡篩選
   const AGE_ORDER = ['6m+', '8m+', '10m+', '1y+', '2y+', '成人'];
   const ages = Array.from(new Set(RECIPES.map(r => r['適合月齡']).filter(Boolean)));
@@ -1765,6 +1692,106 @@ function initFilters() {
       renderRecipes();
     });
     recAgeChipsEl.appendChild(chip);
+  });
+
+  // 選擇食材的搜尋/篩選圖磚 + 已選擇食材標籤
+  renderSelectedIngredientChips();
+  renderIngredientFilterTiles();
+}
+
+// 已選擇的食材篩選標籤（不管目前顯示的圖磚池是什麼，只要選過就一直顯示在這裡，可以直接點掉）
+function renderSelectedIngredientChips() {
+  const wrap = document.getElementById('recSelectedIngChips');
+  wrap.innerHTML = '';
+  if (!recSelectedIngredients.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  recSelectedIngredients.forEach(key => {
+    const chip = document.createElement('button');
+    chip.className = 'chip active ing-selected-chip';
+    chip.textContent = key + ' ✕';
+    chip.addEventListener('click', () => {
+      toggleInArray(recSelectedIngredients, key);
+      renderSelectedIngredientChips();
+      renderIngredientFilterTiles();
+      renderRecipes();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+// 選擇食材的圖磚池：
+// 1. 有打搜尋文字 → 全資料庫比對名稱/簡稱，跳出符合的（不管有沒有選品牌）
+// 2. 沒打搜尋文字、但選了品牌 → 只顯示該品牌的食材
+// 3. 都沒有 → 隨機顯示 5~6 個基本食材
+function renderIngredientFilterTiles() {
+  const gridEl = document.getElementById('recIngredientChips');
+  gridEl.innerHTML = '';
+
+  const foodIngredientsAll = ingredientsOfType('食材');
+  const searchText = recIngredientSearchText.trim();
+  let pool;
+
+  if (searchText) {
+    pool = foodIngredientsAll.filter(i => {
+      const name = String(i['食材名稱'] || '');
+      const keys = ingredientFilterKeys(i);
+      return name.includes(searchText) || keys.some(k => k.includes(searchText));
+    });
+  } else if (recSelectedBrands.length) {
+    pool = foodIngredientsAll.filter(i => recSelectedBrands.includes(i['品牌']));
+  } else {
+    pool = RANDOM_BASIC_INGREDIENTS;
+  }
+
+  // 每個簡稱只出現一顆圖磚（同一簡稱如果有多個品牌版本，圖磚點下去會走原本的品牌選擇彈窗）
+  const seenKeys = new Set();
+  const tiles = [];
+  pool.forEach(item => {
+    ingredientFilterKeys(item).forEach(key => {
+      if (!key || seenKeys.has(key)) return;
+      seenKeys.add(key);
+      tiles.push({ key, representative: item });
+    });
+  });
+
+  if (!tiles.length) {
+    gridEl.innerHTML = `<div class="empty-state" style="padding:14px 0; grid-column:1/-1;">${searchText ? '沒有找到符合的食材' : '這個品牌目前沒有可篩選的食材'}</div>`;
+    return;
+  }
+
+  tiles.forEach(({ key, representative }) => {
+    const tile = document.createElement('div');
+    tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
+    tile.title = key;
+
+    const hasImg = representative && isValidUrl(representative['圖片網址']);
+    if (hasImg) {
+      const img = document.createElement('img');
+      img.className = 'ing-tile-icon';
+      img.src = representative['圖片網址'];
+      img.onerror = function() {
+        this.replaceWith(makeEmojiIconFallback());
+      };
+      tile.appendChild(img);
+    } else {
+      tile.appendChild(makeEmojiIconFallback());
+    }
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ing-tile-name';
+    nameEl.textContent = key;
+    tile.appendChild(nameEl);
+
+    tile.addEventListener('click', () => {
+      toggleInArray(recSelectedIngredients, key);
+      renderSelectedIngredientChips();
+      renderIngredientFilterTiles();
+      renderRecipes();
+    });
+    gridEl.appendChild(tile);
   });
 }
 
@@ -1792,7 +1819,19 @@ document.getElementById('clearFiltersBtn').addEventListener('click', () => {
   recSelectedBrands = [];
   recSelectedIngredients = [];
   recSelectedAges = [];
+  recIngredientSearchText = '';
+  document.getElementById('recIngredientSearch').value = '';
   initFilters();
+  renderRecipes();
+});
+
+document.getElementById('recIngredientSearch').addEventListener('input', (e) => {
+  recIngredientSearchText = e.target.value;
+  renderIngredientFilterTiles();
+});
+
+document.getElementById('recipeSearchInput').addEventListener('input', (e) => {
+  recSearchText = e.target.value.trim();
   renderRecipes();
 });
 
@@ -1885,6 +1924,9 @@ function renderRecipes() {
   grid.innerHTML = '';
 
   let items = RECIPES.filter(r => {
+    if (recSearchText) {
+      if (!String(r['食譜名稱'] || '').includes(recSearchText)) return false;
+    }
     if (recSelectedBrands.length) {
       const brands = getRecipeBrands(r);
       if (!brands.some(b => recSelectedBrands.includes(b))) return false;
@@ -1936,19 +1978,6 @@ function renderRecipes() {
     card.appendChild(body);
     grid.appendChild(card);
   });
-}
-
-// 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
-function pickBestBrandIngredient(group) {
-  const withStatus = group.map(item => ({ item, status: getBrandStatus(item['品牌']) }));
-  const open = withStatus.find(w => w.status.status === 'open');
-  if (open) return open.item;
-  const upcoming = withStatus.filter(w => w.status.status === 'upcoming');
-  if (upcoming.length) {
-    upcoming.sort((a, b) => a.status.nextDate - b.status.nextDate);
-    return upcoming[0].item;
-  }
-  return group[0]; // 全部都已結單且沒有下一團資訊，就固定回傳第一個
 }
 
 // 在「整個」食材資料庫（不只這道食譜用到的）裡找同名／同簡稱的所有品項。
@@ -2080,10 +2109,12 @@ function openIngredientModal(item) {
 
 // ===== 食譜彈窗 =====
 function openRecipeModal(recipe) {
-  // 大圖已經是雪莉自己做好、含標題與標籤的完整海報圖，程式不再另外疊上標題文字
+  // 大圖改為單張成品照片（不是整張海報），標題文字改用程式另外顯示在圖片下方
   document.getElementById('recModalImg').src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
   document.getElementById('recModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
   document.getElementById('recModalImg').alt = recipe['食譜名稱'] || '';
+
+  document.getElementById('recModalTitle').textContent = recipe['食譜名稱'] || '';
 
   const subtitleEl = document.getElementById('recModalSubtitle');
   const subtitle = String(recipe['簡介'] || '').trim();
@@ -2117,7 +2148,7 @@ function openRecipeModal(recipe) {
     infoRowEl.style.display = 'none';
   }
 
-  // ===== 準備食材：圖磚樣式（圖片來自食材資料庫的「圖片網址」欄位） =====
+  // ===== 準備食材：圖磚樣式（圖片來自食材資料庫的「圖片網址」欄位），固定一排 5 個 =====
   const ingList = getRecipeIngredients(recipe);
   const ingGridEl = document.getElementById('recModalIngredients');
   ingGridEl.innerHTML = '';
