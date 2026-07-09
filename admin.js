@@ -31,6 +31,15 @@ const PR_STATUS_CLASS = {
 let prChipOn = localStorage.getItem('admin_pr_chip_on') === '1';
 let currentView = 'home';
 let doneExpanded = false;
+// 【新】待辦事項（所有人共用）
+let todoCategories = [];
+let todos = [];
+let todoEditCtx = null; // { isNew, todo }
+let selectedTodoPriority = '中';
+const TODO_BRAND_CATEGORY = '團購合作'; // 這個主選項用品牌＋合作階段，其他主選項用標題＋內容
+const TODO_PRIORITY_LIST = ['高', '中', '低', '不追'];
+const TODO_PRIORITY_COLOR = { '高': '#FFDCD8', '中': '#FFE8D2', '低': '#E4F5DF', '不追': '#EFEBE5' };
+const TODO_PRIORITY_TEXT_COLOR = { '高': '#C0392B', '中': '#B5601C', '低': '#4f7a3a', '不追': '#7A7166' };
 const SELF_DEFAULT_TASKS = ['顧客提問']; // 「安排工作」預設只有這些＋新增更多
 const CUSTOMER_SOURCES = ['IG', 'FB', 'LINE群組', 'LINE官方帳號'];
 const COLORS = 7;
@@ -1102,8 +1111,13 @@ async function fetchMemos() {
     vendors = Array.isArray(data.vendors) ? data.vendors : [];
     prStatusMap = data.prStatus || {};
     prLocations = Array.isArray(data.prLocations) ? data.prLocations : [];
+    todoCategories = Array.isArray(data.todoCategories) ? data.todoCategories : [];
+    todos = Array.isArray(data.todos) ? data.todos : [];
     if (currentUser) {
       renderTaskUI();
+    }
+    if (currentView === 'todoList' && typeof renderTodoGroups === 'function') {
+      renderTodoGroups();
     }
     if (currentView === 'calendar' && typeof render === 'function') {
       render();
@@ -1288,6 +1302,59 @@ function initEventColorPresets() {
 }
 initEventColorPresets();
 
+// 開始/結束時間改用簡約下拉選單（避免手機上原生時間選單無限滾動的輪盤）
+// 上午/下午 + 小時(1~12) + 分鐘(每10分鐘一格 0~50)，都是有底有頂的固定清單
+function initEventTimeSelects() {
+  const hourIds = ['evStartHourInput', 'evEndHourInput'];
+  const minuteIds = ['evStartMinuteInput', 'evEndMinuteInput'];
+  hourIds.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel || sel.options.length) return;
+    for (let h = 1; h <= 12; h++) {
+      const opt = document.createElement('option');
+      opt.value = String(h).padStart(2, '0');
+      opt.textContent = String(h).padStart(2, '0');
+      sel.appendChild(opt);
+    }
+  });
+  minuteIds.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel || sel.options.length) return;
+    for (let m = 0; m <= 50; m += 10) {
+      const opt = document.createElement('option');
+      opt.value = String(m).padStart(2, '0');
+      opt.textContent = String(m).padStart(2, '0');
+      sel.appendChild(opt);
+    }
+  });
+}
+initEventTimeSelects();
+
+// 把 24 小時制的「HH:MM」字串套進 上午/下午＋小時＋分鐘 下拉選單；分鐘會自動對齊到最近的 10 分鐘格
+function setEvTimeSelects(amPmId, hourId, minuteId, timeStr) {
+  const m = /^(\d{1,2}):(\d{1,2})$/.exec(String(timeStr || '').trim());
+  let h24 = 9, mi = 0; // 沒有資料時預設上午9:00，比半夜0點合理
+  if (m) {
+    h24 = Math.min(23, Math.max(0, parseInt(m[1], 10) || 0));
+    mi = Math.min(50, Math.round((parseInt(m[2], 10) || 0) / 10) * 10);
+  }
+  const amPm = h24 < 12 ? 'AM' : 'PM';
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  document.getElementById(amPmId).value = amPm;
+  document.getElementById(hourId).value = String(h12).padStart(2, '0');
+  document.getElementById(minuteId).value = String(mi).padStart(2, '0');
+}
+
+// 把 上午/下午＋小時(1~12)＋分鐘 下拉選單的值，換算回 24 小時制的「HH:MM」字串存進試算表
+function getEvTimeValue(amPmId, hourId, minuteId) {
+  const amPm = document.getElementById(amPmId).value;
+  let h12 = parseInt(document.getElementById(hourId).value, 10) || 12;
+  let h24 = h12 % 12;
+  if (amPm === 'PM') h24 += 12;
+  return String(h24).padStart(2, '0') + ':' + document.getElementById(minuteId).value;
+}
+
 // 日期輸入框旁邊顯示「XXXX年X月X日(週幾)」的提示文字
 function fmtWeekdayHint(dateStr) {
   const d = parseYmd(dateStr);
@@ -1312,11 +1379,20 @@ function isEvSwitchOn(id) {
 document.getElementById('evAllDaySwitch').addEventListener('click', () => {
   const on = !isEvSwitchOn('evAllDaySwitch');
   setEvSwitch('evAllDaySwitch', on);
-  document.getElementById('evStartTimeInput').style.display = on ? 'none' : '';
-  document.getElementById('evEndTimeInput').style.display = on ? 'none' : '';
+  document.getElementById('evStartTimeWrap').style.display = on ? 'none' : '';
+  document.getElementById('evEndTimeWrap').style.display = on ? 'none' : '';
 });
 document.getElementById('evGroupBuySwitch').addEventListener('click', () => {
   setEvSwitch('evGroupBuySwitch', !isEvSwitchOn('evGroupBuySwitch'));
+});
+
+// 「更多設定」可折疊區塊：標籤／延長時間／早鳥禮／網址／分類／前台顯示
+document.getElementById('evMoreToggle').addEventListener('click', () => {
+  const toggle = document.getElementById('evMoreToggle');
+  const body = document.getElementById('evMoreBody');
+  const open = toggle.classList.toggle('open');
+  body.style.display = open ? 'block' : 'none';
+  document.getElementById('evMoreArrow').textContent = open ? '▴' : '▾';
 });
 
 function ymdStr(d) {
@@ -1337,20 +1413,28 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evColorInput').value = defaultColor || '#FF8FA3';
   document.getElementById('evUrlInput').value = ev ? (ev.url || '') : '';
   document.getElementById('evCategoryInput').value = ev ? (ev.category || '') : '';
+  document.getElementById('evTagInput').value = ev ? (ev.tag || '') : '';
+  document.getElementById('evExtendInput').value = (ev && ev.extend && ev.extend.type === 'days') ? ev.extend.value : '';
+  document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
+
+  // 每次打開都先收合「更多設定」，畫面維持乾淨
+  document.getElementById('evMoreToggle').classList.remove('open');
+  document.getElementById('evMoreBody').style.display = 'none';
+  document.getElementById('evMoreArrow').textContent = '▾';
 
   const allDay = ev ? (ev.allDay !== false) : true;
   setEvSwitch('evAllDaySwitch', allDay);
-  document.getElementById('evStartTimeInput').style.display = allDay ? 'none' : '';
-  document.getElementById('evEndTimeInput').style.display = allDay ? 'none' : '';
+  document.getElementById('evStartTimeWrap').style.display = allDay ? 'none' : '';
+  document.getElementById('evEndTimeWrap').style.display = allDay ? 'none' : '';
   setEvSwitch('evGroupBuySwitch', ev ? (ev.isGroupBuy !== false) : true);
 
   const startDate = ev ? ev.start : (prefillDate || new Date());
   const endDate = ev ? ev.end : (prefillDate || new Date());
   document.getElementById('evStartDateInput').value = ymdStr(startDate);
   document.getElementById('evEndDateInput').value = ymdStr(endDate);
-  document.getElementById('evStartTimeInput').value = ev ? (ev.startTime || '') : '';
-  document.getElementById('evEndTimeInput').value = ev ? (ev.endTime || '') : '';
+  setEvTimeSelects('evStartAmPmInput', 'evStartHourInput', 'evStartMinuteInput', ev ? ev.startTime : '');
+  setEvTimeSelects('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput', ev ? ev.endTime : '');
   updateEvWeekdayHints();
 
   document.getElementById('eventEditModal').classList.add('show');
@@ -1375,12 +1459,17 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const color = document.getElementById('evColorInput').value;
   const url = document.getElementById('evUrlInput').value.trim();
   const category = document.getElementById('evCategoryInput').value.trim();
-  const startTime = allDay ? '' : document.getElementById('evStartTimeInput').value;
-  const endTime = allDay ? '' : document.getElementById('evEndTimeInput').value;
+  const tag = document.getElementById('evTagInput').value.trim();
+  const extendRaw = document.getElementById('evExtendInput').value.trim();
+  const extend = extendRaw === '' ? '' : (parseInt(extendRaw, 10) || 0);
+  const earlyBird = document.getElementById('evEarlyBirdInput').value
+    .split('\n').map(s => s.trim()).filter(s => s !== '').join('/');
+  const startTime = allDay ? '' : getEvTimeValue('evStartAmPmInput', 'evStartHourInput', 'evStartMinuteInput');
+  const endTime = allDay ? '' : getEvTimeValue('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput');
 
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
-    allDay, isGroupBuy, published, url, category, startTime, endTime
+    allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime
   };
 
   const btn = document.getElementById('evSaveBtn');
@@ -1583,7 +1672,7 @@ document.getElementById('prLocationNewBtn').addEventListener('click', async () =
 // ===== 分頁切換與選單 =====
 function switchView(name) {
   currentView = name;
-  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool' };
+  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool' };
   Object.entries(map).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', key === name);
@@ -1602,6 +1691,7 @@ function switchView(name) {
     renderPriLocationSelect();
     loadPrItems();
   }
+  if (name === 'todoList') renderTodoGroups();
   if (name === 'groupStatus') renderGroupStatusList('groupStatusList');
   if (name === 'lotteryTool') renderLotteryWinnerList();
 }
@@ -3657,3 +3747,391 @@ loadData();
 fetchMemos();
 setInterval(loadData, 60000);
 setInterval(fetchMemos, 60000);
+
+// ===== 【新】待辦事項 =====
+
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+function addMonthsToKey(key, n) {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, (m - 1) + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function fmtMonthLabel(key) {
+  const [y, m] = key.split('-').map(Number);
+  return `${y}年${m}月`;
+}
+
+function fillTodoMonthSelect(selected) {
+  const sel = document.getElementById('todoMonthSelect');
+  const cur = currentMonthKey();
+  const monthsSet = new Set([cur]);
+  for (let i = 1; i <= 12; i++) monthsSet.add(addMonthsToKey(cur, i));
+  todos.forEach(t => { if (t.month) monthsSet.add(t.month); });
+  if (selected) monthsSet.add(selected);
+  const months = Array.from(monthsSet).sort();
+  sel.innerHTML = '';
+  months.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = fmtMonthLabel(m);
+    sel.appendChild(opt);
+  });
+  sel.value = selected || cur;
+}
+
+function ensureTodoMonthOption(monthKey) {
+  const sel = document.getElementById('todoMonthSelect');
+  if ([...sel.options].some(o => o.value === monthKey)) return;
+  const opt = document.createElement('option');
+  opt.value = monthKey;
+  opt.textContent = fmtMonthLabel(monthKey);
+  const opts = Array.from(sel.options);
+  const target = opts.find(o => monthKey < o.value);
+  if (target) sel.insertBefore(opt, target); else sel.appendChild(opt);
+}
+
+function fillTodoCategorySelect(selected) {
+  const sel = document.getElementById('todoCategorySelect');
+  sel.innerHTML = '';
+  todoCategories.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    sel.appendChild(opt);
+  });
+  const addMore = document.createElement('option');
+  addMore.value = '__new__';
+  addMore.textContent = '＋ 新增更多';
+  sel.appendChild(addMore);
+  if (selected && [...sel.options].some(o => o.value === selected)) sel.value = selected;
+  else if (todoCategories.length) sel.value = todoCategories[0];
+}
+
+function updateTodoFieldsVisibility() {
+  const isBrand = document.getElementById('todoCategorySelect').value === TODO_BRAND_CATEGORY;
+  document.getElementById('todoGenericFields').style.display = isBrand ? 'none' : 'block';
+  document.getElementById('todoBrandFields').style.display = isBrand ? 'block' : 'none';
+}
+
+document.getElementById('todoCategorySelect').addEventListener('change', (e) => {
+  const isNew = e.target.value === '__new__';
+  document.getElementById('todoCategoryNewRow').classList.toggle('show', isNew);
+  if (!isNew) updateTodoFieldsVisibility();
+});
+
+document.getElementById('todoCategoryNewBtn').addEventListener('click', async () => {
+  const input = document.getElementById('todoCategoryNewInput');
+  const name = input.value.trim();
+  if (!name) return;
+  if (todoCategories.indexOf(name) !== -1) {
+    fillTodoCategorySelect(name);
+    document.getElementById('todoCategoryNewRow').classList.remove('show');
+    updateTodoFieldsVisibility();
+    input.value = '';
+    return;
+  }
+  try {
+    await postTask({ type: 'todo-category-add', name });
+    todoCategories.push(name);
+    fillTodoCategorySelect(name);
+    document.getElementById('todoCategoryNewRow').classList.remove('show');
+    updateTodoFieldsVisibility();
+    input.value = '';
+  } catch (err) {
+    setFormStatus('todoEditStatus', '新增主選項失敗：' + err.message, 'error');
+  }
+});
+
+document.getElementById('todoStageSelect').addEventListener('change', () => {
+  const show = document.getElementById('todoStageSelect').value === '確定日期';
+  document.getElementById('todoCalendarFields').style.display = show ? 'block' : 'none';
+});
+
+// 重要程度快選按鈕：高／中／低／不追是會存起來的狀態；「改到下個月」是一次性動作，
+// 點了會把月份選單往後移一個月，但不會把「改到下個月」本身存成重要程度
+function renderTodoPriorityQuick(activePriority) {
+  const box = document.getElementById('todoPriorityQuick');
+  box.innerHTML = '';
+  TODO_PRIORITY_LIST.forEach(p => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stage-quick-btn' + (p === activePriority ? ' active' : '');
+    btn.style.background = TODO_PRIORITY_COLOR[p];
+    btn.style.color = TODO_PRIORITY_TEXT_COLOR[p];
+    btn.textContent = p;
+    btn.addEventListener('click', () => {
+      selectedTodoPriority = p;
+      renderTodoPriorityQuick(p);
+    });
+    box.appendChild(btn);
+  });
+  const moveBtn = document.createElement('button');
+  moveBtn.type = 'button';
+  moveBtn.className = 'stage-quick-btn';
+  moveBtn.style.background = '#EFE4FB';
+  moveBtn.style.color = '#7A5AC8';
+  moveBtn.textContent = '➡️ 改到下個月';
+  moveBtn.addEventListener('click', () => {
+    const monthSel = document.getElementById('todoMonthSelect');
+    const next = addMonthsToKey(monthSel.value, 1);
+    ensureTodoMonthOption(next);
+    monthSel.value = next;
+    setFormStatus('todoEditStatus', '已改到下個月，記得按「儲存」才會生效 ✓', 'ok');
+  });
+  box.appendChild(moveBtn);
+}
+
+function openTodoEditModal(todo) {
+  const isNew = !todo;
+  todoEditCtx = { isNew, todo };
+  document.getElementById('todoEditTitle').textContent = isNew ? '➕ 新增待辦事項' : '✏️ 編輯待辦事項';
+  document.getElementById('todoDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
+  setFormStatus('todoEditStatus', '', '');
+  document.getElementById('todoCategoryNewRow').classList.remove('show');
+
+  fillTodoCategorySelect(todo ? todo.category : (todoCategories[0] || ''));
+  updateTodoFieldsVisibility();
+
+  document.getElementById('todoTitleInput').value = todo ? todo.title : '';
+  document.getElementById('todoContentInput').value = todo ? todo.content : '';
+  document.getElementById('todoBrandInput').value = todo ? todo.brand : '';
+  document.getElementById('todoStageSelect').value = todo && todo.stage ? todo.stage : '洽談中';
+  document.getElementById('todoGroupStartInput').value = todo ? (todo.groupStart || '') : '';
+  document.getElementById('todoGroupEndInput').value = todo ? (todo.groupEnd || '') : '';
+  document.getElementById('todoCalendarFields').style.display = document.getElementById('todoStageSelect').value === '確定日期' ? 'block' : 'none';
+  document.getElementById('todoAddedToCalendarNote').style.display = (todo && todo.addedToCalendar) ? 'block' : 'none';
+  document.getElementById('todoAddToCalendarBtn').style.display = (todo && todo.addedToCalendar) ? 'none' : 'block';
+
+  fillTodoMonthSelect(todo ? todo.month : currentMonthKey());
+
+  selectedTodoPriority = (todo && todo.priority) ? todo.priority : '中';
+  renderTodoPriorityQuick(selectedTodoPriority);
+
+  document.getElementById('todoEditModal').classList.add('show');
+}
+
+function closeTodoEditModal() {
+  document.getElementById('todoEditModal').classList.remove('show');
+  todoEditCtx = null;
+}
+
+// 收集表單內容並存檔（新增或更新），回傳這筆待辦事項的 id；共用給「儲存」跟「一鍵新增至行事曆」
+async function collectAndSaveTodo_() {
+  const category = document.getElementById('todoCategorySelect').value;
+  if (!category || category === '__new__') throw new Error('請選擇主選項');
+  const isBrand = category === TODO_BRAND_CATEGORY;
+
+  const fields = { category, month: document.getElementById('todoMonthSelect').value, priority: selectedTodoPriority };
+  if (isBrand) {
+    const brand = document.getElementById('todoBrandInput').value.trim();
+    if (!brand) throw new Error('請輸入品牌');
+    fields.brand = brand;
+    fields.stage = document.getElementById('todoStageSelect').value;
+    fields.groupStart = document.getElementById('todoGroupStartInput').value;
+    fields.groupEnd = document.getElementById('todoGroupEndInput').value;
+    fields.title = '';
+    fields.content = '';
+  } else {
+    const title = document.getElementById('todoTitleInput').value.trim();
+    if (!title) throw new Error('請輸入標題');
+    fields.title = title;
+    fields.content = document.getElementById('todoContentInput').value.trim();
+    fields.brand = '';
+    fields.stage = '';
+    fields.groupStart = '';
+    fields.groupEnd = '';
+  }
+
+  if (todoEditCtx.isNew) {
+    const result = await postTask(Object.assign({ type: 'todo-add' }, fields));
+    todoEditCtx = { isNew: false, todo: { id: result.id } };
+    return result.id;
+  }
+  const id = todoEditCtx.todo.id;
+  await postTask(Object.assign({ type: 'todo-update', id }, fields));
+  return id;
+}
+
+document.getElementById('todoAddBtn').addEventListener('click', () => openTodoEditModal(null));
+
+document.getElementById('todoSaveBtn').addEventListener('click', async () => {
+  if (!todoEditCtx) return;
+  const btn = document.getElementById('todoSaveBtn');
+  btn.disabled = true;
+  setFormStatus('todoEditStatus', '儲存中…', '');
+  try {
+    await collectAndSaveTodo_();
+    closeTodoEditModal();
+    await fetchMemos();
+    renderTodoGroups();
+  } catch (err) {
+    setFormStatus('todoEditStatus', err.message || '儲存失敗', 'error');
+  }
+  btn.disabled = false;
+});
+
+document.getElementById('todoDeleteBtn').addEventListener('click', async () => {
+  if (!todoEditCtx || todoEditCtx.isNew) return;
+  if (!confirm('確定要刪除這筆待辦事項嗎？刪除後就找不回來囉')) return;
+  const btn = document.getElementById('todoDeleteBtn');
+  btn.disabled = true;
+  setFormStatus('todoEditStatus', '刪除中…', '');
+  try {
+    await postTask({ type: 'todo-delete', id: todoEditCtx.todo.id });
+    closeTodoEditModal();
+    await fetchMemos();
+    renderTodoGroups();
+  } catch (err) {
+    setFormStatus('todoEditStatus', '刪除失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+
+// 團購合作進到「確定日期」階段：一鍵把這筆待辦事項的品牌／日期新增到行事曆（預設尚未確認顯示於前台，
+// 之後記得去行事曆編輯模式按「確認顯示於前台」）
+document.getElementById('todoAddToCalendarBtn').addEventListener('click', async () => {
+  if (!todoEditCtx) return;
+  const brand = document.getElementById('todoBrandInput').value.trim();
+  const start = document.getElementById('todoGroupStartInput').value;
+  const end = document.getElementById('todoGroupEndInput').value;
+  if (!brand) { setFormStatus('todoEditStatus', '請先輸入品牌', 'error'); return; }
+  if (!start || !end) { setFormStatus('todoEditStatus', '請選擇開團與結團日期', 'error'); return; }
+
+  const btn = document.getElementById('todoAddToCalendarBtn');
+  btn.disabled = true;
+  setFormStatus('todoEditStatus', '新增至行事曆中…', '');
+  try {
+    const id = await collectAndSaveTodo_();
+    await postTask({
+      type: 'event-add', title: brand, start: start, end: end,
+      allDay: true, isGroupBuy: true, published: false,
+      color: '', category: '', url: '', tag: '', extend: '', earlyBird: ''
+    });
+    await postTask({ type: 'todo-update', id: id, addedToCalendar: true });
+    document.getElementById('todoAddedToCalendarNote').style.display = 'block';
+    btn.style.display = 'none';
+    setFormStatus('todoEditStatus', '已新增至行事曆 ✓ 記得之後到行事曆編輯模式按「確認顯示於前台」', 'ok');
+    await fetchMemos();
+    if (typeof loadData === 'function') loadData();
+    renderTodoGroups();
+  } catch (err) {
+    setFormStatus('todoEditStatus', '新增至行事曆失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+
+function todoPriorityRank(p) {
+  const idx = TODO_PRIORITY_LIST.indexOf(p);
+  return idx === -1 ? 99 : idx;
+}
+
+function todoDisplayName(t) {
+  const label = t.category === TODO_BRAND_CATEGORY ? (t.brand || '（未命名品牌）') : (t.title || '（未命名）');
+  return `${t.category || '待辦'}：${label}`;
+}
+
+function renderTodoGroups() {
+  const box = document.getElementById('todoGroups');
+  if (!box) return;
+  box.innerHTML = '';
+
+  if (!todos.length) {
+    box.innerHTML = '<div class="todo-empty">目前沒有待辦事項，點上面「＋新增待辦事項」開始記錄吧</div>';
+    return;
+  }
+
+  const byMonth = {};
+  todos.forEach(t => {
+    const key = t.month || currentMonthKey();
+    (byMonth[key] = byMonth[key] || []).push(t);
+  });
+  const months = Object.keys(byMonth).sort();
+
+  months.forEach(monthKey => {
+    const items = byMonth[monthKey].slice().sort((a, b) => {
+      const r = todoPriorityRank(a.priority) - todoPriorityRank(b.priority);
+      if (r !== 0) return r;
+      return (a.created || '').localeCompare(b.created || '');
+    });
+
+    const group = document.createElement('div');
+    group.className = 'todo-month-group';
+    const head = document.createElement('div');
+    head.className = 'todo-month-head';
+    head.textContent = fmtMonthLabel(monthKey);
+    group.appendChild(head);
+
+    items.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'todo-item';
+
+      const headRow = document.createElement('div');
+      headRow.className = 'todo-item-head';
+
+      if (TODO_PRIORITY_LIST.indexOf(t.priority) !== -1) {
+        const dot = document.createElement('span');
+        dot.className = 'todo-dot todo-dot-' + t.priority;
+        dot.title = '重要程度：' + t.priority;
+        headRow.appendChild(dot);
+      }
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'todo-item-name';
+      nameEl.textContent = todoDisplayName(t);
+      headRow.appendChild(nameEl);
+
+      const arrow = document.createElement('span');
+      arrow.className = 'todo-item-arrow';
+      arrow.textContent = '▾';
+      headRow.appendChild(arrow);
+
+      item.appendChild(headRow);
+
+      const body = document.createElement('div');
+      body.className = 'todo-item-body';
+      const lines = [];
+      if (t.category === TODO_BRAND_CATEGORY) {
+        if (t.stage) lines.push('合作階段：' + t.stage);
+        if (t.groupStart && t.groupEnd) lines.push('日期：' + t.groupStart + ' ～ ' + t.groupEnd);
+        if (t.addedToCalendar) lines.push('✅ 已加入行事曆');
+      } else if (t.content) {
+        lines.push(t.content);
+      }
+      lines.push((t.createdBy ? t.createdBy + '　' : '') + (t.created || ''));
+      body.textContent = lines.join('\n');
+
+      const actions = document.createElement('div');
+      actions.className = 'todo-item-actions';
+      const editBtn = document.createElement('button');
+      editBtn.className = 'task-mini-btn';
+      editBtn.textContent = '✏️ 編輯';
+      editBtn.addEventListener('click', (e) => { e.stopPropagation(); openTodoEditModal(t); });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'task-mini-btn danger';
+      delBtn.textContent = '🗑 刪除';
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('確定要刪除這筆待辦事項嗎？')) return;
+        try {
+          await postTask({ type: 'todo-delete', id: t.id });
+          await fetchMemos();
+          renderTodoGroups();
+        } catch (err) {
+          alert('刪除失敗：' + err.message);
+        }
+      });
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      body.appendChild(actions);
+
+      item.appendChild(body);
+      item.addEventListener('click', () => item.classList.toggle('open'));
+      group.appendChild(item);
+    });
+
+    box.appendChild(group);
+  });
+}
