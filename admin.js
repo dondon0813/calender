@@ -40,6 +40,11 @@ let allEvents = [];
 let currentYear, currentMonth;
 let currentMode = 'start';
 
+// ===== 行事曆編輯模式 =====
+let calendarEditMode = false;
+let calEditSelectedDate = null; // 目前在下方面板顯示的是哪一天
+const EVENT_COLOR_PRESETS = ['#FF8FA3', '#FFB37A', '#9ACB85', '#6FC8C2', '#7AAEEB', '#B79AE8', '#F0C36D'];
+
 const MODE_VISIBLE_DAYS = {
   all:   [0,1,2,3,4,5,6],
   start: [1,2,3,4,5],
@@ -210,13 +215,28 @@ async function loadData() {
       const url = c[7] ? c[7].v : '';
       const adminUrl = c[8] ? c[8].v : ''; // 後台網址，先保留不使用
       const earlyBirdRaw = c[9] ? c[9].v : '';
+      // 新增欄位（K~P）：顏色／整日／開始時間／結束時間／團購／顯示於前台
+      // 舊資料這幾欄是空的，全部視為向下相容的預設值（顏色沿用調色盤、整日、算團購編號、顯示於前台）
+      const colorRaw = c[10] ? c[10].v : '';
+      const allDayRaw = c[11] ? String(c[11].v || '').trim() : '';
+      const startTimeRaw = c[12] ? String(c[12].v || '').trim() : '';
+      const endTimeRaw = c[13] ? String(c[13].v || '').trim() : '';
+      const isGroupBuyRaw = c[14] ? String(c[14].v || '').trim() : '';
+      const publishedRaw = c[15] ? String(c[15].v || '').trim() : '';
       const start = parseDateStr(startRaw);
       const end = parseDateStr(endRaw);
       if (!start || !end || !title) return;
       const extend = parseExtendRaw(extendRaw, end);
       const displayEnd = computeDisplayEnd(end, extend);
       const earlyBird = String(earlyBirdRaw || '').split('/').map(s => s.trim()).filter(s => s !== '');
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird });
+      const color = String(colorRaw || '').trim();
+      const allDay = allDayRaw === '' ? true : (allDayRaw === '是');
+      const isGroupBuy = isGroupBuyRaw === '' ? true : (isGroupBuyRaw === '是');
+      const published = publishedRaw === '' ? true : (publishedRaw === '是');
+      events.push({
+        id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird,
+        color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published
+      });
     });
 
     allEvents = events;
@@ -308,6 +328,7 @@ function render() {
 
   if (isList) {
     renderGroupStatusList('calGroupList');
+    closeCalEditDayPanel();
     return;
   }
 
@@ -320,6 +341,9 @@ function render() {
   } else {
     renderSingleDayMode(currentMode);
   }
+
+  // 切換模式／月份後，之前開著的當日活動面板內容可能已經過期，直接關掉
+  closeCalEditDayPanel();
 }
 
 function renderAllMode() {
@@ -332,6 +356,10 @@ function renderAllMode() {
   const gridStart = new Date(currentYear, currentMonth, 1 - startOffset);
   const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const numWeeks = totalCells / 7;
+
+  // 團購編號：只計算「團購」開關為開啟的活動，依開團日排序，這個月第幾團就是第幾號
+  // （非團購活動，例如宅配、截稿日，不會佔用編號）
+  const groupBuyNumberMap = computeMonthlyGroupBuyNumbers(currentYear, currentMonth);
 
   for (let w = 0; w < numWeeks; w++) {
     const weekStart = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + w * 7);
@@ -374,22 +402,41 @@ function renderAllMode() {
       dn.className = 'daynum';
       dn.textContent = d.getDate();
       cell.appendChild(dn);
+      if (calendarEditMode) {
+        cell.classList.add('editable');
+        const dateCopy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        cell.addEventListener('click', () => openCalEditDayPanel(dateCopy));
+      }
       weekEl.appendChild(cell);
     });
 
     weekEvents.forEach(item => {
-      const colorIdx = (item.ev.id - 1) % COLORS;
+      const gbNumber = groupBuyNumberMap.get(item.ev.id);
+      // 團購活動：顏色跟著「這個月第幾團」走，色系也會每個月重新循環，跟編號對應一致
+      // 非團購活動（沒有 gbNumber）：退回用活動本身的 id 做顏色循環，純粹只是視覺區分
+      const colorIdx = gbNumber ? (gbNumber - 1) % COLORS : (item.ev.id - 1) % COLORS;
       const bar = document.createElement('div');
       bar.className = `ebar c${colorIdx} clickable`;
+      if (item.ev.color) {
+        bar.style.background = item.ev.color;
+      }
       bar.addEventListener('click', () => openAdminModal(item.ev));
       bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
       bar.style.gridRow = `${item.lane + 2}`;
       bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})（點擊查看內部資訊）`;
 
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = item.ev.id;
-      bar.appendChild(badge);
+      if (gbNumber) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = gbNumber;
+        bar.appendChild(badge);
+      } else if (item.ev.isGroupBuy === false) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = '📌';
+        badge.style.background = 'rgba(255,255,255,0.55)';
+        bar.appendChild(badge);
+      }
 
       const dateSpan = document.createElement('span');
       dateSpan.className = 'ev-date';
@@ -413,6 +460,18 @@ function renderAllMode() {
 
     grid.appendChild(weekEl);
   }
+}
+
+// 計算「這個月」團購活動的編號：依開始日期排序，只算 isGroupBuy !== false 的活動
+// 回傳 Map：eventId -> 第幾團（1 起算）
+function computeMonthlyGroupBuyNumbers(year, month) {
+  const map = new Map();
+  const inMonth = allEvents.filter(ev => {
+    if (ev.isGroupBuy === false) return false;
+    return ev.start.getFullYear() === year && ev.start.getMonth() === month;
+  }).sort((a, b) => a.start - b.start || a.id - b.id);
+  inMonth.forEach((ev, idx) => map.set(ev.id, idx + 1));
+  return map;
 }
 
 function renderSingleDayMode(mode) {
@@ -473,11 +532,15 @@ function renderSingleDayMode(mode) {
         dayEvents.forEach(ev => {
           const frozen = isFrozenEvent(ev);
           const status = getEventStatus(ev);
+          const unpublished = ev.published === false;
           const bar = document.createElement('div');
-          const catClass = frozen ? 'cat-frozen' : `cat-${status}`;
+          const catClass = unpublished ? 'cat-unpublished' : (frozen ? 'cat-frozen' : `cat-${status}`);
           bar.className = `ebar ebar-wrap ${catClass} clickable`;
-          bar.addEventListener('click', () => openAdminModal(ev));
-          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）`;
+          bar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAdminModal(ev);
+          });
+          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）` + (unpublished ? '　🔔 尚未確認顯示於前台' : '');
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
@@ -499,7 +562,7 @@ function renderSingleDayMode(mode) {
           }
 
           // 冷凍團：即將結單時顯示小紅點倒數天數
-          if (frozen && (status === 'closingSoon')) {
+          if (!unpublished && frozen && (status === 'closingSoon')) {
             const daysLeft = Math.max(0, daysBetween(startOfDay(new Date()), startOfDay(ev.displayEnd)));
             const dot = document.createElement('span');
             dot.className = 'countdown-dot';
@@ -511,6 +574,12 @@ function renderSingleDayMode(mode) {
           stack.appendChild(bar);
         });
         cell.appendChild(stack);
+      }
+
+      if (calendarEditMode) {
+        cell.classList.add('editable');
+        const dateCopy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        cell.addEventListener('click', () => openCalEditDayPanel(dateCopy));
       }
 
       weekEl.appendChild(cell);
@@ -728,6 +797,8 @@ function openAdminModal(ev) {
     `開團 ${fmtSingleDate(ev.start)}　結單 ${fmtSingleDate(ev.displayEnd)}` +
     (isFrozenEvent(ev) ? '　❄冷凍團' : '');
 
+  renderAdminPublishBox(ev);
+
   const ebBox = document.getElementById('adminEarlyBirdBox');
   const ebList = document.getElementById('adminEarlyBirdList');
   if (ev.earlyBird && ev.earlyBird.length) {
@@ -773,6 +844,40 @@ function openAdminModal(ev) {
 
   document.getElementById('adminModal').classList.add('show');
 }
+
+// 前台顯示狀態小方塊 + 確認顯示按鈕
+function renderAdminPublishBox(ev) {
+  const box = document.getElementById('adminPublishBox');
+  const text = document.getElementById('adminPublishText');
+  const btn = document.getElementById('adminPublishBtn');
+  const published = ev.published !== false; // 沒有這個欄位（舊資料）＝視為已發布
+  box.classList.toggle('is-published', published);
+  text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未確認顯示於前台';
+  btn.style.display = published ? 'none' : 'inline-block';
+}
+
+document.getElementById('adminPublishBtn').addEventListener('click', async () => {
+  if (!currentModalEv) return;
+  const btn = document.getElementById('adminPublishBtn');
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+  try {
+    await postTask({ type: 'event-update', id: currentModalEv.id, published: true });
+    currentModalEv.published = true;
+    renderAdminPublishBox(currentModalEv);
+    render();
+  } catch (err) {
+    alert('更新失敗：' + err.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '✅ 確認顯示於前台';
+});
+
+document.getElementById('adminEditEventBtn').addEventListener('click', () => {
+  if (!currentModalEv) return;
+  closeAdminModal();
+  openEventEditModal(currentModalEv);
+});
 
 // 依 key 渲染公關品狀態面板：狀態下拉、選品網址、位置的顯示與內容
 function renderPrPanel(key) {
@@ -1089,6 +1194,229 @@ if (sessionStorage.getItem('admin_unlocked') === '1') {
   document.getElementById('gatePasswordInput').focus();
 }
 document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+// ===== 行事曆編輯模式：開關、當日活動面板 =====
+document.getElementById('calEditToggleBtn').addEventListener('click', () => {
+  calendarEditMode = !calendarEditMode;
+  document.getElementById('calEditToggleBtn').classList.toggle('on', calendarEditMode);
+  if (!calendarEditMode) closeCalEditDayPanel();
+  render();
+});
+
+function closeCalEditDayPanel() {
+  calEditSelectedDate = null;
+  const panel = document.getElementById('calEditDayPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+function openCalEditDayPanel(date) {
+  calEditSelectedDate = date;
+  const panel = document.getElementById('calEditDayPanel');
+  const title = document.getElementById('calEditDayTitle');
+  const listEl = document.getElementById('calEditDayList');
+
+  title.textContent = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（週${WD_LABEL[date.getDay()]}）活動`;
+  listEl.innerHTML = '';
+
+  const dayEvents = allEvents.filter(ev => {
+    const s = startOfDay(ev.start);
+    const e = startOfDay(ev.displayEnd);
+    const target = startOfDay(date);
+    return target >= s && target <= e;
+  }).sort((a, b) => a.start - b.start);
+
+  if (!dayEvents.length) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-edit-day-empty';
+    empty.textContent = '這天還沒有安排任何活動';
+    listEl.appendChild(empty);
+  } else {
+    dayEvents.forEach(ev => {
+      const row = document.createElement('div');
+      row.className = 'cal-edit-day-row';
+      row.addEventListener('click', () => openEventEditModal(ev));
+
+      const swatch = document.createElement('span');
+      swatch.className = 'cal-edit-day-swatch';
+      swatch.style.background = ev.color || EVENT_COLOR_PRESETS[(ev.id - 1) % EVENT_COLOR_PRESETS.length];
+      row.appendChild(swatch);
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'cal-edit-day-row-name';
+      nameEl.textContent = ev.title;
+      row.appendChild(nameEl);
+
+      if (ev.published === false) {
+        const tag = document.createElement('span');
+        tag.className = 'cal-edit-day-row-tag';
+        tag.textContent = '尚未確認顯示';
+        row.appendChild(tag);
+      }
+
+      listEl.appendChild(row);
+    });
+  }
+
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('calEditDayCloseBtn').addEventListener('click', closeCalEditDayPanel);
+document.getElementById('calEditDayAddBtn').addEventListener('click', () => {
+  openEventEditModal(null, calEditSelectedDate);
+});
+
+// ===== 新增／編輯活動浮動視窗 =====
+let eventEditCtx = null; // { isNew, ev }
+
+function initEventColorPresets() {
+  const box = document.getElementById('evColorPresets');
+  if (!box) return;
+  box.innerHTML = '';
+  EVENT_COLOR_PRESETS.forEach(hex => {
+    const sw = document.createElement('span');
+    sw.className = 'ev-color-preset-swatch';
+    sw.style.background = hex;
+    sw.title = hex;
+    sw.addEventListener('click', () => {
+      document.getElementById('evColorInput').value = hex;
+    });
+    box.appendChild(sw);
+  });
+}
+initEventColorPresets();
+
+// 日期輸入框旁邊顯示「XXXX年X月X日(週幾)」的提示文字
+function fmtWeekdayHint(dateStr) {
+  const d = parseYmd(dateStr);
+  if (!d) return '';
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（週${WD_LABEL[d.getDay()]}）`;
+}
+function updateEvWeekdayHints() {
+  document.getElementById('evStartWeekdayHint').textContent = fmtWeekdayHint(document.getElementById('evStartDateInput').value);
+  document.getElementById('evEndWeekdayHint').textContent = fmtWeekdayHint(document.getElementById('evEndDateInput').value);
+}
+document.getElementById('evStartDateInput').addEventListener('change', updateEvWeekdayHints);
+document.getElementById('evEndDateInput').addEventListener('change', updateEvWeekdayHints);
+
+function setEvSwitch(id, on) {
+  document.getElementById(id).classList.toggle('on', on);
+}
+function isEvSwitchOn(id) {
+  return document.getElementById(id).classList.contains('on');
+}
+
+// 整日開關：關閉整日才需要設定時間，所以開啟時把時間欄隱藏起來
+document.getElementById('evAllDaySwitch').addEventListener('click', () => {
+  const on = !isEvSwitchOn('evAllDaySwitch');
+  setEvSwitch('evAllDaySwitch', on);
+  document.getElementById('evStartTimeInput').style.display = on ? 'none' : '';
+  document.getElementById('evEndTimeInput').style.display = on ? 'none' : '';
+});
+document.getElementById('evGroupBuySwitch').addEventListener('click', () => {
+  setEvSwitch('evGroupBuySwitch', !isEvSwitchOn('evGroupBuySwitch'));
+});
+
+function ymdStr(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// ev 為 null＝新增活動；prefillDate 是從「當日活動面板」的＋新增活動點進來時，預先帶入的日期
+function openEventEditModal(ev, prefillDate) {
+  const isNew = !ev;
+  eventEditCtx = { isNew, ev };
+  document.getElementById('eventEditTitle').textContent = isNew ? '➕ 新增活動' : '✏️ 編輯活動';
+  document.getElementById('evDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
+  setFormStatus('evEditStatus', '', '');
+
+  const defaultColor = ev ? (ev.color || EVENT_COLOR_PRESETS[(ev.id - 1) % EVENT_COLOR_PRESETS.length]) : EVENT_COLOR_PRESETS[0];
+  document.getElementById('evTitleInput').value = ev ? ev.title : '';
+  document.getElementById('evColorInput').value = defaultColor || '#FF8FA3';
+  document.getElementById('evUrlInput').value = ev ? (ev.url || '') : '';
+  document.getElementById('evCategoryInput').value = ev ? (ev.category || '') : '';
+  document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
+
+  const allDay = ev ? (ev.allDay !== false) : true;
+  setEvSwitch('evAllDaySwitch', allDay);
+  document.getElementById('evStartTimeInput').style.display = allDay ? 'none' : '';
+  document.getElementById('evEndTimeInput').style.display = allDay ? 'none' : '';
+  setEvSwitch('evGroupBuySwitch', ev ? (ev.isGroupBuy !== false) : true);
+
+  const startDate = ev ? ev.start : (prefillDate || new Date());
+  const endDate = ev ? ev.end : (prefillDate || new Date());
+  document.getElementById('evStartDateInput').value = ymdStr(startDate);
+  document.getElementById('evEndDateInput').value = ymdStr(endDate);
+  document.getElementById('evStartTimeInput').value = ev ? (ev.startTime || '') : '';
+  document.getElementById('evEndTimeInput').value = ev ? (ev.endTime || '') : '';
+  updateEvWeekdayHints();
+
+  document.getElementById('eventEditModal').classList.add('show');
+}
+
+function closeEventEditModal() {
+  document.getElementById('eventEditModal').classList.remove('show');
+  eventEditCtx = null;
+}
+
+document.getElementById('evSaveBtn').addEventListener('click', async () => {
+  if (!eventEditCtx) return;
+  const title = document.getElementById('evTitleInput').value.trim();
+  if (!title) { setFormStatus('evEditStatus', '請輸入標題', 'error'); return; }
+  const startDateStr = document.getElementById('evStartDateInput').value;
+  const endDateStr = document.getElementById('evEndDateInput').value;
+  if (!startDateStr || !endDateStr) { setFormStatus('evEditStatus', '請選擇開始與結束日期', 'error'); return; }
+
+  const allDay = isEvSwitchOn('evAllDaySwitch');
+  const isGroupBuy = isEvSwitchOn('evGroupBuySwitch');
+  const published = document.getElementById('evPublishedInput').checked;
+  const color = document.getElementById('evColorInput').value;
+  const url = document.getElementById('evUrlInput').value.trim();
+  const category = document.getElementById('evCategoryInput').value.trim();
+  const startTime = allDay ? '' : document.getElementById('evStartTimeInput').value;
+  const endTime = allDay ? '' : document.getElementById('evEndTimeInput').value;
+
+  const payload = {
+    title, start: startDateStr, end: endDateStr, color,
+    allDay, isGroupBuy, published, url, category, startTime, endTime
+  };
+
+  const btn = document.getElementById('evSaveBtn');
+  btn.disabled = true;
+  setFormStatus('evEditStatus', '儲存中…', '');
+  try {
+    if (eventEditCtx.isNew) {
+      await postTask(Object.assign({ type: 'event-add' }, payload));
+    } else {
+      await postTask(Object.assign({ type: 'event-update', id: eventEditCtx.ev.id }, payload));
+    }
+    const reopenDate = calEditSelectedDate;
+    closeEventEditModal();
+    await loadData();
+    if (reopenDate) openCalEditDayPanel(reopenDate);
+  } catch (err) {
+    setFormStatus('evEditStatus', '儲存失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+
+document.getElementById('evDeleteBtn').addEventListener('click', async () => {
+  if (!eventEditCtx || eventEditCtx.isNew) return;
+  if (!confirm('確定要刪除「' + eventEditCtx.ev.title + '」這個活動嗎？刪除後就找不回來囉')) return;
+  const btn = document.getElementById('evDeleteBtn');
+  btn.disabled = true;
+  setFormStatus('evEditStatus', '刪除中…', '');
+  try {
+    await postTask({ type: 'event-delete', id: eventEditCtx.ev.id });
+    const reopenDate = calEditSelectedDate;
+    closeEventEditModal();
+    await loadData();
+    if (reopenDate) openCalEditDayPanel(reopenDate);
+  } catch (err) {
+    setFormStatus('evEditStatus', '刪除失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
 
 async function saveMemo() {
   if (!currentModalEv) return;
@@ -2253,34 +2581,43 @@ function collectExtra(prefix, taskName) {
     const el = document.getElementById(prefix + id);
     return el ? el.value.trim() : '';
   };
+  const extra = {};
+
+  // 識別名稱／品牌：不限任務類型，所有任務都可以填，顯示在任務名稱後面方便辨識
+  const brandEl = document.getElementById(prefix + 'BrandInput');
+  const brandVal = brandEl ? brandEl.value.trim() : '';
+  if (brandVal) extra['識別名稱'] = brandVal;
+
   if (taskName === '顧客提問') {
-    const extra = {};
     if (val('ExtraSource')) extra['顧客來源'] = val('ExtraSource');
     if (val('ExtraCustomer')) extra['顧客名稱'] = val('ExtraCustomer');
-    return Object.keys(extra).length ? extra : null;
-  }
-  if (taskName === '廠商選品') {
+  } else if (taskName === '廠商選品') {
     const sel = val('ExtraVendor');
     const vendor = sel === '__other__' ? val('ExtraVendorOther') : sel;
-    const extra = {};
     if (vendor) extra['廠商'] = vendor;
     if (val('ExtraUrl')) extra['選品網址'] = val('ExtraUrl');
     // 對應團購的 key（給行事曆公關品狀態同步用，不顯示在卡片摘要）
     const evKey = val('ExtraEvent');
     if (evKey) extra['團購key'] = evKey;
-    return Object.keys(extra).length ? extra : null;
+  } else if (taskName === '團購安排') {
+    if (val('ExtraBrand')) extra['品牌或商品'] = val('ExtraBrand');
   }
-  if (taskName === '團購安排') {
-    return val('ExtraBrand') ? { '品牌或商品': val('ExtraBrand') } : null;
-  }
-  return null;
+
+  return Object.keys(extra).length ? extra : null;
 }
 
-// 卡片上顯示的附加資訊小字（網址、內部key 太長或無意義就不放）
+// 任務名稱後面加上識別名稱／品牌，方便在列表裡快速辨識（例如：簽署合約書 MNTL）
+function taskDisplayName(task) {
+  const base = task.taskName || '';
+  const brand = task.extra && task.extra['識別名稱'] ? String(task.extra['識別名稱']).trim() : '';
+  return brand ? `${base} ${brand}` : base;
+}
+
+// 卡片上顯示的附加資訊小字（網址、內部key 太長或無意義就不放；識別名稱已經併進標題，這裡也不重複顯示）
 function extraSummary(task) {
   if (!task.extra) return '';
   return Object.keys(task.extra)
-    .filter(k => k !== '選品網址' && k !== '團購key' && task.extra[k])
+    .filter(k => k !== '選品網址' && k !== '團購key' && k !== '識別名稱' && task.extra[k])
     .map(k => task.extra[k])
     .join('・');
 }
@@ -2353,6 +2690,7 @@ document.getElementById('dispatchSubmitBtn').addEventListener('click', async () 
     document.getElementById('dispatchContent').value = '';
     document.getElementById('dispatchDate').value = '';
     document.getElementById('dispatchUrgent').checked = false;
+    document.getElementById('dispatchBrandInput').value = '';
     document.getElementById('dispatchTaskName').value = '';
     renderExtraFields('dispatch'); // 清空附加欄位
     await fetchMemos(); // 立刻同步最新任務
@@ -2382,6 +2720,7 @@ document.getElementById('selfSubmitBtn').addEventListener('click', async () => {
     setFormStatus('selfStatus', '已加入待完成清單 ✓', 'ok');
     document.getElementById('selfContent').value = '';
     document.getElementById('selfDate').value = '';
+    document.getElementById('selfBrandInput').value = '';
     renderExtraFields('self'); // 清空附加欄位
     await fetchMemos();
   } catch (err) {
@@ -2481,7 +2820,7 @@ function buildPendingItem(task) {
 
   const nameLine = document.createElement('div');
   nameLine.className = 'task-name-line';
-  nameLine.textContent = task.taskName || '';
+  nameLine.textContent = taskDisplayName(task);
   if (task.urgent) {
     const tag = document.createElement('span');
     tag.className = 'task-urgent-tag';
@@ -2569,7 +2908,7 @@ function buildDoneItem(task) {
 
   const nameLine = document.createElement('div');
   nameLine.className = 'task-name-line';
-  nameLine.textContent = task.taskName || '';
+  nameLine.textContent = taskDisplayName(task);
   body.appendChild(nameLine);
 
   const meta = document.createElement('div');
@@ -2702,7 +3041,7 @@ function renderDispatchedList() {
     const summary = extraSummary(task);
     row.innerHTML =
       `<span class="di-to">👤 ${escHtml(owner)}</span>` +
-      `<span class="di-name">${escHtml(task.taskName || '')}${summary ? '<span style="color:#4a7fb5; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}${task.date ? ' <span style="color:#a89888; font-size:11px;">📅 ' + escHtml(task.date) + '</span>' : ''}</span>` +
+      `<span class="di-name">${escHtml(taskDisplayName(task))}${summary ? '<span style="color:#4a7fb5; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}${task.date ? ' <span style="color:#a89888; font-size:11px;">📅 ' + escHtml(task.date) + '</span>' : ''}</span>` +
       statusTagHtml(taskStatus(task));
     row.addEventListener('click', () => openTaskModal(owner, task, true));
 
@@ -2732,7 +3071,7 @@ function openTaskModal(owner, task, isDispatchView) {
   taskModalCtx = { owner, task, isDispatchView };
 
   document.getElementById('taskModalBadge').textContent = isDispatchView ? '📤 派遣給 ' + owner : '📋 任務內容';
-  document.getElementById('taskModalName').textContent = task.taskName || '';
+  document.getElementById('taskModalName').textContent = taskDisplayName(task);
 
   const metaParts = [];
   if (task.from) metaParts.push(task.from === owner ? owner + ' 自己安排' : '由 ' + task.from + ' 派遣');
@@ -2753,8 +3092,8 @@ function openTaskModal(owner, task, isDispatchView) {
   const extraEl = document.getElementById('taskModalExtra');
   const extra = task.extra || null;
   if (extra && Object.keys(extra).length) {
-    // 選品網址改用下方按鈕呈現，團購key 是內部用途，都不印成文字
-    const keys = Object.keys(extra).filter(k => k !== '選品網址' && k !== '團購key' && extra[k]);
+    // 選品網址改用下方按鈕呈現，團購key 是內部用途，識別名稱已經併進標題，都不印成文字
+    const keys = Object.keys(extra).filter(k => k !== '選品網址' && k !== '團購key' && k !== '識別名稱' && extra[k]);
     if (keys.length) {
       extraEl.innerHTML = keys
         .map(k => `<b>${escHtml(k)}：</b>${escHtml(extra[k])}`)
