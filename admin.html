@@ -2252,6 +2252,166 @@
     font-weight: 700;
     min-height: 22px;
   }
+
+  /* ===== 行事曆編輯模式 ===== */
+  #calEditToggleBtn.on { background: #FF8FA3; border-color: #FF8FA3; color: #fff; }
+
+  .daycell.editable, .daycell-list.editable { cursor: pointer; }
+  .daycell.editable:hover, .daycell-list.editable:hover { outline: 2px solid #FFB4C2; outline-offset: -2px; }
+
+  /* 尚未確認顯示於前台：開團日／結團日一律淡綠色 */
+  .ebar-wrap.cat-unpublished {
+    background: #DFF2D8;
+    border: 1.5px solid #9ACB85;
+    color: #4f7a3a;
+  }
+
+  .cal-edit-day-panel {
+    max-width: 640px;
+    margin: 14px auto 0;
+    background: #FFF6EC;
+    border: 2px solid #FFE3CC;
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+  .cal-edit-day-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 900;
+    font-size: 14.5px;
+    color: #5a4a3f;
+    margin-bottom: 10px;
+  }
+  .cal-edit-day-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #FFFDFA;
+    border: 2px solid #FFE3CC;
+    border-radius: 12px;
+    padding: 9px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .cal-edit-day-row:hover { background: #FFF1E6; }
+  .cal-edit-day-swatch {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+  .cal-edit-day-row-name {
+    flex: 1;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #5a4a3f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cal-edit-day-row-tag {
+    flex: none;
+    font-size: 10.5px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 2px 8px;
+    background: #DFF2D8;
+    color: #4f7a3a;
+  }
+  .cal-edit-day-empty {
+    text-align: center;
+    color: #b39a8b;
+    font-size: 13px;
+    padding: 14px 0;
+  }
+
+  /* 首頁前台顯示狀態 box（在活動浮動視窗裡） */
+  .publish-status-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: #DFF2D8;
+    border: 1.5px solid #9ACB85;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #4f7a3a;
+  }
+  .publish-status-box.is-published {
+    background: #F0E4D6;
+    border-color: #E0C9B0;
+    color: #8a7462;
+  }
+
+  /* 新增／編輯活動視窗 */
+  .ev-color-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .ev-color-row input[type="color"] {
+    flex: none;
+    width: 46px;
+    height: 38px;
+    border: 2px solid #FFD3B6;
+    border-radius: 10px;
+    padding: 2px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .ev-color-presets {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ev-color-preset-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1.5px #E8D8C8;
+  }
+  .ev-toggle-row {
+    display: flex;
+    gap: 18px;
+    margin-top: 14px;
+    background: #fff;
+    border: 2px solid #FFD3B6;
+    border-radius: 12px;
+    padding: 10px 14px;
+  }
+  .ev-toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ev-toggle-label { font-size: 13px; font-weight: 800; color: #8a7462; }
+  .ev-datetime-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .ev-datetime-label {
+    flex: none;
+    width: 40px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #8a7462;
+  }
+  .ev-datetime-row input[type="date"] { flex: 1 1 auto; }
+  .ev-datetime-row input[type="time"] { flex: 0 0 100px; }
+  .ev-weekday-hint {
+    font-size: 11.5px;
+    color: #a89888;
+    margin: 3px 0 0 48px;
+  }
 </style>
 </head>
 <body>
@@ -2344,6 +2504,9 @@
 
       <div id="dispatchContentBlock" style="display:none;">
         <div id="dispatchExtra"></div>
+        <label for="dispatchBrandInput">識別名稱／品牌（選填，會顯示在任務名稱後面方便辨識，例如：簽署合約書 MNTL）</label>
+        <input type="text" id="dispatchBrandInput" placeholder="例如：MNTL、林貝兒…">
+
         <label for="dispatchContent">任務內容</label>
         <textarea id="dispatchContent" placeholder="輸入任務的詳細內容…"></textarea>
 
@@ -2375,6 +2538,9 @@
       <div class="my-taskname-tags" id="selfMyNamesTags"></div>
       <div id="selfContentBlock" style="display:none;">
         <div id="selfExtra"></div>
+        <label for="selfBrandInput">識別名稱／品牌（選填，會顯示在任務名稱後面方便辨識，例如：簽署合約書 MNTL）</label>
+        <input type="text" id="selfBrandInput" placeholder="例如：MNTL、林貝兒…">
+
         <label for="selfContent">任務內容</label>
         <textarea id="selfContent" placeholder="輸入工作的詳細內容…"></textarea>
         <label for="selfDate">指定日期（可不填）</label>
@@ -2571,6 +2737,7 @@
       </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
+      <button id="calEditToggleBtn" title="開啟／關閉行事曆編輯模式">✏️ 編輯</button>
       <label class="pr-toggle" id="prToggleWrap" title="在開團日／結團日的團購下方顯示公關品狀態小圖示">
         <span class="pr-toggle-text">公關品狀態</span>
         <span class="pr-switch" id="prSwitch"><span class="pr-knob"></span></span>
@@ -2583,6 +2750,16 @@
   <div class="weekdays" id="weekdays"></div>
 
   <div class="month-grid" id="grid"></div>
+
+  <!-- ===== 編輯模式：點選日期後跳出的當日活動列表 ===== -->
+  <div id="calEditDayPanel" class="cal-edit-day-panel" style="display:none;">
+    <div class="cal-edit-day-head">
+      <span id="calEditDayTitle">－</span>
+      <button class="modal-close" id="calEditDayCloseBtn" style="position:static;">✕</button>
+    </div>
+    <div id="calEditDayList"></div>
+    <button class="task-submit-btn" id="calEditDayAddBtn" style="margin-top:10px;">➕ 新增活動</button>
+  </div>
 
   <div id="calGroupListWrap" style="display:none;">
     <div style="text-align:center; margin:10px 0 4px;">
@@ -2597,6 +2774,7 @@
     <span class="legend-item"><span class="legend-dot legend-closingSoon"></span>即將結單</span>
     <span class="legend-item"><span class="legend-dot legend-ended"></span>已結單</span>
     <span class="legend-item"><span class="legend-dot legend-frozen"></span>冷凍團</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#DFF2D8; border:1.5px solid #9ACB85;"></span>尚未確認顯示</span>
   </div>
   </div><!-- /viewCalendar -->
 
@@ -2686,6 +2864,15 @@
     <div class="admin-modal-badge" id="adminModalBadge"></div>
     <h3 id="adminModalTitle"></h3>
     <div class="admin-modal-meta" id="adminModalMeta"></div>
+
+    <div class="publish-status-box" id="adminPublishBox">
+      <span id="adminPublishText">🔔 尚未確認顯示於前台</span>
+      <button class="task-mini-btn" id="adminPublishBtn" style="border-color:#9ACB85; color:#5C9147;">✅ 確認顯示於前台</button>
+    </div>
+
+    <div class="action-row" style="margin-top:10px;">
+      <button class="task-mini-btn" id="adminEditEventBtn" style="width:100%; padding:10px; font-size:13px;">✏️ 編輯這個活動</button>
+    </div>
 
     <div class="early-bird-box" id="adminEarlyBirdBox" style="display:none;">
       <div class="early-bird-label">🎁 早鳥禮參考</div>
@@ -2855,8 +3042,68 @@
   </div>
 </div>
 
+<!-- ===== 行事曆：新增／編輯活動浮動視窗 ===== -->
+<div class="modal-backdrop" id="eventEditModal" onclick="if(event.target===this) closeEventEditModal()">
+  <div class="modal-box" style="width:400px;">
+    <button class="modal-close" onclick="closeEventEditModal()">✕</button>
+    <h3 id="eventEditTitle">➕ 新增活動</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+
+      <label for="evTitleInput">標題</label>
+      <input type="text" id="evTitleInput" placeholder="例如：林貝兒米餅 開團">
+
+      <label for="evColorInput">顏色（顯示全部列表中的底色）</label>
+      <div class="ev-color-row">
+        <input type="color" id="evColorInput" value="#FF8FA3">
+        <div class="ev-color-presets" id="evColorPresets"></div>
+      </div>
+
+      <div class="ev-toggle-row">
+        <div class="ev-toggle-item">
+          <span class="ev-toggle-label">☀️ 整日</span>
+          <span class="pr-switch" id="evAllDaySwitch"><span class="pr-knob"></span></span>
+        </div>
+        <div class="ev-toggle-item">
+          <span class="ev-toggle-label">🛍️ 團購</span>
+          <span class="pr-switch" id="evGroupBuySwitch"><span class="pr-knob"></span></span>
+        </div>
+      </div>
+
+      <div class="ev-datetime-row">
+        <span class="ev-datetime-label">開始</span>
+        <input type="date" id="evStartDateInput">
+        <input type="time" id="evStartTimeInput">
+      </div>
+      <div class="ev-weekday-hint" id="evStartWeekdayHint"></div>
+
+      <div class="ev-datetime-row">
+        <span class="ev-datetime-label">結束</span>
+        <input type="date" id="evEndDateInput">
+        <input type="time" id="evEndTimeInput">
+      </div>
+      <div class="ev-weekday-hint" id="evEndWeekdayHint"></div>
+
+      <label for="evUrlInput" style="margin-top:14px;">團購網址（可不填）</label>
+      <input type="text" id="evUrlInput" placeholder="貼上團購頁面網址…">
+
+      <label for="evCategoryInput">分類標記（可不填，例如：冷凍）</label>
+      <input type="text" id="evCategoryInput" placeholder="例如：冷凍">
+
+      <label class="urgent-check" style="color:#5C9147;" id="evPublishedRow">
+        <input type="checkbox" id="evPublishedInput">✅ 顯示於前台（不勾＝尚未確認，先不顯示）
+      </label>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="evSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="evDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="evEditStatus"></div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=14"></script>
+<script src="admin.js?v=16"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
