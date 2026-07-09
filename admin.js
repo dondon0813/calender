@@ -215,14 +215,16 @@ async function loadData() {
       const url = c[7] ? c[7].v : '';
       const adminUrl = c[8] ? c[8].v : ''; // 後台網址，先保留不使用
       const earlyBirdRaw = c[9] ? c[9].v : '';
-      // 新增欄位（K~P）：顏色／整日／開始時間／結束時間／團購／顯示於前台
+      // 新增欄位（L~Q）：顏色／整日／開始時間／結束時間／團購／顯示於前台
       // 舊資料這幾欄是空的，全部視為向下相容的預設值（顏色沿用調色盤、整日、算團購編號、顯示於前台）
-      const colorRaw = c[10] ? c[10].v : '';
-      const allDayRaw = c[11] ? String(c[11].v || '').trim() : '';
-      const startTimeRaw = c[12] ? String(c[12].v || '').trim() : '';
-      const endTimeRaw = c[13] ? String(c[13].v || '').trim() : '';
-      const isGroupBuyRaw = c[14] ? String(c[14].v || '').trim() : '';
-      const publishedRaw = c[15] ? String(c[15].v || '').trim() : '';
+      // 欄位對照：J=早鳥禮(idx9)　K=食譜品牌(idx10，既有欄位，這裡不需要讀)
+      // L=顏色(idx11)　M=整日(idx12)　N=開始時間(idx13)　O=結束時間(idx14)　P=團購(idx15)　Q=顯示於前台(idx16)
+      const colorRaw = c[11] ? c[11].v : '';
+      const allDayRaw = c[12] ? String(c[12].v || '').trim() : '';
+      const startTimeRaw = c[13] ? String(c[13].v || '').trim() : '';
+      const endTimeRaw = c[14] ? String(c[14].v || '').trim() : '';
+      const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
+      const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
       const start = parseDateStr(startRaw);
       const end = parseDateStr(endRaw);
       if (!start || !end || !title) return;
