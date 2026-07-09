@@ -1,3110 +1,1577 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>雪莉與朵栗 內部後台行事曆</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
-
-  * { box-sizing: border-box; min-width: 0; }
-  html, body { width: 100%; overflow-x: hidden; }
-
-  body {
-    margin: 0;
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
-    color: #5a4a3f;
-    padding: 16px 8px 50px;
-  }
-
-  .wrap {
-    max-width: 1080px;
-    margin: 0 auto;
-    background: #FFFBF5;
-    border-radius: 22px;
-    border: 3px solid #FFE3CC;
-    padding: 18px 14px 26px;
-    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
-  }
-
-  .header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-  }
-
-  .header-row2 {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-
-  .month-num {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 46px;
-    color: #FF8FA3;
-    line-height: 1;
-    text-shadow: 2px 2px 0 #FFE0E8;
-    flex: none;
-  }
-
-  .title-img {
-    height: 96px;
-    width: auto;
-    max-width: 100%;
-    flex: 1 1 auto;
-    object-fit: contain;
-  }
-
-  @media (max-width: 480px) {
-    .title-img { height: 68px; }
-  }
-
-  .controls {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .controls select, .controls button {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
-    background: #fff;
-    color: #b5755a;
-    padding: 7px 14px;
-    cursor: pointer;
-  }
-  .controls button:hover { background: #FFF1E6; }
-
-  /* 公關品狀態顯示開關（圓圈左右滑動） */
-  .pr-toggle {
-    display: none; /* 只有開團日／結團日模式才顯示，由 JS 控制 */
-    align-items: center;
-    gap: 7px;
-    cursor: pointer;
-    user-select: none;
-    padding: 4px 6px;
-  }
-  .pr-toggle.show { display: inline-flex; }
-  .pr-toggle-text { font-size: 13px; font-weight: 700; color: #b5755a; }
-  .pr-switch {
-    position: relative;
-    width: 42px;
-    height: 24px;
-    border-radius: 999px;
-    background: #EAD9CB;
-    transition: background .2s;
-    flex: 0 0 auto;
-  }
-  .pr-switch.on { background: #7AAEEB; }
-  .pr-knob {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,.2);
-    transition: left .2s;
-  }
-  .pr-switch.on .pr-knob { left: 21px; }
-
-  /* 事件條上的公關品狀態小圖示 */
-  .pr-chip {
-    display: inline-block;
-    margin-top: 3px;
-    padding: 1px 8px;
-    border-radius: 999px;
-    font-size: 10.5px;
-    font-weight: 700;
-    line-height: 1.6;
-    white-space: nowrap;
-  }
-  /* 六種公關品狀態色塊（chip 與面板標題共用） */
-  .pr-st-none     { background: #ECE3DA; color: #7a6a5c; }
-  .pr-st-picking  { background: #FFE0B2; color: #9a5f14; }
-  .pr-st-picked   { background: #D6E8FF; color: #2f6bb3; }
-  .pr-st-sent     { background: #DDEBD3; color: #4f7a3a; }
-  .pr-st-received { background: #FFD9E4; color: #b04068; }
-  .pr-st-shot     { background: #E4D9FF; color: #6a4fb0; }
-
-  /* 浮動視窗裡的公關品狀態面板（可收折） */
-  .pr-panel {
-    margin-top: 12px;
-    border: 2px solid #FFE3CC;
-    border-radius: 14px;
-    background: #FFFBF5;
-    overflow: hidden;
-  }
-  .pr-panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .pr-panel-head .pr-head-left {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 700; color: #b5755a; font-size: 14px;
-  }
-  .pr-head-chip {
-    font-size: 12px; font-weight: 700;
-    border-radius: 999px; padding: 2px 10px;
-  }
-  .pr-panel-head .pr-arrow { color: #c9a892; transition: transform .2s; }
-  .pr-panel.open .pr-panel-head .pr-arrow { transform: rotate(180deg); }
-  .pr-panel-body { display: none; padding: 0 14px 14px; }
-  .pr-panel.open .pr-panel-body { display: block; }
-  .pr-field { margin-top: 10px; }
-  .pr-field label {
-    display: block; font-size: 12.5px; font-weight: 700;
-    color: #a9806a; margin-bottom: 5px;
-  }
-  .pr-field select, .pr-field input {
-    width: 100%;
-    box-sizing: border-box;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    border: 2px solid #FFD8C2;
-    border-radius: 10px;
-    padding: 8px 10px;
-    background: #fff;
-    color: #6b4a3a;
-  }
-  .pr-go-btn {
-    display: inline-block;
-    background: #7AAEEB;
-    color: #fff;
-    font-weight: 700;
-    font-size: 13px;
-    text-decoration: none;
-    border-radius: 999px;
-    padding: 8px 16px;
-  }
-  .pr-save-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
-  .pr-save-btn {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    color: #fff;
-    background: #FF8FA3;
-    border: none;
-    border-radius: 999px;
-    padding: 8px 18px;
-    cursor: pointer;
-  }
-  .pr-save-btn:hover { background: #ff7d95; }
-  .pr-save-status { font-size: 12px; color: #7BAF7B; }
-
-  .status {
-    font-size: 11px;
-    color: #b39a8b;
-    margin-bottom: 10px;
-  }
-  .status.error { color: #e0654f; }
-
-  /* ===== 頂部列：目前身份 + 小房子 + 三條線選單 ===== */
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .user-chip {
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #b5755a;
-    background: #FFF1E6;
-    border: 2px solid #FFD3B6;
-    border-radius: 999px;
-    padding: 6px 14px;
-  }
-  .topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .home-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 2px solid #FFD3B6;
-    background: #fff;
-    cursor: pointer;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-  .home-btn:hover { background: #FFF1E6; }
-  .menu-wrap { position: relative; }
-  .menu-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    border: 2px solid #FFD3B6;
-    background: #fff;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 0;
-  }
-  .menu-btn span {
-    display: block;
-    width: 20px;
-    height: 3px;
-    border-radius: 999px;
-    background: #b5755a;
-  }
-  .menu-btn:hover { background: #FFF1E6; }
-  .menu-panel {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 48px;
-    background: #FFFBF5;
-    border: 3px solid #FFE3CC;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(230,160,120,0.25);
-    z-index: 40;
-    min-width: 160px;
-    overflow: hidden;
-  }
-  .menu-panel.show { display: block; }
-  .menu-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    border: none;
-    background: none;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    font-weight: 800;
-    color: #5a4a3f;
-    padding: 12px 18px;
-    cursor: pointer;
-    text-align: left;
-  }
-  .menu-item:hover { background: #FFF1E6; }
-  .menu-item.active { color: #FF8FA3; }
-  .menu-item .mi-urgent-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #e0453a;
-    margin-left: auto;
-  }
-
-  /* ===== 緊急任務紅色提醒（所有頁面最上方）===== */
-  .urgent-banner {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: #FFE3E0;
-    border: 2px solid #F1998F;
-    color: #D63A2E;
-    font-size: 13px;
-    font-weight: 900;
-    border-radius: 14px;
-    padding: 10px 14px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    text-align: center;
-  }
-  .urgent-banner.show { display: flex; animation: urgentBlink 1.2s ease-in-out infinite; }
-  @keyframes urgentBlink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  /* ===== 綠色新任務提醒（優先順序排在緊急之後）===== */
-  .newtask-banner {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: #EBF7E6;
-    border: 2px solid #9ACB85;
-    color: #5C9147;
-    font-size: 13px;
-    font-weight: 900;
-    border-radius: 14px;
-    padding: 10px 14px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    text-align: center;
-  }
-  .newtask-banner.show { display: flex; }
-
-  .task-extra-line {
-    font-size: 12px;
-    font-weight: 800;
-    color: #4a7fb5;
-    margin-top: 4px;
-  }
-  .task-modal-extra {
-    font-size: 12.5px;
-    color: #5a4a3f;
-    background: #E9F2FC;
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 12px;
-    line-height: 1.8;
-  }
-  .task-modal-extra b { color: #4a7fb5; }
-  .urgent-toggle-btn {
-    display: block;
-    width: 100%;
-    border: 2px solid #F1998F;
-    background: #fff;
-    color: #D63A2E;
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 12.5px;
-    font-weight: 800;
-    padding: 8px;
-    cursor: pointer;
-    margin-bottom: 14px;
-  }
-  .urgent-toggle-btn.on { background: #e0453a; border-color: #e0453a; color: #fff; }
-
-  /* ===== 分頁切換 ===== */
-  .view { display: none; }
-  .view.active { display: block; }
-
-  .view-title {
-    text-align: center;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 22px;
-    color: #5a4a3f;
-    margin: 4px 0 6px;
-    position: relative;
-    padding-bottom: 10px;
-  }
-  .view-title::after {
-    content: '';
-    display: block;
-    width: 50%;
-    height: 0;
-    border-bottom: 2px dashed #FFC2CE;
-    margin: 8px auto 0;
-  }
-
-  /* ===== 工作首頁按鈕 ===== */
-  .home-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    max-width: 520px;
-    margin: 18px auto 8px;
-  }
-  .home-card {
-    position: relative;
-    border: 2px solid #FFD9BB;
-    border-radius: 18px;
-    background: #FFEDE0;
-    padding: 26px 10px 20px;
-    text-align: center;
-    cursor: pointer;
-    font-family: 'Noto Sans TC', sans-serif;
-    transition: transform .15s ease;
-  }
-  .home-card:hover { transform: translateY(-2px); }
-  .home-card .hc-icon { font-size: 34px; display: block; margin-bottom: 8px; }
-  .home-card .hc-name { font-size: 14.5px; font-weight: 900; color: #8a7462; }
-  .home-card .hc-urgent {
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    font-size: 16px;
-  }
-
-  /* ===== 便利小工具：App桌面風格圖示 ===== */
-  .tools-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px 8px;
-    max-width: 480px;
-    margin: 22px auto 8px;
-  }
-  .tool-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 7px;
-    cursor: pointer;
-    text-align: center;
-  }
-  .tool-icon-img-wrap {
-    width: 58px;
-    height: 58px;
-    border-radius: 16px;
-    background: #FFFDFB;
-    border: 1.5px solid #F0E4D6;
-    box-shadow: 0 3px 8px rgba(180,130,90,0.18);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    transition: transform .15s ease;
-  }
-  .tool-icon:hover .tool-icon-img-wrap { transform: scale(1.06); }
-  .tool-icon-img-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-    image-rendering: auto;
-  }
-  .tool-icon-fallback { font-size: 26px; }
-  .tool-icon-label {
-    font-size: 11px;
-    font-weight: 800;
-    color: #8a7462;
-    line-height: 1.3;
-  }
-
-  /* ===== 抽獎小幫手 ===== */
-  .lottery-result-box {
-    max-width: 400px;
-    margin: 0 auto 20px;
-    background: linear-gradient(145deg, #FFD9BB, #FFB3C6);
-    border-radius: 20px;
-    padding: 26px 20px;
-    text-align: center;
-    box-shadow: 0 6px 16px rgba(214,58,46,0.18);
-  }
-  .lottery-result-prize {
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #7a4a3a;
-    margin-bottom: 8px;
-  }
-  .lottery-result-winner {
-    font-size: 28px;
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.15);
-  }
-  .lottery-winner-list {
-    max-width: 460px;
-    margin: 0 auto;
-  }
-  .lottery-winner-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 12px;
-    padding: 9px 14px;
-    margin-bottom: 8px;
-    font-size: 13px;
-  }
-  .lottery-winner-row .lw-prize { font-weight: 800; color: #8a7462; }
-  .lottery-winner-row .lw-winner { font-weight: 900; color: #D63A2E; }
-
-  /* ===== 表單（派遣任務／安排工作／公關品新增）===== */
-  .task-form {
-    max-width: 460px;
-    margin: 14px auto;
-    background: #FFF6EC;
-    border-radius: 16px;
-    padding: 18px 16px;
-  }
-  .task-form label {
-    display: block;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #8a7462;
-    margin: 12px 0 6px;
-  }
-  .task-form label:first-child { margin-top: 0; }
-  .task-form select,
-  .task-form input[type="text"],
-  .task-form input[type="password"],
-  .task-form input[type="date"],
-  .task-form textarea {
-    width: 100%;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13.5px;
-    font-weight: 700;
-    color: #5a4a3f;
-    border: 2px solid #FFD3B6;
-    border-radius: 12px;
-    background: #fff;
-    padding: 10px 12px;
-    outline: none;
-  }
-  .task-form textarea { resize: vertical; min-height: 84px; }
-  .task-form select:focus,
-  .task-form input[type="text"]:focus,
-  .task-form input[type="password"]:focus,
-  .task-form input[type="date"]:focus,
-  .task-form textarea:focus { border-color: #FF8FA3; }
-  .newname-row {
-    display: none;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .newname-row.show { display: flex; }
-  .newname-row input { flex: 1; }
-  .newname-row button {
-    flex: none;
-    border: none;
-    border-radius: 999px;
-    background: #9ACB85;
-    color: #fff;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 12.5px;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-  .my-taskname-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-  }
-  .my-taskname-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #F0E4D6;
-    color: #8a7462;
-    font-size: 11.5px;
-    font-weight: 700;
-    border-radius: 999px;
-    padding: 4px 6px 4px 12px;
-  }
-  .my-taskname-tag button {
-    flex: none;
-    border: none;
-    background: #fff;
-    color: #D63A2E;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
-    text-align: center;
-    border-radius: 50%;
-    font-size: 10px;
-    font-weight: 900;
-    cursor: pointer;
-    padding: 0;
-  }
-  .urgent-check {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    font-size: 13px;
-    font-weight: 800;
-    color: #D63A2E;
-    cursor: pointer;
-    user-select: none;
-  }
-  .urgent-check input { width: 17px; height: 17px; accent-color: #e0453a; cursor: pointer; }
-  .task-submit-btn {
-    display: block;
-    width: 100%;
-    margin-top: 16px;
-    border: none;
-    border-radius: 999px;
-    background: #FF8FA3;
-    color: #fff;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 14.5px;
-    padding: 12px;
-    cursor: pointer;
-  }
-  .task-submit-btn:hover { background: #FF7391; }
-  .task-submit-btn:disabled { opacity: .6; cursor: default; }
-  .form-status {
-    text-align: center;
-    font-size: 12px;
-    font-weight: 800;
-    margin-top: 10px;
-    min-height: 16px;
-    color: #a89888;
-  }
-  .form-status.ok { color: #9ACB85; }
-  .form-status.error { color: #e0654f; }
-
-  /* ===== 我的任務清單 ===== */
-  .task-section-title {
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #fff;
-    background: #5a4a3f;
-    border-radius: 999px;
-    padding: 5px 14px;
-    display: inline-block;
-    margin: 18px 0 10px;
-  }
-  .task-list { max-width: 560px; margin: 0 auto; }
-  .task-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-  }
-  .task-item.urgent { border-color: #F1998F; background: #FFF0EE; }
-  .task-item.done { opacity: .7; }
-  .task-check {
-    flex: none;
-    width: 22px;
-    height: 22px;
-    margin-top: 1px;
-    border-radius: 7px;
-    border: 2px solid #E0C9B0;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    color: #fff;
-    cursor: pointer;
-  }
-  .task-item.done .task-check { background: #9ACB85; border-color: #9ACB85; }
-  .task-body { flex: 1; }
-  .task-name-line {
-    font-size: 14px;
-    font-weight: 900;
-    color: #5a4a3f;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .task-urgent-tag {
-    font-size: 10.5px;
-    font-weight: 900;
-    color: #fff;
-    background: #e0453a;
-    border-radius: 999px;
-    padding: 2px 8px;
-  }
-  .task-content-text {
-    font-size: 12.5px;
-    color: #8a7462;
-    line-height: 1.6;
-    margin-top: 4px;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .task-meta {
-    font-size: 11px;
-    color: #b39a8b;
-    margin-top: 6px;
-  }
-  .task-empty {
-    text-align: center;
-    color: #b39a8b;
-    font-size: 13px;
-    padding: 24px 0;
-  }
-  .done-toggle {
-    display: block;
-    margin: 16px auto 0;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 800;
-    color: #b5755a;
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-
-  /* ===== 任務狀態標籤 ===== */
-  .task-status-tag {
-    font-size: 10.5px;
-    font-weight: 900;
-    border-radius: 999px;
-    padding: 2px 8px;
-    flex: none;
-  }
-  .st-pending { color: #8a7462; background: #F0E4D6; }
-  .st-working { color: #fff; background: #F5A25D; }
-  .st-done { color: #fff; background: #9ACB85; }
-  .st-bounce { color: #fff; background: #B79AE8; }
-
-  .task-mini-btn {
-    flex: none;
-    border: none;
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 11px;
-    padding: 5px 10px;
-    cursor: pointer;
-    background: #fff;
-    color: #b5755a;
-    border: 2px solid #FFD3B6;
-  }
-  .task-mini-btn:hover { background: #FFF1E6; }
-  .task-mini-btn.working { border-color: #F5A25D; color: #E58B4E; }
-  .task-mini-btn.working.on { background: #F5A25D; color: #fff; }
-  .task-mini-btn.danger { border-color: #F1998F; color: #D63A2E; }
-  .task-mini-btn.restore { border-color: #9ACB85; color: #5C9147; }
-
-  /* ===== 已完成分組（依日期摺疊）===== */
-  .done-group-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #F5EDE2;
-    border-radius: 12px;
-    padding: 9px 14px;
-    margin: 8px 0;
-    font-size: 12.5px;
-    font-weight: 900;
-    color: #8a7462;
-    cursor: pointer;
-    user-select: none;
-  }
-  .task-item.done-item {
-    background: #F5F1EA;
-    border-color: #E8DECF;
-    opacity: .85;
-  }
-  .task-item.done-item .task-name-line { color: #a89888; text-decoration: line-through; }
-  .done-item-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-  }
-
-  /* ===== 已派遣的任務列表 ===== */
-  .dispatched-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 14px;
-    padding: 11px 14px;
-    margin-bottom: 8px;
-    cursor: pointer;
-  }
-  .dispatched-item.urgent { border-color: #F1998F; background: #FFF0EE; }
-  .dispatched-item .di-to {
-    flex: none;
-    font-size: 11.5px;
-    font-weight: 900;
-    color: #4a7fb5;
-    background: #E3EFFB;
-    border-radius: 999px;
-    padding: 3px 10px;
-  }
-  .dispatched-item .di-name {
-    flex: 1;
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #5a4a3f;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* ===== 任務浮動視窗 ===== */
-  .task-modal-meta {
-    text-align: center;
-    font-size: 11.5px;
-    color: #a89888;
-    margin: -2px 0 12px;
-  }
-  .task-modal-content {
-    font-size: 13px;
-    color: #8a7462;
-    line-height: 1.7;
-    background: #FFF6EC;
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 14px;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .status-pill-row {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 14px;
-  }
-  .status-pill {
-    border: 2px solid #E0C9B0;
-    background: #fff;
-    color: #8a7462;
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 12.5px;
-    font-weight: 800;
-    padding: 7px 14px;
-    cursor: pointer;
-  }
-  .status-pill.active-pending { background: #8a7462; border-color: #8a7462; color: #fff; }
-  .status-pill.active-working { background: #F5A25D; border-color: #F5A25D; color: #fff; }
-  .status-pill.active-done { background: #9ACB85; border-color: #9ACB85; color: #fff; }
-  .stage-list { margin-bottom: 8px; }
-  .stage-item {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-size: 12.5px;
-    color: #5a4a3f;
-    padding: 7px 4px;
-    border-bottom: 1px dotted #F0DFCB;
-    line-height: 1.5;
-  }
-  .stage-item:last-child { border-bottom: none; }
-  .stage-item .stage-dot { flex: none; color: #FF8FA3; font-weight: 900; }
-  .stage-item .stage-time { flex: none; font-size: 10.5px; color: #b39a8b; margin-left: auto; }
-  .stage-item .stage-del {
-    flex: none;
-    border: none;
-    background: none;
-    color: #c99;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 0 2px;
-    margin-left: 4px;
-  }
-  .stage-item .stage-del:hover { color: #e0654f; }
-  .stage-add-row {
-    display: flex;
-    gap: 8px;
-  }
-  .stage-add-row input {
-    flex: 1;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 12.5px;
-    font-weight: 700;
-    color: #5a4a3f;
-    border: 2px solid #FFD3B6;
-    border-radius: 999px;
-    padding: 8px 14px;
-    outline: none;
-  }
-  .stage-add-row input:focus { border-color: #FF8FA3; }
-  .stage-add-row button {
-    flex: none;
-    border: none;
-    border-radius: 999px;
-    background: #7AAEEB;
-    color: #fff;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 12px;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-  .stage-add-row button:hover { background: #5F97DB; }
-
-  /* 選品任務的階段快選按鈕 */
-  .stage-quick {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin: 8px 0 10px;
-  }
-  .stage-quick-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: #a9806a;
-    width: 100%;
-    margin-bottom: 2px;
-  }
-  .stage-quick-btn {
-    border: none;
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 700;
-    font-size: 12px;
-    padding: 6px 13px;
-    cursor: pointer;
-  }
-  .stage-quick-btn:hover { filter: brightness(0.95); }
-  .stage-quick-btn.active {
-    outline: 2.5px solid #b5755a;
-    outline-offset: 1px;
-    box-shadow: 0 0 0 3px rgba(181,117,90,.15);
-  }
-
-  /* 回派對話 */
-  .bounce-item {
-    font-size: 12.5px;
-    color: #5a4a3f;
-    padding: 8px 4px;
-    border-bottom: 1px dotted #F0DFCB;
-    line-height: 1.5;
-  }
-  .bounce-item:last-child { border-bottom: none; }
-  .bounce-item .bounce-from { font-weight: 900; color: #4a7fb5; margin-right: 4px; }
-  .bounce-item .bounce-time { font-size: 10.5px; color: #b39a8b; margin-left: 6px; }
-
-  /* 可收折區塊標題（階段紀錄用） */
-  .rc-section-head.collapsible { cursor: pointer; user-select: none; }
-  .rc-section-head.collapsible .pr-arrow { margin-left: auto; color: #c9a892; transition: transform .2s; }
-
-  /* ===== 任務視窗小卡樣式 ===== */
-  .recipe-card-modal {
-    width: 380px;
-    padding: 16px 18px 20px;
-    background: #FFFCF7;
-    border-radius: 26px;
-    border: none;
-    max-height: 88vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    box-shadow: 0 16px 40px rgba(210,150,110,0.28);
-  }
-  .rc-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .rc-badge-pill {
-    font-size: 12px;
-    font-weight: 800;
-    color: #FF8FA3;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 5px 12px;
-  }
-  .rc-close-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: none;
-    background: #FF8FA3;
-    color: #fff;
-    font-size: 12px;
-    cursor: pointer;
-    flex: none;
-  }
-  .rc-title {
-    text-align: center;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 20px;
-    color: #5a4a3f;
-    margin: 4px 0 6px;
-    position: relative;
-    padding-bottom: 10px;
-  }
-  .rc-title::after {
-    content: '';
-    display: block;
-    width: 78%;
-    height: 0;
-    border-bottom: 2px dashed #FFC2CE;
-    margin: 8px auto 0;
-  }
-  .rc-section { margin-bottom: 16px; }
-  .rc-section-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .rc-section-title {
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #5a4a3f;
-    background: #FFE9CE;
-    border-radius: 999px;
-    padding: 5px 14px;
-  }
-  .rc-footer {
-    text-align: center;
-    font-size: 11.5px;
-    color: #FFB4C2;
-    font-weight: 700;
-    margin-top: 14px;
-  }
-  .modal-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-  }
-
-  .weekdays {
-    display: grid;
-    gap: 5px;
-    margin-bottom: 6px;
-  }
-  .weekday {
-    text-align: center;
-    padding: 6px 0;
-    border-radius: 999px;
-    color: #fff;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 1px;
-  }
-  .wd-0 { background: #FF8FA3; }
-  .wd-1 { background: #FFB37A; }
-  .wd-2 { background: #9ACB85; }
-  .wd-3 { background: #6FC8C2; }
-  .wd-4 { background: #7AAEEB; }
-  .wd-5 { background: #B79AE8; }
-  .wd-6 { background: #FF8FA3; }
-
-  .month-grid {
-    border-top: 2px solid #F3E2D3;
-    border-left: 2px solid #F3E2D3;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-
-  .week {
-    display: grid;
-    border-bottom: 2px solid #F3E2D3;
-  }
-
-  .daycell {
-    grid-row: 1 / -1;
-    border-right: 2px solid #F3E2D3;
-    background: #FFFDFA;
-    padding: 5px 4px 4px;
-    min-height: 30px;
-  }
-  .daycell.dim { background: #FBF6EF; }
-  .daycell.today {
-    background: #FFE9C2;
-    box-shadow: inset 0 0 0 2px #FFB454;
-  }
-  .daynum {
-    font-weight: 700;
-    font-size: 13px;
-    color: #a89888;
-  }
-  .daycell.dim .daynum { color: #ddd0c2; }
-  .daycell.today .daynum { color: #C97A1A; font-weight: 900; }
-
-  .daycell-list {
-    border-right: 2px solid #F3E2D3;
-    background: #FFFDFA;
-    padding: 5px 4px 6px;
-    min-height: 30px;
-  }
-  .daycell-list.dim { background: #FBF6EF; }
-  .daycell-list.today {
-    background: #FFE9C2;
-    box-shadow: inset 0 0 0 2px #FFB454;
-  }
-  .daycell-list.today .daynum { color: #C97A1A; font-weight: 900; }
-  .daycell-list .events-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-top: 3px;
-  }
-
-  .ebar {
-    margin: 3px 2px;
-    border-radius: 999px;
-    padding: 2px 8px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    overflow: hidden;
-    white-space: nowrap;
-    font-size: 11px;
-    align-self: center;
-    z-index: 2;
-    text-decoration: none;
-    color: inherit;
-  }
-  .ebar.clickable {
-    cursor: pointer;
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  .ebar.clickable:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-  }
-
-  /* 開團日 / 結團日 模式：讓長條寬度跟著格子走，文字換行不外溢 */
-  .ebar-wrap {
-    align-self: stretch;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    white-space: normal;
-    border-radius: 10px;
-    text-align: center;
-    position: relative;
-  }
-  .ebar-wrap .ev-tag {
-    margin-left: 0;
-    margin-top: 2px;
-  }
-
-  /* 狀態色：未開團(黃) / 已開團(橘) / 即將結單(紅粉) / 已結團(灰) */
-  .ebar-wrap.cat-upcoming {
-    background: #FFF6DD;
-    border: 1.5px solid #E8B93D;
-    color: #8A6D1F;
-  }
-  .ebar-wrap.cat-active {
-    background: #FFEcD9;
-    border: 1.5px solid #FF9F4A;
-    color: #B5601C;
-  }
-  .ebar-wrap.cat-closingSoon {
-    background: #FFE1E8;
-    border: 1.5px solid #FF6F91;
-    color: #C1315A;
-  }
-  .ebar-wrap.cat-ended {
-    background: #EFEBE5;
-    border: 1.5px solid #B8AC9C;
-    color: #7A7166;
-  }
-  /* 冷凍團：固定藍色，右下角淺色雪花浮水印 */
-  .ebar-wrap.cat-frozen {
-    background-color: #E6F1FC;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
-    background-repeat: no-repeat;
-    background-position: bottom right;
-    background-size: 34px 34px;
-    border: 1.5px solid #4F91D9;
-    color: #2F6FB0;
-  }
-  /* 行事曆「工作表」模式：把安排好日期的工作用小卡片排在對應日期 */
-  .ebar-wrap.cat-work {
-    background: #EAF6E3;
-    border: 1.5px solid #9ACB85;
-    color: #4f7a3a;
-  }
-  .ebar-wrap.cat-work-urgent {
-    background: #FFE1DE;
-    border: 1.5px solid #e0453a;
-    color: #a8291f;
-  }
-  .ebar-wrap.cat-work-done {
-    background: #EFEBE5;
-    border: 1.5px solid #B8AC9C;
-    color: #7A7166;
-  }
-  .countdown-dot {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 3px;
-    border-radius: 999px;
-    background: #FF4D6A;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-  }
-
-  /* 早鳥禮彈窗 */
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(90, 74, 63, 0.45);
-    z-index: 50;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-backdrop.show {
-    display: flex;
-  }
-  .modal-box {
-    position: relative;
-    background: #FFFBF5;
-    border-radius: 18px;
-    border: 3px solid #FFE3CC;
-    padding: 24px 22px;
-    max-width: 90%;
-    width: 360px;
-    max-height: 88vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  }
-  .modal-box h3 {
-    margin: 0 0 12px;
-    color: #FF8FA3;
-    font-size: 17px;
-  }
-  .modal-box ul {
-    margin: 0;
-    padding-left: 18px;
-    color: #5a4a3f;
-    font-size: 14px;
-    line-height: 1.7;
-  }
-  .modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: none;
-    background: none;
-    font-size: 16px;
-    color: #b5755a;
-    cursor: pointer;
-  }
-
-  /* 內部後台彈窗 */
-  .admin-modal { width: 380px; }
-  .admin-modal-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 800;
-    color: #b5755a;
-    background: #FFF1E6;
-    border-radius: 999px;
-    padding: 2px 10px;
-    margin-bottom: 8px;
-  }
-  .admin-modal-meta {
-    font-size: 12px;
-    color: #a89888;
-    margin: -6px 0 14px;
-  }
-  .early-bird-box {
-    background: #FFF6DD;
-    border: 1.5px solid #E8B93D;
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 14px;
-  }
-  .early-bird-label {
-    font-size: 12px;
-    font-weight: 800;
-    color: #8A6D1F;
-    margin-bottom: 4px;
-  }
-  .early-bird-box ul {
-    margin: 0;
-    padding-left: 16px;
-    font-size: 12.5px;
-    color: #8A6D1F;
-    line-height: 1.6;
-  }
-  .action-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .action-btn {
-    flex: 1 1 auto;
-    text-align: center;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 13.5px;
-    border-radius: 999px;
-    padding: 10px 14px;
-    background: #FF8FA3;
-    color: #fff;
-  }
-  .action-btn:hover { background: #FF7391; }
-  .action-btn-alt {
-    background: #7AAEEB;
-  }
-  .action-btn-alt:hover { background: #5F97DB; }
-  .backend-edit-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-  }
-  .backend-edit-row input {
-    flex: 1 1 auto;
-    min-width: 0;
-    border: 2px solid #FFD3B6;
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 12.5px;
-    color: #5a4a3f;
-    background: #FFFDFA;
-  }
-  .backend-edit-row .icon-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 13px;
-  }
-  .icon-btn {
-    flex: none;
-    width: 38px;
-    height: 38px;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
-    background: #fff;
-    color: #b5755a;
-    font-size: 15px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .icon-btn:hover { background: #FFF1E6; }
-  .memo-section {
-    margin-top: 16px;
-    border-top: 1.5px dashed #F3E2D3;
-    padding-top: 14px;
-  }
-  .memo-section label {
-    display: block;
-    font-size: 13px;
-    font-weight: 700;
-    color: #5a4a3f;
-    margin-bottom: 6px;
-  }
-  .memo-section textarea {
-    width: 100%;
-    border: 2px solid #FFD3B6;
-    border-radius: 12px;
-    padding: 10px 12px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13px;
-    color: #5a4a3f;
-    resize: vertical;
-    background: #FFFDFA;
-  }
-  .memo-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .save-btn {
-    border: none;
-    background: #9ACB85;
-    color: #fff;
-    font-weight: 800;
-    font-size: 13px;
-    border-radius: 999px;
-    padding: 9px 20px;
-    cursor: pointer;
-  }
-  .save-btn:hover { background: #85BC6E; }
-  .save-btn:disabled { background: #cfd8c9; cursor: default; }
-  .memo-status {
-    font-size: 12px;
-    color: #9ACB85;
-    font-weight: 700;
-  }
-
-  /* 進入密碼鎖 */
-  .password-gate {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .gate-box {
-    background: #FFFBF5;
-    border-radius: 22px;
-    border: 3px solid #FFE3CC;
-    padding: 36px 30px;
-    max-width: 320px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.2);
-  }
-  .gate-lock { font-size: 34px; margin-bottom: 6px; }
-  .gate-box h2 {
-    margin: 0 0 4px;
-    font-size: 18px;
-    color: #FF8FA3;
-  }
-  .gate-box p {
-    margin: 0 0 18px;
-    font-size: 13px;
-    color: #a89888;
-  }
-  .gate-box input {
-    width: 100%;
-    border: 2px solid #FFD3B6;
-    border-radius: 999px;
-    padding: 10px 16px;
-    font-size: 14px;
-    text-align: center;
-    color: #5a4a3f;
-    margin-bottom: 12px;
-    background: #fff;
-  }
-  .gate-box button {
-    width: 100%;
-    border: none;
-    background: #FF8FA3;
-    color: #fff;
-    font-weight: 800;
-    font-size: 14px;
-    border-radius: 999px;
-    padding: 11px 16px;
-    cursor: pointer;
-  }
-  .gate-box button:hover { background: #FF7391; }
-  .gate-error {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #e0654f;
-    min-height: 16px;
-  }
-
-  .badge {
-    flex: none;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    color: #fff;
-    font-weight: 800;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .ev-date {
-    flex: none;
-    font-weight: 800;
-    color: #fff;
-    font-size: 11px;
-  }
-  .ev-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #fff;
-    font-weight: 500;
-  }
-  .ev-title-wrap {
-    flex: 1 1 0%;
-    min-width: 0;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    line-height: 1.3;
-    word-break: keep-all;
-    overflow-wrap: normal;
-    color: inherit;
-    font-weight: 700;
-  }
-  .ev-tag {
-    flex: none;
-    background: #FF5C8A;
-    color: #fff;
-    font-weight: 800;
-    font-size: 9px;
-    border-radius: 999px;
-    padding: 1px 6px;
-    margin-left: auto;
-  }
-
-  .c0 .badge { background: #FFE6EC; color: #FF8FA3; } .c0.ebar { background: #FF8FA3; }
-  .c1 .badge { background: #FFEcD6; color: #FFB37A; } .c1.ebar { background: #FFB37A; }
-  .c2 .badge { background: #E4F5DF; color: #9ACB85; } .c2.ebar { background: #9ACB85; }
-  .c3 .badge { background: #DEF5F4; color: #6FC8C2; } .c3.ebar { background: #6FC8C2; }
-  .c4 .badge { background: #E2EBFD; color: #7AAEEB; } .c4.ebar { background: #7AAEEB; }
-  .c5 .badge { background: #EFE4FB; color: #B79AE8; } .c5.ebar { background: #B79AE8; }
-  .c6 .badge { background: #FBEFD9; color: #D9A441; } .c6.ebar { background: #F0C36D; }
-
-  .footer {
-    text-align: center;
-    margin-top: 18px;
-    color: #FF8FA3;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  .legend {
-    display: none;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 14px;
-    margin-top: 16px;
-    padding-top: 10px;
-    border-top: 1.5px dashed #F3E2D3;
-  }
-  .legend.show {
-    display: flex;
-  }
-  .legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #a89888;
-  }
-  .legend-dot {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    display: inline-block;
-    flex: none;
-  }
-  .legend-upcoming { background: #FFF6DD; border: 1.5px solid #E8B93D; }
-  .legend-active { background: #FFEcD9; border: 1.5px solid #FF9F4A; }
-  .legend-closingSoon { background: #FFE1E8; border: 1.5px solid #FF6F91; }
-  .legend-ended { background: #EFEBE5; border: 1.5px solid #B8AC9C; }
-  .legend-frozen { background: #E6F1FC; border: 1.5px solid #4F91D9; }
-  .footer a {
-    color: inherit;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
-
-  @media (max-width: 480px) {
-    .month-num { font-size: 36px; }
-    .weekday { font-size: 10px; }
-    .daynum { font-size: 11px; }
-    .ebar { font-size: 9.5px; padding: 2px 6px; }
-    .badge { width: 14px; height: 14px; font-size: 8.5px; }
-    .ev-date { font-size: 9.5px; }
-    .ev-tag { font-size: 8px; }
-  }
-
-  /* ===== 我的備忘錄 / 共用備忘錄 ===== */
-  .pnote-header-wrap { position: relative; max-width: 900px; margin: 0 auto; }
-  .pnote-header-wrap .view-title { margin: 4px 0 6px; }
-  .pnote-scope-toggle {
-    position: absolute;
-    top: 2px;
-    right: 0;
-  }
-  .pnote-hint {
-    max-width: 900px;
-    margin: -6px auto 14px;
-    text-align: center;
-    font-size: 12px;
-    color: #a89888;
-  }
-  /* 搜尋列 + 新增資料夾/備忘錄圖示 */
-  .mtree-toolbar {
-    max-width: 900px;
-    margin: 0 auto 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .mtree-search-wrap {
-    flex: 1 1 200px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #fff;
-    border: 2px solid #FFD3B6;
-    border-radius: 999px;
-    padding: 8px 14px;
-  }
-  .mtree-search-wrap input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13.5px;
-    color: #5a4a3f;
-    background: transparent;
-  }
-  .mtree-search-icon { font-size: 14px; color: #b5755a; }
-  .mtree-icon-btn {
-    flex: none;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 2px solid #FFD3B6;
-    background: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-  .mtree-icon-btn:hover { background: #FFF1E6; }
-
-  /* 左右分欄（桌面：列表＋編輯器並排；手機：靠 class 切換全螢幕） */
-  .mtree-wrap {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-  }
-  .mtree-list-pane { flex: 1 1 340px; min-width: 0; }
-  .mtree-editor-pane {
-    flex: 1 1 380px;
-    min-width: 0;
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 16px;
-    padding: 14px 16px;
-  }
-  .mtree-back-btn {
-    display: none;
-    border: none;
-    background: none;
-    color: #b5755a;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 13.5px;
-    cursor: pointer;
-    padding: 4px 0 10px;
-  }
-  @media (max-width: 860px) {
-    .mtree-wrap { display: block; }
-    .mtree-wrap:not(.show-editor) .mtree-editor-pane { display: none; }
-    .mtree-wrap.show-editor .mtree-list-pane { display: none; }
-    .mtree-wrap.show-editor .mtree-back-btn { display: inline-block; }
-  }
-
-  /* 樹狀節點：資料夾列／備忘錄列 */
-  .mtree-folder-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 6px;
-    border-radius: 10px;
-    cursor: pointer;
-  }
-  .mtree-folder-row:hover { background: #FFF1E6; }
-  .mtree-arrow {
-    flex: none;
-    width: 16px;
-    text-align: center;
-    color: #c9a892;
-    font-size: 11px;
-  }
-  .mtree-folder-icon { flex: none; font-size: 14px; }
-  .mtree-folder-name {
-    flex: 1;
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #5a4a3f;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .mtree-folder-count {
-    flex: none;
-    font-size: 11.5px;
-    color: #b39a8b;
-    font-weight: 700;
-  }
-  .mtree-folder-add, .mtree-folder-del {
-    flex: none;
-    border: none;
-    background: none;
-    color: #c9a892;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 2px 4px;
-  }
-  .mtree-folder-add:hover { color: #7BAF7B; }
-  .mtree-folder-del:hover { color: #e0654f; }
-  .mtree-children {
-    margin-left: 20px;
-    border-left: 1.5px dashed #F0DFCB;
-    padding-left: 10px;
-  }
-  .mtree-note-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 6px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #5a4a3f;
-  }
-  .mtree-note-row:hover { background: #FFF1E6; }
-  .mtree-note-row.active { background: #FFE9CE; font-weight: 800; }
-  .mtree-note-icon { flex: none; font-size: 12px; }
-  .mtree-note-title {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .mtree-search-path {
-    flex: none;
-    font-size: 10.5px;
-    color: #a89888;
-    margin-left: 6px;
-  }
-  .pnote-textarea {
-    width: 100%;
-    min-height: 90px;
-    resize: vertical;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: #5a4a3f;
-    border: 2px solid #FFD3B6;
-    border-radius: 12px;
-    background: #fff;
-    padding: 10px 12px;
-    outline: none;
-  }
-  .pnote-textarea:focus { border-color: #FF8FA3; }
-  .pnote-card-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .pnote-folder-select {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 12.5px;
-    font-weight: 700;
-    color: #8a7462;
-    border: 2px solid #FFD3B6;
-    border-radius: 10px;
-    background: #fff;
-    padding: 6px 8px;
-  }
-  .pnote-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-  .pnote-btn {
-    border: none;
-    border-radius: 999px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 12px;
-    padding: 7px 12px;
-    cursor: pointer;
-    color: #fff;
-    background: #b5a08c;
-  }
-  .pnote-btn-save { background: #9ACB85; }
-  .pnote-btn-copy { background: #7FB6D9; }
-  .pnote-btn-delete { background: #e0654f; }
-  .pnote-card-status {
-    text-align: right;
-    font-size: 11.5px;
-    font-weight: 800;
-    color: #a89888;
-    min-height: 14px;
-    margin-top: 6px;
-  }
-  .pnote-card-status.ok { color: #9ACB85; }
-  .pnote-card-status.error { color: #e0654f; }
-
-  /* ===== 公關品狀態清單（首頁卡片頁面） ===== */
-  .pri-card {
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    max-width: 640px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .pri-card-title {
-    font-size: 14px;
-    font-weight: 900;
-    color: #5a4a3f;
-    margin-bottom: 4px;
-  }
-  .pri-card-meta {
-    font-size: 12px;
-    color: #a89888;
-    margin-bottom: 8px;
-  }
-  .pri-card-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .pri-card-row input, .pri-card-row select {
-    flex: 1 1 120px;
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 12.5px;
-    border: 2px solid #FFD3B6;
-    border-radius: 10px;
-    padding: 7px 10px;
-    background: #fff;
-    color: #5a4a3f;
-  }
-  .pri-card-actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .pri-card-status {
-    font-size: 11.5px;
-    font-weight: 800;
-    color: #a89888;
-  }
-  .pri-card-status.ok { color: #9ACB85; }
-  .pri-card-status.error { color: #e0654f; }
-  /* ===== 開團狀態：清單卡片模式 ===== */
-  .group-list {
-    padding: 4px 2px 8px;
-  }
-  .gs-section-title {
-    text-align: center;
-    font-weight: 900;
-    font-size: 20px;
-    margin: 18px 0 12px;
-    letter-spacing: 1px;
-  }
-  .gs-section-title:first-child { margin-top: 4px; }
-  .gs-title-closing { color: #E0405F; }
-  .gs-title-active { color: #C98A3E; }
-  .gs-card {
-    display: block;
-    position: relative;
-    background: #B98868;
-    color: #fff;
-    border-radius: 16px;
-    padding: 14px 20px;
-    margin-bottom: 14px;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    width: 100%;
-    font-family: inherit;
-    transition: transform 0.12s ease;
-  }
-  .gs-card:hover { transform: scale(1.015); }
-  .gs-card.gs-today {
-    background: #7A5A42;
-    box-shadow: 0 0 0 3px #FFD3DC;
-  }
-  .gs-card-name {
-    font-size: 19px;
-    font-weight: 700;
-  }
-  .gs-card-date {
-    font-size: 13px;
-    opacity: 0.85;
-    margin-top: 4px;
-  }
-  .gs-badges {
-    position: absolute;
-    top: -10px;
-    right: 12px;
-    display: flex;
-    gap: 6px;
-  }
-  .gs-today-badge,
-  .gs-frozen-badge {
-    white-space: nowrap;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 999px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  }
-  .gs-today-badge { background: #FF4D6D; }
-  .gs-frozen-badge { background: #4F91D9; }
-  .gs-empty {
-    text-align: center;
-    color: #a89787;
-    padding: 30px 0;
-    font-size: 14px;
-  }
-
-  /* ===== 食譜貼文產生器：選食譜的卡片 grid（跟 recipes.html 同款樣式，之前漏加導致圖片破版） ===== */
-  .recipe-card-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .recipe-reco-card {
-    background: #FFFDFA;
-    border: 2px solid #FFE3CC;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    box-shadow: 0 3px 8px rgba(230,160,120,0.12);
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  .recipe-reco-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 18px rgba(230,160,120,0.25);
-  }
-  .recipe-reco-card img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    background: #FFF1E6;
-    display: block;
-  }
-  .recipe-reco-card .rrc-body {
-    padding: 10px 10px 12px;
-  }
-  .recipe-reco-card .rrc-name {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 700;
-    font-size: 13.5px;
-    color: #5a4a3f;
-    margin-bottom: 6px;
-  }
-  .recipe-reco-card .rrc-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-  .mini-tag {
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 999px;
-    padding: 2px 8px;
-  }
-
-  /* ===== 食譜貼文產生器：4:5 貼文圖（離畫面外繪製，html2canvas 截圖用） =====
-     設計原則：每個區塊都有固定高度預算，總和控制在 1350px 以內，絕對不會超版。
-     食材上限 8 個（4x2）、步驟上限 4 個（橫向一排）、小提醒最多 3 行。 */
-  #pgPosterStage {
-    position: fixed;
-    left: -9999px;
-    top: 0;
-    width: 1080px;
-    height: 1350px;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .pgp-poster {
-    position: relative;
-    width: 1080px;
-    height: 1350px;
-    background: linear-gradient(165deg, #FFFCF6 0%, #FFF4E8 55%, #FFF0E4 100%);
-    font-family: 'Noto Sans TC', sans-serif;
-    color: #5a4a3f;
-    box-sizing: border-box;
-    padding: 56px 60px 40px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-  .pgp-doodle {
-    position: absolute;
-    opacity: 0.28;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  /* -- 標頭：標語 + 標題 + 圓形大頭照，固定高度 260px -- */
-  .pgp-header-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    height: 260px;
-    flex: none;
-  }
-  .pgp-header-text { flex: 1 1 auto; min-width: 0; padding-top: 4px; }
-  .pgp-tagline {
-    display: inline-block;
-    background: #FFE3EB;
-    color: #FF6F91;
-    font-weight: 800;
-    font-size: 20px;
-    border-radius: 999px;
-    padding: 7px 20px;
-    margin-bottom: 16px;
-  }
-  .pgp-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 50px;
-    color: #E0954A;
-    line-height: 1.28;
-    max-width: 560px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    position: relative;
-    padding-bottom: 14px;
-  }
-  .pgp-title::after {
-    content: '';
-    position: absolute;
-    left: 0; bottom: 0;
-    width: 130px;
-    height: 0;
-    border-bottom: 3px dashed #FFC2CE;
-  }
-  .pgp-hero-frame {
-    position: relative;
-    flex: none;
-    width: 236px;
-    height: 236px;
-  }
-  .pgp-hero-circle {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 9px solid #fff;
-    box-shadow: 0 10px 22px rgba(224,149,74,0.28);
-    overflow: hidden;
-    background: #FFF1E6;
-  }
-  .pgp-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pgp-hero-tape {
-    position: absolute;
-    top: -14px;
-    left: -26px;
-    background: #FFB37A;
-    color: #fff;
-    font-weight: 800;
-    font-size: 15px;
-    padding: 6px 16px;
-    border-radius: 4px;
-    transform: rotate(-8deg);
-    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-    white-space: nowrap;
-  }
-
-  /* -- 4 個特色標籤，固定高度 56px -- */
-  .pgp-benefit-row {
-    display: flex;
-    gap: 12px;
-    height: 56px;
-    flex: none;
-    margin-top: 22px;
-  }
-  .pgp-benefit-tag {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: #EAF6E3;
-    color: #4f7a3a;
-    font-weight: 800;
-    font-size: 17px;
-    border-radius: 999px;
-    padding: 0 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* -- 區塊標籤共用樣式 -- */
-  .pgp-section-label {
-    display: inline-block;
-    font-weight: 800;
-    font-size: 22px;
-    border-radius: 999px;
-    padding: 7px 20px;
-    margin-bottom: 16px;
-  }
-  .pgp-label-pink { background: #FFE9CE; color: #B5601C; }
-  .pgp-label-orange { background: #FFE0B2; color: #9a5f14; }
-
-  /* -- 準備食材：固定高度 330px，4欄 x 最多2排 -- */
-  .pgp-ing-section { height: 330px; flex: none; margin-top: 24px; overflow: hidden; }
-  .pgp-ing-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px 12px;
-  }
-  .pgp-ing-tile { text-align: center; }
-  .pgp-ing-photo {
-    width: 108px;
-    height: 108px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #fff;
-    border: 4px solid #FFE3CC;
-    display: block;
-    margin: 0 auto 8px;
-  }
-  .pgp-ing-label {
-    font-size: 16px;
-    font-weight: 800;
-    color: #8a7462;
-    line-height: 1.3;
-  }
-
-  /* -- 簡單步驟：固定高度 300px，橫向一排最多4格 -- */
-  .pgp-step-section { height: 300px; flex: none; margin-top: 20px; overflow: hidden; }
-  .pgp-step-grid {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 16px;
-  }
-  .pgp-step-card { text-align: center; }
-  .pgp-step-photo-wrap { position: relative; margin-bottom: 10px; }
-  .pgp-step-photo {
-    width: 100%;
-    aspect-ratio: 1/1;
-    object-fit: cover;
-    border-radius: 20px;
-    border: 3px solid #FFE3CC;
-    background: #FFF1E6;
-    display: block;
-  }
-  .pgp-step-photo-empty {
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px;
-  }
-  .pgp-step-badge {
-    position: absolute;
-    top: -12px; left: -12px;
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    background: #F5A25D;
-    color: #fff;
-    font-weight: 800;
-    font-size: 19px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-  }
-  .pgp-step-caption {
-    font-size: 15px;
-    color: #8a7462;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* -- 小提醒：固定高度 96px 的橫幅（放最下面，跟版面等寬，不會跟其他區塊重疊） -- */
-  .pgp-tip-bar {
-    height: 96px;
-    flex: none;
-    margin-top: 20px;
-    background: #FFF6EC;
-    border: 2px dashed #FFC79A;
-    border-radius: 20px;
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    overflow: hidden;
-  }
-  .pgp-tip-icon { font-size: 30px; flex: none; }
-  .pgp-tip-head { font-weight: 800; font-size: 17px; color: #E0954A; margin-bottom: 4px; }
-  .pgp-tip-list { margin: 0; padding: 0; list-style: none; font-size: 15px; color: #8a7462; line-height: 1.5; }
-  .pgp-tip-list li { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-
-  .pgp-empty { font-size: 16px; color: #b39a8b; }
-
-  .pgp-footer {
-    flex: 1 1 auto;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    font-size: 16px;
-    color: #FFB4C2;
-    font-weight: 700;
-    min-height: 22px;
-  }
-
-  /* ===== 行事曆編輯模式 ===== */
-  #calEditToggleBtn.on { background: #FF8FA3; border-color: #FF8FA3; color: #fff; }
-
-  .daycell.editable, .daycell-list.editable { cursor: pointer; }
-  .daycell.editable:hover, .daycell-list.editable:hover { outline: 2px solid #FFB4C2; outline-offset: -2px; }
-
-  /* 尚未確認顯示於前台：開團日／結團日一律淡綠色 */
-  .ebar-wrap.cat-unpublished {
-    background: #DFF2D8;
-    border: 1.5px solid #9ACB85;
-    color: #4f7a3a;
-  }
-
-  .cal-edit-day-panel {
-    max-width: 640px;
-    margin: 14px auto 0;
-    background: #FFF6EC;
-    border: 2px solid #FFE3CC;
-    border-radius: 16px;
-    padding: 14px 16px;
-  }
-  .cal-edit-day-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-weight: 900;
-    font-size: 14.5px;
-    color: #5a4a3f;
-    margin-bottom: 10px;
-  }
-  .cal-edit-day-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #FFFDFA;
-    border: 2px solid #FFE3CC;
-    border-radius: 12px;
-    padding: 9px 12px;
-    margin-bottom: 8px;
-    cursor: pointer;
-  }
-  .cal-edit-day-row:hover { background: #FFF1E6; }
-  .cal-edit-day-swatch {
-    flex: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-  }
-  .cal-edit-day-row-name {
-    flex: 1;
-    font-size: 13.5px;
-    font-weight: 800;
-    color: #5a4a3f;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .cal-edit-day-row-tag {
-    flex: none;
-    font-size: 10.5px;
-    font-weight: 800;
-    border-radius: 999px;
-    padding: 2px 8px;
-    background: #DFF2D8;
-    color: #4f7a3a;
-  }
-  .cal-edit-day-empty {
-    text-align: center;
-    color: #b39a8b;
-    font-size: 13px;
-    padding: 14px 0;
-  }
-
-  /* 首頁前台顯示狀態 box（在活動浮動視窗裡） */
-  .publish-status-box {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    flex-wrap: wrap;
-    background: #DFF2D8;
-    border: 1.5px solid #9ACB85;
-    border-radius: 12px;
-    padding: 8px 12px;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #4f7a3a;
-  }
-  .publish-status-box.is-published {
-    background: #F0E4D6;
-    border-color: #E0C9B0;
-    color: #8a7462;
-  }
-
-  /* 新增／編輯活動視窗 */
-  .ev-color-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .ev-color-row input[type="color"] {
-    flex: none;
-    width: 46px;
-    height: 38px;
-    border: 2px solid #FFD3B6;
-    border-radius: 10px;
-    padding: 2px;
-    background: #fff;
-    cursor: pointer;
-  }
-  .ev-color-presets {
-    flex: 1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .ev-color-preset-swatch {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1.5px #E8D8C8;
-  }
-  .ev-toggle-row {
-    display: flex;
-    gap: 18px;
-    margin-top: 14px;
-    background: #fff;
-    border: 2px solid #FFD3B6;
-    border-radius: 12px;
-    padding: 10px 14px;
-  }
-  .ev-toggle-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .ev-toggle-label { font-size: 13px; font-weight: 800; color: #8a7462; }
-  .ev-datetime-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  .ev-datetime-label {
-    flex: none;
-    width: 40px;
-    font-size: 13px;
-    font-weight: 800;
-    color: #8a7462;
-  }
-  .ev-datetime-row input[type="date"] { flex: 1 1 auto; }
-  .ev-datetime-row input[type="time"] { flex: 0 0 100px; }
-  .ev-weekday-hint {
-    font-size: 11.5px;
-    color: #a89888;
-    margin: 3px 0 0 48px;
-  }
-</style>
-</head>
-<body>
-
-<div class="password-gate" id="passwordGate">
-  <div class="gate-box">
-    <div class="gate-lock">🔒</div>
-    <h2>雪莉與朵栗 內部後台</h2>
-    <p>請輸入密碼才能進入</p>
-    <input type="text" id="gateNameInput" placeholder="請輸入姓名">
-    <input type="password" id="gatePasswordInput" placeholder="請輸入密碼" autocomplete="off">
-    <button id="gateSubmitBtn">進入</button>
-    <div class="gate-error" id="gateError"></div>
-  </div>
-</div>
-
-<div class="wrap" id="mainWrap" style="visibility:hidden;">
-
-  <div class="urgent-banner" id="urgentBanner" onclick="switchView('myTasks')">
-    🚨 現在有緊急任務，請點擊前往
-  </div>
-
-  <div class="newtask-banner" id="newTaskBanner" onclick="switchView('myTasks')">
-    🟢 你有新任務，請點擊前往
-  </div>
-
-  <div class="topbar">
-    <span class="user-chip" id="userChip">👤</span>
-    <div class="topbar-right">
-      <button class="home-btn" id="homeBtn" title="回到首頁" aria-label="回到首頁">🏠</button>
-      <div class="menu-wrap">
-        <button class="menu-btn" id="menuBtn" title="選單" aria-label="選單">
-          <span></span><span></span><span></span>
-        </button>
-        <div class="menu-panel" id="menuPanel">
-          <button class="menu-item" data-view="home">🏠 工作首頁</button>
-          <button class="menu-item" data-view="calendar">📅 行事曆</button>
-          <button class="menu-item" data-view="dispatch">📨 派遣任務</button>
-          <button class="menu-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
-          <button class="menu-item" data-view="memo">📝 備忘錄</button>
-          <button class="menu-item" data-view="prItems">🎀 公關品狀態</button>
-          <button class="menu-item" data-view="groupStatus">🌼 開團狀態</button>
-          <button class="menu-item" data-view="tools">🧰 便利小工具</button>
-          <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 工作首頁 ===== -->
-  <div class="view" id="viewHome">
-    <h2 class="view-title">工作首頁</h2>
-    <div class="home-grid">
-      <div class="home-card" onclick="switchView('memo')">
-        <span class="hc-icon">📝</span><span class="hc-name">我的備忘錄</span>
-      </div>
-      <div class="home-card" onclick="switchView('calendar')">
-        <span class="hc-icon">📅</span><span class="hc-name">行事曆</span>
-      </div>
-      <div class="home-card" onclick="switchView('dispatch')">
-        <span class="hc-icon">📨</span><span class="hc-name">派遣任務</span>
-      </div>
-      <div class="home-card" onclick="switchView('myTasks')">
-        <span class="hc-icon">📋</span><span class="hc-name">我的任務</span>
-        <span class="hc-urgent" id="homeUrgentIcon" style="display:none;">🚨</span>
-      </div>
-      <div class="home-card" onclick="switchView('prItems')">
-        <span class="hc-icon">🎀</span><span class="hc-name">公關品狀態</span>
-      </div>
-      <div class="home-card" onclick="switchView('tools')">
-        <span class="hc-icon">🧰</span><span class="hc-name">便利小工具</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 派遣任務 ===== -->
-  <div class="view" id="viewDispatch">
-    <h2 class="view-title">派遣任務</h2>
-    <div class="task-form">
-      <label for="dispatchTo">派遣給誰</label>
-      <select id="dispatchTo"></select>
-
-      <label for="dispatchTaskName">任務名稱</label>
-      <select id="dispatchTaskName"></select>
-      <div class="newname-row" id="dispatchNewNameRow">
-        <input type="text" id="dispatchNewNameInput" placeholder="輸入新的任務名稱…">
-        <button id="dispatchNewNameBtn">新增</button>
-      </div>
-      <div class="my-taskname-tags" id="dispatchMyNamesTags"></div>
-
-      <div id="dispatchContentBlock" style="display:none;">
-        <div id="dispatchExtra"></div>
-        <label for="dispatchBrandInput">識別名稱／品牌（選填，會顯示在任務名稱後面方便辨識，例如：簽署合約書 MNTL）</label>
-        <input type="text" id="dispatchBrandInput" placeholder="例如：MNTL、林貝兒…">
-
-        <label for="dispatchContent">任務內容</label>
-        <textarea id="dispatchContent" placeholder="輸入任務的詳細內容…"></textarea>
-
-        <label for="dispatchDate">指定日期（可不填）</label>
-        <input type="date" id="dispatchDate">
-
-        <label class="urgent-check"><input type="checkbox" id="dispatchUrgent">🚨 這是緊急任務</label>
-
-        <button class="task-submit-btn" id="dispatchSubmitBtn">派遣</button>
-      </div>
-      <div class="form-status" id="dispatchStatus"></div>
-    </div>
-
-    <div style="text-align:center;"><span class="task-section-title">📤 已派遣的任務</span></div>
-    <div class="task-list" id="dispatchedList"></div>
-  </div>
-
-  <!-- ===== 我的任務 ===== -->
-  <div class="view" id="viewMyTasks">
-    <h2 class="view-title">我的任務</h2>
-
-    <div class="task-form">
-      <label for="selfTaskName">安排工作</label>
-      <select id="selfTaskName"></select>
-      <div class="newname-row" id="selfNewNameRow">
-        <input type="text" id="selfNewNameInput" placeholder="輸入新的任務名稱…">
-        <button id="selfNewNameBtn">新增</button>
-      </div>
-      <div class="my-taskname-tags" id="selfMyNamesTags"></div>
-      <div id="selfContentBlock" style="display:none;">
-        <div id="selfExtra"></div>
-        <label for="selfBrandInput">識別名稱／品牌（選填，會顯示在任務名稱後面方便辨識，例如：簽署合約書 MNTL）</label>
-        <input type="text" id="selfBrandInput" placeholder="例如：MNTL、林貝兒…">
-
-        <label for="selfContent">任務內容</label>
-        <textarea id="selfContent" placeholder="輸入工作的詳細內容…"></textarea>
-        <label for="selfDate">指定日期（可不填）</label>
-        <input type="date" id="selfDate">
-        <button class="task-submit-btn" id="selfSubmitBtn">安排</button>
-      </div>
-      <div class="form-status" id="selfStatus"></div>
-    </div>
-
-    <div style="text-align:center;"><span class="task-section-title">✅ 已完成</span></div>
-    <div class="task-list" id="doneGroups"></div>
-
-    <div style="text-align:center;"><span class="task-section-title">📋 待完成</span></div>
-    <div class="task-list" id="pendingList"></div>
-  </div>
-
-  <!-- ===== 我的備忘錄（樹狀結構） ===== -->
-  <div class="view" id="viewMemo">
-    <div class="pnote-header-wrap">
-      <h2 class="view-title" id="pnoteViewTitle">我的備忘錄</h2>
-      <label class="pr-toggle show pnote-scope-toggle" id="pnoteScopeToggleWrap" title="切換顯示「我的備忘錄」／「共用備忘錄」">
-        <span class="pr-toggle-text" id="pnoteScopeLabel">共用</span>
-        <span class="pr-switch" id="pnoteScopeSwitch"><span class="pr-knob"></span></span>
-      </label>
-    </div>
-    <p class="pnote-hint" id="pnoteHint">只有你自己看得到這裡的資料夾與備忘錄，適合放常常要複製貼上的文字片段。</p>
-
-    <div class="mtree-toolbar">
-      <div class="mtree-search-wrap">
-        <span class="mtree-search-icon">🔍</span>
-        <input type="text" id="pnoteSearchInput" placeholder="搜尋備忘錄內容…">
-      </div>
-      <button class="mtree-icon-btn" id="pnoteAddNoteBtn" title="新增備忘錄">📝➕</button>
-      <button class="mtree-icon-btn" id="pnoteAddFolderBtn" title="新增資料夾">📁➕</button>
-    </div>
-
-    <div class="mtree-wrap" id="mtreeWrap">
-      <div class="mtree-list-pane" id="mtreeListPane">
-        <div id="mtreeTree"></div>
-      </div>
-      <div class="mtree-editor-pane" id="mtreeEditorPane">
-        <button class="mtree-back-btn" id="mtreeBackBtn">‹ 返回列表</button>
-        <div id="mtreeEditorBody"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 公關品狀態列表 ===== -->
-  <div class="view" id="viewPrItems">
-    <h2 class="view-title">公關品狀態</h2>
-
-    <div class="task-form" id="prItemAddForm">
-      <label for="priName">名稱</label>
-      <input type="text" id="priName" placeholder="例如：林貝兒 米餅">
-      <label for="priVendor">廠商</label>
-      <input type="text" id="priVendor" placeholder="廠商名稱（可不填）">
-      <label for="priBrand">品牌</label>
-      <input type="text" id="priBrand" placeholder="品牌名稱（可不填）">
-      <label for="priGroup">屬於哪一團</label>
-      <input type="text" id="priGroup" placeholder="團購標題（可不填）">
-      <label for="priLocation">放置位置</label>
-      <select id="priLocation"></select>
-      <div class="newname-row" id="priLocationNewRow">
-        <input type="text" id="priLocationNewInput" placeholder="輸入新的位置選項…">
-        <button id="priLocationNewBtn">新增</button>
-      </div>
-      <label for="priNote">備註</label>
-      <textarea id="priNote" placeholder="備註…（可不填）"></textarea>
-      <button class="task-submit-btn" id="priAddBtn">➕ 手動新增</button>
-      <div class="form-status" id="priAddStatus"></div>
-    </div>
-
-    <div style="text-align:center;"><span class="task-section-title">🎀 公關品清單</span></div>
-    <div id="priList"></div>
-  </div>
-
-  <!-- ===== 開團狀態（結團倒數／現正團購中） ===== -->
-  <div class="view" id="viewGroupStatus">
-    <h2 class="view-title">開團狀態</h2>
-    <div class="group-list" id="groupStatusList"></div>
-  </div>
-
-  <!-- ===== 便利小工具（App桌面風格圖示） ===== -->
-  <div class="view" id="viewTools">
-    <h2 class="view-title">便利小工具</h2>
-    <div class="tools-grid">
-      <div class="tool-icon" onclick="openCopyGenModal()">
-        <div class="tool-icon-img-wrap">
-          <img src="images/tools/copygen.png" alt="開團文案產生器" onerror="this.remove(); this.parentElement.querySelector('.tool-icon-fallback').style.display='flex';">
-          <span class="tool-icon-fallback" style="display:none;">📋</span>
-        </div>
-        <span class="tool-icon-label">開團文案<br>產生器</span>
-      </div>
-      <div class="tool-icon" onclick="openRecipePostModal()">
-        <div class="tool-icon-img-wrap">
-          <img src="images/tools/recipepost.png" alt="食譜貼文產生器" onerror="this.remove(); this.parentElement.querySelector('.tool-icon-fallback').style.display='flex';">
-          <span class="tool-icon-fallback" style="display:none;">🍽️</span>
-        </div>
-        <span class="tool-icon-label">食譜貼文<br>產生器</span>
-      </div>
-      <div class="tool-icon" onclick="switchView('lotteryTool')">
-        <div class="tool-icon-img-wrap">
-          <img src="images/tools/lottery.png" alt="抽獎小幫手" onerror="this.remove(); this.parentElement.querySelector('.tool-icon-fallback').style.display='flex';">
-          <span class="tool-icon-fallback" style="display:none;">🎉</span>
-        </div>
-        <span class="tool-icon-label">抽獎<br>小幫手</span>
-      </div>
-      <div class="tool-icon" onclick="switchView('convertTool')">
-        <div class="tool-icon-img-wrap">
-          <img src="images/tools/convert.png" alt="轉檔小工具" onerror="this.remove(); this.parentElement.querySelector('.tool-icon-fallback').style.display='flex';">
-          <span class="tool-icon-fallback" style="display:none;">🔄</span>
-        </div>
-        <span class="tool-icon-label">轉檔<br>小工具</span>
-      </div>
-      <div class="tool-icon" onclick="window.open('https://print.ibon.com.tw/ibonprinter', '_blank')">
-        <div class="tool-icon-img-wrap">
-          <img src="images/tools/ibon.png" alt="ibon上傳" onerror="this.remove(); this.parentElement.querySelector('.tool-icon-fallback').style.display='flex';">
-          <span class="tool-icon-fallback" style="display:none;">🖨️</span>
-        </div>
-        <span class="tool-icon-label">ibon<br>上傳</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== 抽獎小幫手 ===== -->
-  <div class="view" id="viewLotteryTool">
-    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🎉 抽獎小幫手</h2>
-    <div class="task-form">
-      <label for="lotteryPrizesInput">獎項清單（每行一個，格式：獎項*數量。由上到下＝大獎到小獎，實際會從最下面開始抽；隨時都可以編輯）</label>
-      <textarea id="lotteryPrizesInput" rows="5" placeholder="例如：&#10;iPhone*1&#10;悠遊卡*10&#10;美妝組*3"></textarea>
-
-      <label for="lotteryParticipantsInput">參加名單（每行一個，格式：姓名*次數；隨時都可以編輯）</label>
-      <textarea id="lotteryParticipantsInput" rows="5" placeholder="例如：&#10;咚咚*3&#10;小美*1"></textarea>
-
-      <label for="lotteryRuleSelect">抽獎規則</label>
-      <select id="lotteryRuleSelect">
-        <option value="removeName">移除名稱（每人僅限中獎一次）</option>
-        <option value="removeChance">移除一次機會（一個機會中獎一次）</option>
-        <option value="removeChanceUniquePrize">移除一次機會（獎項不重複）</option>
-        <option value="keepChance">不扣除機會（可重複中獎）</option>
-      </select>
-    </div>
-
-    <div style="display:flex; gap:10px; justify-content:center; margin:16px 0; flex-wrap:wrap;">
-      <button class="task-mini-btn danger" style="font-size:13px; padding:9px 18px;" id="lotteryResetBtn" onclick="resetLottery()">🔄 重新設定</button>
-      <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 28px;" id="lotteryDrawBtn" onclick="drawLottery()">🎲 開始抽獎</button>
-      <button class="task-mini-btn" style="font-size:13px; padding:9px 18px; border-color:#B79AE8; color:#7A5AC8;" id="lotteryRedrawBtn" onclick="redrawLottery()">↩️ 重抽</button>
-    </div>
-
-    <div class="lottery-result-box" id="lotteryResultBox" style="display:none;">
-      <div class="lottery-result-prize" id="lotteryResultPrize"></div>
-      <div class="lottery-result-winner" id="lotteryResultWinner"></div>
-    </div>
-
-    <div style="text-align:center;"><span class="task-section-title">🏆 中獎名單</span></div>
-    <div id="lotteryWinnerList" class="lottery-winner-list"></div>
-  </div>
-
-  <!-- ===== 轉檔小工具（介面先做好，轉檔功能之後再串） ===== -->
-  <div class="view" id="viewConvertTool">
-    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🔄 轉檔小工具</h2>
-    <div class="task-form">
-      <label for="convertFileInput">選擇檔案（PDF／Excel／JPG）</label>
-      <input type="file" id="convertFileInput" accept=".pdf,.xls,.xlsx,.jpg,.jpeg,.png">
-      <label for="convertTargetSelect">要轉成的格式</label>
-      <select id="convertTargetSelect">
-        <option value="pdf">PDF</option>
-        <option value="xlsx">Excel（.xlsx）</option>
-        <option value="jpg">JPG</option>
-      </select>
-      <button class="task-submit-btn" onclick="runConvertTool()">開始轉換</button>
-      <div class="form-status" id="convertStatus"></div>
-      <p style="text-align:center; font-size:12.5px; font-weight:800; color:#b5755a; margin:10px 0 0;">🚧 即將推出，敬請期待</p>
-    </div>
-  </div>
-
-  <!-- ===== 行事曆 ===== -->
-  <div class="view" id="viewCalendar">
-  <div class="header">
-  </div>
-
-  <div class="header-row2">
-    <div class="month-num" id="monthNum">7月</div>
-    <img class="title-img" id="titleImg" alt="雪莉與朵栗 團購行事曆" src="images/title-logo.png">
-    <div class="controls">
-      <select id="modeSelect">
-        <option value="all">顯示全部</option>
-        <option value="start" selected>開團日</option>
-        <option value="end">結團日</option>
-        <option value="list">現正開團中</option>
-        <option value="mytasks">工作表</option>
-      </select>
-      <select id="monthSelect"></select>
-      <button id="refreshBtn">重新整理</button>
-      <button id="calEditToggleBtn" title="開啟／關閉行事曆編輯模式">✏️ 編輯</button>
-      <label class="pr-toggle" id="prToggleWrap" title="在開團日／結團日的團購下方顯示公關品狀態小圖示">
-        <span class="pr-toggle-text">公關品狀態</span>
-        <span class="pr-switch" id="prSwitch"><span class="pr-knob"></span></span>
-      </label>
-    </div>
-  </div>
-
-  <div class="status" id="status">資料載入中…</div>
-
-  <div class="weekdays" id="weekdays"></div>
-
-  <div class="month-grid" id="grid"></div>
-
-  <!-- ===== 編輯模式：點選日期後跳出的當日活動列表 ===== -->
-  <div id="calEditDayPanel" class="cal-edit-day-panel" style="display:none;">
-    <div class="cal-edit-day-head">
-      <span id="calEditDayTitle">－</span>
-      <button class="modal-close" id="calEditDayCloseBtn" style="position:static;">✕</button>
-    </div>
-    <div id="calEditDayList"></div>
-    <button class="task-submit-btn" id="calEditDayAddBtn" style="margin-top:10px;">➕ 新增活動</button>
-  </div>
-
-  <div id="calGroupListWrap" style="display:none;">
-    <div style="text-align:center; margin:10px 0 4px;">
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openCopyGenModal()">📋 開團文案產生器</button>
-    </div>
-    <div class="group-list" id="calGroupList"></div>
-  </div>
-
-  <div class="legend" id="legend">
-    <span class="legend-item"><span class="legend-dot legend-upcoming"></span>開團預告</span>
-    <span class="legend-item"><span class="legend-dot legend-active"></span>開團中</span>
-    <span class="legend-item"><span class="legend-dot legend-closingSoon"></span>即將結單</span>
-    <span class="legend-item"><span class="legend-dot legend-ended"></span>已結單</span>
-    <span class="legend-item"><span class="legend-dot legend-frozen"></span>冷凍團</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#DFF2D8; border:1.5px solid #9ACB85;"></span>尚未確認顯示</span>
-  </div>
-  </div><!-- /viewCalendar -->
-
-  <div class="footer">🔒 內部後台版本・僅供雪莉與員工使用</div>
-</div>
-
-<!-- 任務詳細浮動視窗：狀態切換／階段紀錄／回派對話／備忘錄 -->
-<div class="modal-backdrop" id="taskModal" onclick="if(event.target===this) closeModal('taskModal')">
-  <div class="modal-box recipe-card-modal">
-    <div class="rc-header">
-      <span class="rc-badge-pill" id="taskModalBadge">📋 任務內容</span>
-      <button class="rc-close-btn" onclick="closeModal('taskModal')">✕</button>
-    </div>
-
-    <h2 class="rc-title" id="taskModalName"></h2>
-    <div class="task-modal-meta" id="taskModalMeta"></div>
-
-    <div class="status-pill-row">
-      <button class="status-pill" id="pillPending">待完成</button>
-      <button class="status-pill" id="pillWorking">處理中</button>
-      <button class="status-pill" id="pillDone">已完成</button>
-    </div>
-
-    <button class="urgent-toggle-btn" id="taskUrgentBtn">🚨 標記為緊急</button>
-
-    <div class="task-modal-extra" id="taskModalExtra" style="display:none;"></div>
-    <div class="modal-actions" id="taskModalGoRow" style="display:none; margin:0 0 14px;">
-      <a class="action-btn" id="taskModalGoBtn" target="_blank" rel="noopener noreferrer">🛒 前往選品</a>
-    </div>
-
-    <div class="task-modal-content" id="taskModalContent" style="display:none;"></div>
-
-    <!-- 📌 階段紀錄（可收折） -->
-    <div class="rc-section">
-      <div class="rc-section-head collapsible" id="stageSectionHead">
-        <span class="rc-section-title">📌 階段紀錄</span>
-        <span class="pr-arrow" id="stageSectionArrow">▼</span>
-      </div>
-      <div id="stageSectionBody">
-        <div class="stage-list" id="stageList"></div>
-        <div class="stage-quick" id="stageQuick" style="display:none;"></div>
-        <div class="pr-field" id="taskPrLocationField" style="display:none;">
-          <label for="taskPrLocationSelect">📦 公關品位置</label>
-          <select id="taskPrLocationSelect"></select>
-          <div class="newname-row" id="taskPrLocationNewRow">
-            <input type="text" id="taskPrLocationNewInput" placeholder="輸入新的位置選項…">
-            <button id="taskPrLocationNewBtn">新增</button>
-          </div>
-          <span class="pr-save-status" id="taskPrLocationSaveMsg"></span>
-        </div>
-        <div class="stage-add-row">
-          <input type="text" id="stageInput" placeholder="例如：問題已丟給廠商，等待回覆中…">
-          <button id="stageAddBtn">新增階段</button>
-        </div>
-        <div class="form-status" id="stageStatus"></div>
-      </div>
-    </div>
-
-    <!-- 🔁 回派對話 -->
-    <div class="rc-section">
-      <div class="rc-section-head"><span class="rc-section-title">🔁 回派對話</span></div>
-      <div class="stage-list" id="bounceList"></div>
-      <div class="stage-add-row">
-        <input type="text" id="bounceInput" placeholder="輸入要回覆給對方的內容…">
-        <button id="bounceAddBtn">送出並回派</button>
-      </div>
-      <div class="form-status" id="bounceStatus"></div>
-    </div>
-
-    <!-- 📝 任務備忘錄（移到最下面） -->
-    <div class="rc-section">
-      <div class="rc-section-head"><span class="rc-section-title">📝 任務備忘錄</span></div>
-      <textarea id="taskMemoText" rows="4" style="width:100%; font-family:'Noto Sans TC',sans-serif; font-size:13px; font-weight:700; color:#5a4a3f; border:2px solid #FFD3B6; border-radius:12px; padding:10px 12px; outline:none; resize:vertical;" placeholder="記錄這個任務的處理內容、對話或注意事項…"></textarea>
-      <div class="modal-actions" style="margin-top:8px;">
-        <button class="action-btn" id="taskMemoSaveBtn" style="flex:none; padding:9px 22px;">儲存</button>
-        <span class="form-status" id="taskMemoStatus" style="margin:0; align-self:center;"></span>
-      </div>
-    </div>
-
-    <div class="rc-footer">🩷 雪莉與朵栗・內部任務 🩷</div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="adminModal" onclick="if(event.target===this) closeAdminModal()">
-  <div class="modal-box admin-modal">
-    <button class="modal-close" onclick="closeAdminModal()">✕</button>
-    <div class="admin-modal-badge" id="adminModalBadge"></div>
-    <h3 id="adminModalTitle"></h3>
-    <div class="admin-modal-meta" id="adminModalMeta"></div>
-
-    <div class="publish-status-box" id="adminPublishBox">
-      <span id="adminPublishText">🔔 尚未確認顯示於前台</span>
-      <button class="task-mini-btn" id="adminPublishBtn" style="border-color:#9ACB85; color:#5C9147;">✅ 確認顯示於前台</button>
-    </div>
-
-    <div class="action-row" style="margin-top:10px;">
-      <button class="task-mini-btn" id="adminEditEventBtn" style="width:100%; padding:10px; font-size:13px;">✏️ 編輯這個活動</button>
-    </div>
-
-    <div class="early-bird-box" id="adminEarlyBirdBox" style="display:none;">
-      <div class="early-bird-label">🎁 早鳥禮參考</div>
-      <ul id="adminEarlyBirdList"></ul>
-    </div>
-
-    <div class="action-row">
-      <a id="adminGoUrl" class="action-btn" target="_blank" rel="noopener noreferrer">前往網頁</a>
-      <button class="icon-btn" id="copyUrlBtn" title="複製網址給客人">📋</button>
-    </div>
-    <div class="action-row">
-      <a id="adminBackendUrl" class="action-btn action-btn-alt" target="_blank" rel="noopener noreferrer">前往後台觀看報表</a>
-    </div>
-    <div class="backend-edit-row">
-      <input type="text" id="backendUrlInput" placeholder="貼上後台網址...">
-      <button class="icon-btn" id="saveBackendUrlBtn" title="儲存後台網址">💾</button>
-      <span class="memo-status" id="backendUrlStatus"></span>
-    </div>
-
-    <div class="memo-section">
-      <label for="memoText">📝 客人問題備忘錄</label>
-      <textarea id="memoText" rows="4" placeholder="記錄客人問題或回覆內容，員工之間會共用這則備忘錄…"></textarea>
-      <div class="memo-actions">
-        <button id="saveMemoBtn" class="save-btn">儲存</button>
-        <button class="icon-btn" id="copyMemoBtn" title="複製備忘錄內容">📋</button>
-        <span class="memo-status" id="memoStatus"></span>
-      </div>
-    </div>
-
-    <!-- 公關品狀態（可收折） -->
-    <div class="pr-panel" id="prPanel">
-      <div class="pr-panel-head" id="prPanelHead">
-        <span class="pr-head-left">
-          🎀 公關品狀態
-          <span class="pr-head-chip" id="prHeadChip">尚未選品</span>
-        </span>
-        <span class="pr-arrow">▼</span>
-      </div>
-      <div class="pr-panel-body">
-        <div class="pr-field">
-          <label for="prStatusSelect">目前狀態</label>
-          <select id="prStatusSelect"></select>
-          <span class="pr-save-status" id="prStatusSaveMsg"></span>
-        </div>
-
-        <!-- 選品中：出現前往選品按鈕／可選品項 -->
-        <div class="pr-field" id="prPickField" style="display:none;">
-          <label for="prUrlInput">選品網址（貼上後可點下方按鈕前往）</label>
-          <input type="text" id="prUrlInput" placeholder="貼上選品連結，或在備忘錄記下可選品項…">
-          <div class="pr-save-row">
-            <button class="pr-save-btn" id="prUrlSaveBtn">儲存</button>
-            <a class="pr-go-btn" id="prGoBtn" target="_blank" rel="noopener noreferrer" style="display:none;">🛒 前往選品</a>
-            <span class="pr-save-status" id="prUrlSaveMsg"></span>
-          </div>
-        </div>
-
-        <!-- 已收到／已拍攝：出現位置下拉 -->
-        <div class="pr-field" id="prLocationField" style="display:none;">
-          <label for="prLocationSelect">📦 位置</label>
-          <select id="prLocationSelect"></select>
-          <div class="newname-row" id="prLocationNewRow">
-            <input type="text" id="prLocationNewInput" placeholder="輸入新的位置選項…">
-            <button id="prLocationNewBtn">新增</button>
-          </div>
-          <div class="pr-save-row">
-            <span class="pr-save-status" id="prLocationSaveMsg"></span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 開團文案產生器浮動視窗 ===== -->
-<div class="modal-backdrop" id="copyGenModal" onclick="if(event.target===this) closeCopyGenModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeCopyGenModal()">✕</button>
-    <h3>📋 開團文案產生器</h3>
-    <div class="task-form" style="margin:0; padding:0; background:none;">
-      <label for="copyGenDate">選擇日期</label>
-      <input type="date" id="copyGenDate">
-      <button class="task-submit-btn" id="copyGenGenerateBtn" onclick="generateCopyGenText()">產生文案</button>
-      <textarea id="copyGenOutput" readonly rows="10" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border:2px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;" placeholder="選好日期後按「產生文案」，內容會出現在這裡"></textarea>
-      <button class="task-mini-btn" id="copyGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;" onclick="copyGenCopyText()">📄 複製文案</button>
-      <div class="form-status" id="copyGenStatus"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 食譜貼文產生器浮動視窗 ===== -->
-<div class="modal-backdrop" id="recipePostModal" onclick="if(event.target===this) closeRecipePostModal()">
-  <div class="modal-box" style="width:440px;">
-    <button class="modal-close" onclick="closeRecipePostModal()">✕</button>
-    <h3>🍽 食譜貼文產生器</h3>
-
-    <div id="pgPickerView">
-      <div class="task-form" style="margin:0 0 12px; padding:0; background:none;">
-        <label for="pgSearchInput">搜尋食譜名稱</label>
-        <input type="text" id="pgSearchInput" placeholder="輸入食譜名稱關鍵字…">
-      </div>
-      <div class="recipe-card-grid" id="pgRecipeGrid" style="max-height:360px; overflow-y:auto;"></div>
-    </div>
-
-    <div id="pgActionView" style="display:none;">
-      <button class="task-mini-btn" style="margin-bottom:10px;" onclick="pgBackToPicker()">⬅ 重新選擇食譜</button>
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-        <img id="pgSelectedImg" src="" alt="" style="width:64px; height:64px; border-radius:14px; object-fit:cover; background:#FFF1E6;">
-        <div id="pgSelectedName" style="font-weight:800; font-size:15px; color:#5a4a3f;"></div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px;" onclick="pgGeneratePoster()">🖼 產生4:5貼文圖</button>
-        <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px; background:#7AAEEB;" onclick="pgGenerateText()">📝 產生貼文文案</button>
-      </div>
-      <div class="form-status" id="pgStatus"></div>
-
-      <div id="pgOutputArea" style="display:none; margin-top:14px;">
-        <div id="pgOutputTextWrap" style="display:none;">
-          <textarea id="pgOutputText" readonly rows="12" style="width:100%; box-sizing:border-box; padding:10px 12px; border:2px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
-          <button class="task-mini-btn" id="pgCopyTextBtn" style="margin-top:10px; width:100%; padding:9px 0;" onclick="pgCopyText()">📄 複製文案</button>
-        </div>
-        <div id="pgOutputImgWrap" style="display:none;">
-          <img id="pgOutputImg" src="" alt="" style="width:100%; border-radius:12px; border:2px solid #FFE3CC;">
-          <button class="task-mini-btn" id="pgDownloadImgBtn" style="margin-top:10px; width:100%; padding:9px 0;">⬇️ 下載圖片</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 食譜貼文產生器：離畫面外的隱藏繪製區，html2canvas 從這裡截圖，不需要另外加樣式進 .wrap -->
-<div id="pgPosterStage"></div>
-
-<!-- ===== 設定：修改密碼彈窗 ===== -->
-<div class="modal-backdrop" id="settingsModal" onclick="if(event.target===this) closeSettingsModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeSettingsModal()">✕</button>
-    <h3>⚙️ 設定：修改密碼</h3>
-    <div class="task-form" style="margin:0; padding:0; background:none;">
-      <label for="oldPasswordInput">目前密碼</label>
-      <input type="password" id="oldPasswordInput" autocomplete="off">
-
-      <label for="newPasswordInput">新密碼</label>
-      <input type="password" id="newPasswordInput" autocomplete="off">
-      <label for="newPasswordInput2">再輸入一次新密碼</label>
-      <input type="password" id="newPasswordInput2" autocomplete="off">
-      <p style="font-size:11.5px; color:#a89888; margin:6px 0 0;">密碼至少6碼，需包含大寫英文、小寫英文與數字各一個。</p>
-
-      <button class="task-submit-btn" id="settingsSubmitBtn">送出修改</button>
-      <div class="form-status" id="settingsStatus"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 備忘錄：新增資料夾浮動視窗 ===== -->
-<div class="modal-backdrop" id="pnoteFolderModal" onclick="if(event.target===this) closePnoteFolderModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closePnoteFolderModal()">✕</button>
-    <h3>📁 新增資料夾</h3>
-    <div class="task-form" style="margin:0; padding:0; background:none;">
-      <label for="pnoteFolderNameInput">資料夾名稱</label>
-      <input type="text" id="pnoteFolderNameInput" placeholder="輸入資料夾名稱…">
-      <label for="pnoteFolderParentSelect">上層資料夾</label>
-      <select id="pnoteFolderParentSelect"></select>
-      <button class="task-submit-btn" id="pnoteFolderModalSubmitBtn">新增</button>
-      <div class="form-status" id="pnoteFolderModalStatus"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 行事曆：新增／編輯活動浮動視窗 ===== -->
-<div class="modal-backdrop" id="eventEditModal" onclick="if(event.target===this) closeEventEditModal()">
-  <div class="modal-box" style="width:400px;">
-    <button class="modal-close" onclick="closeEventEditModal()">✕</button>
-    <h3 id="eventEditTitle">➕ 新增活動</h3>
-    <div class="task-form" style="margin:0; padding:0; background:none;">
-
-      <label for="evTitleInput">標題</label>
-      <input type="text" id="evTitleInput" placeholder="例如：林貝兒米餅 開團">
-
-      <label for="evColorInput">顏色（顯示全部列表中的底色）</label>
-      <div class="ev-color-row">
-        <input type="color" id="evColorInput" value="#FF8FA3">
-        <div class="ev-color-presets" id="evColorPresets"></div>
-      </div>
-
-      <div class="ev-toggle-row">
-        <div class="ev-toggle-item">
-          <span class="ev-toggle-label">☀️ 整日</span>
-          <span class="pr-switch" id="evAllDaySwitch"><span class="pr-knob"></span></span>
-        </div>
-        <div class="ev-toggle-item">
-          <span class="ev-toggle-label">🛍️ 團購</span>
-          <span class="pr-switch" id="evGroupBuySwitch"><span class="pr-knob"></span></span>
-        </div>
-      </div>
-
-      <div class="ev-datetime-row">
-        <span class="ev-datetime-label">開始</span>
-        <input type="date" id="evStartDateInput">
-        <input type="time" id="evStartTimeInput">
-      </div>
-      <div class="ev-weekday-hint" id="evStartWeekdayHint"></div>
-
-      <div class="ev-datetime-row">
-        <span class="ev-datetime-label">結束</span>
-        <input type="date" id="evEndDateInput">
-        <input type="time" id="evEndTimeInput">
-      </div>
-      <div class="ev-weekday-hint" id="evEndWeekdayHint"></div>
-
-      <label for="evUrlInput" style="margin-top:14px;">團購網址（可不填）</label>
-      <input type="text" id="evUrlInput" placeholder="貼上團購頁面網址…">
-
-      <label for="evCategoryInput">分類標記（可不填，例如：冷凍）</label>
-      <input type="text" id="evCategoryInput" placeholder="例如：冷凍">
-
-      <label class="urgent-check" style="color:#5C9147;" id="evPublishedRow">
-        <input type="checkbox" id="evPublishedInput">✅ 顯示於前台（不勾＝尚未確認，先不顯示）
-      </label>
-
-      <div style="display:flex; gap:8px; margin-top:16px;">
-        <button class="task-submit-btn" id="evSaveBtn" style="margin-top:0;">💾 儲存</button>
-        <button class="task-mini-btn danger" id="evDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
-      </div>
-      <div class="form-status" id="evEditStatus"></div>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=16"></script>
-<script src="memo.js?v=5"></script>
-
-</body>
-</html>
+/**
+ * 雪莉與朵栗 後台主程式（完整版 v11 — 行事曆編輯模式：新增/編輯/刪除活動 + 前台顯示確認機制）
+ *
+ * 【v11 跟 v10 比，這次改了什麼】
+ *   1. 修正新增活動欄位的位置：發現前台試算表原本第 K 欄已經在用（食譜品牌），
+ *      v9/v10 誤把新欄位從 K 欄開始加，會蓋掉這個既有欄位的資料。
+ *      v11 改成從 L 欄開始加新欄位，完全不動 K 欄。
+ *   2. 團購編號（顯示全部模式的圓形編號）現在改成「每個月重新計算」：
+ *      只算團購開關有打開的活動，依開團日排序，每個月自動從 1 號重新開始。
+ *      這個編號是即時算出來的顯示用途，不會去改動試算表 A 欄「編號」本身的數值
+ *      （A 欄維持原樣，因為客人問題備忘錄／後台網址／公關品狀態都是用這欄位對應資料，
+ *      改動它會讓已經存的資料對不到原本的團購）。
+ *   3. 前台的公開行事曆（index.html）也已經同步套用同一套「每月重新計算團購編號」
+ *      邏輯，並且改成只顯示「已確認顯示於前台」的活動。
+ *
+ * 【v9 跟 v8 比，這次改了什麼】
+ *   1. 新增行事曆活動的 CRUD（doPost type: 'event-add' / 'event-update' / 'event-delete'）
+ *      對應後台網頁新的「行事曆編輯模式」：新增/編輯活動會直接寫回試算表，
+ *      不用再手動去試算表打字。
+ *   2. 活動資料表新增六個欄位（接在既有的 K 欄「食譜品牌」後面，L~Q欄）：
+ *        L 顏色　M 整日(是/否)　N 開始時間　O 結束時間　P 團購(是/否)　Q 顯示於前台(是/否)
+ *      舊資料這六欄都是空的，程式會自動當作「整天活動／算團購編號／已顯示於前台」處理，
+ *      不會影響原本已經存在的活動。
+ *
+ * ⚠️ 行事曆活動資料放在「前台試算表」（跟這份 Code.gs 綁定的後台試算表是不同的兩份試算表），
+ *    用 SpreadsheetApp.openById(EVENT_SHEET_ID) 指名打開，ID 直接沿用 admin.js 裡的 SHEET_ID。
+ *    預設抓該試算表的第一個分頁；如果實際上放在別的分頁，把 EVENT_SHEET_NAME 改成分頁名稱即可。
+ *
+ * 部署方式跟之前一樣：
+ *   全選刪除原本程式碼 → 貼上這一整份 → 存檔
+ *   部署 →「管理部署作業」→ 點鉛筆✏️編輯 → 版本選「新版本」→ 部署
+ *   ⚠️ 不要用「新增部署作業」，網址會變、所有網頁都要跟著改
+ */
+
+const MEMO_SHEET_NAME = '備忘錄';
+const URL_SHEET_NAME = '後台網址';
+const SETTINGS_SHEET_NAME = '設定';
+const DEFAULT_PASSWORD = '0000';
+
+const BRAND_SHEET_NAME = '品牌';
+const INGREDIENT_SHEET_NAME = '食材'; // 舊分頁，已改用下面兩個新分頁，這行保留但不再讀取
+const INGREDIENT_DB_SHEET_NAME = '食材資料庫';
+const PRODUCT_DB_SHEET_NAME = '成品資料庫';
+const RECIPE_SHEET_NAME = '食譜';
+const SCHOOL_LIST_SHEET_NAME = '開學清單';
+
+// 密碼雜湊相關設定
+const PASSWORD_PEPPER = 'dondon0813_uihwfie68sd6sd4s_abc123xyz';
+const STAFF_SALT_LENGTH = 16;
+const STAFF_COL_NAME = 1;
+const STAFF_COL_HASH = 2;
+const STAFF_COL_SALT = 3;
+const STAFF_COL_NEWPW = 4;
+
+const STAFF_SHEET_NAME = '員工名單';
+const TASKNAME_SHEET_NAME = '任務名稱';
+const TASK_SHEET_PREFIX = '任務_';
+const DEFAULT_TASK_NAMES = ['簽署合約書', '團購安排', '廠商選品', '顧客提問', '贈品寄送', '照片提供'];
+const VENDOR_SHEET_NAME = '廠商名單';
+const PR_STATUS_SHEET_NAME = '公關品狀態';
+
+// 【新】公關品位置清單、公關品清單
+const PR_LOCATION_SHEET_NAME = '公關品位置清單';
+const PR_ITEM_SHEET_NAME = '公關品清單';
+
+// 登入 session 相關設定
+const SESSION_SHEET_NAME = 'Sessions';
+const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
+
+// 個人備忘錄相關設定
+const PNOTE_FOLDER_SHEET_NAME = '個人備忘錄資料夾';
+const PNOTE_SHEET_NAME = '個人備忘錄內容';
+
+// 共用備忘錄
+const SPNOTE_FOLDER_SHEET_NAME = '共用備忘錄資料夾';
+const SPNOTE_SHEET_NAME = '共用備忘錄內容';
+
+// 員工自己新增的任務名稱
+const MY_TASKNAME_SHEET_NAME = '我的任務名稱';
+
+// 【新】行事曆活動資料所在分頁：留空＝自動使用試算表的「第一個分頁」（跟前台網頁 gviz 讀取邏輯一致）
+// 行事曆活動資料放在「前台試算表」，是一份跟這個後台 Code.gs 綁定的試算表完全不同、獨立的試算表
+// （前台網頁 admin.js／index.html 都是用這個 ID 透過 gviz 直接讀取）。
+// ⚠️ 這個 Apps Script 執行時是用雪莉的 Google 帳號授權，只要這個帳號對下面這份試算表有「編輯」權限
+// （不只是「檢視」），新增／編輯／刪除活動就能正常寫入；如果操作時出現權限錯誤，通常就是這裡要調整分享設定。
+const EVENT_SHEET_ID = '18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk';
+// 如果行事曆資料實際上是放在該試算表裡別的分頁（不是第一個分頁），把下面改成分頁名稱即可，例如：const EVENT_SHEET_NAME = '行事曆';
+const EVENT_SHEET_NAME = '';
+
+// ===== 共用工具 =====
+
+function getKeyValueSheet_(name, headerLabel) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(['key', headerLabel, '更新時間']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getMemoSheet_() {
+  return getKeyValueSheet_(MEMO_SHEET_NAME, '備忘錄內容');
+}
+
+function getUrlSheet_() {
+  return getKeyValueSheet_(URL_SHEET_NAME, '後台網址');
+}
+
+function sheetToMap_(sheet) {
+  const data = sheet.getDataRange().getValues();
+  const map = {};
+  for (let i = 1; i < data.length; i++) {
+    const key = data[i][0];
+    const val = data[i][1];
+    if (key) map[String(key)] = val || '';
+  }
+  return map;
+}
+
+function upsertKeyValue_(sheet, key, value) {
+  const data = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === key) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+  if (rowIndex === -1) {
+    sheet.appendRow([key, value, new Date()]);
+  } else {
+    sheet.getRange(rowIndex, 2).setValue(value);
+    sheet.getRange(rowIndex, 3).setValue(new Date());
+  }
+}
+
+function getSettingsSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
+    sheet.appendRow(['password', DEFAULT_PASSWORD]);
+    sheet.setFrozenRows(0);
+  }
+  return sheet;
+}
+
+function getPassword_() {
+  const sheet = getSettingsSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 0; i < data.length; i++) {
+    if (String(data[i][0]).trim() === 'password') {
+      return String(data[i][1] || DEFAULT_PASSWORD);
+    }
+  }
+  return DEFAULT_PASSWORD;
+}
+
+function sheetRowsAsObjects_(sheetName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const headers = data[0].map(h => String(h).trim());
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    const obj = {};
+    headers.forEach((h, idx) => {
+      obj[h] = row[idx] !== undefined ? row[idx] : '';
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+// 【新】把「食材資料庫」＋「成品資料庫」兩個新分頁合併成前端 recipes.html 原本預期的格式，
+// 讓網頁那邊完全不用改：食材資料庫的每一列補上 類型=食材，成品資料庫的每一列補上 類型=成品，
+// 並把 成品ID→食材ID、成品名稱→食材名稱 對應好欄位名稱
+function getMergedIngredientsAndProducts_() {
+  const ingredientRows = sheetRowsAsObjects_(INGREDIENT_DB_SHEET_NAME).map(function (row) {
+    return {
+      '食材ID': row['食材ID'] || '',
+      '食材名稱': row['食材名稱'] || '',
+      '英文名稱': row['英文名稱'] || '',
+      '食材類型': row['食材類型'] || '',
+      '分類': row['分類'] || '',
+      '類型': '食材',
+      '品牌': row['品牌'] || '',
+      '圖片網址': row['圖片網址'] || '',
+      '保存期限': row['保存期限'] || '',
+      '成分': row['成分'] || '',
+      '產地': row['產地'] || '',
+      '內容物規格': row['內容物規格'] || '',
+      '簡短介紹': row['簡短介紹'] || '',
+      '簡稱': row['簡稱'] || ''
+    };
+  });
+
+  const productRows = sheetRowsAsObjects_(PRODUCT_DB_SHEET_NAME).map(function (row) {
+    return {
+      '食材ID': row['成品ID'] || '',
+      '食材名稱': row['成品名稱'] || '',
+      '英文名稱': '',
+      '食材類型': '品牌',
+      '分類': '',
+      '類型': '成品',
+      '品牌': row['品牌'] || '',
+      '圖片網址': row['圖片網址'] || '',
+      '保存期限': row['保存期限'] || '',
+      '成分': row['成分'] || '',
+      '產地': row['產地'] || '',
+      '內容物規格': row['內容物規格'] || '',
+      '簡短介紹': row['簡短介紹'] || '',
+      '簡稱': row['簡稱'] || '',
+      '相關食材ID': row['相關食材ID'] || ''
+    };
+  });
+
+  return ingredientRows.concat(productRows);
+}
+
+// ===== 登入 Session 管理 =====
+
+function getSessionSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SESSION_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SESSION_SHEET_NAME);
+    sheet.appendRow(['token', '姓名', '建立時間']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function createSession_(name) {
+  const sheet = getSessionSheet_();
+  const token = Utilities.getUuid();
+  sheet.appendRow([token, name, new Date()]);
+  cleanupExpiredSessions_(sheet);
+  return token;
+}
+
+function getSessionUser_(token) {
+  if (!token) return null;
+  const sheet = getSessionSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(token)) {
+      const created = data[i][2];
+      if (created instanceof Date && (Date.now() - created.getTime()) > SESSION_DURATION_MS) {
+        return null;
+      }
+      return String(data[i][1]);
+    }
+  }
+  return null;
+}
+
+function cleanupExpiredSessions_(sheet) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    const created = data[i][2];
+    if (created instanceof Date && (Date.now() - created.getTime()) > SESSION_DURATION_MS) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+}
+
+// ===== 密碼雜湊工具 =====
+
+function sha256Hex_(text) {
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
+  return bytes.map(function (b) {
+    const v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? '0' + v : v;
+  }).join('');
+}
+
+function randomSalt_() {
+  return Utilities.getUuid().replace(/-/g, '').substring(0, STAFF_SALT_LENGTH);
+}
+
+function hashPassword_(password, salt) {
+  return sha256Hex_(String(password) + String(salt) + PASSWORD_PEPPER);
+}
+
+// ===== 員工名單 =====
+
+function getStaffSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(STAFF_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(STAFF_SHEET_NAME);
+    sheet.appendRow(['姓名', '密碼雜湊', 'Salt', '新密碼(打這裡存檔後自動加密並清空)']);
+    const salt1 = randomSalt_();
+    const salt2 = randomSalt_();
+    sheet.appendRow(['雪莉', hashPassword_(getPassword_(), salt1), salt1, '']);
+    sheet.appendRow(['曾曾', hashPassword_('0000', salt2), salt2, '']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getStaff_() {
+  const sheet = getStaffSheet_();
+  const data = sheet.getDataRange().getValues();
+  const staff = [];
+  for (let i = 1; i < data.length; i++) {
+    const name = String(data[i][STAFF_COL_NAME - 1] || '').trim();
+    const hash = String(data[i][STAFF_COL_HASH - 1] || '').trim();
+    const salt = String(data[i][STAFF_COL_SALT - 1] || '').trim();
+    if (name) staff.push({ name: name, hash: hash, salt: salt });
+  }
+  return staff;
+}
+
+function isPasswordValid_(pw) {
+  if (typeof pw !== 'string') return false;
+  if (pw.length < 6) return false;
+  if (!/[a-z]/.test(pw)) return false;
+  if (!/[A-Z]/.test(pw)) return false;
+  if (!/[0-9]/.test(pw)) return false;
+  return true;
+}
+
+function findStaffRowByName_(name) {
+  const sheet = getStaffSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][STAFF_COL_NAME - 1] || '').trim() === name) return i + 1;
+  }
+  return -1;
+}
+
+function setStaffPassword_(name, newPlainPassword) {
+  const sheet = getStaffSheet_();
+  const row = findStaffRowByName_(name);
+  if (row === -1) return false;
+  const salt = randomSalt_();
+  const hash = hashPassword_(newPlainPassword, salt);
+  sheet.getRange(row, STAFF_COL_HASH).setValue(hash);
+  sheet.getRange(row, STAFF_COL_SALT).setValue(salt);
+  return true;
+}
+
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sheet = e.range.getSheet();
+    if (sheet.getName() !== STAFF_SHEET_NAME) return;
+
+    const row = e.range.getRow();
+    const col = e.range.getColumn();
+    if (row === 1) return;
+    if (col !== STAFF_COL_NEWPW) return;
+
+    const newValue = String(sheet.getRange(row, STAFF_COL_NEWPW).getValue() || '').trim();
+    if (!newValue) return;
+
+    const name = String(sheet.getRange(row, STAFF_COL_NAME).getValue() || '').trim();
+    if (!name) return;
+
+    const salt = randomSalt_();
+    const hash = hashPassword_(newValue, salt);
+    sheet.getRange(row, STAFF_COL_HASH).setValue(hash);
+    sheet.getRange(row, STAFF_COL_SALT).setValue(salt);
+    sheet.getRange(row, STAFF_COL_NEWPW).setValue('');
+  } catch (err) {
+    // 安靜失敗
+  }
+}
+
+function migrateStaffPasswordsToHash_ONETIME() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(STAFF_SHEET_NAME);
+  if (!sheet) {
+    Logger.log('找不到「員工名單」分頁，不需要搬家');
+    return;
+  }
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 1) {
+    Logger.log('員工名單是空的，不需要搬家');
+    return;
+  }
+  const header = data[0].map(function (h) { return String(h).trim(); });
+  if (header[1] === '密碼雜湊') {
+    Logger.log('看起來已經轉換過了（第二欄標題是「密碼雜湊」），不需要重複執行');
+    return;
+  }
+
+  const newRows = [['姓名', '密碼雜湊', 'Salt', '新密碼(打這裡存檔後自動加密並清空)']];
+  let count = 0;
+  for (let i = 1; i < data.length; i++) {
+    const name = String(data[i][0] || '').trim();
+    const plainPassword = String(data[i][1] || '').trim();
+    if (!name) continue;
+    const salt = randomSalt_();
+    const hash = hashPassword_(plainPassword, salt);
+    newRows.push([name, hash, salt, '']);
+    count++;
+  }
+
+  sheet.clearContents();
+  sheet.getRange(1, 1, newRows.length, 4).setValues(newRows);
+  sheet.setFrozenRows(1);
+  Logger.log('搬家完成，共處理 ' + count + ' 位員工，明文密碼已從表格中移除');
+}
+
+// ===== 任務名稱清單 =====
+
+function getTaskNameSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TASKNAME_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TASKNAME_SHEET_NAME);
+    sheet.appendRow(['任務名稱']);
+    DEFAULT_TASK_NAMES.forEach(n => sheet.appendRow([n]));
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getTaskNames_() {
+  const sheet = getTaskNameSheet_();
+  const data = sheet.getDataRange().getValues();
+  const names = [];
+  for (let i = 1; i < data.length; i++) {
+    const n = String(data[i][0] || '').trim();
+    if (n) names.push(n);
+  }
+  return names;
+}
+
+function addTaskName_(name) {
+  const sheet = getTaskNameSheet_();
+  const existing = getTaskNames_();
+  if (existing.indexOf(name) !== -1) return;
+  sheet.appendRow([name]);
+}
+
+// ===== 員工自己的任務名稱 =====
+
+function getMyTaskNameSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(MY_TASKNAME_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(MY_TASKNAME_SHEET_NAME);
+    sheet.appendRow(['姓名', '任務名稱', '建立時間']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getMyTaskNamesFor_(name) {
+  const sheet = getMyTaskNameSheet_();
+  const data = sheet.getDataRange().getValues();
+  const names = [];
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0] || '').trim() === name) {
+      const n = String(data[i][1] || '').trim();
+      if (n) names.push(n);
+    }
+  }
+  return names;
+}
+
+function addMyTaskName_(name, taskName) {
+  const sheet = getMyTaskNameSheet_();
+  const existing = getMyTaskNamesFor_(name);
+  if (existing.indexOf(taskName) !== -1) return;
+  sheet.appendRow([name, taskName, new Date()]);
+}
+
+// 刪除自己新增過的任務名稱（只會刪除屬於自己那一筆，不影響共用清單或其他人）
+function deleteMyTaskName_(name, taskName) {
+  const sheet = getMyTaskNameSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    const rowName = String(data[i][0] || '').trim();
+    const rowTaskName = String(data[i][1] || '').trim();
+    if (rowName === name && rowTaskName === taskName) {
+      sheet.deleteRow(i + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ===== 廠商名單 =====
+
+function getVendorSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(VENDOR_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(VENDOR_SHEET_NAME);
+    sheet.appendRow(['廠商名稱']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getVendors_() {
+  const sheet = getVendorSheet_();
+  const data = sheet.getDataRange().getValues();
+  const names = [];
+  for (let i = 1; i < data.length; i++) {
+    const n = String(data[i][0] || '').trim();
+    if (n) names.push(n);
+  }
+  return names;
+}
+
+// ===== 【新】公關品位置清單 =====
+
+function getPrLocationSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(PR_LOCATION_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PR_LOCATION_SHEET_NAME);
+    sheet.appendRow(['位置名稱']);
+    ['辦公室', '倉庫', '我家'].forEach(n => sheet.appendRow([n]));
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getPrLocations_() {
+  const sheet = getPrLocationSheet_();
+  const data = sheet.getDataRange().getValues();
+  const names = [];
+  for (let i = 1; i < data.length; i++) {
+    const n = String(data[i][0] || '').trim();
+    if (n) names.push(n);
+  }
+  return names;
+}
+
+function addPrLocation_(name) {
+  const sheet = getPrLocationSheet_();
+  const existing = getPrLocations_();
+  if (existing.indexOf(name) !== -1) return;
+  sheet.appendRow([name]);
+}
+
+// ===== 【新】公關品清單（首頁「公關品狀態」卡片用） =====
+
+function getPrItemSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(PR_ITEM_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PR_ITEM_SHEET_NAME);
+    sheet.appendRow(['id', '名稱', '廠商', '品牌', '團購', '位置', '備註', '建立時間', '更新時間', '關聯key']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getPrItems_() {
+  const sheet = getPrItemSheet_();
+  const data = sheet.getDataRange().getValues();
+  const items = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    items.push({
+      id: String(row[0]),
+      name: String(row[1] || ''),
+      vendor: String(row[2] || ''),
+      brand: String(row[3] || ''),
+      group: String(row[4] || ''),
+      location: String(row[5] || ''),
+      note: String(row[6] || ''),
+      created: row[7] instanceof Date ? fmtDateTime_(row[7]) : String(row[7] || ''),
+      updated: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || '')
+    });
+  }
+  return items;
+}
+
+function findPrItemRowById_(id) {
+  const sheet = getPrItemSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) return i + 1;
+  }
+  return -1;
+}
+
+function findPrItemRowByEvKey_(evKey) {
+  if (!evKey) return -1;
+  const sheet = getPrItemSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][9] || '') === evKey) return i + 1;
+  }
+  return -1;
+}
+
+function addPrItem_(fields) {
+  const sheet = getPrItemSheet_();
+  const id = Utilities.getUuid();
+  const now = new Date();
+  sheet.appendRow([
+    id,
+    fields.name || '',
+    fields.vendor || '',
+    fields.brand || '',
+    fields.group || '',
+    fields.location || '',
+    fields.note || '',
+    now,
+    now,
+    fields.evKey || ''
+  ]);
+  return id;
+}
+
+function updatePrItem_(id, fields) {
+  const sheet = getPrItemSheet_();
+  const row = findPrItemRowById_(id);
+  if (row === -1) return false;
+  if (fields.name !== undefined) sheet.getRange(row, 2).setValue(fields.name);
+  if (fields.vendor !== undefined) sheet.getRange(row, 3).setValue(fields.vendor);
+  if (fields.brand !== undefined) sheet.getRange(row, 4).setValue(fields.brand);
+  if (fields.group !== undefined) sheet.getRange(row, 5).setValue(fields.group);
+  if (fields.location !== undefined) sheet.getRange(row, 6).setValue(fields.location);
+  if (fields.note !== undefined) sheet.getRange(row, 7).setValue(fields.note);
+  sheet.getRange(row, 9).setValue(new Date());
+  return true;
+}
+
+function deletePrItem_(id) {
+  const sheet = getPrItemSheet_();
+  const row = findPrItemRowById_(id);
+  if (row === -1) return false;
+  sheet.deleteRow(row);
+  return true;
+}
+
+// 依 evKey（團購key）新增或更新一筆公關品清單；已存在同一 evKey 就更新，不會重複新增
+function upsertPrItemByEvKey_(evKey, fields) {
+  const row = findPrItemRowByEvKey_(evKey);
+  if (row === -1) {
+    return addPrItem_(Object.assign({ evKey: evKey }, fields));
+  }
+  const sheet = getPrItemSheet_();
+  if (fields.name !== undefined && fields.name) sheet.getRange(row, 2).setValue(fields.name);
+  if (fields.vendor !== undefined && fields.vendor) sheet.getRange(row, 3).setValue(fields.vendor);
+  if (fields.brand !== undefined) sheet.getRange(row, 4).setValue(fields.brand);
+  if (fields.group !== undefined && fields.group) sheet.getRange(row, 5).setValue(fields.group);
+  if (fields.location !== undefined) sheet.getRange(row, 6).setValue(fields.location);
+  if (fields.note !== undefined) sheet.getRange(row, 7).setValue(fields.note);
+  sheet.getRange(row, 9).setValue(new Date());
+  return String(sheet.getRange(row, 1).getValue());
+}
+
+// ===== 【新】行事曆活動 CRUD =====
+// 欄位順序（A~Q欄）：
+//   A 編號　B 開始日期　C 結束日期　D 延長時間　E 品牌/標題　F 標籤　G 類別　H 開團連結網址　I 後台網址　J 早鳥禮
+//   K 食譜品牌（既有欄位，這裡完全不動，維持你原本的用法）
+//   L 顏色　M 整日(是/否)　N 開始時間　O 結束時間　P 團購(是/否)　Q 顯示於前台(是/否)
+const EVENT_COL = {
+  ID: 1, START: 2, END: 3, EXTEND: 4, TITLE: 5, TAG: 6, CATEGORY: 7, URL: 8, ADMIN_URL: 9, EARLYBIRD: 10,
+  RECIPE_BRAND: 11,
+  COLOR: 12, ALLDAY: 13, START_TIME: 14, END_TIME: 15, IS_GROUPBUY: 16, PUBLISHED: 17
+};
+
+function getEventSheet_() {
+  // ⚠️ 這裡故意不是用 SpreadsheetApp.getActiveSpreadsheet()：
+  // 行事曆活動資料放在跟這個 Code.gs 不同的「前台試算表」，要用 openById 指名打開才抓得到。
+  const ss = SpreadsheetApp.openById(EVENT_SHEET_ID);
+  if (EVENT_SHEET_NAME) {
+    const named = ss.getSheetByName(EVENT_SHEET_NAME);
+    if (named) return named;
+  }
+  // 沒有指定分頁名稱時，預設使用第一個分頁（跟前台網頁 gviz 讀取同一份資料的邏輯一致）
+  return ss.getSheets()[0];
+}
+
+function findEventRowById_(sheet, id) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) return i + 1;
+  }
+  return -1;
+}
+
+function getNextEventId_(sheet) {
+  const data = sheet.getDataRange().getValues();
+  let max = 0;
+  for (let i = 1; i < data.length; i++) {
+    const n = parseInt(data[i][0], 10);
+    if (!isNaN(n) && n > max) max = n;
+  }
+  return max + 1;
+}
+
+// 把 admin.js 傳來的 'YYYY-MM-DD' 字串轉成 Date 物件（固定午夜0點，時間另外存在 M/N 欄的文字裡，
+// 這樣試算表的 B/C 欄位永遠是「純日期」，gviz 讀出來的格式才不會跟前台網頁的日期解析邏輯衝突）
+function parseYmdToDate_(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '').trim());
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+function addEvent_(fields) {
+  const sheet = getEventSheet_();
+  const id = getNextEventId_(sheet);
+  const startDate = parseYmdToDate_(fields.start);
+  const endDate = parseYmdToDate_(fields.end);
+  if (!startDate || !endDate) throw new Error('開始或結束日期格式不正確');
+
+  const row = [];
+  row[EVENT_COL.ID - 1] = id;
+  row[EVENT_COL.START - 1] = startDate;
+  row[EVENT_COL.END - 1] = endDate;
+  row[EVENT_COL.EXTEND - 1] = (fields.extend === '' || fields.extend === undefined || fields.extend === null) ? '' : Number(fields.extend);
+  row[EVENT_COL.TITLE - 1] = fields.title || '';
+  row[EVENT_COL.TAG - 1] = fields.tag || '';
+  row[EVENT_COL.CATEGORY - 1] = fields.category || '';
+  row[EVENT_COL.URL - 1] = fields.url || '';
+  row[EVENT_COL.ADMIN_URL - 1] = '';
+  row[EVENT_COL.EARLYBIRD - 1] = fields.earlyBird || '';
+  row[EVENT_COL.RECIPE_BRAND - 1] = ''; // 既有的「食譜品牌」欄位，新增活動先留空，不影響既有資料
+  row[EVENT_COL.COLOR - 1] = fields.color || '';
+  row[EVENT_COL.ALLDAY - 1] = fields.allDay ? '是' : '否';
+  row[EVENT_COL.START_TIME - 1] = fields.allDay ? '' : (fields.startTime || '');
+  row[EVENT_COL.END_TIME - 1] = fields.allDay ? '' : (fields.endTime || '');
+  row[EVENT_COL.IS_GROUPBUY - 1] = fields.isGroupBuy ? '是' : '否';
+  row[EVENT_COL.PUBLISHED - 1] = fields.published ? '是' : '否';
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  return id;
+}
+
+function updateEvent_(id, fields) {
+  const sheet = getEventSheet_();
+  const row = findEventRowById_(sheet, id);
+  if (row === -1) return false;
+
+  if (fields.start !== undefined) {
+    const d = parseYmdToDate_(fields.start);
+    if (d) sheet.getRange(row, EVENT_COL.START).setValue(d);
+  }
+  if (fields.end !== undefined) {
+    const d = parseYmdToDate_(fields.end);
+    if (d) sheet.getRange(row, EVENT_COL.END).setValue(d);
+  }
+  if (fields.title !== undefined) sheet.getRange(row, EVENT_COL.TITLE).setValue(fields.title);
+  if (fields.category !== undefined) sheet.getRange(row, EVENT_COL.CATEGORY).setValue(fields.category);
+  if (fields.url !== undefined) sheet.getRange(row, EVENT_COL.URL).setValue(fields.url);
+  if (fields.tag !== undefined) sheet.getRange(row, EVENT_COL.TAG).setValue(fields.tag);
+  if (fields.earlyBird !== undefined) sheet.getRange(row, EVENT_COL.EARLYBIRD).setValue(fields.earlyBird);
+  if (fields.extend !== undefined) {
+    sheet.getRange(row, EVENT_COL.EXTEND).setValue(fields.extend === '' ? '' : Number(fields.extend));
+  }
+  if (fields.color !== undefined) sheet.getRange(row, EVENT_COL.COLOR).setValue(fields.color);
+  if (fields.allDay !== undefined) {
+    sheet.getRange(row, EVENT_COL.ALLDAY).setValue(fields.allDay ? '是' : '否');
+    if (fields.allDay) {
+      // 切回整日活動時，把之前存的時間清掉，避免殘留舊時間造成混淆
+      sheet.getRange(row, EVENT_COL.START_TIME).setValue('');
+      sheet.getRange(row, EVENT_COL.END_TIME).setValue('');
+    }
+  }
+  if (fields.allDay === false) {
+    if (fields.startTime !== undefined) sheet.getRange(row, EVENT_COL.START_TIME).setValue(fields.startTime);
+    if (fields.endTime !== undefined) sheet.getRange(row, EVENT_COL.END_TIME).setValue(fields.endTime);
+  }
+  if (fields.isGroupBuy !== undefined) sheet.getRange(row, EVENT_COL.IS_GROUPBUY).setValue(fields.isGroupBuy ? '是' : '否');
+  if (fields.published !== undefined) sheet.getRange(row, EVENT_COL.PUBLISHED).setValue(fields.published ? '是' : '否');
+  return true;
+}
+
+function deleteEvent_(id) {
+  const sheet = getEventSheet_();
+  const row = findEventRowById_(sheet, id);
+  if (row === -1) return false;
+  sheet.deleteRow(row);
+  return true;
+}
+
+// ===== 對外介面 =====
+
+function doGet(e) {
+  const scope = e && e.parameter ? e.parameter.scope : '';
+  const token = e && e.parameter ? e.parameter.token : '';
+
+  const publicResult = {
+    brands: sheetRowsAsObjects_(BRAND_SHEET_NAME),
+    ingredients: getMergedIngredientsAndProducts_(),
+    recipes: sheetRowsAsObjects_(RECIPE_SHEET_NAME),
+    schoolList: sheetRowsAsObjects_(SCHOOL_LIST_SHEET_NAME)
+  };
+
+  if (scope === 'public') {
+    return jsonResult_(publicResult);
+  }
+
+  const user = getSessionUser_(token);
+  if (!user) {
+    return jsonResult_(Object.assign({}, publicResult, {
+      unauthorized: true,
+      error: '未登入或登入逾時，請重新登入'
+    }));
+  }
+
+  const result = {
+    currentUser: user,
+    memos: sheetToMap_(getMemoSheet_()),
+    urls: sheetToMap_(getUrlSheet_()),
+    brands: publicResult.brands,
+    ingredients: publicResult.ingredients,
+    recipes: publicResult.recipes,
+    schoolList: publicResult.schoolList,
+    staff: getStaff_().map(s => ({ name: s.name })),
+    taskNames: getTaskNames_(),
+    myTaskNames: getMyTaskNamesFor_(user),
+    tasks: getAllTasks_(),
+    vendors: getVendors_(),
+    prStatus: getPrStatusMap_(),
+    prLocations: getPrLocations_()
+  };
+
+  return jsonResult_(result);
+}
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const body = JSON.parse(e.postData.contents);
+    const type = String(body.type || '');
+
+    if (type === 'login') {
+      const name = String(body.name || '').trim();
+      const password = String(body.password || '').trim();
+      if (!password) return jsonResult_({ success: false, error: '請輸入密碼' });
+
+      const staff = getStaff_();
+      let matches;
+      if (name) {
+        matches = staff.filter(function (s) { return s.name === name && s.hash === hashPassword_(password, s.salt); });
+      } else {
+        matches = staff.filter(function (s) { return s.hash === hashPassword_(password, s.salt); });
+      }
+
+      if (matches.length === 0) {
+        return jsonResult_({ success: false, error: '密碼錯誤' });
+      }
+      if (matches.length > 1) {
+        return jsonResult_({ success: false, error: '有員工使用相同密碼，請到「員工名單」分頁設定成不同密碼' });
+      }
+
+      const token = createSession_(matches[0].name);
+      return jsonResult_({ success: true, token: token, name: matches[0].name });
+    }
+
+    const token = String(body.token || '');
+    const currentUser = getSessionUser_(token);
+    if (!currentUser) {
+      return jsonResult_({ success: false, error: '未登入或登入逾時，請重新登入', needLogin: true });
+    }
+
+    if (type === 'change-password') {
+      const oldPassword = String(body.oldPassword || '');
+      const newPassword = String(body.newPassword || '');
+      if (!oldPassword || !newPassword) {
+        return jsonResult_({ success: false, error: '請輸入舊密碼與新密碼' });
+      }
+      if (!isPasswordValid_(newPassword)) {
+        return jsonResult_({ success: false, error: '新密碼至少需要6碼，並包含大寫英文、小寫英文、數字各一個' });
+      }
+      const staff = getStaff_();
+      const me = staff.find(function (s) { return s.name === currentUser; });
+      if (!me) {
+        return jsonResult_({ success: false, error: '找不到使用者資料' });
+      }
+      if (hashPassword_(oldPassword, me.salt) !== me.hash) {
+        return jsonResult_({ success: false, error: '舊密碼不正確' });
+      }
+      setStaffPassword_(currentUser, newPassword);
+      return jsonResult_({ success: true });
+    }
+
+    if (type === 'pnote-list') {
+      const scope = body.scope === 'shared' ? 'shared' : 'personal';
+      return jsonResult_({
+        success: true,
+        folders: getPnoteFoldersFor_(scope, currentUser),
+        notes: getPnotesFor_(scope, currentUser)
+      });
+    }
+
+    if (type === 'pnote-folder-add') {
+      const scope = body.scope === 'shared' ? 'shared' : 'personal';
+      const name = String(body.name || '').trim();
+      if (!name) return jsonResult_({ success: false, error: '請輸入資料夾名稱' });
+      const parentFolderId = String(body.parentFolderId || '').trim();
+      const id = addPnoteFolder_(scope, currentUser, name, parentFolderId);
+      return jsonResult_({ success: true, folder: { id: id, name: name, parentFolderId: parentFolderId } });
+    }
+
+    if (type === 'pnote-folder-delete') {
+      const scope = body.scope === 'shared' ? 'shared' : 'personal';
+      const folderId = String(body.folderId || '').trim();
+      if (!folderId) return jsonResult_({ success: false, error: '缺少資料夾資訊' });
+      const ok = deletePnoteFolder_(scope, currentUser, folderId);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個資料夾' });
+    }
+
+    if (type === 'pnote-add') {
+      const scope = body.scope === 'shared' ? 'shared' : 'personal';
+      const folderId = String(body.folderId || '').trim();
+      const id = addPnote_(scope, currentUser, folderId, body.text);
+      return jsonResult_({ success: true, note: { id: id, folderId: folderId, text: String(body.text || '') } });
+    }
+
+    if (type === 'pnote-update') {
+      const scope = body.scope === 'shared' ? 'shared' : 'personal';
+      const noteId = String(body.noteId || '').trim();
+      if (!noteId) return jsonResult_({ success: false, error: '缺少備忘錄資訊' });
+      const fields = {};
+      if (body.text !== undefined) fields.text = body.text;
+      if (body.folderId !== undefined) fields.folderId = body.folderId;
+      const ok = updatePnote_(scope, currentUser, noteId, fields);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這則備忘錄' });
+    }
+
+    if (type === 'pnote-delete') {
+      const scope = body.scope === 'shared' ? 'shared' : 'personal';
+      const noteId = String(body.noteId || '').trim();
+      if (!noteId) return jsonResult_({ success: false, error: '缺少備忘錄資訊' });
+      const ok = deletePnote_(scope, currentUser, noteId);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這則備忘錄' });
+    }
+
+    if (type === 'task-add') {
+      const to = String(body.to || '').trim();
+      const taskName = String(body.taskName || '').trim();
+      if (!to || !taskName) return jsonResult_({ success: false, error: '缺少派遣對象或任務名稱' });
+      const dateStr = String(body.date || '').trim();
+      const id = addTask_(to, currentUser, taskName, String(body.content || ''), !!body.urgent, body.extra, dateStr);
+      return jsonResult_({ success: true, id: id });
+    }
+
+    if (type === 'task-urgent') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      if (!owner || !id) return jsonResult_({ success: false, error: '缺少任務資訊' });
+      const ok = setTaskUrgent_(owner, id, !!body.urgent);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆任務' });
+    }
+
+    if (type === 'task-done') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      if (!owner || !id) return jsonResult_({ success: false, error: '缺少任務資訊' });
+      const ok = setTaskStatus_(owner, id, body.done ? '已完成' : '待完成');
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆任務' });
+    }
+
+    if (type === 'task-status') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      const status = String(body.status || '').trim();
+      if (!owner || !id) return jsonResult_({ success: false, error: '缺少任務資訊' });
+      const ok = setTaskStatus_(owner, id, status);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆任務或狀態錯誤' });
+    }
+
+    if (type === 'task-memo') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      if (!owner || !id) return jsonResult_({ success: false, error: '缺少任務資訊' });
+      const ok = setTaskMemo_(owner, id, body.text);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆任務' });
+    }
+
+    if (type === 'task-stage-add') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      const text = String(body.text || '').trim();
+      if (!owner || !id || !text) return jsonResult_({ success: false, error: '缺少階段內容' });
+      const stageId = addTaskStage_(owner, id, text);
+      return jsonResult_(stageId ? { success: true, stageId: stageId } : { success: false, error: '找不到這筆任務' });
+    }
+
+    if (type === 'task-stage-delete') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      const stageId = String(body.stageId || '').trim();
+      if (!owner || !id || !stageId) return jsonResult_({ success: false, error: '缺少階段資訊' });
+      const ok = deleteTaskStage_(owner, id, stageId);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆階段紀錄' });
+    }
+
+    if (type === 'task-bounce-add') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      const text = String(body.text || '').trim();
+      if (!owner || !id || !text) return jsonResult_({ success: false, error: '缺少回派內容' });
+      const ok = addTaskBounce_(owner, id, currentUser, text);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆任務' });
+    }
+
+    if (type === 'task-delete') {
+      const owner = String(body.owner || '').trim();
+      const id = String(body.id || '').trim();
+      if (!owner || !id) return jsonResult_({ success: false, error: '缺少任務資訊' });
+      const ok = deleteTask_(owner, id);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆任務' });
+    }
+
+    if (type === 'taskname-add') {
+      const name = String(body.name || '').trim();
+      if (!name) return jsonResult_({ success: false, error: '缺少任務名稱' });
+      addTaskName_(name);
+      return jsonResult_({ success: true });
+    }
+
+    if (type === 'my-taskname-add') {
+      const name = String(body.name || '').trim();
+      if (!name) return jsonResult_({ success: false, error: '缺少任務名稱' });
+      if (getTaskNames_().indexOf(name) === -1) {
+        addMyTaskName_(currentUser, name);
+      }
+      return jsonResult_({ success: true });
+    }
+
+    // 刪除自己新增過的任務名稱（只影響自己在「我的任務名稱」分頁裡的那一筆）
+    if (type === 'my-taskname-delete') {
+      const name = String(body.name || '').trim();
+      if (!name) return jsonResult_({ success: false, error: '缺少任務名稱' });
+      const ok = deleteMyTaskName_(currentUser, name);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個任務名稱' });
+    }
+
+    if (type === 'pr-status') {
+      const key = String(body.key || '').trim();
+      if (!key) return jsonResult_({ success: false, error: '缺少團購 key' });
+      const fields = {};
+      if (body.status != null) fields.status = String(body.status);
+      if (body.url != null) fields.url = String(body.url);
+      if (body.location != null) fields.location = String(body.location);
+      upsertPrStatus_(key, fields);
+      return jsonResult_({ success: true });
+    }
+
+    // 公關品位置清單
+    if (type === 'pr-location-add') {
+      const name = String(body.name || '').trim();
+      if (!name) return jsonResult_({ success: false, error: '缺少位置名稱' });
+      addPrLocation_(name);
+      return jsonResult_({ success: true });
+    }
+
+    // 公關品清單
+    if (type === 'pr-item-list') {
+      return jsonResult_({ success: true, items: getPrItems_() });
+    }
+
+    if (type === 'pr-item-add') {
+      const fields = {
+        name: String(body.name || '').trim(),
+        vendor: String(body.vendor || '').trim(),
+        brand: String(body.brand || '').trim(),
+        group: String(body.group || '').trim(),
+        location: String(body.location || '').trim(),
+        note: String(body.note || '').trim()
+      };
+      if (!fields.name) return jsonResult_({ success: false, error: '請至少輸入名稱' });
+      const id = addPrItem_(fields);
+      return jsonResult_({ success: true, id: id });
+    }
+
+    if (type === 'pr-item-update') {
+      const id = String(body.id || '').trim();
+      if (!id) return jsonResult_({ success: false, error: '缺少公關品資訊' });
+      const fields = {};
+      ['name', 'vendor', 'brand', 'group', 'location', 'note'].forEach(function (k) {
+        if (body[k] !== undefined) fields[k] = String(body[k]);
+      });
+      const ok = updatePrItem_(id, fields);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆資料' });
+    }
+
+    if (type === 'pr-item-delete') {
+      const id = String(body.id || '').trim();
+      if (!id) return jsonResult_({ success: false, error: '缺少公關品資訊' });
+      const ok = deletePrItem_(id);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆資料' });
+    }
+
+    // 廠商選品任務切到「已收到」／「已拍攝」時，前端自動呼叫，新增或更新對應的公關品清單一筆
+    if (type === 'pr-item-sync') {
+      const evKey = String(body.evKey || '').trim();
+      if (!evKey) return jsonResult_({ success: false, error: '缺少對應團購資訊' });
+      const fields = {};
+      ['name', 'vendor', 'brand', 'group', 'location', 'note'].forEach(function (k) {
+        if (body[k] !== undefined) fields[k] = String(body[k]);
+      });
+      const id = upsertPrItemByEvKey_(evKey, fields);
+      return jsonResult_({ success: true, id: id });
+    }
+
+    // 【新】行事曆活動：新增
+    if (type === 'event-add') {
+      const title = String(body.title || '').trim();
+      if (!title) return jsonResult_({ success: false, error: '請輸入標題' });
+      if (!body.start || !body.end) return jsonResult_({ success: false, error: '請選擇開始與結束日期' });
+      try {
+        const id = addEvent_({
+          title: title,
+          start: body.start,
+          end: body.end,
+          color: body.color || '',
+          allDay: !!body.allDay,
+          startTime: body.startTime || '',
+          endTime: body.endTime || '',
+          isGroupBuy: !!body.isGroupBuy,
+          published: !!body.published,
+          url: body.url || '',
+          category: body.category || '',
+          tag: body.tag || '',
+          extend: body.extend === undefined ? '' : body.extend,
+          earlyBird: body.earlyBird || ''
+        });
+        return jsonResult_({ success: true, id: id });
+      } catch (err) {
+        return jsonResult_({ success: false, error: String(err) });
+      }
+    }
+
+    // 【新】行事曆活動：編輯
+    if (type === 'event-update') {
+      const id = body.id;
+      if (id === undefined || id === null || id === '') return jsonResult_({ success: false, error: '缺少活動資訊' });
+      const fields = {};
+      if (body.title !== undefined) fields.title = String(body.title);
+      if (body.start !== undefined) fields.start = body.start;
+      if (body.end !== undefined) fields.end = body.end;
+      if (body.color !== undefined) fields.color = String(body.color);
+      if (body.allDay !== undefined) fields.allDay = !!body.allDay;
+      if (body.startTime !== undefined) fields.startTime = String(body.startTime);
+      if (body.endTime !== undefined) fields.endTime = String(body.endTime);
+      if (body.isGroupBuy !== undefined) fields.isGroupBuy = !!body.isGroupBuy;
+      if (body.published !== undefined) fields.published = !!body.published;
+      if (body.tag !== undefined) fields.tag = String(body.tag);
+      if (body.extend !== undefined) fields.extend = body.extend;
+      if (body.earlyBird !== undefined) fields.earlyBird = String(body.earlyBird);
+      if (body.url !== undefined) fields.url = String(body.url);
+      if (body.category !== undefined) fields.category = String(body.category);
+      const ok = updateEvent_(id, fields);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個活動' });
+    }
+
+    // 【新】行事曆活動：刪除
+    if (type === 'event-delete') {
+      const id = body.id;
+      if (id === undefined || id === null || id === '') return jsonResult_({ success: false, error: '缺少活動資訊' });
+      const ok = deleteEvent_(id);
+      return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個活動' });
+    }
+
+    // 原有功能：備忘錄／後台網址
+    const key = String(body.key || '').trim();
+    const text = body.text || '';
+    const kvType = body.type === 'url' ? 'url' : 'memo';
+
+    if (!key) return jsonResult_({ success: false, error: 'missing key' });
+
+    const sheet = kvType === 'url' ? getUrlSheet_() : getMemoSheet_();
+    upsertKeyValue_(sheet, key, text);
+
+    return jsonResult_({ success: true });
+  } catch (err) {
+    return jsonResult_({ success: false, error: String(err) });
+  } finally {
+    try { lock.releaseLock(); } catch (e2) {}
+  }
+}
+
+// ===== 任務系統 =====
+
+function getTaskSheet_(ownerName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = TASK_SHEET_PREFIX + ownerName;
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['id', '任務名稱', '內容', '緊急', '狀態', '派遣人', '建立時間', '完成時間', '備忘錄', '階段', '附加資料', '日期', '回派對話']);
+    sheet.setFrozenRows(1);
+  } else {
+    if (!String(sheet.getRange(1, 9).getValue()).trim()) sheet.getRange(1, 9).setValue('備忘錄');
+    if (!String(sheet.getRange(1, 10).getValue()).trim()) sheet.getRange(1, 10).setValue('階段');
+    if (!String(sheet.getRange(1, 11).getValue()).trim()) sheet.getRange(1, 11).setValue('附加資料');
+    if (!String(sheet.getRange(1, 12).getValue()).trim()) sheet.getRange(1, 12).setValue('日期');
+    if (!String(sheet.getRange(1, 13).getValue()).trim()) sheet.getRange(1, 13).setValue('回派對話');
+  }
+  return sheet;
+}
+
+function fmtDateTime_(d) {
+  if (!(d instanceof Date) || isNaN(d)) return '';
+  return Utilities.formatDate(d, 'Asia/Taipei', 'M/d HH:mm');
+}
+
+function getTasksFor_(ownerName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(TASK_SHEET_PREFIX + ownerName);
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  const tasks = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    let status = String(row[4] || '').trim();
+    if (status !== '處理中' && status !== '已完成' && status !== '回派中') status = '待完成';
+    let stages = [];
+    try {
+      const parsed = JSON.parse(String(row[9] || '[]'));
+      if (Array.isArray(parsed)) stages = parsed;
+    } catch (errStage) { stages = []; }
+    let extra = null;
+    try {
+      const parsedExtra = JSON.parse(String(row[10] || 'null'));
+      if (parsedExtra && typeof parsedExtra === 'object') extra = parsedExtra;
+    } catch (errExtra) { extra = null; }
+    let bounces = [];
+    try {
+      const parsedBounce = JSON.parse(String(row[12] || '[]'));
+      if (Array.isArray(parsedBounce)) bounces = parsedBounce;
+    } catch (errBounce) { bounces = []; }
+    tasks.push({
+      id: String(row[0]),
+      taskName: String(row[1] || ''),
+      content: String(row[2] || ''),
+      urgent: String(row[3]).trim() === '是',
+      status: status,
+      done: status === '已完成',
+      from: String(row[5] || ''),
+      created: row[6] instanceof Date ? fmtDateTime_(row[6]) : String(row[6] || ''),
+      doneAt: row[7] instanceof Date ? fmtDateTime_(row[7]) : String(row[7] || ''),
+      memo: String(row[8] || ''),
+      stages: stages,
+      extra: extra,
+      date: row[11] instanceof Date ? Utilities.formatDate(row[11], 'Asia/Taipei', 'yyyy-MM-dd') : String(row[11] || ''),
+      bounces: bounces
+    });
+  }
+  return tasks;
+}
+
+function getAllTasks_() {
+  const tasks = {};
+  getStaff_().forEach(s => {
+    tasks[s.name] = getTasksFor_(s.name);
+  });
+  return tasks;
+}
+
+function addTask_(to, from, taskName, content, urgent, extra, dateStr) {
+  const sheet = getTaskSheet_(to);
+  const id = 'T' + Date.now();
+  const extraJson = extra && typeof extra === 'object' ? JSON.stringify(extra) : '';
+  sheet.appendRow([id, taskName, content, urgent ? '是' : '否', '待完成', from, new Date(), '', '', '[]', extraJson, dateStr || '', '[]']);
+  return id;
+}
+
+function setTaskUrgent_(owner, id, urgent) {
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  sheet.getRange(row, 4).setValue(urgent ? '是' : '否');
+  return true;
+}
+
+function findTaskRow_(sheet, id) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) return i + 1;
+  }
+  return -1;
+}
+
+function setTaskStatus_(owner, id, status) {
+  if (status !== '待完成' && status !== '處理中' && status !== '已完成' && status !== '回派中') return false;
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  sheet.getRange(row, 5).setValue(status);
+  sheet.getRange(row, 8).setValue(status === '已完成' ? new Date() : '');
+  return true;
+}
+
+function setTaskMemo_(owner, id, text) {
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  sheet.getRange(row, 9).setValue(String(text || ''));
+  return true;
+}
+
+// 新增一筆階段紀錄；每筆會帶一個 id，回傳這個 id（找不到任務回傳 false）
+function addTaskStage_(owner, id, text) {
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  let stages = [];
+  try {
+    const parsed = JSON.parse(String(sheet.getRange(row, 10).getValue() || '[]'));
+    if (Array.isArray(parsed)) stages = parsed;
+  } catch (errStage) { stages = []; }
+  const stageId = 'S' + Date.now() + Math.floor(Math.random() * 1000);
+  stages.push({ id: stageId, text: String(text || ''), time: fmtDateTime_(new Date()) });
+  sheet.getRange(row, 10).setValue(JSON.stringify(stages));
+  return stageId;
+}
+
+// 依 stageId 刪除單一條階段紀錄；找不到任務或 stageId 都回傳 false
+function deleteTaskStage_(owner, id, stageId) {
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  let stages = [];
+  try {
+    const parsed = JSON.parse(String(sheet.getRange(row, 10).getValue() || '[]'));
+    if (Array.isArray(parsed)) stages = parsed;
+  } catch (errStage) { stages = []; }
+  const filtered = stages.filter(function (s) { return String(s.id) !== String(stageId); });
+  if (filtered.length === stages.length) return false; // 沒找到（可能是舊資料沒有 id）
+  sheet.getRange(row, 10).setValue(JSON.stringify(filtered));
+  return true;
+}
+
+// 新增一筆回派對話紀錄，並把任務狀態改成「回派中」
+function addTaskBounce_(owner, id, fromName, text) {
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  let bounces = [];
+  try {
+    const parsed = JSON.parse(String(sheet.getRange(row, 13).getValue() || '[]'));
+    if (Array.isArray(parsed)) bounces = parsed;
+  } catch (errBounce) { bounces = []; }
+  bounces.push({ from: fromName, text: String(text || ''), time: fmtDateTime_(new Date()) });
+  sheet.getRange(row, 13).setValue(JSON.stringify(bounces));
+  sheet.getRange(row, 5).setValue('回派中');
+  return true;
+}
+
+function deleteTask_(owner, id) {
+  const sheet = getTaskSheet_(owner);
+  const row = findTaskRow_(sheet, id);
+  if (row === -1) return false;
+  sheet.deleteRow(row);
+  return true;
+}
+
+// ===== 備忘錄（個人／共用） =====
+
+function getPnoteFolderSheetForScope_(scope) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = scope === 'shared' ? SPNOTE_FOLDER_SHEET_NAME : PNOTE_FOLDER_SHEET_NAME;
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['id', '建立人', '資料夾名稱', '上層資料夾ID', '建立時間']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getPnoteSheetForScope_(scope) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = scope === 'shared' ? SPNOTE_SHEET_NAME : PNOTE_SHEET_NAME;
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['id', '建立人', '資料夾ID', '內容', '建立時間', '更新時間']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getPnoteFoldersFor_(scope, name) {
+  const sheet = getPnoteFolderSheetForScope_(scope);
+  const data = sheet.getDataRange().getValues();
+  const folders = [];
+  for (let i = 1; i < data.length; i++) {
+    const owner = String(data[i][1] || '').trim();
+    if (scope === 'shared' || owner === name) {
+      folders.push({
+        id: String(data[i][0]),
+        name: String(data[i][2] || ''),
+        parentFolderId: String(data[i][3] || '')
+      });
+    }
+  }
+  return folders;
+}
+
+function getPnotesFor_(scope, name) {
+  const sheet = getPnoteSheetForScope_(scope);
+  const data = sheet.getDataRange().getValues();
+  const notes = [];
+  for (let i = 1; i < data.length; i++) {
+    const owner = String(data[i][1] || '').trim();
+    if (scope === 'shared' || owner === name) {
+      notes.push({
+        id: String(data[i][0]),
+        folderId: String(data[i][2] || ''),
+        text: String(data[i][3] || ''),
+        updatedAt: data[i][5] instanceof Date ? fmtDateTime_(data[i][5]) : ''
+      });
+    }
+  }
+  return notes;
+}
+
+function addPnoteFolder_(scope, name, folderName, parentFolderId) {
+  const sheet = getPnoteFolderSheetForScope_(scope);
+  const id = Utilities.getUuid();
+  sheet.appendRow([id, name, folderName, parentFolderId || '', new Date()]);
+  return id;
+}
+
+function collectPnoteFolderIdsRecursive_(allFolders, rootId) {
+  const result = [String(rootId)];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    allFolders.forEach(f => {
+      if (result.indexOf(f.id) === -1 && result.indexOf(f.parentFolderId) !== -1) {
+        result.push(f.id);
+        changed = true;
+      }
+    });
+  }
+  return result;
+}
+
+function deletePnoteFolder_(scope, name, folderId) {
+  const allFolders = getPnoteFoldersFor_(scope, name);
+  const target = allFolders.find(function (f) { return f.id === String(folderId); });
+  if (!target) return false;
+
+  const idsToDelete = collectPnoteFolderIdsRecursive_(allFolders, folderId);
+
+  const folderSheet = getPnoteFolderSheetForScope_(scope);
+  const data = folderSheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    const rowId = String(data[i][0]);
+    const owner = String(data[i][1] || '').trim();
+    if (idsToDelete.indexOf(rowId) !== -1 && (scope === 'shared' || owner === name)) {
+      folderSheet.deleteRow(i + 1);
+    }
+  }
+
+  const noteSheet = getPnoteSheetForScope_(scope);
+  const noteData = noteSheet.getDataRange().getValues();
+  for (let i = 1; i < noteData.length; i++) {
+    const owner = String(noteData[i][1] || '').trim();
+    const folderIdOfNote = String(noteData[i][2] || '');
+    if ((scope === 'shared' || owner === name) && idsToDelete.indexOf(folderIdOfNote) !== -1) {
+      noteSheet.getRange(i + 1, 3).setValue('');
+    }
+  }
+  return true;
+}
+
+function addPnote_(scope, name, folderId, text) {
+  const sheet = getPnoteSheetForScope_(scope);
+  const id = Utilities.getUuid();
+  const now = new Date();
+  sheet.appendRow([id, name, folderId || '', text || '', now, now]);
+  return id;
+}
+
+function findPnoteRow_(sheet, scope, name, noteId) {
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const owner = String(data[i][1] || '').trim();
+    if (String(data[i][0]) === String(noteId) && (scope === 'shared' || owner === name)) return i + 1;
+  }
+  return -1;
+}
+
+function updatePnote_(scope, name, noteId, fields) {
+  const sheet = getPnoteSheetForScope_(scope);
+  const row = findPnoteRow_(sheet, scope, name, noteId);
+  if (row === -1) return false;
+  if (fields.text !== undefined) sheet.getRange(row, 4).setValue(String(fields.text));
+  if (fields.folderId !== undefined) sheet.getRange(row, 3).setValue(String(fields.folderId));
+  sheet.getRange(row, 6).setValue(new Date());
+  return true;
+}
+
+function deletePnote_(scope, name, noteId) {
+  const sheet = getPnoteSheetForScope_(scope);
+  const row = findPnoteRow_(sheet, scope, name, noteId);
+  if (row === -1) return false;
+  sheet.deleteRow(row);
+  return true;
+}
+
+// ===== 公關品狀態（單個團購的狀態，跟公關品清單是不同分頁） =====
+
+function getPrStatusSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(PR_STATUS_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PR_STATUS_SHEET_NAME);
+    sheet.appendRow(['key', '狀態', '選品網址', '倉庫位置', '更新時間']);
+    sheet.setFrozenRows(1);
+  }
+  const header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  const need = ['key', '狀態', '選品網址', '倉庫位置', '更新時間'];
+  if (header.length < need.length) {
+    sheet.getRange(1, 1, 1, need.length).setValues([need]);
+  }
+  return sheet;
+}
+
+function getPrStatusMap_() {
+  const sheet = getPrStatusSheet_();
+  const data = sheet.getDataRange().getValues();
+  const map = {};
+  for (let i = 1; i < data.length; i++) {
+    const key = data[i][0];
+    if (!key) continue;
+    map[String(key)] = {
+      status: data[i][1] || '',
+      url: data[i][2] || '',
+      location: data[i][3] || '',
+      updated: data[i][4] ? fmtDateTime_(data[i][4]) : ''
+    };
+  }
+  return map;
+}
+
+function upsertPrStatus_(key, fields) {
+  const sheet = getPrStatusSheet_();
+  const data = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === key) { rowIndex = i + 1; break; }
+  }
+  const now = new Date();
+  if (rowIndex === -1) {
+    sheet.appendRow([
+      key,
+      fields.status != null ? fields.status : '',
+      fields.url != null ? fields.url : '',
+      fields.location != null ? fields.location : '',
+      now
+    ]);
+  } else {
+    if (fields.status != null) sheet.getRange(rowIndex, 2).setValue(fields.status);
+    if (fields.url != null) sheet.getRange(rowIndex, 3).setValue(fields.url);
+    if (fields.location != null) sheet.getRange(rowIndex, 4).setValue(fields.location);
+    sheet.getRange(rowIndex, 5).setValue(now);
+  }
+  return true;
+}
+
+function jsonResult_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
