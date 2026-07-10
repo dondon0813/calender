@@ -1161,7 +1161,7 @@ function updatePermissionUI() {
   const iconEl = document.getElementById('toolIconImageLibrary');
   if (iconEl) iconEl.style.display = showImageLib ? '' : 'none';
 
-  const permBtn = document.getElementById('menuPermissionsBtn');
+  const permBtn = document.getElementById('settingsHubPermissionsBtn');
   if (permBtn) permBtn.style.display = isAdmin ? '' : 'none';
 }
 
@@ -2466,11 +2466,26 @@ async function submitPasswordChange() {
   btn.disabled = false;
 }
 
-document.getElementById('menuPasswordBtn').addEventListener('click', openSettingsModal);
+document.getElementById('menuSettingsBtn').addEventListener('click', openSettingsHubModal);
 document.getElementById('settingsSubmitBtn').addEventListener('click', submitPasswordChange);
 
+function openSettingsHubModal() {
+  document.getElementById('menuPanel').classList.remove('show');
+  document.getElementById('settingsHubModal').classList.add('show');
+}
+function closeSettingsHubModal() {
+  document.getElementById('settingsHubModal').classList.remove('show');
+}
+document.getElementById('settingsHubPasswordBtn').addEventListener('click', () => {
+  closeSettingsHubModal();
+  openSettingsModal();
+});
+document.getElementById('settingsHubPermissionsBtn').addEventListener('click', () => {
+  closeSettingsHubModal();
+  openPermissionsModal();
+});
+
 // ===== 【新】權限設定（只有管理員雪莉看得到入口，後端也會擋非管理員的請求） =====
-document.getElementById('menuPermissionsBtn').addEventListener('click', openPermissionsModal);
 
 function openPermissionsModal() {
   document.getElementById('menuPanel').classList.remove('show');
@@ -4254,7 +4269,7 @@ function renderTodoGroups() {
 // ===== 【新】圖片庫：瀏覽／上傳／改名／刪除／批次轉WebP =====
 
 let ilFiles = [];          // 目前資料夾下的檔案清單（來自 image-list）
-let ilSelectedForWebp = new Set(); // 勾選要批次轉WebP的檔案 path
+let ilSelected = new Set(); // 勾選的檔案 path，批次轉WebP／刪除／搬移共用同一組選取
 
 function ilCurrentFolder() {
   const sel = document.getElementById('ilFolderSelect');
@@ -4277,6 +4292,7 @@ document.getElementById('ilSearchInput').addEventListener('input', () => ilRende
 // 這樣新增資料夾、或資料夾名稱大小寫跟原本猜的不一樣，都能正確被抓到）
 async function ilLoadFolderOptions() {
   const sel = document.getElementById('ilFolderSelect');
+  const moveSel = document.getElementById('ilMoveTargetSelect');
   const prevVal = sel.value === '__custom__' ? '' : sel.value;
   try {
     const result = await postTask({ type: 'image-folder-list' });
@@ -4297,6 +4313,19 @@ async function ilLoadFolderOptions() {
     sel.appendChild(customOpt);
 
     if (prevVal && folders.indexOf(prevVal) !== -1) sel.value = prevVal;
+
+    // 搬移目標選單用同一份資料夾清單，多一個「搬到…」的預設空白選項
+    moveSel.innerHTML = '<option value="">搬到…</option>';
+    folders.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      moveSel.appendChild(opt);
+    });
+    const moveCustomOpt = document.createElement('option');
+    moveCustomOpt.value = '__custom__';
+    moveCustomOpt.textContent = '自訂路徑…';
+    moveSel.appendChild(moveCustomOpt);
   } catch (err) {
     console.warn('資料夾清單讀取失敗，沿用目前選單：', err);
   }
@@ -4305,7 +4334,7 @@ async function ilLoadFolderOptions() {
 async function ilLoad() {
   const grid = document.getElementById('ilGrid');
   grid.innerHTML = '<div class="il-empty">載入中…</div>';
-  ilSelectedForWebp.clear();
+  ilSelected.clear();
   document.getElementById('ilSelectAllCheckbox').checked = false;
   try {
     const result = await postTask({ type: 'image-list', path: ilCurrentFolder() });
@@ -4337,16 +4366,18 @@ function ilRenderGrid() {
     card.className = 'il-card';
 
     const isWebp = ilIsWebp(f.name);
-    if (!isWebp) {
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.className = 'il-card-checkbox';
-      cb.checked = ilSelectedForWebp.has(f.path);
-      cb.addEventListener('change', () => {
-        if (cb.checked) ilSelectedForWebp.add(f.path); else ilSelectedForWebp.delete(f.path);
-      });
-      card.appendChild(cb);
-    } else {
+
+    // 每張圖都有勾選框，用來做批次刪除／批次搬移；WebP徽章跟勾選框可以同時存在
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'il-card-checkbox';
+    cb.checked = ilSelected.has(f.path);
+    cb.addEventListener('change', () => {
+      if (cb.checked) ilSelected.add(f.path); else ilSelected.delete(f.path);
+    });
+    card.appendChild(cb);
+
+    if (isWebp) {
       const badge = document.createElement('span');
       badge.className = 'il-card-webp-badge';
       badge.textContent = 'WebP';
@@ -4399,10 +4430,15 @@ function ilRenderGrid() {
   });
 }
 
+// 全選／取消全選：只作用在「目前有依搜尋條件顯示出來」的那些圖片，不會動到被篩掉、看不到的項目
 document.getElementById('ilSelectAllCheckbox').addEventListener('change', (e) => {
-  ilSelectedForWebp.clear();
+  const search = (document.getElementById('ilSearchInput').value || '').trim().toLowerCase();
+  let items = ilFiles;
+  if (search) items = items.filter(f => f.name.toLowerCase().includes(search));
   if (e.target.checked) {
-    ilFiles.forEach(f => { if (!ilIsWebp(f.name)) ilSelectedForWebp.add(f.path); });
+    items.forEach(f => ilSelected.add(f.path));
+  } else {
+    items.forEach(f => ilSelected.delete(f.path));
   }
   ilRenderGrid();
 });
@@ -4537,9 +4573,11 @@ async function ilConvertOneToWebp(f) {
 }
 
 document.getElementById('ilBatchConvertBtn').addEventListener('click', async () => {
-  const targets = ilFiles.filter(f => ilSelectedForWebp.has(f.path));
+  const selected = ilFiles.filter(f => ilSelected.has(f.path));
+  const targets = selected.filter(f => !ilIsWebp(f.name));
+  const skipped = selected.length - targets.length;
   if (!targets.length) {
-    setFormStatus('ilBatchStatus', '請先勾選要轉檔的圖片', 'error');
+    setFormStatus('ilBatchStatus', selected.length ? '勾選的圖片都已經是WebP了，不用轉' : '請先勾選要轉檔的圖片', 'error');
     return;
   }
   const btn = document.getElementById('ilBatchConvertBtn');
@@ -4557,8 +4595,103 @@ document.getElementById('ilBatchConvertBtn').addEventListener('click', async () 
       console.warn('批次轉檔失敗：', f.name, err);
     }
   }
-  setFormStatus('ilBatchStatus', `完成，成功轉換 ${okCount}/${targets.length} 張 ✓（原圖皆保留）`, okCount === targets.length ? 'ok' : 'error');
+  const skipNote = skipped ? `，略過 ${skipped} 張已是WebP的` : '';
+  setFormStatus('ilBatchStatus', `完成，成功轉換 ${okCount}/${targets.length} 張 ✓（原圖皆保留）${skipNote}`, okCount === targets.length ? 'ok' : 'error');
   btn.disabled = false;
-  ilSelectedForWebp.clear();
+  ilSelected.clear();
+  await ilLoad();
+});
+
+// 【新】批次刪除：勾選的圖片一次刪除，刪除前先統一檢查有沒有被試算表引用
+document.getElementById('ilBatchDeleteBtn').addEventListener('click', async () => {
+  const targets = ilFiles.filter(f => ilSelected.has(f.path));
+  if (!targets.length) {
+    setFormStatus('ilBatchStatus', '請先勾選要刪除的圖片', 'error');
+    return;
+  }
+  const btn = document.getElementById('ilBatchDeleteBtn');
+  btn.disabled = true;
+  setFormStatus('ilBatchStatus', '檢查引用中…', '');
+  let totalRefs = 0;
+  try {
+    for (const f of targets) {
+      const usage = await postTask({ type: 'image-usage-check', path: f.path });
+      totalRefs += (usage.refs || []).length;
+    }
+  } catch (err) {
+    console.warn('引用檢查失敗，直接進確認：', err);
+  }
+  let confirmMsg = `確定要刪除這 ${targets.length} 張圖片嗎？此動作無法復原。`;
+  if (totalRefs > 0) {
+    confirmMsg = `⚠️ 這些圖片中總共有 ${totalRefs} 處被試算表欄位引用，刪除後那些地方的圖會消失。確定還是要刪除這 ${targets.length} 張嗎？`;
+  }
+  if (!confirm(confirmMsg)) {
+    btn.disabled = false;
+    setFormStatus('ilBatchStatus', '', '');
+    return;
+  }
+
+  let okCount = 0;
+  for (let i = 0; i < targets.length; i++) {
+    const f = targets[i];
+    setFormStatus('ilBatchStatus', `刪除中… (${i + 1}/${targets.length}) ${f.name}`, '');
+    try {
+      await postTask({ type: 'image-delete', path: f.path });
+      okCount++;
+    } catch (err) {
+      console.warn('刪除失敗：', f.name, err);
+    }
+  }
+  setFormStatus('ilBatchStatus', `完成，成功刪除 ${okCount}/${targets.length} 張 ✓`, okCount === targets.length ? 'ok' : 'error');
+  btn.disabled = false;
+  ilSelected.clear();
+  await ilLoad();
+});
+
+// 【新】批次搬移：把勾選的圖片搬到另一個資料夾，檔名不變，試算表引用會自動更新
+document.getElementById('ilMoveTargetSelect').addEventListener('change', (e) => {
+  document.getElementById('ilMoveCustomFolderInput').style.display = e.target.value === '__custom__' ? 'inline-block' : 'none';
+});
+
+function ilMoveTargetFolder() {
+  const sel = document.getElementById('ilMoveTargetSelect');
+  if (sel.value === '__custom__') {
+    return document.getElementById('ilMoveCustomFolderInput').value.trim();
+  }
+  return sel.value;
+}
+
+document.getElementById('ilBatchMoveBtn').addEventListener('click', async () => {
+  const targets = ilFiles.filter(f => ilSelected.has(f.path));
+  if (!targets.length) {
+    setFormStatus('ilBatchStatus', '請先勾選要搬移的圖片', 'error');
+    return;
+  }
+  const targetFolder = ilMoveTargetFolder();
+  if (!targetFolder) {
+    setFormStatus('ilBatchStatus', '請選擇要搬到哪個資料夾', 'error');
+    return;
+  }
+  if (targetFolder === ilCurrentFolder()) {
+    setFormStatus('ilBatchStatus', '目標資料夾跟目前資料夾相同，不用搬', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('ilBatchMoveBtn');
+  btn.disabled = true;
+  let okCount = 0;
+  for (let i = 0; i < targets.length; i++) {
+    const f = targets[i];
+    setFormStatus('ilBatchStatus', `搬移中… (${i + 1}/${targets.length}) ${f.name}`, '');
+    try {
+      await postTask({ type: 'image-move', oldPath: f.path, newFolder: targetFolder });
+      okCount++;
+    } catch (err) {
+      console.warn('搬移失敗：', f.name, err);
+    }
+  }
+  setFormStatus('ilBatchStatus', `完成，成功搬移 ${okCount}/${targets.length} 張到「${targetFolder}」✓（試算表引用已自動更新）`, okCount === targets.length ? 'ok' : 'error');
+  btn.disabled = false;
+  ilSelected.clear();
   await ilLoad();
 });
