@@ -1310,6 +1310,23 @@
     color: #a89888;
     margin: -6px 0 14px;
   }
+
+  /* 【新】瀏覽/點擊次數統計小方塊 */
+  .admin-stats-box {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: #F0F6FF;
+    border: 1.5px solid #C9DEFB;
+    border-radius: 12px;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #4a7fb5;
+  }
+  .admin-stats-item b { font-size: 14px; }
+
   .early-bird-box {
     background: #FFF6DD;
     border: 1.5px solid #E8B93D;
@@ -3018,6 +3035,9 @@
     <h3 id="adminModalTitle"></h3>
     <div class="admin-modal-meta" id="adminModalMeta"></div>
 
+    <!-- 【新】瀏覽/點擊次數統計 -->
+    <div class="admin-stats-box" id="adminStatsBox"></div>
+
     <div class="publish-status-box" id="adminPublishBox">
       <span id="adminPublishText">🔔 尚未確認顯示於前台</span>
       <button class="task-mini-btn" id="adminPublishBtn" style="border-color:#9ACB85; color:#5C9147;">✅ 確認顯示於前台</button>
@@ -3345,7 +3365,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=17"></script>
+<script src="admin.js?v=18"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
