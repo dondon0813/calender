@@ -2722,6 +2722,26 @@
     font-weight: 700;
     color: #b5755a;
   }
+  .settings-hub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .settings-hub-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 2px solid #FFD3B6;
+    background: #FFF6EC;
+    color: #5a4a3f;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    border-radius: 12px;
+    padding: 13px 16px;
+    cursor: pointer;
+  }
+  .settings-hub-item:hover { background: #FFEcD6; }
 </style>
 </head>
 <body>
@@ -2765,8 +2785,7 @@
           <button class="menu-item" data-view="todoList">🗒️ 待辦事項</button>
           <button class="menu-item" data-view="groupStatus">🌼 開團狀態</button>
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
-          <button class="menu-item" id="menuPasswordBtn">🔑 修改密碼</button>
-          <button class="menu-item" id="menuPermissionsBtn" style="display:none;">🛡️ 權限設定</button>
+          <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
     </div>
@@ -3057,9 +3076,17 @@
 
     <div class="il-batch-bar">
       <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:800; color:#4a7fb5; cursor:pointer;">
-        <input type="checkbox" id="ilSelectAllCheckbox"> 全選尚未轉WebP的圖片
+        <input type="checkbox" id="ilSelectAllCheckbox"> 全選目前顯示的圖片
       </label>
-      <button class="task-mini-btn" style="border-color:#7AAEEB; color:#4a7fb5;" id="ilBatchConvertBtn">批次轉WebP（新增WebP版本，不刪除原圖）</button>
+      <button class="task-mini-btn" style="border-color:#7AAEEB; color:#4a7fb5;" id="ilBatchConvertBtn">🔄 批次轉WebP（略過已是WebP的）</button>
+      <button class="task-mini-btn" style="border-color:#F1998F; color:#C0392B;" id="ilBatchDeleteBtn">🗑 批次刪除</button>
+      <span style="display:flex; align-items:center; gap:6px;">
+        <select id="ilMoveTargetSelect">
+          <option value="">搬到…</option>
+        </select>
+        <input type="text" id="ilMoveCustomFolderInput" placeholder="輸入資料夾路徑…" style="display:none; width:130px;">
+        <button class="task-mini-btn" style="border-color:#9ACB85; color:#5C9147;" id="ilBatchMoveBtn">📂 搬移</button>
+      </span>
       <span class="form-status" id="ilBatchStatus" style="margin:0;"></span>
     </div>
 
@@ -3375,6 +3402,18 @@
 <div id="pgPosterStage"></div>
 
 <!-- ===== 設定：修改密碼彈窗 ===== -->
+<!-- ===== 設定總覽（點漢堡選單「設定」先進這裡，再選要修改密碼還是權限設定） ===== -->
+<div class="modal-backdrop" id="settingsHubModal" onclick="if(event.target===this) closeSettingsHubModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeSettingsHubModal()">✕</button>
+    <h3>⚙️ 設定</h3>
+    <div class="settings-hub-list">
+      <button class="settings-hub-item" id="settingsHubPasswordBtn">🔑 修改密碼</button>
+      <button class="settings-hub-item" id="settingsHubPermissionsBtn" style="display:none;">🛡️ 權限設定</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="settingsModal" onclick="if(event.target===this) closeSettingsModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closeSettingsModal()">✕</button>
@@ -3571,7 +3610,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=21"></script>
+<script src="admin.js?v=22"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
