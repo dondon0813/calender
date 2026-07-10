@@ -22,6 +22,9 @@ let vendors = [];                  // 廠商名單（廠商選品的下拉選單
 let prStatusMap = {};              // { getMemoKey(ev): { status, url, location, updated } }
 let prLocations = [];              // 【新】公關品位置清單（辦公室／倉庫／我家…可自訂新增）
 let statsMap = {};                 // 【新】瀏覽/點擊次數統計 { getMemoKey(ev): { views, clicks, updated } }
+let isAdmin = false;               // 【新】目前登入者是否為管理員（雪莉）
+let myPermissions = {};            // 【新】目前登入者被開放的功能權限 { imageLibrary: bool, ... }
+let allPermissions = {};           // 【新】（僅管理員拿得到）所有員工的權限狀態，給權限設定頁面用
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
 const PR_STATUS_LIST = ['尚未選品', '選品中', '已選品', '已寄出', '已收到', '已拍攝'];
 const PR_STATUS_CLASS = {
@@ -1124,6 +1127,10 @@ async function fetchMemos() {
     prStatusMap = data.prStatus || {};
     prLocations = Array.isArray(data.prLocations) ? data.prLocations : [];
     statsMap = data.stats || {};
+    isAdmin = !!data.isAdmin;
+    myPermissions = data.permissions || {};
+    allPermissions = data.allPermissions || {};
+    updatePermissionUI();
     todoCategories = Array.isArray(data.todoCategories) ? data.todoCategories : [];
     todos = Array.isArray(data.todos) ? data.todos : [];
     if (currentUser) {
@@ -1146,6 +1153,16 @@ async function fetchMemos() {
   } catch (err) {
     console.warn('後台資料讀取失敗：', err);
   }
+}
+
+// 依目前登入者的身份／權限，切換相關功能入口的顯示與隱藏
+function updatePermissionUI() {
+  const showImageLib = isAdmin || !!myPermissions.imageLibrary;
+  const iconEl = document.getElementById('toolIconImageLibrary');
+  if (iconEl) iconEl.style.display = showImageLib ? '' : 'none';
+
+  const permBtn = document.getElementById('menuPermissionsBtn');
+  if (permBtn) permBtn.style.display = isAdmin ? '' : 'none';
 }
 
 async function tryUnlock() {
@@ -1688,6 +1705,10 @@ document.getElementById('prLocationNewBtn').addEventListener('click', async () =
 
 // ===== 分頁切換與選單 =====
 function switchView(name) {
+  if (name === 'imageLibrary' && !(isAdmin || myPermissions.imageLibrary)) {
+    alert('你沒有圖片庫的使用權限，如果需要請跟雪莉申請開通。');
+    return;
+  }
   currentView = name;
   const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary' };
   Object.entries(map).forEach(([key, id]) => {
@@ -2445,8 +2466,84 @@ async function submitPasswordChange() {
   btn.disabled = false;
 }
 
-document.getElementById('menuSettingsBtn').addEventListener('click', openSettingsModal);
+document.getElementById('menuPasswordBtn').addEventListener('click', openSettingsModal);
 document.getElementById('settingsSubmitBtn').addEventListener('click', submitPasswordChange);
+
+// ===== 【新】權限設定（只有管理員雪莉看得到入口，後端也會擋非管理員的請求） =====
+document.getElementById('menuPermissionsBtn').addEventListener('click', openPermissionsModal);
+
+function openPermissionsModal() {
+  document.getElementById('menuPanel').classList.remove('show');
+  document.getElementById('permissionsModal').classList.add('show');
+  loadPermissionsList();
+}
+
+function closePermissionsModal() {
+  document.getElementById('permissionsModal').classList.remove('show');
+}
+
+async function loadPermissionsList() {
+  const box = document.getElementById('permList');
+  box.innerHTML = '<div class="task-empty">載入中…</div>';
+  try {
+    const result = await postTask({ type: 'perm-list' });
+    allPermissions = result.permissions || {};
+    renderPermissionsList(result.staff || [], allPermissions);
+  } catch (err) {
+    box.innerHTML = '<div class="task-empty">讀取失敗：' + escHtml(err.message) + '</div>';
+  }
+}
+
+function renderPermissionsList(staffNames, permissions) {
+  const box = document.getElementById('permList');
+  if (!staffNames.length) {
+    box.innerHTML = '<div class="task-empty">目前沒有其他員工</div>';
+    return;
+  }
+  box.innerHTML = '';
+  staffNames.forEach(name => {
+    const perm = permissions[name] || {};
+    const row = document.createElement('div');
+    row.className = 'perm-row';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'perm-row-name';
+    nameEl.textContent = name;
+    row.appendChild(nameEl);
+
+    const toggleWrap = document.createElement('label');
+    toggleWrap.className = 'perm-row-toggle';
+
+    const label = document.createElement('span');
+    label.className = 'pr-toggle-text';
+    label.textContent = '圖片庫權限';
+    toggleWrap.appendChild(label);
+
+    const sw = document.createElement('span');
+    sw.className = 'pr-switch' + (perm.imageLibrary ? ' on' : '');
+    const knob = document.createElement('span');
+    knob.className = 'pr-knob';
+    sw.appendChild(knob);
+    sw.addEventListener('click', () => togglePermission(name, 'imageLibrary', sw));
+    toggleWrap.appendChild(sw);
+
+    row.appendChild(toggleWrap);
+    box.appendChild(row);
+  });
+}
+
+async function togglePermission(name, key, switchEl) {
+  const newVal = !switchEl.classList.contains('on');
+  switchEl.classList.toggle('on', newVal); // 樂觀更新，失敗再改回來
+  try {
+    await postTask({ type: 'perm-set', name, key, value: newVal });
+    if (!allPermissions[name]) allPermissions[name] = {};
+    allPermissions[name][key] = newVal;
+  } catch (err) {
+    switchEl.classList.toggle('on', !newVal);
+    alert('更新失敗：' + err.message);
+  }
+}
 
 // ===== 任務系統共用 =====
 function myTasks() {
