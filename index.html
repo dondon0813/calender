@@ -539,6 +539,64 @@ const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx
 const COLORS = 7;
 const WD_LABEL = ['日','一','二','三','四','五','六'];
 
+// ===== 【新】前台瀏覽次數／點擊次數統計 =====
+// key 格式跟後台 admin.js 的 getMemoKey() 完全一致（團編號_年-月-日，用開團日 start）
+const STATS_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
+const sentViewKeys = new Set(); // 這次瀏覽本頁時，哪些團已經算過一次「瀏覽」，避免重複計數
+let statObserver = null;
+
+function getStatKey(ev) {
+  const s = ev.start;
+  return `${ev.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
+}
+
+// 用 sendBeacon（不支援時退回 fetch keepalive），不等待回應、不拖慢使用者操作
+function sendStat(key, field) {
+  if (!key || !STATS_BACKEND_URL) return;
+  const type = field === 'click' ? 'stat-click' : 'stat-view';
+  const payload = JSON.stringify({ type, key });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(STATS_BACKEND_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(STATS_BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
+}
+
+// 團購長條/卡片真的滑進畫面才算一次「瀏覽」；同一團同一次載入頁面只算一次
+function getStatObserver() {
+  if (!statObserver) {
+    statObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const key = entry.target.dataset.statKey;
+        if (key && !sentViewKeys.has(key)) {
+          sentViewKeys.add(key);
+          sendStat(key, 'view');
+        }
+        statObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.5 });
+  }
+  return statObserver;
+}
+
+// 幫一個團購長條/卡片元素掛上瀏覽次數觀察＋點擊次數計數（clickable 才會真的連出去，才算一次點擊）
+function attachStatTracking(el, ev, clickable) {
+  const key = getStatKey(ev);
+  el.dataset.statKey = key;
+  getStatObserver().observe(el);
+  if (clickable) {
+    el.addEventListener('click', () => sendStat(key, 'click'));
+  }
+}
+
 let allEvents = [];
 let currentYear, currentMonth;
 let currentMode = 'list';
@@ -859,6 +917,7 @@ function renderGroupList() {
       card.target = '_blank';
       card.rel = 'noopener noreferrer';
     }
+    attachStatTracking(card, ev, clickable);
     card.title = ev.title + (ev.url && !clickable ? '（開團後才能點擊連結）' : '');
 
     const nameEl = document.createElement('div');
@@ -989,6 +1048,7 @@ function renderAllMode() {
       } else if (hasEarlyBird) {
         bar.addEventListener('click', () => showEarlyBirdModal(item.ev));
       }
+      attachStatTracking(bar, item.ev, clickable);
       bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
       bar.style.gridRow = `${item.lane + 2}`;
       bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '');
@@ -1113,6 +1173,7 @@ function renderSingleDayMode(mode) {
           } else if (hasEarlyBird) {
             bar.addEventListener('click', () => showEarlyBirdModal(ev));
           }
+          attachStatTracking(bar, ev, clickable);
           bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '');
 
           const titleSpan = document.createElement('span');
