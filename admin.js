@@ -4611,15 +4611,16 @@ document.getElementById('ilBatchDeleteBtn').addEventListener('click', async () =
   }
   const btn = document.getElementById('ilBatchDeleteBtn');
   btn.disabled = true;
-  setFormStatus('ilBatchStatus', '檢查引用中…', '');
   let totalRefs = 0;
-  try {
-    for (const f of targets) {
+  for (let i = 0; i < targets.length; i++) {
+    const f = targets[i];
+    setFormStatus('ilBatchStatus', `檢查引用中… (${i + 1}/${targets.length}) ${f.name}`, '');
+    try {
       const usage = await postTask({ type: 'image-usage-check', path: f.path });
       totalRefs += (usage.refs || []).length;
+    } catch (err) {
+      console.warn('這張檢查失敗，略過繼續檢查下一張：', f.name, err);
     }
-  } catch (err) {
-    console.warn('引用檢查失敗，直接進確認：', err);
   }
   let confirmMsg = `確定要刪除這 ${targets.length} 張圖片嗎？此動作無法復原。`;
   if (totalRefs > 0) {
