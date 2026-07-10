@@ -21,6 +21,7 @@ let tasksMap = {};                 // { 姓名: [{ id, taskName, content, urgent
 let vendors = [];                  // 廠商名單（廠商選品的下拉選單）
 let prStatusMap = {};              // { getMemoKey(ev): { status, url, location, updated } }
 let prLocations = [];              // 【新】公關品位置清單（辦公室／倉庫／我家…可自訂新增）
+let statsMap = {};                 // 【新】瀏覽/點擊次數統計 { getMemoKey(ev): { views, clicks, updated } }
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
 const PR_STATUS_LIST = ['尚未選品', '選品中', '已選品', '已寄出', '已收到', '已拍攝'];
 const PR_STATUS_CLASS = {
@@ -798,6 +799,16 @@ function renderGroupStatusList(targetId) {
   }
 }
 
+// 【新】渲染活動彈窗裡的「📊 數據」瀏覽/點擊次數區塊
+function renderAdminStatsBox(key) {
+  const box = document.getElementById('adminStatsBox');
+  if (!box) return;
+  const st = statsMap[key] || { views: 0, clicks: 0 };
+  box.innerHTML =
+    `<span class="admin-stats-item">👀 瀏覽 <b>${st.views || 0}</b> 次</span>` +
+    `<span class="admin-stats-item">🖱️ 點擊 <b>${st.clicks || 0}</b> 次</span>`;
+}
+
 function openAdminModal(ev) {
   currentModalEv = ev;
   const key = getMemoKey(ev);
@@ -809,6 +820,7 @@ function openAdminModal(ev) {
     (isFrozenEvent(ev) ? '　❄冷凍團' : '');
 
   renderAdminPublishBox(ev);
+  renderAdminStatsBox(key);
 
   const ebBox = document.getElementById('adminEarlyBirdBox');
   const ebList = document.getElementById('adminEarlyBirdList');
@@ -1111,6 +1123,7 @@ async function fetchMemos() {
     vendors = Array.isArray(data.vendors) ? data.vendors : [];
     prStatusMap = data.prStatus || {};
     prLocations = Array.isArray(data.prLocations) ? data.prLocations : [];
+    statsMap = data.stats || {};
     todoCategories = Array.isArray(data.todoCategories) ? data.todoCategories : [];
     todos = Array.isArray(data.todos) ? data.todos : [];
     if (currentUser) {
@@ -1121,6 +1134,10 @@ async function fetchMemos() {
     }
     if (currentView === 'calendar' && typeof render === 'function') {
       render();
+    }
+    // 若目前正打開活動彈窗，順便刷新一次數據顯示
+    if (currentModalEv && document.getElementById('adminModal').classList.contains('show')) {
+      renderAdminStatsBox(getMemoKey(currentModalEv));
     }
     const taskModalEl = document.getElementById('taskModal');
     if (taskModalCtx && taskModalEl && taskModalEl.classList.contains('show')) {
