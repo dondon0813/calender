@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的集點卡・雪莉與朵栗</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    color: #5a4a3f;
+    padding: 16px 8px 50px;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    background: #FFFBF5;
+    border-radius: 22px;
+    border: 3px solid #FFE3CC;
+    padding: 18px 14px 26px;
+    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+  }
+
+  .back-btn {
+    display: inline-block;
+    background: none;
+    border: none;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #b5755a;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 10px;
+  }
+  .back-btn:hover { color: #FF8FA3; }
+
+  .page-title-wrap { text-align: center; margin: 4px 0 16px; }
+  .page-title-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    color: #FF8FA3;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 5px 14px;
+    margin-bottom: 6px;
+  }
+  .page-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+    color: #5a4a3f;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .page-title::after {
+    content: '';
+    display: block;
+    width: 110px;
+    height: 0;
+    border-bottom: 2px dashed #FFC2CE;
+    margin: 8px auto 0;
+  }
+
+  /* 模式切換 */
+  .mode-switch-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .mode-btn {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    border-radius: 999px;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #b5755a;
+    padding: 9px 18px;
+    cursor: pointer;
+  }
+  .mode-btn.active {
+    background: #FF8FA3;
+    border-color: #FF8FA3;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(255,143,163,0.4);
+  }
+
+  /* 小朋友選擇列 */
+  .profile-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .profile-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 800;
+    border-radius: 999px;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #8a7462;
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+  .profile-chip .emoji { font-size: 16px; }
+  .profile-chip.active {
+    background: #FFF0F3;
+    border-color: #FF8FA3;
+    color: #FF6F91;
+  }
+  .profile-chip-add {
+    border-style: dashed;
+    color: #c99a3a;
+    border-color: #F0DBA0;
+    background: #FFFDF6;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #b39a8b;
+    font-size: 13px;
+    padding: 34px 10px;
+    border: 2px dashed #FFD3AC;
+    border-radius: 18px;
+  }
+
+  /* 集點卡本體 */
+  .card-nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .nav-arrow {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #b5755a;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    flex: none;
+  }
+  .nav-arrow:disabled { opacity: .35; cursor: default; }
+  .card-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: #5a4a3f;
+    text-align: center;
+    min-width: 160px;
+  }
+  .card-title small {
+    display: block;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #FF8FA3;
+    margin-top: 2px;
+  }
+
+  .star-card-box {
+    background: linear-gradient(135deg, #FFF0D9 0%, #FFE7ED 100%);
+    border: 3px dashed #FFC79A;
+    border-radius: 24px;
+    padding: 22px 14px;
+    margin-bottom: 16px;
+  }
+  .star-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  .star-slot {
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    background: #FFFBF5;
+    border: 2.5px dashed #FFC2CE;
+    color: #FFD3E0;
+    user-select: none;
+  }
+  .star-slot.filled {
+    background: #FFF6DD;
+    border: 2.5px solid #F0C36D;
+    color: #F0A93C;
+    animation: pop .35s ease;
+  }
+  .star-slot.clickable { cursor: pointer; }
+  @keyframes pop {
+    0% { transform: scale(0.3); }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  .parent-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .action-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 13.5px;
+    border: none;
+    border-radius: 999px;
+    padding: 11px 12px;
+    background: #FF8FA3;
+    color: #fff;
+    cursor: pointer;
+  }
+  .action-btn:hover { background: #FF7391; }
+  .action-btn-alt { background: #7AAEEB; }
+  .action-btn-alt:hover { background: #5F97DB; }
+  .action-btn-ghost {
+    background: #fff;
+    color: #b5755a;
+    border: 2px solid #FFD3B6;
+  }
+
+  .settings-link-row {
+    text-align: center;
+    margin-top: 6px;
+  }
+  .settings-link {
+    font-size: 11.5px;
+    color: #a89888;
+    font-weight: 700;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(90, 74, 63, 0.45);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal-box {
+    position: relative;
+    background: #FFFBF5;
+    border-radius: 20px;
+    border: 3px solid #FFE3CC;
+    padding: 22px 20px;
+    max-width: 92%;
+    width: 360px;
+    max-height: 86vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    color: #b5755a;
+    cursor: pointer;
+  }
+  .modal-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: #FF8FA3;
+    margin: 0 0 14px;
+    text-align: center;
+  }
+  .field-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #a89888;
+    margin: 10px 0 6px;
+  }
+  .field-input {
+    width: 100%;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #5a4a3f;
+    border: 2px solid #FFD3B6;
+    border-radius: 12px;
+    padding: 10px 14px;
+    background: #fff;
+    outline: none;
+  }
+  .field-input:focus { border-color: #FF8FA3; }
+
+  .avatar-pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .avatar-pick {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .avatar-pick.active { border-color: #FF8FA3; background: #FFF0F3; }
+
+  .modal-hint {
+    font-size: 11.5px;
+    color: #b39a8b;
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+  .modal-error {
+    font-size: 12px;
+    color: #e0644a;
+    font-weight: 800;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+  .modal-divider {
+    text-align: center;
+    font-size: 11px;
+    color: #cbb8a8;
+    margin: 14px 0;
+  }
+
+  .celebrate-emoji { font-size: 46px; text-align: center; margin-bottom: 6px; }
+  .celebrate-text { text-align: center; font-size: 14px; color: #5a4a3f; line-height: 1.7; margin-bottom: 16px; }
+
+  .danger-btn {
+    background: #fff;
+    color: #e0644a;
+    border: 2px solid #FFCFC2;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <button class="back-btn" onclick="location.href='kids.html'">← 返回兒童專區</button>
+
+  <div class="page-title-wrap">
+    <div class="page-title-badge">🌟 兒童專區</div>
+    <div class="page-title">⭐ 我的集點卡</div>
+  </div>
+
+  <div class="mode-switch-row">
+    <button id="modeChildBtn" class="mode-btn active">🧒 兒童模式</button>
+    <button id="modeParentBtn" class="mode-btn">🔐 家長模式</button>
+  </div>
+
+  <div class="profile-row" id="profileRow"></div>
+
+  <div id="cardStage" style="display:none;">
+    <div class="card-nav-row">
+      <button id="prevCardBtn" class="nav-arrow">←</button>
+      <div class="card-title" id="cardTitleLabel"></div>
+      <button id="nextCardBtn" class="nav-arrow">→</button>
+    </div>
+    <div class="star-card-box">
+      <div class="star-grid" id="starGrid"></div>
+    </div>
+    <div class="parent-actions" id="parentActions" style="display:none;">
+      <button id="addStarBtn" class="action-btn">⭐ 蓋一顆星星</button>
+      <button id="undoStarBtn" class="action-btn action-btn-ghost">↩️ 復原上一顆</button>
+    </div>
+    <div class="settings-link-row" id="parentSettingsRow" style="display:none;">
+      <button class="settings-link" id="openSettingsBtn">⚙️ 家長設定</button>
+    </div>
+  </div>
+
+  <div class="empty-state" id="noProfileState" style="display:none;">
+    尚未新增小朋友，點上面的「＋ 新增小朋友」開始集點吧 🌈
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<!-- 新增/編輯小朋友 -->
+<div class="modal-backdrop" id="addChildModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('addChildModal')">✕</button>
+    <div class="modal-title">👶 新增小朋友</div>
+    <div class="field-label">姓名</div>
+    <input type="text" id="childNameInput" class="field-input" placeholder="小朋友的名字">
+    <div class="field-label">年齡</div>
+    <input type="number" id="childAgeInput" class="field-input" placeholder="幾歲" min="0" max="18">
+    <div class="field-label">選一個代表圖案</div>
+    <div class="avatar-pick-row" id="avatarPickRow"></div>
+    <div class="modal-error" id="addChildError"></div>
+    <div class="parent-actions" style="margin-top:14px;">
+      <button class="action-btn" id="saveChildBtn">✨ 開始集點</button>
+    </div>
+  </div>
+</div>
+
+<!-- 家長驗證：設定密碼（第一次） -->
+<div class="modal-backdrop" id="setPasswordModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('setPasswordModal')">✕</button>
+    <div class="modal-title">🔐 設定家長密碼</div>
+    <div class="modal-hint">第一次使用家長模式，請先設定一組密碼（4 位數以上），之後每次要蓋星星或修改設定都需要輸入。</div>
+    <div class="field-label">設定密碼</div>
+    <input type="password" id="newPasswordInput" class="field-input" placeholder="請輸入密碼" inputmode="numeric">
+    <div class="field-label">再輸入一次</div>
+    <input type="password" id="newPasswordConfirmInput" class="field-input" placeholder="再輸入一次確認">
+    <div class="modal-error" id="setPasswordError"></div>
+    <div class="parent-actions" style="margin-top:14px;">
+      <button class="action-btn" id="confirmSetPasswordBtn">儲存密碼</button>
+    </div>
+    <div class="modal-divider" id="biometricSetupDivider" style="display:none;">或</div>
+    <div class="parent-actions" id="biometricSetupRow" style="display:none;">
+      <button class="action-btn action-btn-alt" id="registerBiometricBtn">📱 同時設定 Face ID／指紋解鎖</button>
+    </div>
+  </div>
+</div>
+
+<!-- 家長驗證：輸入密碼 -->
+<div class="modal-backdrop" id="parentAuthModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('parentAuthModal')">✕</button>
+    <div class="modal-title">🔐 家長驗證</div>
+    <div class="field-label">請輸入密碼</div>
+    <input type="password" id="parentPasswordInput" class="field-input" placeholder="密碼" inputmode="numeric">
+    <div class="modal-error" id="parentAuthError"></div>
+    <div class="parent-actions" style="margin-top:14px;">
+      <button class="action-btn" id="confirmParentAuthBtn">解鎖</button>
+    </div>
+    <div class="modal-divider" id="biometricAuthDivider" style="display:none;">或</div>
+    <div class="parent-actions" id="biometricAuthRow" style="display:none;">
+      <button class="action-btn action-btn-alt" id="useBiometricBtn">📱 使用 Face ID／指紋解鎖</button>
+    </div>
+  </div>
+</div>
+
+<!-- 集滿慶祝 -->
+<div class="modal-backdrop" id="celebrateModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('celebrateModal')">✕</button>
+    <div class="celebrate-emoji">🎉</div>
+    <div class="celebrate-text">恭喜蓋滿一整張集點卡！<br>可以跟爸爸媽媽換一個小獎勵囉 🎁</div>
+    <div class="parent-actions">
+      <button class="action-btn" onclick="closeModal('celebrateModal')">太棒了！繼續下一張 ⭐</button>
+    </div>
+  </div>
+</div>
+
+<!-- 家長設定 -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('settingsModal')">✕</button>
+    <div class="modal-title">⚙️ 家長設定</div>
+
+    <div class="field-label">修改密碼</div>
+    <input type="password" id="settingsNewPassword" class="field-input" placeholder="輸入新密碼" inputmode="numeric" style="margin-bottom:8px;">
+    <input type="password" id="settingsNewPasswordConfirm" class="field-input" placeholder="再輸入一次確認">
+    <div class="parent-actions" style="margin-top:10px;">
+      <button class="action-btn action-btn-alt" id="saveNewPasswordBtn">更新密碼</button>
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <div class="field-label">目前小朋友：<span id="settingsChildName"></span></div>
+    <div class="parent-actions">
+      <button class="action-btn danger-btn" id="deleteChildBtn">🗑 刪除這位小朋友的集點紀錄</button>
+    </div>
+
+    <div class="modal-error" id="settingsError"></div>
+  </div>
+</div>
+
+<script>
+// ===================== 資料儲存 =====================
+const STORAGE_KEY = 'dondon_kidsStarApp_v1';
+const STARS_PER_CARD = 10;
+const AVATAR_OPTIONS = ['🐻','🐰','🦊','🐱','🐶','🦁','🐼','🐨','🐸','🦄','🐷','🐤'];
+
+function loadApp() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { profiles: [], activeProfileId: null, parentAuth: null };
+    const parsed = JSON.parse(raw);
+    if (!parsed.profiles) parsed.profiles = [];
+    return parsed;
+  } catch (e) {
+    console.error(e);
+    return { profiles: [], activeProfileId: null, parentAuth: null };
+  }
+}
+function saveApp() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(APP));
+}
+
+let APP = loadApp();
+let isParentMode = false;
+let parentUnlocked = false;
+let viewCardIndex = {}; // profileId -> which card index is currently being viewed
+let pendingAvatar = AVATAR_OPTIONS[0];
+
+// ===================== 工具 =====================
+function getActiveProfile() {
+  return APP.profiles.find(p => p.id === APP.activeProfileId) || null;
+}
+function newProfileId() {
+  return 'child_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+function ensureViewIndex(profile) {
+  if (viewCardIndex[profile.id] === undefined) {
+    viewCardIndex[profile.id] = profile.cards.length - 1;
+  }
+  // 不能超過現有卡片範圍
+  if (viewCardIndex[profile.id] > profile.cards.length - 1) {
+    viewCardIndex[profile.id] = profile.cards.length - 1;
+  }
+  if (viewCardIndex[profile.id] < 0) viewCardIndex[profile.id] = 0;
+}
+
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function randomSalt() {
+  const arr = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function arrayBufferToBase64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function base64ToArrayBuffer(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+async function isPlatformAuthAvailable() {
+  if (!window.PublicKeyCredential || !PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return false;
+  try { return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch (e) { return false; }
+}
+
+// ===================== 渲染：小朋友選擇列 =====================
+function renderProfileRow() {
+  const row = document.getElementById('profileRow');
+  row.innerHTML = '';
+
+  APP.profiles.forEach(p => {
+    const chip = document.createElement('button');
+    chip.className = 'profile-chip' + (p.id === APP.activeProfileId ? ' active' : '');
+    chip.innerHTML = `<span class="emoji">${p.avatar || '🐻'}</span><span>${p.name}</span>`;
+    chip.addEventListener('click', () => {
+      APP.activeProfileId = p.id;
+      saveApp();
+      renderAll();
+    });
+    row.appendChild(chip);
+  });
+
+  const addChip = document.createElement('button');
+  addChip.className = 'profile-chip profile-chip-add';
+  addChip.textContent = '＋ 新增小朋友';
+  addChip.addEventListener('click', openAddChildModal);
+  row.appendChild(addChip);
+}
+
+// ===================== 渲染：集點卡 =====================
+function renderCardStage() {
+  const profile = getActiveProfile();
+  const stage = document.getElementById('cardStage');
+  const emptyState = document.getElementById('noProfileState');
+
+  if (!profile) {
+    stage.style.display = 'none';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+  stage.style.display = 'block';
+
+  ensureViewIndex(profile);
+  const idx = viewCardIndex[profile.id];
+  const card = profile.cards[idx];
+  const isLatest = idx === profile.cards.length - 1;
+  const filledCount = card.filter(Boolean).length;
+
+  document.getElementById('cardTitleLabel').innerHTML =
+    `${profile.name} 的第 ${idx + 1} 張集點卡<small>${filledCount} ／ ${STARS_PER_CARD} ⭐</small>`;
+
+  document.getElementById('prevCardBtn').disabled = idx <= 0;
+  document.getElementById('nextCardBtn').disabled = idx >= profile.cards.length - 1;
+
+  const grid = document.getElementById('starGrid');
+  grid.innerHTML = '';
+  card.forEach((filled, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'star-slot' + (filled ? ' filled' : '') + (isParentMode && parentUnlocked && isLatest && filled ? ' clickable' : '');
+    slot.textContent = filled ? '⭐' : '☆';
+    if (isParentMode && parentUnlocked && isLatest && filled) {
+      slot.title = '點擊移除這顆星星';
+      slot.addEventListener('click', () => removeSpecificStar(profile, i));
+    }
+    grid.appendChild(slot);
+  });
+
+  const showParentActions = isParentMode && parentUnlocked;
+  document.getElementById('parentActions').style.display = showParentActions ? 'flex' : 'none';
+  document.getElementById('parentSettingsRow').style.display = showParentActions ? 'block' : 'none';
+}
+
+function renderAll() {
+  renderProfileRow();
+  renderCardStage();
+}
+
+// ===================== 集點卡動作 =====================
+function addStar() {
+  const profile = getActiveProfile();
+  if (!profile) return;
+  // 一律加到最新一張卡片
+  const latestIdx = profile.cards.length - 1;
+  const card = profile.cards[latestIdx];
+  const emptyIdx = card.findIndex(v => !v);
+  if (emptyIdx === -1) return; // 理論上不會發生，滿了會自動開新卡
+  card[emptyIdx] = true;
+  viewCardIndex[profile.id] = latestIdx;
+
+  const nowFull = card.every(Boolean);
+  if (nowFull) {
+    profile.cards.push(new Array(STARS_PER_CARD).fill(false));
+  }
+  saveApp();
+  renderCardStage();
+  if (nowFull) {
+    document.getElementById('celebrateModal').classList.add('show');
+  }
+}
+
+function undoStar() {
+  const profile = getActiveProfile();
+  if (!profile) return;
+  const latestIdx = profile.cards.length - 1;
+  const card = profile.cards[latestIdx];
+  let lastFilled = -1;
+  for (let i = 0; i < card.length; i++) if (card[i]) lastFilled = i;
+
+  if (lastFilled === -1) {
+    // 這張卡是空的，如果前面還有卡片就往前一張移除最後一顆
+    if (profile.cards.length > 1) {
+      profile.cards.pop();
+      const prevCard = profile.cards[profile.cards.length - 1];
+      let prevLast = -1;
+      for (let i = 0; i < prevCard.length; i++) if (prevCard[i]) prevLast = i;
+      if (prevLast !== -1) prevCard[prevLast] = false;
+      viewCardIndex[profile.id] = profile.cards.length - 1;
+      saveApp();
+      renderCardStage();
+    }
+    return;
+  }
+  if (!confirm('確定要移除最後蓋上的一顆星星嗎？')) return;
+  card[lastFilled] = false;
+  viewCardIndex[profile.id] = latestIdx;
+  saveApp();
+  renderCardStage();
+}
+
+function removeSpecificStar(profile, index) {
+  const latestIdx = profile.cards.length - 1;
+  const card = profile.cards[latestIdx];
+  if (!confirm('確定要移除這顆星星嗎？')) return;
+  card[index] = false;
+  saveApp();
+  renderCardStage();
+}
+
+document.getElementById('prevCardBtn').addEventListener('click', () => {
+  const profile = getActiveProfile();
+  if (!profile) return;
+  ensureViewIndex(profile);
+  if (viewCardIndex[profile.id] > 0) viewCardIndex[profile.id]--;
+  renderCardStage();
+});
+document.getElementById('nextCardBtn').addEventListener('click', () => {
+  const profile = getActiveProfile();
+  if (!profile) return;
+  ensureViewIndex(profile);
+  if (viewCardIndex[profile.id] < profile.cards.length - 1) viewCardIndex[profile.id]++;
+  renderCardStage();
+});
+document.getElementById('addStarBtn').addEventListener('click', addStar);
+document.getElementById('undoStarBtn').addEventListener('click', undoStar);
+
+// ===================== 新增小朋友 =====================
+function openAddChildModal() {
+  document.getElementById('childNameInput').value = '';
+  document.getElementById('childAgeInput').value = '';
+  document.getElementById('addChildError').textContent = '';
+  pendingAvatar = AVATAR_OPTIONS[Math.floor(Math.random() * AVATAR_OPTIONS.length)];
+  renderAvatarPickRow();
+  document.getElementById('addChildModal').classList.add('show');
+}
+function renderAvatarPickRow() {
+  const row = document.getElementById('avatarPickRow');
+  row.innerHTML = '';
+  AVATAR_OPTIONS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'avatar-pick' + (emoji === pendingAvatar ? ' active' : '');
+    btn.textContent = emoji;
+    btn.addEventListener('click', () => {
+      pendingAvatar = emoji;
+      renderAvatarPickRow();
+    });
+    row.appendChild(btn);
+  });
+}
+document.getElementById('saveChildBtn').addEventListener('click', () => {
+  const name = document.getElementById('childNameInput').value.trim();
+  const age = document.getElementById('childAgeInput').value.trim();
+  const errEl = document.getElementById('addChildError');
+  if (!name) { errEl.textContent = '請輸入小朋友的名字'; return; }
+  const profile = {
+    id: newProfileId(),
+    name,
+    age: age || '',
+    avatar: pendingAvatar,
+    cards: [new Array(STARS_PER_CARD).fill(false)],
+    createdAt: Date.now()
+  };
+  APP.profiles.push(profile);
+  APP.activeProfileId = profile.id;
+  saveApp();
+  closeModal('addChildModal');
+  renderAll();
+});
+
+// ===================== 模式切換 =====================
+document.getElementById('modeChildBtn').addEventListener('click', () => {
+  isParentMode = false;
+  parentUnlocked = false;
+  document.getElementById('modeChildBtn').classList.add('active');
+  document.getElementById('modeParentBtn').classList.remove('active');
+  renderCardStage();
+});
+document.getElementById('modeParentBtn').addEventListener('click', async () => {
+  if (parentUnlocked) {
+    isParentMode = true;
+    document.getElementById('modeParentBtn').classList.add('active');
+    document.getElementById('modeChildBtn').classList.remove('active');
+    renderCardStage();
+    return;
+  }
+  if (!APP.parentAuth) {
+    await openSetPasswordModal();
+  } else {
+    await openParentAuthModal();
+  }
+});
+
+// ===================== 家長密碼：設定 =====================
+async function openSetPasswordModal() {
+  document.getElementById('newPasswordInput').value = '';
+  document.getElementById('newPasswordConfirmInput').value = '';
+  document.getElementById('setPasswordError').textContent = '';
+  const available = await isPlatformAuthAvailable();
+  document.getElementById('biometricSetupDivider').style.display = available ? 'block' : 'none';
+  document.getElementById('biometricSetupRow').style.display = available ? 'flex' : 'none';
+  document.getElementById('setPasswordModal').classList.add('show');
+}
+document.getElementById('confirmSetPasswordBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('newPasswordInput').value;
+  const pw2 = document.getElementById('newPasswordConfirmInput').value;
+  const errEl = document.getElementById('setPasswordError');
+  if (pw.length < 4) { errEl.textContent = '密碼至少需要 4 位數'; return; }
+  if (pw !== pw2) { errEl.textContent = '兩次輸入的密碼不一致'; return; }
+  const salt = randomSalt();
+  const hash = await sha256Hex(salt + ':' + pw);
+  APP.parentAuth = { passwordHash: hash, salt, webauthnCredentialId: null };
+  saveApp();
+  closeModal('setPasswordModal');
+  unlockParentMode();
+});
+document.getElementById('registerBiometricBtn').addEventListener('click', async () => {
+  const errEl = document.getElementById('setPasswordError');
+  try {
+    // 密碼要先存在才能設定生物辨識（生物辨識作為密碼之外的快速解鎖方式）
+    if (!APP.parentAuth) {
+      const pw = document.getElementById('newPasswordInput').value;
+      const pw2 = document.getElementById('newPasswordConfirmInput').value;
+      if (pw.length < 4 || pw !== pw2) {
+        errEl.textContent = '請先在上方設定好密碼（兩次一致、至少4位數），再設定 Face ID／指紋';
+        return;
+      }
+      const salt = randomSalt();
+      const hash = await sha256Hex(salt + ':' + pw);
+      APP.parentAuth = { passwordHash: hash, salt, webauthnCredentialId: null };
+    }
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: '雪莉與朵栗 兒童專區' },
+        user: { id: userId, name: 'parent', displayName: '家長' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000,
+        attestation: 'none'
+      }
+    });
+    APP.parentAuth.webauthnCredentialId = arrayBufferToBase64(cred.rawId);
+    saveApp();
+    closeModal('setPasswordModal');
+    unlockParentMode();
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = '無法設定 Face ID／指紋，這台裝置可能不支援，或已取消';
+  }
+});
+
+// ===================== 家長密碼：驗證 =====================
+async function openParentAuthModal() {
+  document.getElementById('parentPasswordInput').value = '';
+  document.getElementById('parentAuthError').textContent = '';
+  const available = await isPlatformAuthAvailable();
+  const hasCred = !!(APP.parentAuth && APP.parentAuth.webauthnCredentialId);
+  const showBiometric = available && hasCred;
+  document.getElementById('biometricAuthDivider').style.display = showBiometric ? 'block' : 'none';
+  document.getElementById('biometricAuthRow').style.display = showBiometric ? 'flex' : 'none';
+  document.getElementById('parentAuthModal').classList.add('show');
+}
+document.getElementById('confirmParentAuthBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('parentPasswordInput').value;
+  const errEl = document.getElementById('parentAuthError');
+  const hash = await sha256Hex(APP.parentAuth.salt + ':' + pw);
+  if (hash === APP.parentAuth.passwordHash) {
+    closeModal('parentAuthModal');
+    unlockParentMode();
+  } else {
+    errEl.textContent = '密碼不正確，請再試一次';
+  }
+});
+document.getElementById('useBiometricBtn').addEventListener('click', async () => {
+  const errEl = document.getElementById('parentAuthError');
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const credId = base64ToArrayBuffer(APP.parentAuth.webauthnCredentialId);
+    await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: credId, type: 'public-key', transports: ['internal'] }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    closeModal('parentAuthModal');
+    unlockParentMode();
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = '驗證失敗或已取消，請改用密碼解鎖';
+  }
+});
+
+function unlockParentMode() {
+  parentUnlocked = true;
+  isParentMode = true;
+  document.getElementById('modeParentBtn').classList.add('active');
+  document.getElementById('modeChildBtn').classList.remove('active');
+  renderCardStage();
+}
+
+// ===================== 家長設定 =====================
+document.getElementById('openSettingsBtn').addEventListener('click', () => {
+  const profile = getActiveProfile();
+  document.getElementById('settingsChildName').textContent = profile ? profile.name : '';
+  document.getElementById('settingsNewPassword').value = '';
+  document.getElementById('settingsNewPasswordConfirm').value = '';
+  document.getElementById('settingsError').textContent = '';
+  document.getElementById('settingsModal').classList.add('show');
+});
+document.getElementById('saveNewPasswordBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('settingsNewPassword').value;
+  const pw2 = document.getElementById('settingsNewPasswordConfirm').value;
+  const errEl = document.getElementById('settingsError');
+  if (pw.length < 4) { errEl.textContent = '密碼至少需要 4 位數'; return; }
+  if (pw !== pw2) { errEl.textContent = '兩次輸入的密碼不一致'; return; }
+  const salt = randomSalt();
+  const hash = await sha256Hex(salt + ':' + pw);
+  APP.parentAuth.passwordHash = hash;
+  APP.parentAuth.salt = salt;
+  saveApp();
+  errEl.style.color = '#5C9147';
+  errEl.textContent = '密碼已更新！';
+});
+document.getElementById('deleteChildBtn').addEventListener('click', () => {
+  const profile = getActiveProfile();
+  if (!profile) return;
+  if (!confirm(`確定要刪除「${profile.name}」的所有集點紀錄嗎？這個動作無法復原。`)) return;
+  APP.profiles = APP.profiles.filter(p => p.id !== profile.id);
+  APP.activeProfileId = APP.profiles.length ? APP.profiles[0].id : null;
+  delete viewCardIndex[profile.id];
+  saveApp();
+  closeModal('settingsModal');
+  renderAll();
+});
+
+// ===================== Modal 通用 =====================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) backdrop.classList.remove('show');
+  });
+});
+
+// ===================== 初始化 =====================
+if (!APP.activeProfileId && APP.profiles.length) {
+  APP.activeProfileId = APP.profiles[0].id;
+}
+renderAll();
+</script>
+
+</body>
+</html>

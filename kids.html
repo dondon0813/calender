@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 兒童專區</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; min-width: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    color: #5a4a3f;
+    padding: 16px 8px 50px;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    background: #FFFBF5;
+    border-radius: 22px;
+    border: 3px solid #FFE3CC;
+    padding: 18px 14px 26px;
+    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+  }
+
+  .page-title-wrap { text-align: center; margin: 4px 0 18px; }
+  .page-title-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    color: #FF8FA3;
+    background: #FFE9EF;
+    border-radius: 999px;
+    padding: 5px 14px;
+    margin-bottom: 6px;
+  }
+  .page-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    color: #5a4a3f;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .page-title::after {
+    content: '';
+    display: block;
+    width: 120px;
+    height: 0;
+    border-bottom: 2px dashed #FFC2CE;
+    margin: 8px auto 0;
+  }
+
+  .home-subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #b5755a;
+    font-weight: 700;
+    margin-bottom: 22px;
+  }
+
+  .home-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .home-card {
+    border-radius: 22px;
+    padding: 26px 12px 20px;
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .home-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(230,160,110,0.22);
+  }
+
+  .home-card-coral { background: #FFE3DC; border-color: #FFB6A6; }
+  .home-card-coral .home-card-title { color: #FF6F55; }
+  .home-card-coral .home-card-title-divider { border-color: #FF6F55; }
+
+  .home-card-mint { background: #E4F5DF; border-color: #B9E3AC; }
+  .home-card-mint .home-card-title { color: #5C9147; }
+  .home-card-mint .home-card-title-divider { border-color: #5C9147; }
+
+  .home-card-blue { background: #E2EBFD; border-color: #B9CDF5; }
+  .home-card-blue .home-card-title { color: #5F87C9; }
+  .home-card-blue .home-card-title-divider { border-color: #5F87C9; }
+
+  .home-card-purple { background: #EFE4FB; border-color: #D5BCF0; }
+  .home-card-purple .home-card-title { color: #8E6BB5; }
+  .home-card-purple .home-card-title-divider { border-color: #8E6BB5; }
+
+  .soon-card { position: relative; opacity: 0.92; }
+  .soon-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+    background: #C9A66B;
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+  .home-card-icon { font-size: 34px; margin-bottom: 8px; }
+  .home-card-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 17px;
+  }
+  .home-card-title-divider {
+    width: 60%;
+    height: 0;
+    border-bottom: 2px dashed;
+    margin: 8px auto;
+    opacity: .5;
+  }
+  .home-card-desc { font-size: 11.5px; color: #8a7462; }
+
+  .back-btn {
+    display: inline-block;
+    background: none;
+    border: none;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #b5755a;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 14px;
+  }
+  .back-btn:hover { color: #FF8FA3; }
+
+  .footer {
+    text-align: center;
+    margin-top: 22px;
+    color: #FF8FA3;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  @media (max-width: 420px) {
+    .home-card-icon { font-size: 28px; }
+    .home-card-title { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <button class="back-btn" onclick="location.href='recipes.html'">← 返回主頁</button>
+
+  <div class="page-title-wrap">
+    <div class="page-title-badge">💗 雪莉與朵栗</div>
+    <div class="page-title">🌈 兒童專區</div>
+  </div>
+
+  <div class="home-subtitle">🌟 陪孩子一起玩中學、學中玩 🌟</div>
+
+  <div class="home-cards">
+    <a class="home-card home-card-coral" href="star-card.html" style="text-decoration:none; display:block;">
+      <div class="home-card-icon">⭐</div>
+      <div class="home-card-title">我的集點卡</div>
+      <div class="home-card-title-divider"></div>
+      <div class="home-card-desc">蓋星星集點，累積小成就 💗</div>
+    </a>
+
+    <div class="home-card home-card-mint soon-card">
+      <div class="soon-badge">即將推出</div>
+      <div class="home-card-icon">🎨</div>
+      <div class="home-card-title">塗鴉牆</div>
+      <div class="home-card-title-divider"></div>
+      <div class="home-card-desc">自由創作的塗鴉空間 💗</div>
+    </div>
+
+    <div class="home-card home-card-blue soon-card">
+      <div class="soon-badge">即將推出</div>
+      <div class="home-card-icon">🎵</div>
+      <div class="home-card-title">兒歌童謠</div>
+      <div class="home-card-title-divider"></div>
+      <div class="home-card-desc">好聽好唱的兒歌精選 💗</div>
+    </div>
+
+    <div class="home-card home-card-purple soon-card">
+      <div class="soon-badge">即將推出</div>
+      <div class="home-card-icon">🧩</div>
+      <div class="home-card-title">小遊戲</div>
+      <div class="home-card-title-divider"></div>
+      <div class="home-card-desc">簡單好玩的益智小遊戲 💗</div>
+    </div>
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<script>
+document.querySelectorAll('.soon-card').forEach(card => {
+  card.addEventListener('click', () => {
+    alert('這個功能還在準備中，敬請期待！🩷');
+  });
+});
+</script>
+
+</body>
+</html>
