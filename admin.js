@@ -1732,7 +1732,7 @@ function switchView(name) {
   if (name === 'todoList') renderTodoGroups();
   if (name === 'groupStatus') renderGroupStatusList('groupStatusList');
   if (name === 'lotteryTool') renderLotteryWinnerList();
-  if (name === 'imageLibrary') ilLoad();
+  if (name === 'imageLibrary') { ilLoadFolderOptions().then(() => ilLoad()); }
 }
 
 document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
@@ -4267,11 +4267,40 @@ function ilCurrentFolder() {
 document.getElementById('ilFolderSelect').addEventListener('change', (e) => {
   document.getElementById('ilCustomFolderInput').style.display = e.target.value === '__custom__' ? 'inline-block' : 'none';
 });
-document.getElementById('ilRefreshBtn').addEventListener('click', () => ilLoad());
+document.getElementById('ilRefreshBtn').addEventListener('click', () => { ilLoadFolderOptions().then(() => ilLoad()); });
 document.getElementById('ilCustomFolderInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') ilLoad();
 });
 document.getElementById('ilSearchInput').addEventListener('input', () => ilRenderGrid());
+
+// 動態掃描 repo 實際的資料夾結構，填進資料夾下拉選單（取代原本寫死的固定清單，
+// 這樣新增資料夾、或資料夾名稱大小寫跟原本猜的不一樣，都能正確被抓到）
+async function ilLoadFolderOptions() {
+  const sel = document.getElementById('ilFolderSelect');
+  const prevVal = sel.value === '__custom__' ? '' : sel.value;
+  try {
+    const result = await postTask({ type: 'image-folder-list' });
+    const scanned = Array.isArray(result.folders) ? result.folders : [];
+    // 保底一定要有 images 這個常用選項，即使掃描結果因故是空的也不會選單空白
+    const folders = Array.from(new Set(['images'].concat(scanned))).sort();
+
+    sel.innerHTML = '';
+    folders.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      sel.appendChild(opt);
+    });
+    const customOpt = document.createElement('option');
+    customOpt.value = '__custom__';
+    customOpt.textContent = '自訂路徑…';
+    sel.appendChild(customOpt);
+
+    if (prevVal && folders.indexOf(prevVal) !== -1) sel.value = prevVal;
+  } catch (err) {
+    console.warn('資料夾清單讀取失敗，沿用目前選單：', err);
+  }
+}
 
 async function ilLoad() {
   const grid = document.getElementById('ilGrid');
