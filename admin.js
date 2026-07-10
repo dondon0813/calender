@@ -4288,6 +4288,20 @@ document.getElementById('ilCustomFolderInput').addEventListener('keydown', (e) =
 });
 document.getElementById('ilSearchInput').addEventListener('input', () => ilRenderGrid());
 
+// 一鍵修復：把已經有 webp 版本、但試算表網址還沒跟著換的欄位全部修好，不會重新轉檔
+document.getElementById('ilRepairRefsBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('ilRepairRefsBtn');
+  btn.disabled = true;
+  setFormStatus('ilRepairStatus', '掃描試算表中，圖片數量多的話可能要一點時間，請耐心等候…', '');
+  try {
+    const result = await postTask({ type: 'image-repair-webp-refs' });
+    setFormStatus('ilRepairStatus', `完成，共修好 ${result.updated} 處試算表網址 ✓`, 'ok');
+  } catch (err) {
+    setFormStatus('ilRepairStatus', '修復失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+
 // 動態掃描 repo 實際的資料夾結構，填進資料夾下拉選單（取代原本寫死的固定清單，
 // 這樣新增資料夾、或資料夾名稱大小寫跟原本猜的不一樣，都能正確被抓到）
 async function ilLoadFolderOptions() {
@@ -4468,7 +4482,24 @@ function ilLoadImageFromUrl(url) {
   });
 }
 
-function ilImageToWebpBase64(img, quality, maxDim) {
+// 偵測目前瀏覽器實際上能不能把 canvas 轉出真正的 WebP（iPhone 的 Safari 目前不支援，
+// 遇到不支援時 canvas.toDataURL 會偷偷退回 PNG，所以要實際測一次結果，不能只看瀏覽器名稱猜）
+let ilWebpSupportChecked = false;
+let ilWebpSupported = false;
+function ilCheckWebpSupport() {
+  if (ilWebpSupportChecked) return ilWebpSupported;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const dataUrl = canvas.toDataURL('image/webp', 0.8);
+  ilWebpSupported = dataUrl.indexOf('data:image/webp') === 0;
+  ilWebpSupportChecked = true;
+  return ilWebpSupported;
+}
+
+// 把圖片畫進 canvas 並壓縮輸出：能轉 WebP 的瀏覽器輸出 WebP，不能轉的老實輸出 PNG
+// （寧可格式退回 PNG，也不要把 PNG 內容硬取名成 .webp，不然檔名跟實際內容對不上，圖片會打不開）
+function ilEncodeImage(img, quality, maxDim) {
   let { width, height } = img;
   if (width > maxDim || height > maxDim) {
     const scale = maxDim / Math.max(width, height);
@@ -4480,15 +4511,18 @@ function ilImageToWebpBase64(img, quality, maxDim) {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, width, height);
-  const dataUrl = canvas.toDataURL('image/webp', quality);
-  return dataUrl.split(',')[1];
+
+  const supportsWebp = ilCheckWebpSupport();
+  const mime = supportsWebp ? 'image/webp' : 'image/png';
+  const dataUrl = canvas.toDataURL(mime, quality);
+  return { base64: dataUrl.split(',')[1], ext: supportsWebp ? '.webp' : '.png', isWebp: supportsWebp };
 }
 
-// 檔名去掉副檔名，換成 .webp（給上傳新圖時用；已經是 webp 的檔案就不用再轉）
-function ilSwapExtToWebp(filename) {
+// 檔名去掉副檔名，換成指定的新副檔名（例如 '.webp' 或 '.png'）
+function ilSwapExt(filename, ext) {
   const dot = filename.lastIndexOf('.');
   const base = dot === -1 ? filename : filename.slice(0, dot);
-  return base + '.webp';
+  return base + ext;
 }
 
 document.getElementById('ilUploadBtn').addEventListener('click', async () => {
@@ -4508,16 +4542,17 @@ document.getElementById('ilUploadBtn').addEventListener('click', async () => {
     setFormStatus('ilUploadStatus', `處理中… (${i + 1}/${files.length}) ${file.name}`, '');
     try {
       const img = await ilLoadImageFromFile(file);
-      const base64 = ilImageToWebpBase64(img, 0.82, 1600);
-      const filename = ilSwapExtToWebp(file.name);
-      await postTask({ type: 'image-upload', folder, filename, dataBase64: base64 });
+      const encoded = ilEncodeImage(img, 0.82, 1600);
+      const filename = ilSwapExt(file.name, encoded.ext);
+      await postTask({ type: 'image-upload', folder, filename, dataBase64: encoded.base64 });
       okCount++;
     } catch (err) {
       setFormStatus('ilUploadStatus', `「${file.name}」上傳失敗：${err.message}`, 'error');
     }
   }
 
-  setFormStatus('ilUploadStatus', `完成，成功上傳 ${okCount}/${files.length} 張 ✓`, okCount === files.length ? 'ok' : 'error');
+  const browserNote = ilCheckWebpSupport() ? '' : '（這個瀏覽器不支援轉WebP，已改存成PNG；要轉WebP請改用電腦的Chrome/Edge/Firefox）';
+  setFormStatus('ilUploadStatus', `完成，成功上傳 ${okCount}/${files.length} 張 ✓${browserNote}`, okCount === files.length ? 'ok' : 'error');
   input.value = '';
   btn.disabled = false;
   await ilLoad();
@@ -4559,10 +4594,14 @@ async function ilDeleteFile(f) {
 }
 
 async function ilConvertOneToWebp(f) {
+  if (!ilCheckWebpSupport()) {
+    alert('這個瀏覽器沒辦法轉出真正的 WebP 格式（常見於 iPhone 的 Safari），麻煩改用電腦上的 Chrome、Edge 或 Firefox 瀏覽器來做這個轉檔。');
+    return;
+  }
   try {
     const img = await ilLoadImageFromUrl(f.download_url);
-    const base64 = ilImageToWebpBase64(img, 0.82, 1600);
-    const result = await postTask({ type: 'image-add-webp-version', oldPath: f.path, dataBase64: base64 });
+    const encoded = ilEncodeImage(img, 0.82, 1600);
+    const result = await postTask({ type: 'image-add-webp-version', oldPath: f.path, dataBase64: encoded.base64 });
     if (result.updatedRefs > 0) {
       alert(`已新增 WebP 版本，並自動更新 ${result.updatedRefs} 處試算表引用 ✓（原圖保留未刪除）`);
     }
@@ -4573,6 +4612,10 @@ async function ilConvertOneToWebp(f) {
 }
 
 document.getElementById('ilBatchConvertBtn').addEventListener('click', async () => {
+  if (!ilCheckWebpSupport()) {
+    setFormStatus('ilBatchStatus', '這個瀏覽器沒辦法轉出真正的WebP（常見於iPhone的Safari），請改用電腦的Chrome/Edge/Firefox', 'error');
+    return;
+  }
   const selected = ilFiles.filter(f => ilSelected.has(f.path));
   const targets = selected.filter(f => !ilIsWebp(f.name));
   const skipped = selected.length - targets.length;
@@ -4588,8 +4631,8 @@ document.getElementById('ilBatchConvertBtn').addEventListener('click', async () 
     setFormStatus('ilBatchStatus', `轉檔中… (${i + 1}/${targets.length}) ${f.name}`, '');
     try {
       const img = await ilLoadImageFromUrl(f.download_url);
-      const base64 = ilImageToWebpBase64(img, 0.82, 1600);
-      await postTask({ type: 'image-add-webp-version', oldPath: f.path, dataBase64: base64 });
+      const encoded = ilEncodeImage(img, 0.82, 1600);
+      await postTask({ type: 'image-add-webp-version', oldPath: f.path, dataBase64: encoded.base64 });
       okCount++;
     } catch (err) {
       console.warn('批次轉檔失敗：', f.name, err);
