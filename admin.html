@@ -2742,6 +2742,79 @@
     cursor: pointer;
   }
   .settings-hub-item:hover { background: #FFEcD6; }
+
+  /* ===== 計算機 ===== */
+  .calc-display {
+    background: #FFFDFA;
+    border: 2px solid #FFE3CC;
+    border-radius: 14px;
+    padding: 18px 16px;
+    text-align: right;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #5a4a3f;
+    margin: 4px auto 12px;
+    max-width: 360px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    max-width: 360px;
+    margin: 0 auto 26px;
+  }
+  .calc-btn {
+    border: none;
+    border-radius: 12px;
+    background: #FFF6EC;
+    color: #5a4a3f;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 16px 0;
+    cursor: pointer;
+  }
+  .calc-btn:hover { background: #FFEcD6; }
+  .calc-btn.op { background: #FFD9BB; color: #b5601c; }
+  .calc-btn.op:hover { background: #FFCBA0; }
+  .calc-btn.eq { background: #FF8FA3; color: #fff; grid-column: span 2; }
+  .calc-btn.eq:hover { background: #FF7391; }
+  .calc-btn.zero { grid-column: span 2; }
+  .calc-btn.func { background: #F0E4D6; color: #8a7462; }
+  .calc-btn.func:hover { background: #E4D5C2; }
+
+  .tax-calc-box {
+    max-width: 420px;
+    margin: 0 auto;
+    background: #FFF6EC;
+    border-radius: 16px;
+    padding: 18px 16px;
+  }
+  .tax-calc-box label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #8a7462;
+    margin: 12px 0 6px;
+  }
+  .tax-calc-box label:first-child { margin-top: 0; }
+  .tax-calc-box input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #5a4a3f;
+    border: 2px solid #FFD3B6;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #fff;
+  }
+  .tax-calc-box input:focus { outline: none; border-color: #FF8FA3; }
+
 </style>
 </head>
 <body>
@@ -3008,6 +3081,13 @@
         </div>
         <span class="tool-icon-label">ibon<br>上傳</span>
       </div>
+      <div class="tool-icon" onclick="switchView('calculator')">
+        <div class="tool-icon-img-wrap">
+          <img src="images/tools/calculator.webp" alt="計算機" onerror="if(!this.dataset.f){this.dataset.f='1'; this.src='images/tools/calculator.png';}else{const w=this.parentElement; this.remove(); w.querySelector('.tool-icon-fallback').style.display='flex';}">
+          <span class="tool-icon-fallback" style="display:none;">🧮</span>
+        </div>
+        <span class="tool-icon-label">計算機</span>
+      </div>
     </div>
   </div>
 
@@ -3109,6 +3189,50 @@
       <button class="task-submit-btn" onclick="runConvertTool()">開始轉換</button>
       <div class="form-status" id="convertStatus"></div>
       <p style="text-align:center; font-size:12.5px; font-weight:800; color:#b5755a; margin:10px 0 0;">🚧 即將推出，敬請期待</p>
+    </div>
+  </div>
+
+  <!-- ===== 計算機（基本四則運算 + 稅率互算） ===== -->
+  <div class="view" id="viewCalculator">
+    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
+    <h2 class="view-title">🧮 計算機</h2>
+
+    <div class="calc-display" id="calcDisplay">0</div>
+    <div class="calc-grid">
+      <button class="calc-btn func" onclick="calcClear()">C</button>
+      <button class="calc-btn func" onclick="calcBackspace()">⌫</button>
+      <button class="calc-btn func" onclick="calcInputPercent()">%</button>
+      <button class="calc-btn op" onclick="calcPerformOperation('÷')">÷</button>
+
+      <button class="calc-btn" onclick="calcInputDigit('7')">7</button>
+      <button class="calc-btn" onclick="calcInputDigit('8')">8</button>
+      <button class="calc-btn" onclick="calcInputDigit('9')">9</button>
+      <button class="calc-btn op" onclick="calcPerformOperation('×')">×</button>
+
+      <button class="calc-btn" onclick="calcInputDigit('4')">4</button>
+      <button class="calc-btn" onclick="calcInputDigit('5')">5</button>
+      <button class="calc-btn" onclick="calcInputDigit('6')">6</button>
+      <button class="calc-btn op" onclick="calcPerformOperation('-')">-</button>
+
+      <button class="calc-btn" onclick="calcInputDigit('1')">1</button>
+      <button class="calc-btn" onclick="calcInputDigit('2')">2</button>
+      <button class="calc-btn" onclick="calcInputDigit('3')">3</button>
+      <button class="calc-btn op" onclick="calcPerformOperation('+')">+</button>
+
+      <button class="calc-btn zero" onclick="calcInputDigit('0')">0</button>
+      <button class="calc-btn" onclick="calcInputDecimal()">．</button>
+      <button class="calc-btn eq" onclick="calcPerformOperation('=')">=</button>
+    </div>
+
+    <div style="text-align:center;"><span class="task-section-title">🧾 稅率計算（稅率 5%）</span></div>
+    <div class="tax-calc-box">
+      <label for="taxPreInput">未稅金額</label>
+      <input type="number" id="taxPreInput" placeholder="輸入未稅金額…" inputmode="decimal">
+      <label for="taxAmtInput">稅額</label>
+      <input type="number" id="taxAmtInput" placeholder="輸入稅額…" inputmode="decimal">
+      <label for="taxIncInput">含稅金額</label>
+      <input type="number" id="taxIncInput" placeholder="輸入含稅金額…" inputmode="decimal">
+      <p style="font-size:11.5px; color:#a89888; margin:10px 0 0;">輸入任一欄位，另外兩欄會自動計算（四捨五入到整數元）。</p>
     </div>
   </div>
 
@@ -3610,7 +3734,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=23"></script>
+<script src="admin.js?v=24"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
