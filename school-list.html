@@ -27,6 +27,29 @@
     padding: 18px 14px 26px;
     box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
   }
+
+  /* 【新】右上角小房子：回到首頁（recipes.html） */
+  .site-home-btn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #FFD3B6;
+    color: #b5755a;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    box-shadow: 0 3px 10px rgba(230,160,120,0.25);
+    z-index: 30;
+    cursor: pointer;
+  }
+  .site-home-btn:hover { background: #FFF1E6; }
+
   .empty-state {
     text-align: center;
     color: #b39a8b;
@@ -690,6 +713,8 @@
 </style>
 </head>
 <body>
+
+<a class="site-home-btn" href="recipes.html" title="回首頁" aria-label="回首頁">🏠</a>
 
 <div class="wrap">
   <button class="back-btn" id="backToHome">← 返回首頁</button>
