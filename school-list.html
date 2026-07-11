@@ -629,17 +629,20 @@
     width: 384px;
     height: 576px;
     background: #ffffff;
-    padding: 20px 14px;
+    padding: 16px 14px 10px;
     box-sizing: border-box;
     font-family: 'Noto Sans TC', sans-serif;
+    display: flex;
+    flex-direction: column;
   }
   .sticker-grid {
+    flex: 1 1 auto;
+    min-height: 0;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(6, 1fr);
     gap: 6px 6px;
     width: 100%;
-    height: 100%;
   }
   .sticker-cell {
     display: flex;
@@ -654,7 +657,7 @@
     width: 100%;
     min-height: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     overflow: hidden;
   }
@@ -665,7 +668,7 @@
   .sticker-icon-wrap.emoji { font-size: 26px; }
   .sticker-name {
     flex: none;
-    margin-top: 2px;
+    margin-top: 0;
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 800;
     font-size: 11px;
@@ -676,6 +679,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .sticker-footer {
+    flex: none;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #b5755a;
+    padding-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -683,7 +694,7 @@
 <div class="wrap">
   <button class="back-btn" id="backToHome">← 返回首頁</button>
   <div class="school-header">
-    <img class="school-title-img" src="icons/title-header.png" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
+    <img class="school-title-img" src="icons/title-header.webp" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
   </div>
   <div id="statusMsg" class="status-msg" style="display:none;">資料載入中…</div>
   <div class="school-progress" id="schoolProgress"></div>
@@ -693,17 +704,17 @@
   <div class="school-removed-box" id="schoolRemovedBox" style="display:none;"></div>
 
   <div class="school-generate-box" id="schoolGenerateBox" style="display:none;">
-    <button class="school-generate-btn" id="generateA4Btn"><img class="school-generate-btn-img" src="icons/btn-generate.png" alt="產生我的專屬用品清單"></button>
+    <button class="school-generate-btn" id="generateA4Btn"><img class="school-generate-btn-img" src="icons/btn-generate.webp" alt="產生我的專屬用品清單"></button>
     <div class="school-generate-hint">會把清單上的項目（不含已移除的）做成一張 A4 圖片，已打勾的項目圖片上也會顯示 ✓，方便下載、列印或帶去購物</div>
   </div>
 
   <div class="school-generate-box" id="stickerGenerateBox" style="display:none;">
-    <button class="school-generate-btn" id="openStickerModalBtn"><img class="school-generate-btn-img" src="icons/btn-sticker.png" alt="製作我的專屬姓名貼"></button>
+    <button class="school-generate-btn" id="openStickerModalBtn"><img class="school-generate-btn-img" src="icons/btn-sticker.webp" alt="製作我的專屬姓名貼"></button>
     <div class="school-generate-hint">輸入姓名後，會把清單上的項目（不含已移除的）做成一張 4x6 姓名貼圖片，每樣用品下面都印上姓名，方便沖印後貼在每樣用品上</div>
   </div>
 
   <div class="school-reminder-box">
-    <img class="school-reminder-img" src="icons/reminder-footer.png" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
+    <img class="school-reminder-img" src="icons/reminder-footer.webp" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
   </div>
 
   <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
@@ -741,12 +752,12 @@
 <div id="a4PosterRoot">
   <div class="a4-poster" id="a4Poster">
     <div class="a4-header">
-      <img class="a4-title-img" src="icons/title-header.png" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
+      <img class="a4-title-img" src="icons/title-header.webp" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
       <div class="a4-subtitle" id="a4Subtitle"></div>
     </div>
     <div id="a4Body"></div>
     <div class="a4-footer">
-      <img class="a4-footer-img" src="icons/reminder-footer.png" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
+      <img class="a4-footer-img" src="icons/reminder-footer.webp" alt="所有物品都記得寫上名字，才不會弄丟喔！" onerror="this.style.display='none';">
       🩷 雪莉與朵栗・@dondon0813 🩷
       <span class="a4-date" id="a4Date"></span>
     </div>
@@ -769,6 +780,7 @@
 <div id="stickerPosterRoot">
   <div class="sticker-poster" id="stickerPoster">
     <div class="sticker-grid" id="stickerGrid"></div>
+    <div class="sticker-footer">🩷 雪莉與朵栗・IG @dondon0813 製作</div>
   </div>
 </div>
 
