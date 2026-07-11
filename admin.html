@@ -2813,8 +2813,53 @@
     padding: 10px 12px;
     background: #fff;
   }
-  .tax-calc-box input:focus { outline: none; border-color: #FF8FA3; }
+.tax-calc-box input:focus { outline: none; border-color: #FF8FA3; }
 
+  /* ===== 【新】自訂文字按鈕區塊（開團狀態清單新增的區塊） ===== */
+  .cb-card {
+    display: block;
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .cb-title { font-family: 'Baloo 2', 'Noto Sans TC', sans-serif; font-weight: 700; }
+  .cb-subtitle { font-size: 12.5px; opacity: 0.85; margin-top: 4px; }
+  .cb-disabled { opacity: 0.45; }
+  .cb-admin-wrap { margin-bottom: 14px; }
+  .cb-admin-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: #FFF6EC;
+    border-radius: 0 0 12px 12px;
+    padding: 6px 10px;
+    margin-top: -4px;
+  }
+  .cb-admin-stats {
+    font-size: 11px;
+    color: #a89888;
+    text-align: center;
+    margin-top: 4px;
+  }
+  @keyframes cbShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+  @keyframes cbBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes cbVibrate {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-1.5deg); }
+    75% { transform: rotate(1.5deg); }
+  }
+  .cb-anim-shake { animation: cbShake 0.6s ease-in-out infinite; }
+  .cb-anim-bounce { animation: cbBounce 0.9s ease-in-out infinite; }
+  .cb-anim-vibrate { animation: cbVibrate 0.35s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -3023,9 +3068,12 @@
   <!-- ===== 開團狀態（結團倒數／現正團購中） ===== -->
   <div class="view" id="viewGroupStatus">
     <h2 class="view-title">開團狀態</h2>
+    <div style="text-align:center; margin-bottom:14px;">
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openBlockEditModal(null)">➕ 新增文字按鈕</button>
+    </div>
     <div class="group-list" id="groupStatusList"></div>
   </div>
-
+  
   <!-- ===== 待辦事項 ===== -->
   <div class="view" id="viewTodoList">
     <h2 class="view-title">待辦事項</h2>
@@ -3738,9 +3786,93 @@
     </div>
   </div>
 </div>
+<!-- ===== 開團狀態：文字按鈕區塊 新增／編輯 視窗 ===== -->
+<div class="modal-backdrop" id="blockEditModal" onclick="if(event.target===this) closeBlockEditModal()">
+  <div class="modal-box" style="width:400px;">
+    <button class="modal-close" onclick="closeBlockEditModal()">✕</button>
+    <h3 id="blockEditTitle">➕ 新增文字按鈕</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+
+      <label for="blkTitleInput">標題</label>
+      <input type="text" id="blkTitleInput" placeholder="例如：點我看限時活動">
+
+      <label for="blkTitleSizeSelect">標題尺寸</label>
+      <select id="blkTitleSizeSelect">
+        <option value="小">小</option>
+        <option value="中" selected>中</option>
+        <option value="大">大</option>
+        <option value="特大">特大</option>
+      </select>
+
+      <div class="ev-toggle-row" style="margin-top:14px;">
+        <div class="ev-toggle-item">
+          <span class="ev-toggle-label">副標題</span>
+          <span class="pr-switch" id="blkSubtitleSwitch"><span class="pr-knob"></span></span>
+        </div>
+      </div>
+      <div id="blkSubtitleRow" style="display:none;">
+        <label for="blkSubtitleInput">副標（顯示在標題下方，字比較小）</label>
+        <input type="text" id="blkSubtitleInput" placeholder="輸入副標文字…">
+      </div>
+
+      <label for="blkButtonColorInput" style="margin-top:14px;">按鈕顏色</label>
+      <input type="color" id="blkButtonColorInput" value="#FF8FA3" style="height:40px; padding:4px; cursor:pointer;">
+
+      <label for="blkBorderStyleSelect">邊框樣式</label>
+      <select id="blkBorderStyleSelect">
+        <option value="無" selected>無</option>
+        <option value="實線">實線</option>
+        <option value="虛線">虛線</option>
+      </select>
+
+      <div id="blkBorderFieldsWrap" style="display:none; gap:8px;">
+        <div style="flex:1;">
+          <label for="blkBorderWidthInput">邊框粗細(px)</label>
+          <input type="number" id="blkBorderWidthInput" min="1" max="10" value="2">
+        </div>
+        <div style="flex:1;">
+          <label for="blkBorderColorInput">邊框顏色</label>
+          <input type="color" id="blkBorderColorInput" value="#FFFFFF" style="height:40px; padding:4px; cursor:pointer; width:100%;">
+        </div>
+      </div>
+
+      <label for="blkTextColorInput">文字顏色</label>
+      <input type="color" id="blkTextColorInput" value="#FFFFFF" style="height:40px; padding:4px; cursor:pointer;">
+
+      <label for="blkUrlInput">網址按鈕（點擊後前往的連結）</label>
+      <input type="text" id="blkUrlInput" placeholder="貼上網址…">
+
+      <label for="blkAnimationSelect">動態效果</label>
+      <select id="blkAnimationSelect">
+        <option value="無" selected>無</option>
+        <option value="搖晃">搖晃</option>
+        <option value="跳動">跳動</option>
+        <option value="震動">震動</option>
+      </select>
+
+      <label for="blkPositionSelect">顯示位置</label>
+      <select id="blkPositionSelect">
+        <option value="before">團購清單之前</option>
+        <option value="between">結團倒數／現正團購中之間</option>
+        <option value="after" selected>團購清單之後</option>
+      </select>
+
+      <label style="margin-top:14px;">預覽</label>
+      <div id="blockPreview" style="background:#FFF6EC; border-radius:14px; padding:16px; display:flex; justify-content:center;"></div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="blkSaveBtn" style="margin-top:0;">➕ 新增按鈕</button>
+        <button class="task-mini-btn danger" id="blkDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="blkEditStatus"></div>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=26"></script>
+<script src="admin.js?v=27"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="admin.js?v=27"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
