@@ -1971,6 +1971,25 @@
   }
   .gs-today-badge { background: #FF4D6D; }
   .gs-frozen-badge { background: #4F91D9; }
+  .gs-card-icons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .gs-card-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .gs-card-icon:hover { background: rgba(255,255,255,0.4); }
   .gs-empty {
     text-align: center;
     color: #a89787;
@@ -2496,6 +2515,30 @@
   }
   .ev-more-body {
     padding-top: 4px;
+  }
+  .ev-icon-row {
+    display: flex;
+    gap: 10px;
+  }
+  .ev-icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid #FFD3B6;
+    background: #fff;
+    color: #b5755a;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .ev-icon-btn:hover { background: #FFF1E6; }
+  .ev-icon-btn.set {
+    background: #FF8FA3;
+    border-color: #FF8FA3;
+    color: #fff;
   }
 
   /* ===== 圖片庫 ===== */
@@ -3436,7 +3479,7 @@
     <h3 id="adminModalTitle"></h3>
     <div class="admin-modal-meta" id="adminModalMeta"></div>
 
-    <!-- 【新】瀏覽/點擊次數統計 -->
+    <!-- 【新】瀏覽/點擊次數統計（同時顯示團名彈窗三個按鈕各自的點擊次數） -->
     <div class="admin-stats-box" id="adminStatsBox"></div>
 
     <div class="publish-status-box" id="adminPublishBox">
@@ -3696,7 +3739,7 @@
       <div class="ev-weekday-hint" id="evEndWeekdayHint"></div>
 
       <div class="ev-more-toggle" id="evMoreToggle">
-        <span>更多設定（標籤／延長時間／早鳥禮／網址／分類／前台顯示）</span>
+        <span>更多設定（標籤／延長時間／早鳥禮／網址／分類／前台顯示／社群圖示）</span>
         <span class="ev-more-arrow" id="evMoreArrow">▾</span>
       </div>
       <div class="ev-more-body" id="evMoreBody" style="display:none;">
@@ -3715,6 +3758,14 @@
 
         <label for="evCategoryInput">分類標記（可不填，例如：冷凍）</label>
         <input type="text" id="evCategoryInput" placeholder="例如：冷凍">
+
+        <label style="margin-top:14px;">社群小圖示（點圖示輸入網址，前後台都會顯示；留空可清除）</label>
+        <div class="ev-icon-row" id="evIconRow">
+          <button type="button" class="ev-icon-btn" data-key="iconIg" title="Instagram">📷</button>
+          <button type="button" class="ev-icon-btn" data-key="iconTiktok" title="TikTok">🎵</button>
+          <button type="button" class="ev-icon-btn" data-key="iconFb" title="Facebook">📘</button>
+          <button type="button" class="ev-icon-btn" data-key="iconEmail" title="Email／其他連結">✉️</button>
+        </div>
 
         <label class="urgent-check" style="color:#5C9147;" id="evPublishedRow">
           <input type="checkbox" id="evPublishedInput">顯示於前台（不勾＝尚未確認，先不顯示）
@@ -3870,9 +3921,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=27"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=27"></script>
+<script src="admin.js?v=28"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
