@@ -203,6 +203,29 @@ function computeDisplayEnd(end, extend) {
   return extend.value;
 }
 
+// ===== 【新】社群小圖示：4 個內建圖示，前後台共用同一套渲染邏輯 =====
+const EVENT_ICON_DEFS = [
+  { key: 'iconIg', emoji: '📷', label: 'Instagram' },
+  { key: 'iconTiktok', emoji: '🎵', label: 'TikTok' },
+  { key: 'iconFb', emoji: '📘', label: 'Facebook' },
+  { key: 'iconEmail', emoji: '✉️', label: 'Email／其他' }
+];
+function buildEventIconElements(ev) {
+  return EVENT_ICON_DEFS.filter(d => ev[d.key]).map(d => {
+    let href = ev[d.key];
+    if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href)) href = 'https://' + href;
+    const span = document.createElement('span');
+    span.className = 'gs-card-icon';
+    span.title = d.label;
+    span.textContent = d.emoji;
+    span.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.open(href, '_blank', 'noopener');
+    });
+    return span;
+  });
+}
+
 async function loadData() {
   const statusEl = document.getElementById('status');
   statusEl.textContent = '資料載入中…';
@@ -229,16 +252,21 @@ async function loadData() {
       const url = c[7] ? c[7].v : '';
       const adminUrl = c[8] ? c[8].v : ''; // 後台網址，先保留不使用
       const earlyBirdRaw = c[9] ? c[9].v : '';
-      // 新增欄位（L~Q）：顏色／整日／開始時間／結束時間／團購／顯示於前台
+      // 新增欄位（L~U）：顏色／整日／開始時間／結束時間／團購／顯示於前台／4個社群圖示網址
       // 舊資料這幾欄是空的，全部視為向下相容的預設值（顏色沿用調色盤、整日、算團購編號、顯示於前台）
       // 欄位對照：J=早鳥禮(idx9)　K=食譜品牌(idx10，既有欄位，這裡不需要讀)
       // L=顏色(idx11)　M=整日(idx12)　N=開始時間(idx13)　O=結束時間(idx14)　P=團購(idx15)　Q=顯示於前台(idx16)
+      // R=IG(idx17)　S=TikTok(idx18)　T=Facebook(idx19)　U=Email／其他(idx20)
       const colorRaw = c[11] ? c[11].v : '';
       const allDayRaw = c[12] ? String(c[12].v || '').trim() : '';
       const startTimeRaw = c[13] ? String(c[13].v || '').trim() : '';
       const endTimeRaw = c[14] ? String(c[14].v || '').trim() : '';
       const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
       const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
+      const iconIg = c[17] ? String(c[17].v || '').trim() : '';
+      const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
+      const iconFb = c[19] ? String(c[19].v || '').trim() : '';
+      const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
       const start = parseDateStr(startRaw);
       const end = parseDateStr(endRaw);
       if (!start || !end || !title) return;
@@ -251,7 +279,8 @@ async function loadData() {
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
       events.push({
         id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird,
-        color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published
+        color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published,
+        iconIg, iconTiktok, iconFb, iconEmail
       });
     });
 
@@ -577,15 +606,7 @@ function renderSingleDayMode(mode) {
             bar.appendChild(chip);
           }
 
-          // 冷凍團：即將結單時顯示小紅點倒數天數
-          if (!unpublished && frozen && (status === 'closingSoon')) {
-            const daysLeft = Math.max(0, daysBetween(startOfDay(new Date()), startOfDay(ev.displayEnd)));
-            const dot = document.createElement('span');
-            dot.className = 'countdown-dot';
-            dot.textContent = daysLeft;
-            dot.title = daysLeft === 0 ? '今天結單' : `剩 ${daysLeft} 天結單`;
-            bar.appendChild(dot);
-          }
+          // 【拿掉】冷凍團倒數天數小圓點功能已依需求整個移除，冷凍團只保留藍色底+雪花浮水印
 
           stack.appendChild(bar);
         });
@@ -765,6 +786,14 @@ function renderGroupStatusList(targetId) {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
+    const icons = buildEventIconElements(ev);
+    if (icons.length) {
+      const iconsWrap = document.createElement('div');
+      iconsWrap.className = 'gs-card-icons';
+      icons.forEach(el => iconsWrap.appendChild(el));
+      card.appendChild(iconsWrap);
+    }
+
     if (frozen || isToday) {
       const badges = document.createElement('div');
       badges.className = 'gs-badges';
@@ -810,13 +839,26 @@ function renderGroupStatusList(targetId) {
 }
 
 // 【新】渲染活動彈窗裡的「📊 數據」瀏覽/點擊次數區塊
+// 除了整體瀏覽/點擊，還會顯示團名彈窗「前往觀看介紹／食譜大全／前往下單」三顆按鈕各自的點擊次數
+// （這三個統計 key 格式固定是 團購key + '_intro' / '_recipe' / '_order'，跟前台 index.html 送出的 key 一致）
 function renderAdminStatsBox(key) {
   const box = document.getElementById('adminStatsBox');
   if (!box) return;
   const st = statsMap[key] || { views: 0, clicks: 0 };
-  box.innerHTML =
+  let html =
     `<span class="admin-stats-item">👀 瀏覽 <b>${st.views || 0}</b> 次</span>` +
     `<span class="admin-stats-item">🖱️ 點擊 <b>${st.clicks || 0}</b> 次</span>`;
+
+  const introClicks = (statsMap[key + '_intro'] || {}).clicks || 0;
+  const recipeClicks = (statsMap[key + '_recipe'] || {}).clicks || 0;
+  const orderClicks = (statsMap[key + '_order'] || {}).clicks || 0;
+  if (introClicks || recipeClicks || orderClicks) {
+    html +=
+      `<span class="admin-stats-item">📖 介紹 <b>${introClicks}</b> 次</span>` +
+      `<span class="admin-stats-item">🍽 食譜 <b>${recipeClicks}</b> 次</span>` +
+      `<span class="admin-stats-item">🛒 下單 <b>${orderClicks}</b> 次</span>`;
+  }
+  box.innerHTML = html;
 }
 
 function openAdminModal(ev) {
@@ -1430,7 +1472,7 @@ document.getElementById('evGroupBuySwitch').addEventListener('click', () => {
   setEvSwitch('evGroupBuySwitch', !isEvSwitchOn('evGroupBuySwitch'));
 });
 
-// 「更多設定」可折疊區塊：標籤／延長時間／早鳥禮／網址／分類／前台顯示
+// 「更多設定」可折疊區塊：標籤／延長時間／早鳥禮／網址／分類／前台顯示／社群圖示
 document.getElementById('evMoreToggle').addEventListener('click', () => {
   const toggle = document.getElementById('evMoreToggle');
   const body = document.getElementById('evMoreBody');
@@ -1438,6 +1480,41 @@ document.getElementById('evMoreToggle').addEventListener('click', () => {
   body.style.display = open ? 'block' : 'none';
   document.getElementById('evMoreArrow').textContent = open ? '▴' : '▾';
 });
+
+// ===== 【新】社群小圖示按鈕：新增／編輯活動視窗裡的 4 個圖示，點擊跳出 prompt 輸入網址 =====
+let evIconValues = {};
+function initEventIconButtons() {
+  const box = document.getElementById('evIconRow');
+  if (!box || box.dataset.bound) return;
+  box.dataset.bound = '1';
+  EVENT_ICON_DEFS.forEach(def => {
+    const btn = box.querySelector(`[data-key="${def.key}"]`);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const current = evIconValues[def.key] || '';
+      const input = prompt(`輸入${def.label}網址（留空即可清除）：`, current);
+      if (input === null) return; // 按取消不變更
+      evIconValues[def.key] = input.trim();
+      btn.classList.toggle('set', !!evIconValues[def.key]);
+    });
+  });
+}
+initEventIconButtons();
+
+function setEventIconButtons(ev) {
+  evIconValues = {
+    iconIg: ev ? (ev.iconIg || '') : '',
+    iconTiktok: ev ? (ev.iconTiktok || '') : '',
+    iconFb: ev ? (ev.iconFb || '') : '',
+    iconEmail: ev ? (ev.iconEmail || '') : ''
+  };
+  const box = document.getElementById('evIconRow');
+  if (!box) return;
+  EVENT_ICON_DEFS.forEach(def => {
+    const btn = box.querySelector(`[data-key="${def.key}"]`);
+    if (btn) btn.classList.toggle('set', !!evIconValues[def.key]);
+  });
+}
 
 function ymdStr(d) {
   const pad = n => String(n).padStart(2, '0');
@@ -1461,6 +1538,7 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evExtendInput').value = (ev && ev.extend && ev.extend.type === 'days') ? ev.extend.value : '';
   document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
+  setEventIconButtons(ev);
 
   // 每次打開都先收合「更多設定」，畫面維持乾淨
   document.getElementById('evMoreToggle').classList.remove('open');
@@ -1513,7 +1591,9 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
 
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
-    allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime
+    allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime,
+    iconIg: evIconValues.iconIg || '', iconTiktok: evIconValues.iconTiktok || '',
+    iconFb: evIconValues.iconFb || '', iconEmail: evIconValues.iconEmail || ''
   };
 
   const btn = document.getElementById('evSaveBtn');
