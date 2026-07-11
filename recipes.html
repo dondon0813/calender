@@ -28,6 +28,27 @@
     box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
   }
 
+  /* 【新】右上角小房子：在首頁本身時，點擊會把畫面切回首頁區塊 */
+  .site-home-btn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #FFD3B6;
+    color: #b5755a;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(230,160,120,0.25);
+    z-index: 30;
+    cursor: pointer;
+  }
+  .site-home-btn:hover { background: #FFF1E6; }
+
   .page-title-wrap {
     text-align: center;
     margin: 4px 0 18px;
@@ -1233,6 +1254,8 @@
 </style>
 </head>
 <body>
+
+<button class="site-home-btn" id="siteHomeBtn" title="回首頁" aria-label="回首頁">🏠</button>
 
 <div class="wrap">
   <!-- 首頁 -->
@@ -2619,6 +2642,9 @@ document.querySelectorAll('.soon-card').forEach(card => {
 });
 document.getElementById('backFromIngredients').addEventListener('click', () => switchView('home'));
 document.getElementById('backFromRecipes').addEventListener('click', () => switchView('home'));
+
+// 【新】右上角小房子：這裡本身就是首頁，點擊直接切回首頁區塊（不用整頁跳轉）
+document.getElementById('siteHomeBtn').addEventListener('click', () => switchView('home'));
 
 function applyInitialRoute() {
   // 完全沒帶網址參數（直接打開 recipes.html）才停在首頁；
