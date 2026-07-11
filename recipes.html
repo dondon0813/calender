@@ -1970,10 +1970,14 @@ function renderIngredientFilterTiles() {
   }
 
   // 每個簡稱只出現一顆圖磚（同一簡稱如果有多個品牌版本，圖磚點下去會走原本的品牌選擇彈窗）
+  // 【新】成品類（例如吐司、鬆餅）不套用「簡稱可拆多個別名」這個機制，只取第一個簡稱當單一代表圖磚，
+  // 避免像「南瓜吐司/吐司」這種簡稱把同一款成品拆成好幾顆圖磚；食材類維持原本可以拆多別名的行為
   const seenKeys = new Set();
   const tiles = [];
   pool.forEach(item => {
-    ingredientFilterKeys(item).forEach(key => {
+    const itemType = (item['類型'] || '食材').trim();
+    const keys = itemType === '成品' ? [ingredientFilterKey(item)].filter(Boolean) : ingredientFilterKeys(item);
+    keys.forEach(key => {
       if (!key || seenKeys.has(key)) return;
       seenKeys.add(key);
       tiles.push({ key, representative: item });
