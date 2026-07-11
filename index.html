@@ -639,9 +639,9 @@ const CB_BORDER_STYLE_CSS = { '無': 'none', '實線': 'solid', '虛線': 'dashe
 const CB_ANIM_CLASS = { '無': '', '搖晃': 'cb-anim-shake', '跳動': 'cb-anim-bounce', '震動': 'cb-anim-vibrate' };
 
 async function loadCustomBlocks() {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) return;
+  if (!STATS_BACKEND_URL) return;
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch(STATS_BACKEND_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
   } catch (err) {
