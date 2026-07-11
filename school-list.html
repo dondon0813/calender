@@ -589,24 +589,6 @@
   }
 
   /* ===== 姓名貼功能 ===== */
-  .sticker-open-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: none;
-    border-radius: 999px;
-    padding: 12px 26px;
-    background: linear-gradient(135deg, #7AAEEB, #9ACBE8);
-    color: #fff;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 15px;
-    cursor: pointer;
-    box-shadow: 0 6px 16px rgba(122, 174, 235, 0.35);
-  }
-  .sticker-open-btn:hover { background: linear-gradient(135deg, #5F97DB, #7AAEEB); }
-  .sticker-open-btn:disabled { opacity: 0.6; cursor: default; }
-
   .sticker-modal-icon { font-size: 34px; margin-bottom: 4px; }
   .sticker-modal-title {
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
@@ -645,45 +627,48 @@
   }
   .sticker-poster {
     width: 384px;
-    min-height: 576px;
+    height: 576px;
     background: #ffffff;
-    padding: 22px 18px;
+    padding: 20px 14px;
     box-sizing: border-box;
     font-family: 'Noto Sans TC', sans-serif;
   }
   .sticker-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px 10px;
-    align-content: start;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 6px 6px;
+    width: 100%;
+    height: 100%;
   }
   .sticker-cell {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+    min-height: 0;
+    overflow: hidden;
   }
   .sticker-icon-wrap {
+    flex: 1 1 auto;
     width: 100%;
-    aspect-ratio: 1 / 1;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
   .sticker-icon-wrap img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
     display: block;
     margin: 0 auto;
   }
-  .sticker-icon-wrap.emoji { font-size: 30px; }
+  .sticker-icon-wrap.emoji { font-size: 26px; }
   .sticker-name {
+    flex: none;
     margin-top: 2px;
     font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
     font-weight: 800;
-    font-size: 13px;
+    font-size: 11px;
     color: #5a4a3f;
     text-align: center;
     white-space: nowrap;
@@ -713,7 +698,7 @@
   </div>
 
   <div class="school-generate-box" id="stickerGenerateBox" style="display:none;">
-    <button class="sticker-open-btn" id="openStickerModalBtn">🏷️ 製作我的專屬姓名貼</button>
+    <button class="school-generate-btn" id="openStickerModalBtn"><img class="school-generate-btn-img" src="icons/btn-sticker.png" alt="製作我的專屬姓名貼"></button>
     <div class="school-generate-hint">輸入姓名後，會把清單上的項目（不含已移除的）做成一張 4x6 姓名貼圖片，每樣用品下面都印上姓名，方便沖印後貼在每樣用品上</div>
   </div>
 
@@ -1388,19 +1373,35 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('show');
 }
 
-// ===== 姓名貼（4x6 明信片，白底，圖示 + 姓名） =====
+// ===== 姓名貼（4x6 明信片，白底，固定 4欄x6排=24格，不足24個就輪迴填滿） =====
+const STICKER_GRID_COLS = 4;
+const STICKER_GRID_ROWS = 6;
+const STICKER_GRID_SLOTS = STICKER_GRID_COLS * STICKER_GRID_ROWS;
+
+function buildStickerItemSlots(items) {
+  if (!items.length) return [];
+  const slots = [];
+  for (let i = 0; i < STICKER_GRID_SLOTS; i++) {
+    slots.push(items[i % items.length]);
+  }
+  return slots;
+}
+
 async function buildStickerPoster(name) {
   const removedIds = getRemovedSchoolIds();
-  // 跟 A4 清單一樣：只排除打叉移除的項目，其餘全部列出（不管有沒有打勾）
+  // 跟 A4 清單一樣：只排除打叉移除的項目
   const items = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
 
   const gridEl = document.getElementById('stickerGrid');
   gridEl.innerHTML = '';
   if (!items.length) return false;
 
+  // 固定填滿 4 欄 x 6 排 = 24 格；選擇的品項不足 24 個就從頭輪迴重複，直到填滿
+  const slots = buildStickerItemSlots(items);
+
   const imgChecks = [];
 
-  items.forEach(item => {
+  slots.forEach(item => {
     const cell = document.createElement('div');
     cell.className = 'sticker-cell';
 
@@ -1417,17 +1418,14 @@ async function buildStickerPoster(name) {
           iconWrap.textContent = '🎒';
           return;
         }
-        // 跟 A4 清單同樣的做法：依容器實際尺寸＋圖片原始長寬比手動算出縮放後的寬高，
-        // 避免截圖工具對 object-fit / aspect-ratio 支援不穩定造成圖片被裁掉
-        const boxSize = iconWrap.getBoundingClientRect().width || iconWrap.offsetWidth || 0;
-        if (boxSize && res.w && res.h) {
-          iconWrap.style.height = boxSize + 'px';
-          const ratio = res.w / res.h;
-          let drawW, drawH;
-          if (ratio >= 1) { drawW = boxSize; drawH = boxSize / ratio; }
-          else { drawH = boxSize; drawW = boxSize * ratio; }
-          img.style.width = drawW + 'px';
-          img.style.height = drawH + 'px';
+        // 依格子實際「寬 x 高」（不是假設正方形）+ 圖片原始長寬比，手動算出等比縮放後的寬高，
+        // 避免截圖工具對 object-fit / aspect-ratio 支援不穩定造成圖片被裁掉或跑版
+        const boxW = iconWrap.getBoundingClientRect().width || iconWrap.offsetWidth || 0;
+        const boxH = iconWrap.getBoundingClientRect().height || iconWrap.offsetHeight || 0;
+        if (boxW && boxH && res.w && res.h) {
+          const fitScale = Math.min(boxW / res.w, boxH / res.h);
+          img.style.width = (res.w * fitScale) + 'px';
+          img.style.height = (res.h * fitScale) + 'px';
         }
       }));
     } else {
