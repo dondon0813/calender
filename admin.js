@@ -465,7 +465,10 @@ function renderAllMode() {
       if (item.ev.color) {
         bar.style.background = item.ev.color;
       }
-      bar.addEventListener('click', () => openAdminModal(item.ev));
+      bar.addEventListener('click', () => {
+        if (calendarEditMode) openEventEditModal(item.ev);
+        else openAdminModal(item.ev);
+      });
       bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
       bar.style.gridRow = `${item.lane + 2}`;
       bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})（點擊查看內部資訊）`;
@@ -583,7 +586,8 @@ function renderSingleDayMode(mode) {
           bar.className = `ebar ebar-wrap ${catClass} clickable`;
           bar.addEventListener('click', (e) => {
             e.stopPropagation();
-            openAdminModal(ev);
+            if (calendarEditMode) openEventEditModal(ev);
+            else openAdminModal(ev);
           });
           bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）` + (unpublished ? '　🔔 尚未確認顯示於前台' : '');
 
@@ -774,7 +778,10 @@ function renderGroupStatusList(targetId) {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'gs-card' + (isToday ? ' gs-today' : '');
-    card.addEventListener('click', () => openAdminModal(ev));
+    card.addEventListener('click', () => {
+      if (calendarEditMode) openEventEditModal(ev);
+      else openAdminModal(ev);
+    });
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
@@ -920,38 +927,38 @@ function openAdminModal(ev) {
   document.getElementById('adminModal').classList.add('show');
 }
 
-// 前台顯示狀態小方塊 + 確認顯示按鈕
+// 前台顯示狀態小方塊 + 顯示於前台開關（可開可關）
 function renderAdminPublishBox(ev) {
   const box = document.getElementById('adminPublishBox');
   const text = document.getElementById('adminPublishText');
-  const btn = document.getElementById('adminPublishBtn');
+  const sw = document.getElementById('adminPublishSwitch');
   const published = ev.published !== false; // 沒有這個欄位（舊資料）＝視為已發布
   box.classList.toggle('is-published', published);
-  text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未確認顯示於前台';
-  btn.style.display = published ? 'none' : 'inline-block';
+  text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
+  sw.classList.toggle('on', published);
 }
 
-document.getElementById('adminPublishBtn').addEventListener('click', async () => {
+document.getElementById('adminPublishSwitch').addEventListener('click', async () => {
   if (!currentModalEv) return;
-  const btn = document.getElementById('adminPublishBtn');
-  btn.disabled = true;
-  btn.textContent = '處理中…';
+  const sw = document.getElementById('adminPublishSwitch');
+  const newVal = !sw.classList.contains('on');
+  const prevVal = currentModalEv.published !== false;
+
+  // 樂觀更新：先改畫面，失敗再還原
+  sw.classList.toggle('on', newVal);
+  document.getElementById('adminPublishText').textContent = newVal ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
+  document.getElementById('adminPublishBox').classList.toggle('is-published', newVal);
+
   try {
-    await postTask({ type: 'event-update', id: currentModalEv.id, published: true });
-    currentModalEv.published = true;
-    renderAdminPublishBox(currentModalEv);
+    await postTask({ type: 'event-update', id: currentModalEv.id, published: newVal });
+    currentModalEv.published = newVal;
     render();
   } catch (err) {
+    sw.classList.toggle('on', prevVal);
+    document.getElementById('adminPublishText').textContent = prevVal ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
+    document.getElementById('adminPublishBox').classList.toggle('is-published', prevVal);
     alert('更新失敗：' + err.message);
   }
-  btn.disabled = false;
-  btn.textContent = '✅ 確認顯示於前台';
-});
-
-document.getElementById('adminEditEventBtn').addEventListener('click', () => {
-  if (!currentModalEv) return;
-  closeAdminModal();
-  openEventEditModal(currentModalEv);
 });
 
 // 依 key 渲染公關品狀態面板：狀態下拉、選品網址、位置的顯示與內容
