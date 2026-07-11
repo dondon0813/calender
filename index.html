@@ -519,6 +519,45 @@
     .ev-date { font-size: 9.5px; }
     .ev-tag { font-size: 8px; }
   }
+
+  /* ===== 自訂文字按鈕區塊（後台「開團狀態」新增的區塊，混在「現正開團中」清單裡） ===== */
+  .cb-card {
+    display: block;
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 14px;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .cb-card:hover { transform: scale(1.015); }
+  .cb-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+  }
+  .cb-subtitle {
+    font-size: 12.5px;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+  @keyframes cbShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+  @keyframes cbBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes cbVibrate {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-1.5deg); }
+    75% { transform: rotate(1.5deg); }
+  }
+  .cb-anim-shake { animation: cbShake 0.6s ease-in-out infinite; }
+  .cb-anim-bounce { animation: cbBounce 0.9s ease-in-out infinite; }
+  .cb-anim-vibrate { animation: cbVibrate 0.35s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -590,6 +629,63 @@ const WD_LABEL = ['日','一','二','三','四','五','六'];
 
 // 食材食譜網頁（recipes.html）的路徑：跟 index.html 放在同一個資料夾，用相對路徑即可
 const RECIPES_PAGE_URL = 'recipes.html';
+
+// 後台「開團狀態」頁面新增的自訂區塊（文字按鈕等），跟行事曆共用同一組 Apps Script 網址，
+// 用 scope=public 撈取「已開啟顯示」的區塊清單
+let CUSTOM_BLOCKS = [];
+
+const CB_TITLE_SIZE_PX = { '小': '14px', '中': '17px', '大': '21px', '特大': '26px' };
+const CB_BORDER_STYLE_CSS = { '無': 'none', '實線': 'solid', '虛線': 'dashed' };
+const CB_ANIM_CLASS = { '無': '', '搖晃': 'cb-anim-shake', '跳動': 'cb-anim-bounce', '震動': 'cb-anim-vibrate' };
+
+async function loadCustomBlocks() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) return;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
+  } catch (err) {
+    console.warn('自訂區塊讀取失敗：', err);
+  }
+}
+
+function buildCustomBlockEl(block) {
+  const a = document.createElement('a');
+  a.className = 'cb-card clickable' + (CB_ANIM_CLASS[block.animation] ? ' ' + CB_ANIM_CLASS[block.animation] : '');
+  a.href = block.url || 'javascript:void(0)';
+  if (block.url) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  a.style.background = block.buttonColor || '#FF8FA3';
+  a.style.color = block.textColor || '#FFFFFF';
+  const borderCss = CB_BORDER_STYLE_CSS[block.borderStyle] || 'none';
+  a.style.border = borderCss === 'none' ? 'none' : `${block.borderWidth || 2}px ${borderCss} ${block.borderColor || '#FFFFFF'}`;
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'cb-title';
+  titleEl.style.fontSize = CB_TITLE_SIZE_PX[block.titleSize] || '17px';
+  titleEl.textContent = block.title || '';
+  a.appendChild(titleEl);
+
+  if (block.subtitleOn && block.subtitle) {
+    const subEl = document.createElement('div');
+    subEl.className = 'cb-subtitle';
+    subEl.textContent = block.subtitle;
+    a.appendChild(subEl);
+  }
+
+  const statKey = 'block_' + block.id;
+  a.dataset.statKey = statKey;
+  getStatObserver().observe(a);
+  a.addEventListener('click', () => sendStat(statKey, 'click'));
+
+  return a;
+}
+
+function appendCustomBlocks(listEl, position) {
+  CUSTOM_BLOCKS
+    .filter(b => b.position === position)
+    .sort((a, b) => a.order - b.order)
+    .forEach(b => listEl.appendChild(buildCustomBlockEl(b)));
+}
 
 // ===== 【新】前台瀏覽次數／點擊次數統計 =====
 // key 格式跟後台 admin.js 的 getMemoKey() 完全一致（團編號_年-月-日，用開團日 start）
@@ -951,6 +1047,8 @@ function renderGroupList() {
   const listEl = document.getElementById('groupList');
   listEl.innerHTML = '';
 
+  appendCustomBlocks(listEl, 'before');
+
   const todayStart = startOfDay(new Date());
   const closingItems = [];
   const activeItems = [];
@@ -1025,6 +1123,7 @@ function renderGroupList() {
   };
 
   buildSection('‼️結團倒數‼️', closingItems);
+  appendCustomBlocks(listEl, 'between');
   buildSection('🌼現正團購中🌼', activeItems);
 
   if (!closingItems.length && !activeItems.length) {
@@ -1033,6 +1132,8 @@ function renderGroupList() {
     empty.textContent = '目前沒有進行中的團購';
     listEl.appendChild(empty);
   }
+
+  appendCustomBlocks(listEl, 'after');
 }
 
 function renderAllMode() {
@@ -1350,8 +1451,10 @@ document.getElementById('modeSelect').addEventListener('change', (e) => {
   render();
 });
 
+loadCustomBlocks().then(() => { if (currentMode === 'list') render(); });
 loadData();
 setInterval(loadData, 60000);
+setInterval(loadCustomBlocks, 60000);
 </script>
 
 </body>
