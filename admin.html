@@ -3482,13 +3482,12 @@
     <!-- 【新】瀏覽/點擊次數統計（同時顯示團名彈窗三個按鈕各自的點擊次數） -->
     <div class="admin-stats-box" id="adminStatsBox"></div>
 
-    <div class="publish-status-box" id="adminPublishBox">
-      <span id="adminPublishText">🔔 尚未確認顯示於前台</span>
-      <button class="task-mini-btn" id="adminPublishBtn" style="border-color:#9ACB85; color:#5C9147;">✅ 確認顯示於前台</button>
-    </div>
-
-    <div class="action-row" style="margin-top:10px;">
-      <button class="task-mini-btn" id="adminEditEventBtn" style="width:100%; padding:10px; font-size:13px;">✏️ 編輯這個活動</button>
+   <div class="publish-status-box" id="adminPublishBox">
+      <span id="adminPublishText">🔔 尚未顯示於前台</span>
+      <label class="pr-toggle show" id="adminPublishToggleWrap" style="margin:0;">
+        <span class="pr-toggle-text">顯示於前台</span>
+        <span class="pr-switch" id="adminPublishSwitch"><span class="pr-knob"></span></span>
+      </label>
     </div>
 
     <div class="early-bird-box" id="adminEarlyBirdBox" style="display:none;">
