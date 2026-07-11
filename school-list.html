@@ -587,6 +587,110 @@
     font-size: 11px;
     margin-top: 4px;
   }
+
+  /* ===== 姓名貼功能 ===== */
+  .sticker-open-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 26px;
+    background: linear-gradient(135deg, #7AAEEB, #9ACBE8);
+    color: #fff;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(122, 174, 235, 0.35);
+  }
+  .sticker-open-btn:hover { background: linear-gradient(135deg, #5F97DB, #7AAEEB); }
+  .sticker-open-btn:disabled { opacity: 0.6; cursor: default; }
+
+  .sticker-modal-icon { font-size: 34px; margin-bottom: 4px; }
+  .sticker-modal-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 19px;
+    color: #5a4a3f;
+    margin: 0 0 8px;
+  }
+  .sticker-modal-desc {
+    font-size: 12.5px;
+    color: #8a7462;
+    line-height: 1.6;
+    margin: 0 0 14px;
+  }
+  .sticker-name-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 2px solid #FFD9BB;
+    background: #FFF6EC;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #5a4a3f;
+    text-align: center;
+    outline: none;
+  }
+  .sticker-name-input:focus { border-color: #7AAEEB; }
+
+  #stickerPosterRoot {
+    position: fixed;
+    left: -99999px;
+    top: 0;
+    background: #ffffff;
+  }
+  .sticker-poster {
+    width: 384px;
+    min-height: 576px;
+    background: #ffffff;
+    padding: 22px 18px;
+    box-sizing: border-box;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 10px;
+    align-content: start;
+  }
+  .sticker-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .sticker-icon-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .sticker-icon-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .sticker-icon-wrap.emoji { font-size: 30px; }
+  .sticker-name {
+    margin-top: 2px;
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    color: #5a4a3f;
+    text-align: center;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 </style>
 </head>
 <body>
@@ -606,6 +710,11 @@
   <div class="school-generate-box" id="schoolGenerateBox" style="display:none;">
     <button class="school-generate-btn" id="generateA4Btn"><img class="school-generate-btn-img" src="icons/btn-generate.png" alt="產生我的專屬用品清單"></button>
     <div class="school-generate-hint">會把清單上的項目（不含已移除的）做成一張 A4 圖片，已打勾的項目圖片上也會顯示 ✓，方便下載、列印或帶去購物</div>
+  </div>
+
+  <div class="school-generate-box" id="stickerGenerateBox" style="display:none;">
+    <button class="sticker-open-btn" id="openStickerModalBtn">🏷️ 製作我的專屬姓名貼</button>
+    <div class="school-generate-hint">輸入姓名後，會把清單上的項目（不含已移除的）做成一張 4x6 姓名貼圖片，每樣用品下面都印上姓名，方便沖印後貼在每樣用品上</div>
   </div>
 
   <div class="school-reminder-box">
@@ -656,6 +765,25 @@
       🩷 雪莉與朵栗・@dondon0813 🩷
       <span class="a4-date" id="a4Date"></span>
     </div>
+  </div>
+</div>
+
+<!-- 製作姓名貼：先輸入姓名 -->
+<div class="modal-backdrop" id="stickerNameModal" onclick="if(event.target===this) closeModal('stickerNameModal')">
+  <div class="modal-box" style="width:340px; text-align:center;">
+    <button class="modal-close" onclick="closeModal('stickerNameModal')">✕</button>
+    <div class="sticker-modal-icon">🏷️</div>
+    <h2 class="sticker-modal-title">製作專屬姓名貼</h2>
+    <p class="sticker-modal-desc">請輸入寶貝的姓名，會把清單上的每樣用品都印上姓名，方便沖印後直接貼上</p>
+    <input type="text" id="stickerNameInput" class="sticker-name-input" maxlength="12" placeholder="例如：王小明">
+    <button class="action-btn" id="stickerGenerateConfirmBtn" style="width:100%; margin-top:14px;">🖼️ 產生姓名貼圖片</button>
+  </div>
+</div>
+
+<!-- 產生姓名貼圖片：離畫面外的樣板（4x6 明信片尺寸，白底），只用來截圖，使用者看不到 -->
+<div id="stickerPosterRoot">
+  <div class="sticker-poster" id="stickerPoster">
+    <div class="sticker-grid" id="stickerGrid"></div>
   </div>
 </div>
 
@@ -859,6 +987,7 @@ function renderSchoolList() {
   const removedToggleEl = document.getElementById('schoolRemovedToggle');
   const removedBoxEl = document.getElementById('schoolRemovedBox');
   const generateBoxEl = document.getElementById('schoolGenerateBox');
+  const stickerGenerateBoxEl = document.getElementById('stickerGenerateBox');
   contentEl.innerHTML = '';
 
   if (!SCHOOL_ITEMS.length) {
@@ -867,6 +996,7 @@ function renderSchoolList() {
     removedToggleEl.style.display = 'none';
     removedBoxEl.style.display = 'none';
     generateBoxEl.style.display = 'none';
+    stickerGenerateBoxEl.style.display = 'none';
     return;
   }
 
@@ -887,6 +1017,7 @@ function renderSchoolList() {
   progressEl.textContent = `已準備 ${totalChecked} / ${visibleItems.length} 項`;
 
   generateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
+  stickerGenerateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
 
   // 有填「分類」的話依分類分組顯示，順序依第一次出現的分類為準；完全沒填分類就整批平鋪
   const hasCategory = visibleItems.some(it => String(it['分類'] || '').trim());
@@ -1257,7 +1388,156 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('show');
 }
 
+// ===== 姓名貼（4x6 明信片，白底，圖示 + 姓名） =====
+async function buildStickerPoster(name) {
+  const removedIds = getRemovedSchoolIds();
+  // 跟 A4 清單一樣：只排除打叉移除的項目，其餘全部列出（不管有沒有打勾）
+  const items = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
+
+  const gridEl = document.getElementById('stickerGrid');
+  gridEl.innerHTML = '';
+  if (!items.length) return false;
+
+  const imgChecks = [];
+
+  items.forEach(item => {
+    const cell = document.createElement('div');
+    cell.className = 'sticker-cell';
+
+    const iconRaw = String(item['圖示'] || '').trim();
+    const iconWrap = document.createElement('div');
+    if (isValidUrl(iconRaw)) {
+      iconWrap.className = 'sticker-icon-wrap';
+      const img = document.createElement('img');
+      img.src = iconRaw;
+      iconWrap.appendChild(img);
+      imgChecks.push(preloadImage(iconRaw).then(res => {
+        if (!res.ok) {
+          iconWrap.className = 'sticker-icon-wrap emoji';
+          iconWrap.textContent = '🎒';
+          return;
+        }
+        // 跟 A4 清單同樣的做法：依容器實際尺寸＋圖片原始長寬比手動算出縮放後的寬高，
+        // 避免截圖工具對 object-fit / aspect-ratio 支援不穩定造成圖片被裁掉
+        const boxSize = iconWrap.getBoundingClientRect().width || iconWrap.offsetWidth || 0;
+        if (boxSize && res.w && res.h) {
+          iconWrap.style.height = boxSize + 'px';
+          const ratio = res.w / res.h;
+          let drawW, drawH;
+          if (ratio >= 1) { drawW = boxSize; drawH = boxSize / ratio; }
+          else { drawH = boxSize; drawW = boxSize * ratio; }
+          img.style.width = drawW + 'px';
+          img.style.height = drawH + 'px';
+        }
+      }));
+    } else {
+      iconWrap.className = 'sticker-icon-wrap emoji';
+      iconWrap.textContent = iconRaw || '🎒';
+    }
+    cell.appendChild(iconWrap);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'sticker-name';
+    nameEl.textContent = name;
+    cell.appendChild(nameEl);
+
+    gridEl.appendChild(cell);
+  });
+
+  await Promise.all(imgChecks);
+  return true;
+}
+
+async function generateNameStickerImage() {
+  const nameInput = document.getElementById('stickerNameInput');
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert('請先輸入姓名喔');
+    nameInput.focus();
+    return;
+  }
+
+  const btn = document.getElementById('stickerGenerateConfirmBtn');
+  const originalBtnText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '圖片產生中…';
+
+  try {
+    const hasItems = await buildStickerPoster(name);
+    if (!hasItems) {
+      alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
+      return;
+    }
+
+    // 等字體 / 版面穩定
+    await new Promise(r => setTimeout(r, 150));
+
+    const posterEl = document.getElementById('stickerPoster');
+    const outputScale = 3;
+    const capturedCanvas = await html2canvas(posterEl, {
+      scale: outputScale,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true
+    });
+
+    // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底
+    const targetW = 384 * outputScale;
+    const targetH = 576 * outputScale;
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = targetW;
+    finalCanvas.height = targetH;
+    const ctx = finalCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+
+    // 項目太多、內容比 4x6 還高的話，整張等比例縮小塞進畫布裡；
+    // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準 4x6 尺寸
+    const fitScale = Math.min(1, targetH / capturedCanvas.height, targetW / capturedCanvas.width);
+    const drawW = capturedCanvas.width * fitScale;
+    const drawH = capturedCanvas.height * fitScale;
+    const dx = (targetW - drawW) / 2;
+    const dy = (targetH - drawH) / 2;
+    ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
+
+    finalCanvas.toBlob((blob) => {
+      if (!blob) {
+        alert('圖片產生失敗，請再試一次');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      a.href = url;
+      a.download = `姓名貼_${name}_${stamp}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      closeModal('stickerNameModal');
+    }, 'image/png');
+  } catch (err) {
+    console.error(err);
+    alert('圖片產生失敗，請再試一次');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalBtnText;
+  }
+}
+
 document.getElementById('generateA4Btn').addEventListener('click', generateA4Image);
+document.getElementById('openStickerModalBtn').addEventListener('click', () => {
+  const nameInput = document.getElementById('stickerNameInput');
+  nameInput.value = '';
+  document.getElementById('stickerNameModal').classList.add('show');
+  setTimeout(() => nameInput.focus(), 100);
+});
+document.getElementById('stickerGenerateConfirmBtn').addEventListener('click', generateNameStickerImage);
+document.getElementById('stickerNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') generateNameStickerImage();
+});
 document.getElementById('backToHome').addEventListener('click', () => { window.location.href = 'recipes.html'; });
 
 loadAll();
