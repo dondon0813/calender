@@ -204,6 +204,7 @@
     margin-bottom: 22px;
   }
   .ing-tile {
+    position: relative;
     background: #FFFDFA;
     border: 2px solid #FFE3CC;
     border-radius: 16px;
@@ -239,6 +240,20 @@
     color: #8a7462;
   }
   .ing-tile.active .ing-tile-name { color: #FF7391; }
+
+  /* 【新】成品類原料（例如寶寶吐司、鬆餅）的小標記，跟一般食材區分開來 */
+  .ing-tile-product-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #8E6BB5;
+    background: #EFE4FB;
+    border-radius: 999px;
+    padding: 1px 6px;
+    line-height: 1.5;
+  }
 
   .recipe-search-row {
     margin-bottom: 12px;
@@ -1702,6 +1717,17 @@ function ingredientsOfType(type) {
   return INGREDIENTS.filter(i => (i['類型'] || '食材').trim() === type);
 }
 
+// 【新】「選擇食材」用的可選池：一般食材全部算，成品類只有標記「可作食材」的才會出現
+// （例如永圻的寶寶吐司、鬆餅可以拿來當別道食譜的原料，但大部分成品不行，所以要靠這個欄位篩選）
+function sellableIngredientsPool() {
+  return INGREDIENTS.filter(i => {
+    const type = (i['類型'] || '食材').trim();
+    if (type === '食材') return true;
+    if (type === '成品') return i['可作食材'] === true;
+    return false;
+  });
+}
+
 // 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
 function pickBestBrandIngredient(group) {
   const withStatus = group.map(item => ({ item, status: getBrandStatus(item['品牌']) }));
@@ -1921,13 +1947,13 @@ function renderSelectedIngredientChips() {
 
 // 選擇食材的圖磚池：
 // 1. 有打搜尋文字 → 全資料庫比對名稱/簡稱，跳出符合的（不管有沒有選品牌）
-// 2. 沒打搜尋文字、但選了品牌 → 只顯示該品牌的食材
+// 2. 沒打搜尋文字、但選了品牌 → 只顯示該品牌的食材（含「可作食材」的成品，例如寶寶吐司、鬆餅）
 // 3. 都沒有 → 隨機顯示 5~6 個基本食材
 function renderIngredientFilterTiles() {
   const gridEl = document.getElementById('recIngredientChips');
   gridEl.innerHTML = '';
 
-  const foodIngredientsAll = ingredientsOfType('食材');
+  const foodIngredientsAll = sellableIngredientsPool();
   const searchText = recIngredientSearchText.trim();
   let pool;
 
@@ -1975,6 +2001,15 @@ function renderIngredientFilterTiles() {
       tile.appendChild(img);
     } else {
       tile.appendChild(makeEmojiIconFallback(representative));
+    }
+
+    // 【新】成品類原料（例如寶寶吐司、鬆餅）加個小標記，讓大家看得出這是「先做出來的東西」而不是直接買的原料
+    const repType = representative ? (representative['類型'] || '食材').trim() : '';
+    if (repType === '成品') {
+      const badge = document.createElement('span');
+      badge.className = 'ing-tile-product-badge';
+      badge.textContent = '成品';
+      tile.appendChild(badge);
     }
 
     const nameEl = document.createElement('div');
