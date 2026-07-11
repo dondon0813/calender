@@ -370,6 +370,42 @@
     cursor: pointer;
   }
 
+  /* 團名點擊：介紹／食譜／下單 三選一彈窗 */
+  .gc-modal-box {
+    text-align: center;
+  }
+  .gc-title {
+    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 17px;
+    color: #5a4a3f;
+    margin: 4px 0 18px;
+    padding-right: 10px;
+  }
+  .gc-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .gc-btn {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 14px;
+    border-radius: 999px;
+    padding: 12px 14px;
+    color: #fff;
+    cursor: pointer;
+    border: none;
+  }
+  .gc-btn-intro { background: #7AAEEB; }
+  .gc-btn-intro:hover { background: #5F97DB; }
+  .gc-btn-recipe { background: #FFB37A; }
+  .gc-btn-recipe:hover { background: #F0A05F; }
+  .gc-btn-order { background: #FF8FA3; }
+  .gc-btn-order:hover { background: #FF7391; }
+
   .badge {
     flex: none;
     width: 17px;
@@ -533,11 +569,27 @@
   </div>
 </div>
 
+<!-- 團名點擊：介紹／食譜／下單 三選一彈窗（只有試算表「食譜品牌」欄位有填的團才會跳出） -->
+<div class="modal-backdrop" id="groupChoiceModal" onclick="if(event.target===this) closeGroupChoiceModal()">
+  <div class="modal-box gc-modal-box">
+    <button class="modal-close" onclick="closeGroupChoiceModal()">✕</button>
+    <h3 class="gc-title" id="groupChoiceTitle"></h3>
+    <div class="gc-btns">
+      <a class="gc-btn gc-btn-intro" id="gcIntroBtn" target="_blank" rel="noopener noreferrer">📖 前往觀看介紹</a>
+      <a class="gc-btn gc-btn-recipe" id="gcRecipeBtn" target="_blank" rel="noopener noreferrer">🍽 食譜大全</a>
+      <a class="gc-btn gc-btn-order" id="gcOrderBtn" target="_blank" rel="noopener noreferrer">🛒 前往下單</a>
+    </div>
+  </div>
+</div>
+
 <script>
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 const COLORS = 7;
 const WD_LABEL = ['日','一','二','三','四','五','六'];
+
+// 食材食譜網頁（recipes.html）的路徑：跟 index.html 放在同一個資料夾，用相對路徑即可
+const RECIPES_PAGE_URL = 'recipes.html';
 
 // ===== 【新】前台瀏覽次數／點擊次數統計 =====
 // key 格式跟後台 admin.js 的 getMemoKey() 完全一致（團編號_年-月-日，用開團日 start）
@@ -719,6 +771,12 @@ function isLinkUnlocked(ev) {
   return new Date() >= ev.start;
 }
 
+// 這團是不是有開啟「進階介紹模式」：試算表 K欄「食譜品牌」有填值就是開啟，
+// 值本身就是要帶去 recipes.html 的品牌名稱（要跟食譜資料庫試算表「品牌名稱」欄位完全一致）
+function hasAdvancedIntro(ev) {
+  return !!(ev.recipeBrand && ev.recipeBrand.trim());
+}
+
 // 解析「延長日期」欄位：可以是數字（延長天數）或日期（指定延長至該天）
 function parseExtendRaw(raw, originalEnd) {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -774,8 +832,9 @@ async function loadData() {
       const url = c[7] ? c[7].v : '';
       const adminUrl = c[8] ? c[8].v : ''; // 後台網址，先保留不使用
       const earlyBirdRaw = c[9] ? c[9].v : '';
-      // 欄位對照：J=早鳥禮(idx9)　K=食譜品牌(idx10，既有欄位，這裡不需要讀)
+      // 欄位對照：J=早鳥禮(idx9)　K=食譜品牌(idx10，有填就開啟「介紹／食譜/下單」三選一浮動視窗)
       // L=顏色(idx11)　M=整日(idx12)　N=開始時間(idx13)　O=結束時間(idx14)　P=團購(idx15)　Q=顯示於前台(idx16)
+      const recipeBrandRaw = c[10] ? c[10].v : '';
       const colorRaw = c[11] ? c[11].v : '';
       const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
       const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
@@ -786,12 +845,13 @@ async function loadData() {
       const displayEnd = computeDisplayEnd(end, extend);
       const earlyBird = String(earlyBirdRaw || '').split('/').map(s => s.trim()).filter(s => s !== '');
       const color = String(colorRaw || '').trim();
+      const recipeBrand = String(recipeBrandRaw || '').trim();
       const isGroupBuy = isGroupBuyRaw === '' ? true : (isGroupBuyRaw === '是');
       // 舊資料沒有這個欄位＝視為已經顯示於前台（向下相容）；新增的活動預設「否」，
       // 要等後台按下「確認顯示於前台」之後，這裡才會是「是」，才會出現在這個公開頁面
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
       if (!published) return; // 尚未確認顯示於前台的活動，公開行事曆完全不顯示
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy });
+      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand });
     });
 
     allEvents = events;
@@ -909,16 +969,20 @@ function renderGroupList() {
     const isToday = daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
     const frozen = isFrozenEvent(ev);
     const clickable = isLinkUnlocked(ev);
+    const advanced = clickable && hasAdvancedIntro(ev);
 
-    const card = document.createElement(clickable ? 'a' : 'div');
+    // 有開啟「進階介紹」的團：卡片本身不再是直接連結的 <a>，改成點擊跳出三選一浮動視窗
+    const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
     card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '');
-    if (clickable) {
+    if (clickable && !advanced) {
       card.href = ev.url;
       card.target = '_blank';
       card.rel = 'noopener noreferrer';
+    } else if (advanced) {
+      card.addEventListener('click', () => openGroupChoiceModal(ev));
     }
     attachStatTracking(card, ev, clickable);
-    card.title = ev.title + (ev.url && !clickable ? '（開團後才能點擊連結）' : '');
+    card.title = ev.title + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
@@ -1035,23 +1099,24 @@ function renderAllMode() {
       // 團購活動：顏色跟著「這個月第幾團」走，每個月重新循環；非團購活動退回用 id 循環
       const colorIdx = gbNumber ? (gbNumber - 1) % COLORS : (item.ev.id - 1) % COLORS;
       const clickable = isLinkUnlocked(item.ev);
+      const advanced = clickable && hasAdvancedIntro(item.ev);
       const hasEarlyBird = !clickable && !isStarted(item.ev) && item.ev.earlyBird.length > 0;
-      const bar = document.createElement(clickable ? 'a' : 'div');
+      const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
       bar.className = `ebar c${colorIdx}` + (clickable ? ' clickable' : '') + (hasEarlyBird ? ' clickable' : '');
       if (item.ev.color) {
         bar.style.background = item.ev.color;
       }
-      if (clickable) {
+      if (clickable && !advanced) {
         bar.href = item.ev.url;
         bar.target = '_blank';
         bar.rel = 'noopener noreferrer';
+      } else if (advanced) {
+        bar.addEventListener('click', () => openGroupChoiceModal(item.ev));
       } else if (hasEarlyBird) {
         bar.addEventListener('click', () => showEarlyBirdModal(item.ev));
       }
       attachStatTracking(bar, item.ev, clickable);
-      bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
-      bar.style.gridRow = `${item.lane + 2}`;
-      bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '');
+      bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
       if (gbNumber) {
         const badge = document.createElement('span');
@@ -1162,19 +1227,22 @@ function renderSingleDayMode(mode) {
           const frozen = isFrozenEvent(ev);
           const status = getEventStatus(ev);
           const clickable = isLinkUnlocked(ev);
+          const advanced = clickable && hasAdvancedIntro(ev);
           const hasEarlyBird = !clickable && status === 'upcoming' && ev.earlyBird.length > 0;
-          const bar = document.createElement((clickable) ? 'a' : 'div');
+          const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
           const catClass = frozen ? 'cat-frozen' : `cat-${status}`;
           bar.className = `ebar ebar-wrap ${catClass}` + (clickable || hasEarlyBird ? ' clickable' : '');
-          if (clickable) {
+          if (clickable && !advanced) {
             bar.href = ev.url;
             bar.target = '_blank';
             bar.rel = 'noopener noreferrer';
+          } else if (advanced) {
+            bar.addEventListener('click', () => openGroupChoiceModal(ev));
           } else if (hasEarlyBird) {
             bar.addEventListener('click', () => showEarlyBirdModal(ev));
           }
           attachStatTracking(bar, ev, clickable);
-          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '');
+          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
@@ -1250,6 +1318,30 @@ function showEarlyBirdModal(ev) {
 
 function closeEarlyBirdModal() {
   document.getElementById('earlyBirdModal').classList.remove('show');
+}
+
+// 團名點擊：介紹／食譜／下單 三選一浮動視窗
+function openGroupChoiceModal(ev) {
+  const brand = (ev.recipeBrand || '').trim();
+  if (!brand) return; // 保險：沒有品牌名稱就不開這個視窗（理論上呼叫前已經檢查過 hasAdvancedIntro）
+
+  const modal = document.getElementById('groupChoiceModal');
+  document.getElementById('groupChoiceTitle').textContent = ev.title;
+
+  const introBtn = document.getElementById('gcIntroBtn');
+  const recipeBtn = document.getElementById('gcRecipeBtn');
+  const orderBtn = document.getElementById('gcOrderBtn');
+
+  introBtn.href = `${RECIPES_PAGE_URL}?view=ingredients&brand=${encodeURIComponent(brand)}`;
+  recipeBtn.href = `${RECIPES_PAGE_URL}?view=recipes&brand=${encodeURIComponent(brand)}`;
+  recipeBtn.textContent = `🍽 ${brand} 食譜大全`;
+  orderBtn.href = ev.url;
+
+  modal.classList.add('show');
+}
+
+function closeGroupChoiceModal() {
+  document.getElementById('groupChoiceModal').classList.remove('show');
 }
 
 document.getElementById('refreshBtn').addEventListener('click', loadData);
