@@ -205,12 +205,21 @@ function computeDisplayEnd(end, extend) {
 }
 
 // ===== 【新】社群小圖示：4 個內建圖示，前後台共用同一套渲染邏輯 =====
+// 改用 SVG 線條圖示（stroke="currentColor"），圓圈邊框跟圖示線條共用同一個顏色來源：
+// - 事件卡片上的小圖示（gs-card-icon）固定白色，因為背景是彩色卡片，走既有 CSS 的 color:#fff
+// - 品牌社群連結列（site-social-icon）改用 --social-icon-color 這個 CSS 變數，可在後台「社群連結設定」改色
 const EVENT_ICON_DEFS = [
-  { key: 'iconIg', emoji: '📷', label: 'Instagram' },
-  { key: 'iconTiktok', emoji: '🎵', label: 'TikTok' },
-  { key: 'iconFb', emoji: '📘', label: 'Facebook' },
-  { key: 'iconEmail', emoji: '✉️', label: 'Email／其他' }
+  { key: 'iconIg', label: 'Instagram' },
+  { key: 'iconTiktok', label: 'TikTok' },
+  { key: 'iconFb', label: 'Facebook' },
+  { key: 'iconEmail', label: 'Email／其他' }
 ];
+const SOCIAL_SVG_ICONS = {
+  iconIg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none"/></svg>',
+  iconTiktok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3c.3 2.1 1.7 3.6 3.8 3.9v3.1c-1.4 0-2.7-.4-3.8-1.2v6.4a5.6 5.6 0 1 1-5.6-5.6c.3 0 .6 0 .9.1v3.2a2.4 2.4 0 1 0 1.7 2.3V3h3z"/></svg>',
+  iconFb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14 8.5h-1.5c-.8 0-1.5.7-1.5 1.5v2h3l-.4 2.5h-2.6V21"/></svg>',
+  iconEmail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>'
+};
 function buildEventIconElements(ev) {
   return EVENT_ICON_DEFS.filter(d => ev[d.key]).map(d => {
     let href = ev[d.key];
@@ -218,7 +227,7 @@ function buildEventIconElements(ev) {
     const span = document.createElement('span');
     span.className = 'gs-card-icon';
     span.title = d.label;
-    span.textContent = d.emoji;
+    span.innerHTML = SOCIAL_SVG_ICONS[d.key];
     span.addEventListener('click', (e) => {
       e.stopPropagation();
       window.open(href, '_blank', 'noopener');
@@ -233,6 +242,7 @@ function buildSocialIconRow() {
   if (!items.length) return null;
   const row = document.createElement('div');
   row.className = 'site-social-row';
+  row.style.setProperty('--social-icon-color', socialLinks.iconColor || '#b5755a');
   items.forEach(d => {
     let href = socialLinks[d.key];
     if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href) && href.indexOf('mailto:') !== 0) href = 'https://' + href;
@@ -242,7 +252,7 @@ function buildSocialIconRow() {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.title = d.label;
-    a.textContent = d.emoji;
+    a.innerHTML = SOCIAL_SVG_ICONS[d.key];
     row.appendChild(a);
   });
   return row;
@@ -826,6 +836,15 @@ function renderGroupStatusList(targetId) {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
+    // 【新】瀏覽／點擊統計直接顯示在這顆按鈕裡面（不再另外開彈窗），
+    // 包含整體次數，以及依開團日／結團日／全部顯示／現正開團中分開的點擊次數
+    const cardKey = getMemoKey(ev);
+    const cardSt = statsMap[cardKey] || { views: 0, clicks: 0 };
+    const statsEl = document.createElement('div');
+    statsEl.className = 'gs-card-stats';
+    statsEl.textContent = `👀瀏覽${cardSt.views || 0}次・🖱️點擊${cardSt.clicks || 0}次｜${buildSourceStatsText(cardKey)}`;
+    card.appendChild(statsEl);
+
     const icons = buildEventIconElements(ev);
     if (icons.length) {
       const iconsWrap = document.createElement('div');
@@ -911,20 +930,19 @@ function renderAdminStatsBox(key) {
   box.innerHTML = html;
 }
 
-// 【新】依來源分開顯示點擊次數：開團日／結團日／全部顯示／現正開團中，直接顯示小圖示
+// 【修改】依來源分開統計的點擊次數（開團日／結團日／全部顯示／現正開團中）不再用彈窗顯示，
+// 改成直接顯示在每個團購卡片「按鈕」裡面（buildCard 裡呼叫），這裡只保留組字串的共用函式
 const STAT_SOURCE_DEFS = [
   { mode: 'start', emoji: '📅', label: '開團日' },
   { mode: 'end', emoji: '📆', label: '結團日' },
   { mode: 'all', emoji: '📋', label: '全部顯示' },
   { mode: 'list', emoji: '🌼', label: '現正開團中' }
 ];
-function renderAdminSourceStats(key) {
-  const box = document.getElementById('adminSourceStats');
-  if (!box) return;
-  box.innerHTML = STAT_SOURCE_DEFS.map(d => {
+function buildSourceStatsText(key) {
+  return STAT_SOURCE_DEFS.map(d => {
     const clicks = (statsMap[key + '_src_' + d.mode] || {}).clicks || 0;
-    return `<span class="admin-source-stat-item">${d.emoji} ${d.label} <b>${clicks}</b> 次</span>`;
-  }).join('');
+    return `${d.emoji}${d.label} ${clicks}次`;
+  }).join('・');
 }
 
 function openAdminModal(ev) {
@@ -939,7 +957,6 @@ function openAdminModal(ev) {
 
   renderAdminPublishBox(ev);
   renderAdminStatsBox(key);
-  renderAdminSourceStats(key);
 
   const ebBox = document.getElementById('adminEarlyBirdBox');
   const ebList = document.getElementById('adminEarlyBirdList');
@@ -1001,11 +1018,9 @@ function renderAdminPublishBox(ev) {
   text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
   sw.classList.toggle('on', published);
 
-  // 【修改】僅在行事曆編輯模式下才能切換，避免誤觸；平常顯示為唯讀狀態
+  // 【修改】非編輯模式直接把切換按鈕整個移除（不佔位置），只有開啟「行事曆編輯模式」才會顯示
   const editable = calendarEditMode;
-  toggleWrap.style.opacity = editable ? '1' : '0.45';
-  toggleWrap.style.pointerEvents = editable ? 'auto' : 'none';
-  toggleWrap.title = editable ? '' : '請先開啟「行事曆編輯模式」才能修改這個開關';
+  toggleWrap.style.display = editable ? '' : 'none';
 }
 
 document.getElementById('adminPublishSwitch').addEventListener('click', async () => {
@@ -1275,9 +1290,7 @@ async function fetchMemos() {
     }
     // 若目前正打開活動彈窗，順便刷新一次數據顯示
     if (currentModalEv && document.getElementById('adminModal').classList.contains('show')) {
-      const modalKey = getMemoKey(currentModalEv);
-      renderAdminStatsBox(modalKey);
-      renderAdminSourceStats(modalKey);
+      renderAdminStatsBox(getMemoKey(currentModalEv));
     }
     const taskModalEl = document.getElementById('taskModal');
     if (taskModalCtx && taskModalEl && taskModalEl.classList.contains('show')) {
@@ -2741,6 +2754,7 @@ function openSocialLinkEditor() {
   document.getElementById('socialLinkTiktokInput').value = socialLinks.iconTiktok || '';
   document.getElementById('socialLinkFbInput').value = socialLinks.iconFb || '';
   document.getElementById('socialLinkEmailInput').value = socialLinks.iconEmail || '';
+  document.getElementById('socialLinkColorInput').value = socialLinks.iconColor || '#b5755a';
   setFormStatus('socialLinkStatus', '', '');
   document.getElementById('socialLinkModal').classList.add('show');
 }
@@ -2754,7 +2768,8 @@ document.getElementById('socialLinkSaveBtn').addEventListener('click', async () 
     iconIg: document.getElementById('socialLinkIgInput').value.trim(),
     iconTiktok: document.getElementById('socialLinkTiktokInput').value.trim(),
     iconFb: document.getElementById('socialLinkFbInput').value.trim(),
-    iconEmail: document.getElementById('socialLinkEmailInput').value.trim()
+    iconEmail: document.getElementById('socialLinkEmailInput').value.trim(),
+    iconColor: document.getElementById('socialLinkColorInput').value
   };
   const btn = document.getElementById('socialLinkSaveBtn');
   btn.disabled = true;
