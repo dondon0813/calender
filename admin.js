@@ -647,15 +647,17 @@ function renderSingleDayMode(mode) {
           });
           bar.appendChild(titleSpan);
 
-          // 【新】這個頁面（開團日／結團日）自己的點擊次數，直接顯示在按鈕裡面
+          // 【修改】這個頁面（開團日／結團日）自己的統計，改成跟其他地方一致的圖示＋數字，
+          // 而且不管數字是不是 0 都固定顯示，每一個團下面都看得到
           const barKey = getMemoKey(ev);
           const barClicks = sourceClickCount(barKey, mode);
-          if (barClicks > 0) {
-            const clickEl = document.createElement('span');
-            clickEl.className = 'ebar-click-stat';
-            clickEl.textContent = `🖱️${barClicks}次`;
-            bar.appendChild(clickEl);
-          }
+          const barViews = (statsMap[barKey] || {}).views || 0;
+          const statsRow = document.createElement('div');
+          statsRow.className = 'ebar-stats-row';
+          statsRow.innerHTML =
+            `<span class="ebar-stat-item">${ICON_SVG_CLICK}<span>${barClicks.toLocaleString()}</span></span>` +
+            `<span class="ebar-stat-item">${ICON_SVG_EYE}<span>${barViews.toLocaleString()}</span></span>`;
+          bar.appendChild(statsRow);
 
           // 後台行事曆改用公關品狀態小圖示，不再顯示 F 欄標籤（如抽免單）
           if (prChipOn) {
@@ -5229,10 +5231,17 @@ function appendCustomBlocksAdmin(listEl, position) {
 
     const statKey = 'block_' + b.id;
     const st = statsMap[statKey] || { views: 0, clicks: 0 };
-    const statsEl = document.createElement('div');
-    statsEl.className = 'cb-admin-stats';
-    statsEl.textContent = `👀 瀏覽 ${st.views || 0} 次・🖱️ 點擊 ${st.clicks || 0} 次`;
-    wrap.appendChild(statsEl);
+    const statsBar = document.createElement('div');
+    statsBar.className = 'gs-stats-bar cb-stats-bar';
+    const cbClickItem = document.createElement('span');
+    cbClickItem.className = 'gs-stat-item';
+    cbClickItem.innerHTML = ICON_SVG_CLICK + `<span>${(st.clicks || 0).toLocaleString()}</span>`;
+    statsBar.appendChild(cbClickItem);
+    const cbViewItem = document.createElement('span');
+    cbViewItem.className = 'gs-stat-item';
+    cbViewItem.innerHTML = ICON_SVG_EYE + `<span>${(st.views || 0).toLocaleString()}</span>`;
+    statsBar.appendChild(cbViewItem);
+    wrap.appendChild(statsBar);
 
     listEl.appendChild(wrap);
   });
