@@ -26,6 +26,7 @@ let isAdmin = false;               // 【新】目前登入者是否為管理員
 let myPermissions = {};            // 【新】目前登入者被開放的功能權限 { imageLibrary: bool, ... }
 let allPermissions = {};           // 【新】（僅管理員拿得到）所有員工的權限狀態，給權限設定頁面用
 let customBlocks = [];             // 【新】開團狀態清單的自訂區塊（文字按鈕等）
+let socialLinks = {};              // 【新】品牌社群連結（IG／TikTok／FB／Email），顯示在現正開團中最上方
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
 const PR_STATUS_LIST = ['尚未選品', '選品中', '已選品', '已寄出', '已收到', '已拍攝'];
 const PR_STATUS_CLASS = {
@@ -224,6 +225,27 @@ function buildEventIconElements(ev) {
     });
     return span;
   });
+}
+
+// ===== 【新】品牌社群連結列（現正開團中最上方），跟事件圖示共用同一份定義 =====
+function buildSocialIconRow() {
+  const items = EVENT_ICON_DEFS.filter(d => socialLinks[d.key]);
+  if (!items.length) return null;
+  const row = document.createElement('div');
+  row.className = 'site-social-row';
+  items.forEach(d => {
+    let href = socialLinks[d.key];
+    if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href) && href.indexOf('mailto:') !== 0) href = 'https://' + href;
+    const a = document.createElement('a');
+    a.className = 'site-social-icon';
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.title = d.label;
+    a.textContent = d.emoji;
+    row.appendChild(a);
+  });
+  return row;
 }
 
 async function loadData() {
@@ -748,12 +770,23 @@ function getMemoKey(ev) {
   return `${ev.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
 }
 
+// 【新】最近結束的團購（給「結團查詢」用），依結束日期新到舊排序
+function getRecentEndedEvents(limit) {
+  const ended = allEvents.filter(ev => getEventStatus(ev) === 'ended');
+  ended.sort((a, b) => b.displayEnd - a.displayEnd);
+  return ended.slice(0, limit || 7);
+}
+
 // 開團狀態清單：結團倒數／現正團購中，卡片點擊直接開啟後台浮動視窗
 // 【新】三個位置可以插入自訂區塊：before＝團購清單全部之前、between＝結團倒數與現正團購中之間、after＝團購清單全部之後
 function renderGroupStatusList(targetId) {
   const listEl = document.getElementById(targetId || 'groupStatusList');
   if (!listEl) return;
   listEl.innerHTML = '';
+
+  // 【新】品牌社群連結列，放在整個清單最上方
+  const socialRow = buildSocialIconRow();
+  if (socialRow) listEl.appendChild(socialRow);
 
   appendCustomBlocksAdmin(listEl, 'before');
 
@@ -770,14 +803,14 @@ function renderGroupStatusList(targetId) {
   closingItems.sort((a, b) => a.displayEnd - b.displayEnd);
   activeItems.sort((a, b) => a.displayEnd - b.displayEnd);
 
-  const buildCard = (ev) => {
+  const buildCard = (ev, grayOut) => {
     const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
-    const isToday = daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
+    const isToday = !grayOut && daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
     const frozen = isFrozenEvent(ev);
 
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'gs-card' + (isToday ? ' gs-today' : '');
+    card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (grayOut ? ' gs-card-gray' : '');
     card.addEventListener('click', () => {
       if (calendarEditMode) openEventEditModal(ev);
       else openAdminModal(ev);
@@ -843,6 +876,16 @@ function renderGroupStatusList(targetId) {
   }
 
   appendCustomBlocksAdmin(listEl, 'after');
+
+  // 【新】結團查詢：最近 7 個結束的團，灰色顯示，最下方，可點開看詳情
+  const endedItems = getRecentEndedEvents(7);
+  if (endedItems.length) {
+    const h = document.createElement('div');
+    h.className = 'gs-section-title gs-title-ended';
+    h.textContent = '🕰結團查詢（最近' + endedItems.length + '個）';
+    listEl.appendChild(h);
+    endedItems.forEach(ev => listEl.appendChild(buildCard(ev, true)));
+  }
 }
 
 // 【新】渲染活動彈窗裡的「📊 數據」瀏覽/點擊次數區塊
@@ -868,6 +911,22 @@ function renderAdminStatsBox(key) {
   box.innerHTML = html;
 }
 
+// 【新】依來源分開顯示點擊次數：開團日／結團日／全部顯示／現正開團中，直接顯示小圖示
+const STAT_SOURCE_DEFS = [
+  { mode: 'start', emoji: '📅', label: '開團日' },
+  { mode: 'end', emoji: '📆', label: '結團日' },
+  { mode: 'all', emoji: '📋', label: '全部顯示' },
+  { mode: 'list', emoji: '🌼', label: '現正開團中' }
+];
+function renderAdminSourceStats(key) {
+  const box = document.getElementById('adminSourceStats');
+  if (!box) return;
+  box.innerHTML = STAT_SOURCE_DEFS.map(d => {
+    const clicks = (statsMap[key + '_src_' + d.mode] || {}).clicks || 0;
+    return `<span class="admin-source-stat-item">${d.emoji} ${d.label} <b>${clicks}</b> 次</span>`;
+  }).join('');
+}
+
 function openAdminModal(ev) {
   currentModalEv = ev;
   const key = getMemoKey(ev);
@@ -880,6 +939,7 @@ function openAdminModal(ev) {
 
   renderAdminPublishBox(ev);
   renderAdminStatsBox(key);
+  renderAdminSourceStats(key);
 
   const ebBox = document.getElementById('adminEarlyBirdBox');
   const ebList = document.getElementById('adminEarlyBirdList');
@@ -896,12 +956,15 @@ function openAdminModal(ev) {
   }
 
   const goUrlEl = document.getElementById('adminGoUrl');
+  const copyBtn = document.getElementById('copyUrlBtn');
   if (ev.url) {
     goUrlEl.href = ev.url;
     goUrlEl.style.display = 'block';
+    copyBtn.style.display = '';
   } else {
     goUrlEl.removeAttribute('href');
     goUrlEl.style.display = 'none';
+    copyBtn.style.display = 'none';
   }
 
   const savedBackendUrl = urlMap[key] || '';
@@ -927,19 +990,27 @@ function openAdminModal(ev) {
   document.getElementById('adminModal').classList.add('show');
 }
 
-// 前台顯示狀態小方塊 + 顯示於前台開關（可開可關）
+// 前台顯示狀態小方塊 + 顯示於前台開關（僅在行事曆編輯模式下可切換）
 function renderAdminPublishBox(ev) {
   const box = document.getElementById('adminPublishBox');
   const text = document.getElementById('adminPublishText');
   const sw = document.getElementById('adminPublishSwitch');
+  const toggleWrap = document.getElementById('adminPublishToggleWrap');
   const published = ev.published !== false; // 沒有這個欄位（舊資料）＝視為已發布
   box.classList.toggle('is-published', published);
   text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
   sw.classList.toggle('on', published);
+
+  // 【修改】僅在行事曆編輯模式下才能切換，避免誤觸；平常顯示為唯讀狀態
+  const editable = calendarEditMode;
+  toggleWrap.style.opacity = editable ? '1' : '0.45';
+  toggleWrap.style.pointerEvents = editable ? 'auto' : 'none';
+  toggleWrap.title = editable ? '' : '請先開啟「行事曆編輯模式」才能修改這個開關';
 }
 
 document.getElementById('adminPublishSwitch').addEventListener('click', async () => {
   if (!currentModalEv) return;
+  if (!calendarEditMode) return; // 【新】僅編輯模式下允許切換
   const sw = document.getElementById('adminPublishSwitch');
   const newVal = !sw.classList.contains('on');
   const prevVal = currentModalEv.published !== false;
@@ -1188,6 +1259,7 @@ async function fetchMemos() {
     allPermissions = data.allPermissions || {};
     updatePermissionUI();
     customBlocks = Array.isArray(data.customBlocks) ? data.customBlocks : [];
+    socialLinks = data.socialLinks || {};
     renderGroupStatusList('groupStatusList');
     renderGroupStatusList('calGroupList');
     todoCategories = Array.isArray(data.todoCategories) ? data.todoCategories : [];
@@ -1203,7 +1275,9 @@ async function fetchMemos() {
     }
     // 若目前正打開活動彈窗，順便刷新一次數據顯示
     if (currentModalEv && document.getElementById('adminModal').classList.contains('show')) {
-      renderAdminStatsBox(getMemoKey(currentModalEv));
+      const modalKey = getMemoKey(currentModalEv);
+      renderAdminStatsBox(modalKey);
+      renderAdminSourceStats(modalKey);
     }
     const taskModalEl = document.getElementById('taskModal');
     if (taskModalCtx && taskModalEl && taskModalEl.classList.contains('show')) {
@@ -1309,6 +1383,10 @@ document.getElementById('calEditToggleBtn').addEventListener('click', () => {
   calendarEditMode = !calendarEditMode;
   document.getElementById('calEditToggleBtn').classList.toggle('on', calendarEditMode);
   if (!calendarEditMode) closeCalEditDayPanel();
+  // 【新】若活動彈窗目前開著，同步更新「顯示於前台」開關的可編輯狀態
+  if (currentModalEv && document.getElementById('adminModal').classList.contains('show')) {
+    renderAdminPublishBox(currentModalEv);
+  }
   render();
 });
 
@@ -2657,6 +2735,43 @@ async function togglePermission(name, key, switchEl) {
   }
 }
 
+// ===== 【新】社群連結設定（現正開團中最上方，前後台共用同一份資料）=====
+function openSocialLinkEditor() {
+  document.getElementById('socialLinkIgInput').value = socialLinks.iconIg || '';
+  document.getElementById('socialLinkTiktokInput').value = socialLinks.iconTiktok || '';
+  document.getElementById('socialLinkFbInput').value = socialLinks.iconFb || '';
+  document.getElementById('socialLinkEmailInput').value = socialLinks.iconEmail || '';
+  setFormStatus('socialLinkStatus', '', '');
+  document.getElementById('socialLinkModal').classList.add('show');
+}
+
+function closeSocialLinkEditor() {
+  document.getElementById('socialLinkModal').classList.remove('show');
+}
+
+document.getElementById('socialLinkSaveBtn').addEventListener('click', async () => {
+  const fields = {
+    iconIg: document.getElementById('socialLinkIgInput').value.trim(),
+    iconTiktok: document.getElementById('socialLinkTiktokInput').value.trim(),
+    iconFb: document.getElementById('socialLinkFbInput').value.trim(),
+    iconEmail: document.getElementById('socialLinkEmailInput').value.trim()
+  };
+  const btn = document.getElementById('socialLinkSaveBtn');
+  btn.disabled = true;
+  setFormStatus('socialLinkStatus', '儲存中…', '');
+  try {
+    await postTask(Object.assign({ type: 'social-link-set' }, fields));
+    socialLinks = fields;
+    setFormStatus('socialLinkStatus', '已儲存 ✓', 'ok');
+    renderGroupStatusList('groupStatusList');
+    renderGroupStatusList('calGroupList');
+    setTimeout(closeSocialLinkEditor, 900);
+  } catch (err) {
+    setFormStatus('socialLinkStatus', '儲存失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+
 // ===== 任務系統共用 =====
 function myTasks() {
   return (tasksMap[currentUser] || []).slice();
@@ -3987,8 +4102,9 @@ function addMonthsToKey(key, n) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 function fmtMonthLabel(key) {
-  const [y, m] = key.split('-').map(Number);
-  return `${y}年${m}月`;
+  const m = /^(\d{4})-(\d{2})$/.exec(String(key || '').trim());
+  if (!m) return currentMonthKey().replace('-', '年') + '月'; // 【修復】格式異常時退回顯示當月，不再出現 NaN年undefined月
+  return `${Number(m[1])}年${Number(m[2])}月`;
 }
 
 function fillTodoMonthSelect(selected) {
