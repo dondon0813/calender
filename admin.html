@@ -132,14 +132,22 @@
     line-height: 1.6;
     white-space: nowrap;
   }
-  /* 【新】開團日／結團日頁面：每個按鈕自己的點擊次數 */
-  .ebar-click-stat {
-    display: block;
+  /* 【新】開團日／結團日頁面：每個按鈕自己的點擊／瀏覽次數，圖示＋數字，固定顯示 */
+  .ebar-stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
     margin-top: 2px;
-    font-size: 9.5px;
-    font-weight: 700;
-    opacity: 0.75;
+    opacity: 0.8;
   }
+  .ebar-stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 9px;
+    font-weight: 700;
+  }
+  .ebar-stat-item svg { width: 10px; height: 10px; flex: none; }
   /* 【新】全部顯示頁面：空間較小，用小徽章顯示點擊次數 */
   .ev-click-badge {
     flex: none;
@@ -2974,15 +2982,13 @@
     gap: 6px;
     flex-wrap: wrap;
     background: #FFF6EC;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0;
     padding: 6px 10px;
     margin-top: -4px;
   }
-  .cb-admin-stats {
-    font-size: 11px;
-    color: #a89888;
-    text-align: center;
-    margin-top: 4px;
+  .cb-stats-bar {
+    border-radius: 0 0 14px 14px;
+    margin-top: 0;
   }
   @keyframes cbShake {
     0%, 100% { transform: translateX(0); }
@@ -4043,7 +4049,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=34"></script>
+<script src="admin.js?v=35"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
