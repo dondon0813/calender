@@ -535,6 +535,16 @@ function renderAllMode() {
         bar.appendChild(tagSpan);
       }
 
+      // 【新】這個頁面（全部顯示）自己的點擊次數，空間有限所以只顯示一個小數字徽章
+      const allBarClicks = sourceClickCount(getMemoKey(item.ev), 'all');
+      if (allBarClicks > 0) {
+        const clickBadge = document.createElement('span');
+        clickBadge.className = 'ev-click-badge';
+        clickBadge.title = '全部顯示頁面點擊次數';
+        clickBadge.textContent = `🖱️${allBarClicks}`;
+        bar.appendChild(clickBadge);
+      }
+
       weekEl.appendChild(bar);
     });
 
@@ -631,6 +641,16 @@ function renderSingleDayMode(mode) {
             titleSpan.appendChild(document.createTextNode(line));
           });
           bar.appendChild(titleSpan);
+
+          // 【新】這個頁面（開團日／結團日）自己的點擊次數，直接顯示在按鈕裡面
+          const barKey = getMemoKey(ev);
+          const barClicks = sourceClickCount(barKey, mode);
+          if (barClicks > 0) {
+            const clickEl = document.createElement('span');
+            clickEl.className = 'ebar-click-stat';
+            clickEl.textContent = `🖱️${barClicks}次`;
+            bar.appendChild(clickEl);
+          }
 
           // 後台行事曆改用公關品狀態小圖示，不再顯示 F 欄標籤（如抽免單）
           if (prChipOn) {
@@ -836,13 +856,13 @@ function renderGroupStatusList(targetId) {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
-    // 【新】瀏覽／點擊統計直接顯示在這顆按鈕裡面（不再另外開彈窗），
-    // 包含整體次數，以及依開團日／結團日／全部顯示／現正開團中分開的點擊次數
+    // 【修改】這裡是「現正開團中」頁面，只顯示整體瀏覽次數，跟「這個頁面自己」的點擊次數
+    // （開團日／結團日／全部顯示頁面的點擊數，各自顯示在那些頁面自己的按鈕上，不會擠在這裡）
     const cardKey = getMemoKey(ev);
     const cardSt = statsMap[cardKey] || { views: 0, clicks: 0 };
     const statsEl = document.createElement('div');
     statsEl.className = 'gs-card-stats';
-    statsEl.textContent = `👀瀏覽${cardSt.views || 0}次・🖱️點擊${cardSt.clicks || 0}次｜${buildSourceStatsText(cardKey)}`;
+    statsEl.textContent = `👀瀏覽${cardSt.views || 0}次・🖱️點擊${sourceClickCount(cardKey, 'list')}次`;
     card.appendChild(statsEl);
 
     const icons = buildEventIconElements(ev);
@@ -930,19 +950,11 @@ function renderAdminStatsBox(key) {
   box.innerHTML = html;
 }
 
-// 【修改】依來源分開統計的點擊次數（開團日／結團日／全部顯示／現正開團中）不再用彈窗顯示，
-// 改成直接顯示在每個團購卡片「按鈕」裡面（buildCard 裡呼叫），這裡只保留組字串的共用函式
-const STAT_SOURCE_DEFS = [
-  { mode: 'start', emoji: '📅', label: '開團日' },
-  { mode: 'end', emoji: '📆', label: '結團日' },
-  { mode: 'all', emoji: '📋', label: '全部顯示' },
-  { mode: 'list', emoji: '🌼', label: '現正開團中' }
-];
-function buildSourceStatsText(key) {
-  return STAT_SOURCE_DEFS.map(d => {
-    const clicks = (statsMap[key + '_src_' + d.mode] || {}).clicks || 0;
-    return `${d.emoji}${d.label} ${clicks}次`;
-  }).join('・');
+// 【修改】依來源分開統計的點擊次數（開團日／結團日／全部顯示／現正開團中），不再把四個來源
+// 擠在同一顆卡片裡；改成「哪個頁面，就在那個頁面自己的按鈕上顯示那個頁面自己的點擊數」，
+// 這裡只留一個共用的小工具函式，各個 render 函式各自呼叫、各自只取自己那個 mode 的數字
+function sourceClickCount(key, mode) {
+  return (statsMap[key + '_src_' + mode] || {}).clicks || 0;
 }
 
 function openAdminModal(ev) {
@@ -1007,20 +1019,18 @@ function openAdminModal(ev) {
   document.getElementById('adminModal').classList.add('show');
 }
 
-// 前台顯示狀態小方塊 + 顯示於前台開關（僅在行事曆編輯模式下可切換）
+// 前台顯示狀態小方塊 + 顯示於前台開關（整個區塊只在行事曆編輯模式下才出現，平常不佔位置）
 function renderAdminPublishBox(ev) {
   const box = document.getElementById('adminPublishBox');
   const text = document.getElementById('adminPublishText');
   const sw = document.getElementById('adminPublishSwitch');
-  const toggleWrap = document.getElementById('adminPublishToggleWrap');
   const published = ev.published !== false; // 沒有這個欄位（舊資料）＝視為已發布
   box.classList.toggle('is-published', published);
   text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
   sw.classList.toggle('on', published);
 
-  // 【修改】非編輯模式直接把切換按鈕整個移除（不佔位置），只有開啟「行事曆編輯模式」才會顯示
-  const editable = calendarEditMode;
-  toggleWrap.style.display = editable ? '' : 'none';
+  // 【修改】非編輯模式直接整個區塊都不出現，只有開啟「行事曆編輯模式」才會顯示
+  box.style.display = calendarEditMode ? '' : 'none';
 }
 
 document.getElementById('adminPublishSwitch').addEventListener('click', async () => {
