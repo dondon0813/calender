@@ -29,7 +29,6 @@
     position: relative;
   }
 
-  /* 【新】右上角小房子：回到首頁（recipes.html） */
   .site-home-btn {
     position: fixed;
     top: 14px;
@@ -214,7 +213,6 @@
     box-shadow: 0 3px 8px rgba(0,0,0,0.15);
   }
 
-  /* 開團日 / 結團日 模式：讓長條寬度跟著格子走，文字換行不外溢 */
   .ebar-wrap {
     align-self: stretch;
     flex-direction: column;
@@ -230,7 +228,6 @@
     margin-top: 2px;
   }
 
-  /* 狀態色：未開團(黃) / 已開團(橘) / 即將結單(紅粉) / 已結團(灰) */
   .ebar-wrap.cat-upcoming {
     background: #FFF6DD;
     border: 1.5px solid #E8B93D;
@@ -251,7 +248,6 @@
     border: 1.5px solid #B8AC9C;
     color: #7A7166;
   }
-  /* 冷凍團：固定藍色，右下角淺色雪花浮水印 */
   .ebar-wrap.cat-frozen {
     background-color: #E6F1FC;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
@@ -262,7 +258,6 @@
     color: #2F6FB0;
   }
 
-  /* ===== 現正開團中：清單卡片模式 ===== */
   .group-list {
     padding: 4px 2px 8px;
   }
@@ -349,7 +344,6 @@
     font-size: 14px;
   }
 
-  /* 早鳥禮彈窗 */
   .modal-backdrop {
     display: none;
     position: fixed;
@@ -395,7 +389,6 @@
     cursor: pointer;
   }
 
-  /* 團名點擊：介紹／食譜／下單 三選一彈窗 */
   .gc-modal-box {
     text-align: center;
   }
@@ -545,7 +538,6 @@
     .ev-tag { font-size: 8px; }
   }
 
-  /* ===== 自訂文字按鈕區塊（後台「開團狀態」新增的區塊，混在「現正開團中」清單裡） ===== */
   .cb-card {
     display: block;
     border-radius: 16px;
@@ -635,7 +627,6 @@
   </div>
 </div>
 
-<!-- 團名點擊：介紹／食譜／下單 三選一彈窗（只有試算表「食譜品牌」欄位有填的團才會跳出） -->
 <div class="modal-backdrop" id="groupChoiceModal" onclick="if(event.target===this) closeGroupChoiceModal()">
   <div class="modal-box gc-modal-box">
     <button class="modal-close" onclick="closeGroupChoiceModal()">✕</button>
@@ -654,18 +645,14 @@ const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx
 const COLORS = 7;
 const WD_LABEL = ['日','一','二','三','四','五','六'];
 
-// 食材食譜網頁（recipes.html）的路徑：跟 index.html 放在同一個資料夾，用相對路徑即可
 const RECIPES_PAGE_URL = 'recipes.html';
 
-// 後台「開團狀態」頁面新增的自訂區塊（文字按鈕等），跟行事曆共用同一組 Apps Script 網址，
-// 用 scope=public 撈取「已開啟顯示」的區塊清單
 let CUSTOM_BLOCKS = [];
 
 const CB_TITLE_SIZE_PX = { '小': '14px', '中': '17px', '大': '21px', '特大': '26px' };
 const CB_BORDER_STYLE_CSS = { '無': 'none', '實線': 'solid', '虛線': 'dashed' };
 const CB_ANIM_CLASS = { '無': '', '搖晃': 'cb-anim-shake', '跳動': 'cb-anim-bounce', '震動': 'cb-anim-vibrate' };
 
-// 【新】社群小圖示：跟後台共用同一套渲染邏輯
 const EVENT_ICON_DEFS = [
   { key: 'iconIg', emoji: '📷', label: 'Instagram' },
   { key: 'iconTiktok', emoji: '🎵', label: 'TikTok' },
@@ -737,10 +724,8 @@ function appendCustomBlocks(listEl, position) {
     .forEach(b => listEl.appendChild(buildCustomBlockEl(b)));
 }
 
-// ===== 【新】前台瀏覽次數／點擊次數統計 =====
-// key 格式跟後台 admin.js 的 getMemoKey() 完全一致（團編號_年-月-日，用開團日 start）
 const STATS_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
-const sentViewKeys = new Set(); // 這次瀏覽本頁時，哪些團已經算過一次「瀏覽」，避免重複計數
+const sentViewKeys = new Set();
 let statObserver = null;
 
 function getStatKey(ev) {
@@ -748,7 +733,6 @@ function getStatKey(ev) {
   return `${ev.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
 }
 
-// 用 sendBeacon（不支援時退回 fetch keepalive），不等待回應、不拖慢使用者操作
 function sendStat(key, field) {
   if (!key || !STATS_BACKEND_URL) return;
   const type = field === 'click' ? 'stat-click' : 'stat-view';
@@ -767,7 +751,6 @@ function sendStat(key, field) {
   } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
 }
 
-// 團購長條/卡片真的滑進畫面才算一次「瀏覽」；同一團同一次載入頁面只算一次
 function getStatObserver() {
   if (!statObserver) {
     statObserver = new IntersectionObserver((entries) => {
@@ -785,7 +768,6 @@ function getStatObserver() {
   return statObserver;
 }
 
-// 幫一個團購長條/卡片元素掛上瀏覽次數觀察＋點擊次數計數（clickable 才會真的連出去，才算一次點擊）
 function attachStatTracking(el, ev, clickable) {
   const key = getStatKey(ev);
   el.dataset.statKey = key;
@@ -838,7 +820,6 @@ function daysBetween(a, b) {
   return Math.round((B - A) / 86400000);
 }
 
-// 將標題切成「詞」，盡量避免拆散同一個詞，再依每行最多字數組行
 function segmentTitle(title) {
   if (typeof Intl !== 'undefined' && Intl.Segmenter) {
     try {
@@ -853,13 +834,9 @@ function segmentTitle(title) {
   return title.split('');
 }
 
-// 已知品牌/店家名稱清單：斷行時優先從這裡比對，
-// 因為自動斷詞無法辨識專有名詞，容易切錯（例如「林貝兒米餅」會被拆成單字）。
-// 之後遇到新品牌，請告訴 Claude 幫忙加進這個清單即可。
 const KNOWN_BRANDS = ['林貝兒', '小影霸', '台東初鹿', '永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
 
 function wrapTitleLines(title, maxCharsPerLine) {
-  // 若品名裡有手動指定的斷行符號（/ 或 、），優先照這裡斷行
   const manualParts = title.split(/[\/、]/).map(s => s.trim()).filter(s => s !== '');
   if (manualParts.length > 1) {
     const lines = [];
@@ -869,7 +846,6 @@ function wrapTitleLines(title, maxCharsPerLine) {
     return lines;
   }
 
-  // 比對已知品牌名稱，優先把品牌獨立成一行
   const brand = KNOWN_BRANDS.find(b => title.startsWith(b));
   if (brand) {
     const rest = title.slice(brand.length).trim();
@@ -899,8 +875,6 @@ function wrapSegment(text, maxCharsPerLine) {
   return lines;
 }
 
-// 冷凍團判斷：優先讀取試算表第 6 欄（F欄，類別欄位，例如填「冷凍」）
-// 若該欄位是空的，才用已知店家名稱比對做保底判斷
 const FROZEN_KEYWORDS = ['永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
 
 function isFrozenEvent(ev) {
@@ -911,19 +885,15 @@ function isFrozenEvent(ev) {
   return FROZEN_KEYWORDS.some(k => ev.title.includes(k));
 }
 
-// 連結是否可點擊：開團日當天 00:00 起解鎖（ev.start 本身即為當天 00:00）
 function isLinkUnlocked(ev) {
   if (!ev.url) return false;
   return new Date() >= ev.start;
 }
 
-// 這團是不是有開啟「進階介紹模式」：試算表 K欄「食譜品牌」有填值就是開啟，
-// 值本身就是要帶去 recipes.html 的品牌名稱（要跟食譜資料庫試算表「品牌名稱」欄位完全一致）
 function hasAdvancedIntro(ev) {
   return !!(ev.recipeBrand && ev.recipeBrand.trim());
 }
 
-// 解析「延長日期」欄位：可以是數字（延長天數）或日期（指定延長至該天）
 function parseExtendRaw(raw, originalEnd) {
   if (raw === null || raw === undefined || raw === '') return null;
   if (typeof raw === 'number') {
@@ -939,7 +909,6 @@ function parseExtendRaw(raw, originalEnd) {
   return null;
 }
 
-// 計算「原本結束日期當天及之前」顯示原日期；隔天起才套用延長後日期
 function computeDisplayEnd(end, extend) {
   if (!extend) return end;
   const today = new Date();
@@ -976,11 +945,8 @@ async function loadData() {
       const tag = c[5] ? c[5].v : '';
       const category = c[6] ? c[6].v : '';
       const url = c[7] ? c[7].v : '';
-      const adminUrl = c[8] ? c[8].v : ''; // 後台網址，先保留不使用
+      const adminUrl = c[8] ? c[8].v : '';
       const earlyBirdRaw = c[9] ? c[9].v : '';
-      // 欄位對照：J=早鳥禮(idx9)　K=食譜品牌(idx10，有填就開啟「介紹／食譜/下單」三選一浮動視窗)
-      // L=顏色(idx11)　M=整日(idx12)　N=開始時間(idx13)　O=結束時間(idx14)　P=團購(idx15)　Q=顯示於前台(idx16)
-      // R=IG(idx17)　S=TikTok(idx18)　T=Facebook(idx19)　U=Email／其他(idx20)
       const recipeBrandRaw = c[10] ? c[10].v : '';
       const colorRaw = c[11] ? c[11].v : '';
       const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
@@ -998,10 +964,8 @@ async function loadData() {
       const color = String(colorRaw || '').trim();
       const recipeBrand = String(recipeBrandRaw || '').trim();
       const isGroupBuy = isGroupBuyRaw === '' ? true : (isGroupBuyRaw === '是');
-      // 舊資料沒有這個欄位＝視為已經顯示於前台（向下相容）；新增的活動預設「否」，
-      // 要等後台按下「確認顯示於前台」之後，這裡才會是「是」，才會出現在這個公開頁面
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
-      if (!published) return; // 尚未確認顯示於前台的活動，公開行事曆完全不顯示
+      if (!published) return;
       events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail });
     });
 
@@ -1029,7 +993,7 @@ function populateMonthSelect() {
 
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${now.getMonth()}`;
-  monthsSet.add(todayKey); // 確保當月一定在選單裡，即使沒有資料
+  monthsSet.add(todayKey);
 
   let months = Array.from(monthsSet).map(s => {
     const [y, m] = s.split('-').map(Number);
@@ -1045,7 +1009,6 @@ function populateMonthSelect() {
   });
 
   if (currentYear === undefined) {
-    // 預設開啟「今天所在的月份」，而不是資料裡最早的月份
     currentYear = now.getFullYear();
     currentMonth = now.getMonth();
   }
@@ -1097,7 +1060,6 @@ function render() {
   }
 }
 
-// 「現正開團中」清單模式：把開團中／即將結單的團分區列出，今日結單特別提醒
 function renderGroupList() {
   const listEl = document.getElementById('groupList');
   listEl.innerHTML = '';
@@ -1124,7 +1086,6 @@ function renderGroupList() {
     const clickable = isLinkUnlocked(ev);
     const advanced = clickable && hasAdvancedIntro(ev);
 
-    // 有開啟「進階介紹」的團：卡片本身不再是直接連結的 <a>，改成點擊跳出三選一浮動視窗
     const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
     card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '');
     if (clickable && !advanced) {
@@ -1210,8 +1171,6 @@ function renderAllMode() {
   const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const numWeeks = totalCells / 7;
 
-  // 團購編號：只計算「團購」開關有打開的活動，依開團日排序，這個月第幾團就是第幾號
-  // （非團購活動，例如宅配、截稿日，不會佔用編號；跟後台管理頁邏輯一致）
   const groupBuyNumberMap = computeMonthlyGroupBuyNumbers(currentYear, currentMonth);
 
   for (let w = 0; w < numWeeks; w++) {
@@ -1260,13 +1219,16 @@ function renderAllMode() {
 
     weekEvents.forEach(item => {
       const gbNumber = groupBuyNumberMap.get(item.ev.id);
-      // 團購活動：顏色跟著「這個月第幾團」走，每個月重新循環；非團購活動退回用 id 循環
       const colorIdx = gbNumber ? (gbNumber - 1) % COLORS : (item.ev.id - 1) % COLORS;
       const clickable = isLinkUnlocked(item.ev);
       const advanced = clickable && hasAdvancedIntro(item.ev);
       const hasEarlyBird = !clickable && !isStarted(item.ev) && item.ev.earlyBird.length > 0;
       const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
       bar.className = `ebar c${colorIdx}` + (clickable ? ' clickable' : '') + (hasEarlyBird ? ' clickable' : '');
+      // 【修復】依 colStart / colEnd / lane 設定跨欄位置，長條才會橫向跨天顯示。
+      // 少了這兩行，瀏覽器的 grid 自動排版會把每個長條硬塞回單一天欄位、疊在一起（就是壞掉的樣子）。
+      bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
+      bar.style.gridRow = `${item.lane + 2}`;
       if (item.ev.color) {
         bar.style.background = item.ev.color;
       }
@@ -1319,9 +1281,6 @@ function renderAllMode() {
   }
 }
 
-// 計算「這個月」團購活動的編號：依開始日期排序，只算 isGroupBuy !== false 的活動
-// 回傳 Map：eventId -> 第幾團（1 起算）。跟後台 admin.js 的 computeMonthlyGroupBuyNumbers 邏輯一致，
-// 確保前台、後台顯示的編號永遠一樣。
 function computeMonthlyGroupBuyNumbers(year, month) {
   const map = new Map();
   const inMonth = allEvents.filter(ev => {
@@ -1424,9 +1383,6 @@ function renderSingleDayMode(mode) {
             bar.appendChild(tagSpan);
           }
 
-          // 【拿掉】冷凍團倒數天數小圓點功能已依需求整個移除，冷凍團只保留藍色底+雪花浮水印，
-          // 不會再多出那個容易被格子邊界裁到、看起來像遮擋物的小圓點
-
           stack.appendChild(bar);
         });
         cell.appendChild(stack);
@@ -1447,7 +1403,6 @@ function isStarted(ev) {
   return startOfDay(new Date()) >= startOfDay(ev.start);
 }
 
-// 團購狀態：未開團 / 已開團 / 即將結單（結束前一天起）/ 已結團
 function getEventStatus(ev) {
   const todayStart = startOfDay(new Date());
   const startD = startOfDay(ev.start);
@@ -1477,12 +1432,9 @@ function closeEarlyBirdModal() {
   document.getElementById('earlyBirdModal').classList.remove('show');
 }
 
-// 團名點擊：介紹／食譜／下單 三選一浮動視窗
-// 【新】三個按鈕各自的點擊次數會分開統計，key 是 團購key + '_intro' / '_recipe' / '_order'，
-// 後台活動彈窗的「📊 數據」區塊會分開顯示這三個數字
 function openGroupChoiceModal(ev) {
   const brand = (ev.recipeBrand || '').trim();
-  if (!brand) return; // 保險：沒有品牌名稱就不開這個視窗（理論上呼叫前已經檢查過 hasAdvancedIntro）
+  if (!brand) return;
 
   const modal = document.getElementById('groupChoiceModal');
   document.getElementById('groupChoiceTitle').textContent = ev.title;
