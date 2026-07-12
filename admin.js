@@ -215,10 +215,10 @@ const EVENT_ICON_DEFS = [
   { key: 'iconEmail', label: 'Email／其他' }
 ];
 const SOCIAL_SVG_ICONS = {
-  iconIg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none"/></svg>',
-  iconTiktok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3c.3 2.1 1.7 3.6 3.8 3.9v3.1c-1.4 0-2.7-.4-3.8-1.2v6.4a5.6 5.6 0 1 1-5.6-5.6c.3 0 .6 0 .9.1v3.2a2.4 2.4 0 1 0 1.7 2.3V3h3z"/></svg>',
-  iconFb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14 8.5h-1.5c-.8 0-1.5.7-1.5 1.5v2h3l-.4 2.5h-2.6V21"/></svg>',
-  iconEmail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>'
+  iconIg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="12" cy="12" r="4.3"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>',
+  iconTiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 2.5c.4 2.4 1.9 4 4.4 4.3v3.4c-1.6 0-3.1-.5-4.4-1.4v6.9c0 3.5-2.8 6.3-6.3 6.3s-6.3-2.8-6.3-6.3 2.8-6.3 6.3-6.3c.3 0 .6 0 .9.1v3.5a2.9 2.9 0 1 0 2 2.8V2.5h3.4z"/></svg>',
+  iconFb: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.8h2.6l.4-3H13.5V8.2c0-.9.2-1.5 1.6-1.5h1.6V4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.3H7.7v3h2.6V21h3.2z"/></svg>',
+  iconEmail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>'
 };
 
 // 【新】團購卡片下方統計條用的三個小圖示：滑鼠點擊、眼睛（瀏覽）、重新整理
@@ -247,7 +247,7 @@ function buildSocialIconRow() {
   if (!items.length) return null;
   const row = document.createElement('div');
   row.className = 'site-social-row';
-  row.style.setProperty('--social-icon-color', socialLinks.iconColor || '#b5755a');
+  row.style.setProperty('--social-icon-color', socialLinks.iconColor || '#3a2f28');
   items.forEach(d => {
     let href = socialLinks[d.key];
     if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href) && href.indexOf('mailto:') !== 0) href = 'https://' + href;
@@ -2799,7 +2799,7 @@ function openSocialLinkEditor() {
   document.getElementById('socialLinkTiktokInput').value = socialLinks.iconTiktok || '';
   document.getElementById('socialLinkFbInput').value = socialLinks.iconFb || '';
   document.getElementById('socialLinkEmailInput').value = socialLinks.iconEmail || '';
-  document.getElementById('socialLinkColorInput').value = socialLinks.iconColor || '#b5755a';
+  document.getElementById('socialLinkColorInput').value = socialLinks.iconColor || '#3a2f28';
   setFormStatus('socialLinkStatus', '', '');
   document.getElementById('socialLinkModal').classList.add('show');
 }
