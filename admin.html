@@ -2049,7 +2049,7 @@
   .gs-card-icon {
     width: 26px;
     height: 26px;
-    border-radius: 50%;
+    border-radius: 30%;
     background: rgba(255,255,255,0.25);
     color: #fff;
     display: flex;
@@ -2058,7 +2058,7 @@
     font-size: 13px;
     cursor: pointer;
   }
-  .gs-card-icon svg { width: 60%; height: 60%; display: block; }
+  .gs-card-icon svg { width: 62%; height: 62%; display: block; }
   .gs-card-icon:hover { background: rgba(255,255,255,0.4); }
   .gs-empty {
     text-align: center;
@@ -2079,20 +2079,21 @@
   .site-social-icon {
     width: 44px;
     height: 44px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid var(--social-icon-color, #FFD3B6);
+    border-radius: 30%;
+    background: var(--social-icon-color, #3a2f28);
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    color: var(--social-icon-color, #b5755a);
+    color: #fff;
     text-decoration: none;
-    box-shadow: 0 3px 8px rgba(230,160,120,0.15);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
     cursor: pointer;
+    transition: filter 0.12s ease;
   }
-  .site-social-icon svg { width: 50%; height: 50%; display: block; }
-  .site-social-icon:hover { background: #FFF1E6; }
+  .site-social-icon svg { width: 52%; height: 52%; display: block; }
+  .site-social-icon:hover { filter: brightness(1.12); }
   .site-social-icon.editable {
     border-style: dashed;
   }
@@ -4040,8 +4041,8 @@
       <input type="text" id="socialLinkFbInput" placeholder="貼上 Facebook 網址…">
       <label for="socialLinkEmailInput">✉️ Email／其他連結</label>
       <input type="text" id="socialLinkEmailInput" placeholder="貼上網址或 mailto:…">
-      <label for="socialLinkColorInput">🎨 圖示顏色（圓圈邊框跟圖示線條會一起變色）</label>
-      <input type="color" id="socialLinkColorInput" value="#b5755a" style="height:40px; padding:4px; cursor:pointer;">
+      <label for="socialLinkColorInput">🎨 圖示底色（正方形圖示背景色，白色圖案會疊在上面）</label>
+      <input type="color" id="socialLinkColorInput" value="#3a2f28" style="height:40px; padding:4px; cursor:pointer;">
       <button class="task-submit-btn" id="socialLinkSaveBtn">💾 儲存</button>
       <div class="form-status" id="socialLinkStatus"></div>
     </div>
@@ -4049,7 +4050,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="admin.js?v=35"></script>
+<script src="admin.js?v=36"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
