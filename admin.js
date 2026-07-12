@@ -220,6 +220,11 @@ const SOCIAL_SVG_ICONS = {
   iconFb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14 8.5h-1.5c-.8 0-1.5.7-1.5 1.5v2h3l-.4 2.5h-2.6V21"/></svg>',
   iconEmail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>'
 };
+
+// 【新】團購卡片下方統計條用的三個小圖示：滑鼠點擊、眼睛（瀏覽）、重新整理
+const ICON_SVG_CLICK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 3l7 16.5 2.2-7 7-2.2z"/></svg>';
+const ICON_SVG_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICON_SVG_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v5h5"/><path d="M20 20v-5h-5"/><path d="M5.5 9a7 7 0 0 1 12.3-3.5"/><path d="M18.5 15a7 7 0 0 1-12.3 3.5"/></svg>';
 function buildEventIconElements(ev) {
   return EVENT_ICON_DEFS.filter(d => ev[d.key]).map(d => {
     let href = ev[d.key];
@@ -856,15 +861,6 @@ function renderGroupStatusList(targetId) {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
-    // 【修改】這裡是「現正開團中」頁面，只顯示整體瀏覽次數，跟「這個頁面自己」的點擊次數
-    // （開團日／結團日／全部顯示頁面的點擊數，各自顯示在那些頁面自己的按鈕上，不會擠在這裡）
-    const cardKey = getMemoKey(ev);
-    const cardSt = statsMap[cardKey] || { views: 0, clicks: 0 };
-    const statsEl = document.createElement('div');
-    statsEl.className = 'gs-card-stats';
-    statsEl.textContent = `👀瀏覽${cardSt.views || 0}次・🖱️點擊${sourceClickCount(cardKey, 'list')}次`;
-    card.appendChild(statsEl);
-
     const icons = buildEventIconElements(ev);
     if (icons.length) {
       const iconsWrap = document.createElement('div');
@@ -891,7 +887,44 @@ function renderGroupStatusList(targetId) {
       card.appendChild(badges);
     }
 
-    return card;
+    // 【修改】瀏覽／點擊次數改成 Portaly 那種樣式：按鈕下方接一條淺色資訊條，
+    // 圖示＋數字（點擊在前、瀏覽在後），右邊一個可以點的重新整理小圖示。
+    // 點擊次數只算「現正開團中」這個頁面自己的（開團日／結團日／全部顯示頁面各自顯示自己的，不會混在這裡）。
+    const cardKey = getMemoKey(ev);
+    const cardSt = statsMap[cardKey] || { views: 0, clicks: 0 };
+    const cardClicks = sourceClickCount(cardKey, 'list');
+
+    const statsBar = document.createElement('div');
+    statsBar.className = 'gs-stats-bar';
+
+    const clickItem = document.createElement('span');
+    clickItem.className = 'gs-stat-item';
+    clickItem.innerHTML = ICON_SVG_CLICK + `<span>${cardClicks.toLocaleString()}</span>`;
+    statsBar.appendChild(clickItem);
+
+    const viewItem = document.createElement('span');
+    viewItem.className = 'gs-stat-item';
+    viewItem.innerHTML = ICON_SVG_EYE + `<span>${(cardSt.views || 0).toLocaleString()}</span>`;
+    statsBar.appendChild(viewItem);
+
+    const refreshBtn = document.createElement('span');
+    refreshBtn.className = 'gs-stats-refresh';
+    refreshBtn.title = '重新整理統計數字';
+    refreshBtn.innerHTML = ICON_SVG_REFRESH;
+    refreshBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      refreshBtn.style.opacity = '0.4';
+      await fetchMemos();
+      refreshBtn.style.opacity = '';
+    });
+    statsBar.appendChild(refreshBtn);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'gs-card-wrap';
+    wrap.appendChild(card);
+    wrap.appendChild(statsBar);
+
+    return wrap;
   };
 
   const buildSection = (title, arr) => {
