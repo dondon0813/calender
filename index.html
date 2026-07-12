@@ -271,6 +271,7 @@
   .gs-section-title:first-child { margin-top: 4px; }
   .gs-title-closing { color: #E0405F; }
   .gs-title-active { color: #C98A3E; }
+  .gs-title-ended { color: #7A7166; }
   .gs-card {
     display: block;
     position: relative;
@@ -289,6 +290,10 @@
   .gs-card.gs-today {
     background: #7A5A42;
     box-shadow: 0 0 0 3px #FFD3DC;
+  }
+  .gs-card.gs-card-gray {
+    background: #C9C1B4;
+    color: #6b6255;
   }
   .gs-card-name {
     font-size: 19px;
@@ -343,6 +348,32 @@
     padding: 30px 0;
     font-size: 14px;
   }
+
+  /* ===== 【新】品牌社群連結列（現正開團中最上方）===== */
+  .site-social-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin: 4px 0 18px;
+    flex-wrap: wrap;
+  }
+  .site-social-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #FFD3B6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #b5755a;
+    text-decoration: none;
+    box-shadow: 0 3px 8px rgba(230,160,120,0.15);
+    cursor: pointer;
+  }
+  .site-social-icon:hover { background: #FFF1E6; }
 
   .modal-backdrop {
     display: none;
@@ -648,6 +679,7 @@ const WD_LABEL = ['日','一','二','三','四','五','六'];
 const RECIPES_PAGE_URL = 'recipes.html';
 
 let CUSTOM_BLOCKS = [];
+let SOCIAL_LINKS = {}; // 【新】品牌社群連結（IG／TikTok／FB／Email），現正開團中最上方顯示
 
 const CB_TITLE_SIZE_PX = { '小': '14px', '中': '17px', '大': '21px', '特大': '26px' };
 const CB_BORDER_STYLE_CSS = { '無': 'none', '實線': 'solid', '虛線': 'dashed' };
@@ -675,12 +707,34 @@ function buildEventIconElements(ev) {
   });
 }
 
+// 【新】品牌社群連結列（跟事件圖示共用同一份定義），沒有設定的圖示就不會出現
+function buildSocialIconRow() {
+  const items = EVENT_ICON_DEFS.filter(d => SOCIAL_LINKS[d.key]);
+  if (!items.length) return null;
+  const row = document.createElement('div');
+  row.className = 'site-social-row';
+  items.forEach(d => {
+    let href = SOCIAL_LINKS[d.key];
+    if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href) && href.indexOf('mailto:') !== 0) href = 'https://' + href;
+    const a = document.createElement('a');
+    a.className = 'site-social-icon';
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.title = d.label;
+    a.textContent = d.emoji;
+    row.appendChild(a);
+  });
+  return row;
+}
+
 async function loadCustomBlocks() {
   if (!STATS_BACKEND_URL) return;
   try {
     const res = await fetch(STATS_BACKEND_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
+    SOCIAL_LINKS = data.socialLinks || {};
   } catch (err) {
     console.warn('自訂區塊讀取失敗：', err);
   }
@@ -768,12 +822,17 @@ function getStatObserver() {
   return statObserver;
 }
 
+// 【修改】點擊時除了送出整體點擊次數，還多送一筆「依目前顯示模式（開團日／結團日／全部顯示／現正開團中）」
+// 分開計算的點擊次數，key 格式固定是 團購key + '_src_' + mode，後台可以分開看是哪個表單點的人最多
 function attachStatTracking(el, ev, clickable) {
   const key = getStatKey(ev);
   el.dataset.statKey = key;
   getStatObserver().observe(el);
   if (clickable) {
-    el.addEventListener('click', () => sendStat(key, 'click'));
+    el.addEventListener('click', () => {
+      sendStat(key, 'click');
+      sendStat(key + '_src_' + currentMode, 'click');
+    });
   }
 }
 
@@ -1060,9 +1119,20 @@ function render() {
   }
 }
 
+// 【新】最近結束的團購（給「結團查詢」用），依結束日期新到舊排序
+function getRecentEndedEvents(limit) {
+  const ended = allEvents.filter(ev => getEventStatus(ev) === 'ended');
+  ended.sort((a, b) => b.displayEnd - a.displayEnd);
+  return ended.slice(0, limit || 7);
+}
+
 function renderGroupList() {
   const listEl = document.getElementById('groupList');
   listEl.innerHTML = '';
+
+  // 【新】品牌社群連結列，放在整個清單最上方
+  const socialRow = buildSocialIconRow();
+  if (socialRow) listEl.appendChild(socialRow);
 
   appendCustomBlocks(listEl, 'before');
 
@@ -1079,15 +1149,15 @@ function renderGroupList() {
   closingItems.sort((a, b) => a.displayEnd - b.displayEnd);
   activeItems.sort((a, b) => a.displayEnd - b.displayEnd);
 
-  const buildCard = (ev) => {
+  const buildCard = (ev, grayOut) => {
     const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
-    const isToday = daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
+    const isToday = !grayOut && daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
     const frozen = isFrozenEvent(ev);
     const clickable = isLinkUnlocked(ev);
     const advanced = clickable && hasAdvancedIntro(ev);
 
     const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
-    card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '');
+    card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '') + (grayOut ? ' gs-card-gray' : '');
     if (clickable && !advanced) {
       card.href = ev.url;
       card.target = '_blank';
@@ -1158,6 +1228,16 @@ function renderGroupList() {
   }
 
   appendCustomBlocks(listEl, 'after');
+
+  // 【新】結團查詢：最近 7 個結束的團，灰色顯示，最下方，可點開看詳情
+  const endedItems = getRecentEndedEvents(7);
+  if (endedItems.length) {
+    const h = document.createElement('div');
+    h.className = 'gs-section-title gs-title-ended';
+    h.textContent = '🕰結團查詢（最近' + endedItems.length + '個）';
+    listEl.appendChild(h);
+    endedItems.forEach(ev => listEl.appendChild(buildCard(ev, true)));
+  }
 }
 
 function renderAllMode() {
