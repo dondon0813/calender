@@ -642,6 +642,36 @@
   }
   .sticker-name-input:focus { border-color: #7AAEEB; }
 
+  .sticker-size-select {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .sticker-size-label {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #8a7462;
+  }
+  .sticker-size-btn {
+    border: 2px solid #FFD9BB;
+    background: #FFF6EC;
+    color: #8a7462;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 800;
+    font-size: 12.5px;
+    border-radius: 999px;
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+  .sticker-size-btn.active {
+    background: #7AAEEB;
+    border-color: #7AAEEB;
+    color: #fff;
+  }
+
   #stickerPosterRoot {
     position: fixed;
     left: -99999px;
@@ -667,6 +697,9 @@
     gap: 6px 6px;
     width: 100%;
   }
+  .sticker-poster.size-large .sticker-grid {
+    gap: 10px 10px;
+  }
   .sticker-cell {
     display: flex;
     flex-direction: column;
@@ -689,6 +722,7 @@
     margin: 0 auto;
   }
   .sticker-icon-wrap.emoji { font-size: 26px; }
+  .sticker-poster.size-large .sticker-icon-wrap.emoji { font-size: 42px; }
   .sticker-name {
     flex: none;
     margin-top: 0;
@@ -702,6 +736,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .sticker-poster.size-large .sticker-name { font-size: 14px; }
   .sticker-footer {
     flex: none;
     text-align: center;
@@ -797,6 +832,11 @@
     <h2 class="sticker-modal-title">製作專屬姓名貼</h2>
     <p class="sticker-modal-desc">請輸入寶貝的姓名，會把清單上的每樣用品都印上姓名，方便沖印後直接貼上</p>
     <input type="text" id="stickerNameInput" class="sticker-name-input" maxlength="12" placeholder="例如：王小明">
+    <div class="sticker-size-select" id="stickerSizeSelect">
+      <span class="sticker-size-label">貼紙尺寸：</span>
+      <button type="button" class="sticker-size-btn active" data-size="small">小・24格</button>
+      <button type="button" class="sticker-size-btn" data-size="large">大・15格（約3x3公分）</button>
+    </div>
     <button class="action-btn" id="stickerGenerateConfirmBtn" style="width:100%; margin-top:14px;">🖼️ 產生姓名貼圖片</button>
   </div>
 </div>
@@ -1410,15 +1450,17 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('show');
 }
 
-// ===== 姓名貼（4x6 明信片，白底，固定 4欄x6排=24格，不足24個就輪迴填滿） =====
-const STICKER_GRID_COLS = 4;
-const STICKER_GRID_ROWS = 6;
-const STICKER_GRID_SLOTS = STICKER_GRID_COLS * STICKER_GRID_ROWS;
+// ===== 姓名貼（4x6 明信片，白底；小＝橫4x直6=24格；大＝橫3x直5=15格，每格約3x3公分，不足就輪迴填滿） =====
+let stickerSize = 'small'; // 'small' | 'large'
+const STICKER_GRID_CONFIG = {
+  small: { cols: 4, rows: 6 },
+  large: { cols: 3, rows: 5 }
+};
 
-function buildStickerItemSlots(items) {
+function buildStickerItemSlots(items, slotCount) {
   if (!items.length) return [];
   const slots = [];
-  for (let i = 0; i < STICKER_GRID_SLOTS; i++) {
+  for (let i = 0; i < slotCount; i++) {
     slots.push(items[i % items.length]);
   }
   return slots;
@@ -1429,12 +1471,21 @@ async function buildStickerPoster(name) {
   // 跟 A4 清單一樣：只排除打叉移除的項目
   const items = SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號']));
 
+  const posterEl = document.getElementById('stickerPoster');
   const gridEl = document.getElementById('stickerGrid');
   gridEl.innerHTML = '';
   if (!items.length) return false;
 
-  // 固定填滿 4 欄 x 6 排 = 24 格；選擇的品項不足 24 個就從頭輪迴重複，直到填滿
-  const slots = buildStickerItemSlots(items);
+  const cfg = STICKER_GRID_CONFIG[stickerSize] || STICKER_GRID_CONFIG.small;
+  const slotCount = cfg.cols * cfg.rows;
+
+  // 依尺寸切換版面：大尺寸格子變少變大，套上 size-large 讓圖示/姓名字級跟著放大
+  posterEl.classList.toggle('size-large', stickerSize === 'large');
+  gridEl.style.gridTemplateColumns = `repeat(${cfg.cols}, 1fr)`;
+  gridEl.style.gridTemplateRows = `repeat(${cfg.rows}, 1fr)`;
+
+  // 固定填滿格數；選擇的品項不足格數就從頭輪迴重複，直到填滿
+  const slots = buildStickerItemSlots(items, slotCount);
 
   const imgChecks = [];
 
@@ -1516,7 +1567,7 @@ async function generateNameStickerImage() {
       allowTaint: true
     });
 
-    // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底
+    // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底（大小尺寸的實際成品紙張大小相同，只是格數不同）
     const targetW = 384 * outputScale;
     const targetH = 576 * outputScale;
 
@@ -1545,8 +1596,9 @@ async function generateNameStickerImage() {
       const a = document.createElement('a');
       const now = new Date();
       const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      const sizeLabel = stickerSize === 'large' ? '大' : '小';
       a.href = url;
-      a.download = `姓名貼_${name}_${stamp}.png`;
+      a.download = `姓名貼_${sizeLabel}_${name}_${stamp}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1566,8 +1618,20 @@ document.getElementById('generateA4Btn').addEventListener('click', generateA4Ima
 document.getElementById('openStickerModalBtn').addEventListener('click', () => {
   const nameInput = document.getElementById('stickerNameInput');
   nameInput.value = '';
+  stickerSize = 'small';
+  document.querySelectorAll('#stickerSizeSelect .sticker-size-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.size === 'small');
+  });
   document.getElementById('stickerNameModal').classList.add('show');
   setTimeout(() => nameInput.focus(), 100);
+});
+document.querySelectorAll('#stickerSizeSelect .sticker-size-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    stickerSize = btn.dataset.size;
+    document.querySelectorAll('#stickerSizeSelect .sticker-size-btn').forEach(b => {
+      b.classList.toggle('active', b === btn);
+    });
+  });
 });
 document.getElementById('stickerGenerateConfirmBtn').addEventListener('click', generateNameStickerImage);
 document.getElementById('stickerNameInput').addEventListener('keydown', (e) => {
