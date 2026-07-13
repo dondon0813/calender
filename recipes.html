@@ -1752,10 +1752,47 @@ function ingredientFilterKeys(ing) {
   return raw.split('/').map(s => s.trim()).filter(Boolean);
 }
 
-// 顯示用的「主要」簡稱（例如食譜食材清單的標籤文字）：取第一個標籤
+// 顯示用的「主要」簡稱（例如食譜食材清單的標籤文字、品牌篩選圖磚的顯示名稱）：一律只取第一個標籤
+// 簡稱裡「/」後面接的其他別名（例如「小羔羊排/羊排」的「羊排」、「雞絞肉/絞肉」的「絞肉」），
+// 只用在搜尋比對（getRecipeIngredientKeys／文字搜尋 pool），不會拿來當作圖磚上顯示或可點選的獨立選項，
+// 這樣同一批品牌食材（例如各種絞肉、各種高湯）就不會被籠統的共用別名洗出重複/多餘的選項
 function ingredientFilterKey(ing) {
   const keys = ingredientFilterKeys(ing);
   return keys[0] || '';
+}
+
+// ===== 【新】食譜「大分類」篩選比對 =====
+// 食譜的「使用食材ID」欄位如果直接打分類詞（例如「蔬菜」），代表這道食譜可以彈性使用該分類
+// 底下的任何食材，所以使用者搜尋/篩選某個具體食材（例如「娃娃菜」）時，也要能找到這種食譜。
+// 分類詞清單直接沿用食材資料庫「分類」欄位實際會出現的值，不需要額外建立一筆假的「蔬菜」食材資料。
+const RESERVED_CATEGORY_WORDS = [
+  '蔬菜', '根莖類', '豆製品', '穀物', '菇類', '辛香料',
+  '肉類海鮮', '蛋類', '水果', '豆類穀物', '堅果乾貨',
+  '芝麻類', '調味料', '乳製品', '粉類', '其他'
+];
+
+// 建立「別名/食材名稱 -> 分類」對照表，同一別名有多筆資料時取第一筆對應到的分類就好
+function buildIngredientCategoryLookup_() {
+  const map = {};
+  INGREDIENTS.forEach(ing => {
+    ingredientFilterKeys(ing).forEach(key => {
+      if (key && !map[key]) map[key] = String(ing['分類'] || '').trim();
+    });
+    const name = String(ing['食材名稱'] || '').trim();
+    if (name && !map[name]) map[name] = String(ing['分類'] || '').trim();
+  });
+  return map;
+}
+
+// 判斷「食譜的篩選key清單」是否符合「使用者選擇的篩選詞 sel」：
+// 1. 精準比對：食譜清單裡本來就有 sel
+// 2. 分類比對：sel 對應到的分類本身是保留分類詞，而且食譜清單裡直接寫了這個分類詞
+//    （例如食譜打「蔬菜」，使用者選「娃娃菜」，娃娃菜的分類是「蔬菜」，兩者就算符合）
+function recipeKeysMatchSelection_(recipeKeys, sel, categoryLookup) {
+  if (recipeKeys.includes(sel)) return true;
+  const category = categoryLookup ? categoryLookup[sel] : '';
+  if (category && RESERVED_CATEGORY_WORDS.includes(category) && recipeKeys.includes(category)) return true;
+  return false;
 }
 
 // 支援「使用食材ID」欄位帶分量：格式為 ing001:50g/ing003:1包（冒號後面是分量，可省略）
@@ -1819,7 +1856,8 @@ function getRecipeIngredientKeys(recipe) {
     if (matches.length) {
       matches.forEach(m => ingredientFilterKeys(m).forEach(key => { if (key) set.add(key); }));
     } else {
-      // 資料庫完全對不到，直接用打的文字本身當標籤（跟一般食材篩選一致）
+      // 資料庫完全對不到，直接用打的文字本身當標籤（跟一般食材篩選一致；
+      // 這也是食譜直接打分類詞，例如「蔬菜」，會被原封不動放進這個清單的地方）
       set.add(idOrName);
     }
   });
@@ -1969,19 +2007,17 @@ function renderIngredientFilterTiles() {
     pool = RANDOM_BASIC_INGREDIENTS;
   }
 
-  // 每個簡稱只出現一顆圖磚（同一簡稱如果有多個品牌版本，圖磚點下去會走原本的品牌選擇彈窗）
-  // 【新】成品類（例如吐司、鬆餅）不套用「簡稱可拆多個別名」這個機制，只取第一個簡稱當單一代表圖磚，
-  // 避免像「南瓜吐司/吐司」這種簡稱把同一款成品拆成好幾顆圖磚；食材類維持原本可以拆多別名的行為
+  // 每個「食材項目」只出現一顆圖磚，一律只用簡稱的第一個當作顯示名稱／篩選key
+  // （簡稱裡「/」後面接的其他別名，例如「小羔羊排/羊排」的「羊排」、「雞絞肉/絞肉」的「絞肉」，
+  // 只用在搜尋比對——使用者在搜尋框直接打「羊排」「絞肉」還是找得到對應項目，但圖磚清單本身
+  // 不會多出這些籠統的別名選項，避免同一批品牌食材（各種絞肉、各種高湯）洗出重複/籠統的圖磚）
   const seenKeys = new Set();
   const tiles = [];
   pool.forEach(item => {
-    const itemType = (item['類型'] || '食材').trim();
-    const keys = itemType === '成品' ? [ingredientFilterKey(item)].filter(Boolean) : ingredientFilterKeys(item);
-    keys.forEach(key => {
-      if (!key || seenKeys.has(key)) return;
-      seenKeys.add(key);
-      tiles.push({ key, representative: item });
-    });
+    const key = ingredientFilterKey(item);
+    if (!key || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    tiles.push({ key, representative: item });
   });
 
   if (!tiles.length) {
@@ -2203,6 +2239,9 @@ function renderRecipes() {
   const titleEl = document.getElementById('recipeRecoTitle');
   grid.innerHTML = '';
 
+  // 分類對照表只需要在每次渲染時建立一次，不要放進 filter 的 callback 裡（會被每個食譜重複呼叫）
+  const categoryLookup = recSelectedIngredients.length ? buildIngredientCategoryLookup_() : null;
+
   let items = RECIPES.filter(r => {
     if (recSearchText) {
       if (!String(r['食譜名稱'] || '').includes(recSearchText)) return false;
@@ -2213,7 +2252,7 @@ function renderRecipes() {
     }
     if (recSelectedIngredients.length) {
       const keys = getRecipeIngredientKeys(r);
-      if (!recSelectedIngredients.every(sel => keys.includes(sel))) return false;
+      if (!recSelectedIngredients.every(sel => recipeKeysMatchSelection_(keys, sel, categoryLookup))) return false;
     }
     if (recSelectedAges.length) {
       if (!recSelectedAges.includes(r['適合月齡'])) return false;
