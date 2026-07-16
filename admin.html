@@ -3820,6 +3820,7 @@
 
       <label for="evTitleInput">標題</label>
       <input type="text" id="evTitleInput" placeholder="例如：林貝兒米餅 開團">
+      <div id="evBrandMatchInfo" style="display:none; margin-top:8px; background:#F0F6FF; border:1.5px solid #C9DEFB; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#4a7fb5; line-height:1.7;"></div>
 
       <label for="evColorInput">顏色（顯示全部列表中的底色）</label>
       <div class="ev-color-row">
@@ -4050,6 +4051,65 @@
   </div>
 </div>
 
+  <!-- ===== 廠商 新增／編輯 視窗 ===== -->
+<div class="modal-backdrop" id="vendorEditModal" onclick="if(event.target===this) closeVendorEditModal()">
+  <div class="modal-box" style="width:380px;">
+    <button class="modal-close" onclick="closeVendorEditModal()">✕</button>
+    <h3 id="vendorEditTitle">➕ 新增廠商</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="vendorNameInput">廠商名稱</label>
+      <input type="text" id="vendorNameInput" placeholder="例如：林貝兒股份有限公司">
+      <label for="vendorTypeSelect">廠商類型</label>
+      <select id="vendorTypeSelect">
+        <option value="廠商">廠商</option>
+        <option value="行銷公司">行銷公司</option>
+      </select>
+      <label for="vendorRemitMethodInput">匯款方式</label>
+      <input type="text" id="vendorRemitMethodInput" placeholder="銀行、戶名、帳號…">
+      <label for="vendorRemitRuleInput">請款／匯款規則</label>
+      <input type="text" id="vendorRemitRuleInput" placeholder="例如：月結30天、出貨後7天…">
+      <label for="vendorContactInput">廠商聯絡窗口</label>
+      <input type="text" id="vendorContactInput" placeholder="沒有品牌獨立窗口時使用">
+      <label for="vendorNoteInput">廠商備註</label>
+      <textarea id="vendorNoteInput" rows="3" placeholder="備註…"></textarea>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="vendorSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="vendorDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="vendorEditStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 品牌 新增／編輯 視窗 ===== -->
+<div class="modal-backdrop" id="brandEditModal" onclick="if(event.target===this) closeBrandEditModal()">
+  <div class="modal-box" style="width:380px;">
+    <button class="modal-close" onclick="closeBrandEditModal()">✕</button>
+    <h3 id="brandEditTitle">➕ 新增品牌</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="brandVendorSelect">所屬廠商</label>
+      <select id="brandVendorSelect"></select>
+      <label for="brandNameInput">品牌名稱（要跟排行事曆的團名完全一致才會自動比對到）</label>
+      <input type="text" id="brandNameInput" placeholder="例如：林貝兒">
+      <label for="brandImageInput">經典商品圖片網址</label>
+      <input type="text" id="brandImageInput" placeholder="貼上圖片網址（可放進圖片庫後複製網址）">
+      <label for="brandLineInput">LINE窗口</label>
+      <input type="text" id="brandLineInput" placeholder="LINE ID 或連結">
+      <label for="brandEmailInput">Email窗口</label>
+      <input type="text" id="brandEmailInput" placeholder="email 地址">
+      <label for="brandIgInput">IG窗口</label>
+      <input type="text" id="brandIgInput" placeholder="IG 帳號或連結">
+      <label for="brandNoteInput">品牌備註</label>
+      <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="brandSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="brandDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="brandEditStatus"></div>
+    </div>
+  </div>
+</div>
+  
 <!-- ===== 社群連結設定浮動視窗 ===== -->
 <div class="modal-backdrop" id="socialLinkModal" onclick="if(event.target===this) closeSocialLinkEditor()">
   <div class="modal-box" style="width:380px;">
