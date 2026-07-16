@@ -27,6 +27,9 @@ let myPermissions = {};            // 【新】目前登入者被開放的功能
 let allPermissions = {};           // 【新】（僅管理員拿得到）所有員工的權限狀態，給權限設定頁面用
 let customBlocks = [];             // 【新】開團狀態清單的自訂區塊（文字按鈕等）
 let socialLinks = {};              // 【新】品牌社群連結（IG／TikTok／FB／Email），顯示在現正開團中最上方
+let vendorDb = [];  // 【新】團購廠商資料庫（廠商/行銷公司）
+let brandDb = [];   // 【新】團購品牌資料庫（掛在廠商底下）
+
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
 const PR_STATUS_LIST = ['尚未選品', '選品中', '已選品', '已寄出', '已收到', '已拍攝'];
 const PR_STATUS_CLASS = {
@@ -1320,6 +1323,10 @@ async function fetchMemos() {
     updatePermissionUI();
     customBlocks = Array.isArray(data.customBlocks) ? data.customBlocks : [];
     socialLinks = data.socialLinks || {};
+    vendorDb = Array.isArray(data.vendorDb) ? data.vendorDb : [];
+    brandDb = Array.isArray(data.brandDb) ? data.brandDb : [];
+    if (currentView === 'brandVendor') renderBrandVendorView();
+    
     renderGroupStatusList('groupStatusList');
     renderGroupStatusList('calGroupList');
     todoCategories = Array.isArray(data.todoCategories) ? data.todoCategories : [];
@@ -1682,6 +1689,9 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
   setEventIconButtons(ev);
+  document.getElementById('evBrandMatchInfo').style.display = 'none';
+  document.getElementById('evBrandMatchInfo').innerHTML = '';
+  if (!isNew) setTimeout(renderEvBrandMatchInfo, 0);
 
   // 每次打開都先收合「更多設定」，畫面維持乾淨
   document.getElementById('evMoreToggle').classList.remove('open');
@@ -1943,7 +1953,7 @@ function switchView(name) {
     return;
   }
   currentView = name;
-  const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator' };
+const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
   Object.entries(map).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('active', key === name);
@@ -1966,6 +1976,7 @@ function switchView(name) {
   if (name === 'groupStatus') renderGroupStatusList('groupStatusList');
   if (name === 'lotteryTool') renderLotteryWinnerList();
   if (name === 'imageLibrary') { ilLoadFolderOptions().then(() => ilLoad()); }
+  if (name === 'brandVendor') renderBrandVendorView();
 }
 
 document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
@@ -5430,4 +5441,253 @@ document.getElementById('blkDeleteBtn').addEventListener('click', async () => {
     setFormStatus('blkEditStatus', '刪除失敗：' + err.message, 'error');
   }
   btn.disabled = false;
+});
+
+// ===== 【新】團購廠商／品牌資料庫管理 =====
+
+function vendorNameById_(id) {
+  const v = vendorDb.find(x => x.id === id);
+  return v ? v.name : '';
+}
+
+function renderBrandVendorView() {
+  renderVendorDbList();
+  renderBrandDbList();
+}
+
+function renderVendorDbList() {
+  const el = document.getElementById('vendorDbList');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!vendorDb.length) {
+    el.innerHTML = '<div class="task-empty">還沒有廠商資料，點上面「＋新增廠商」開始建立吧</div>';
+    return;
+  }
+  vendorDb.forEach(v => {
+    const brandCount = brandDb.filter(b => b.vendorId === v.id).length;
+    const row = document.createElement('div');
+    row.className = 'cal-edit-day-row';
+    row.innerHTML =
+      `<span class="cal-edit-day-swatch" style="background:#7AAEEB;"></span>` +
+      `<span class="cal-edit-day-row-name">${escHtml(v.id)}　${escHtml(v.name)}${v.type ? '（' + escHtml(v.type) + '）' : ''}</span>` +
+      `<span class="cal-edit-day-row-tag">${brandCount} 個品牌</span>`;
+    row.addEventListener('click', () => openVendorEditModal(v));
+    el.appendChild(row);
+  });
+}
+
+function renderBrandDbList() {
+  const el = document.getElementById('brandDbList');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!brandDb.length) {
+    el.innerHTML = '<div class="task-empty">還沒有品牌資料，點上面「＋新增品牌」開始建立吧</div>';
+    return;
+  }
+  brandDb.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'cal-edit-day-row';
+    const vendorName = vendorNameById_(b.vendorId);
+    row.innerHTML =
+      `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
+      `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>`;
+    row.addEventListener('click', () => openBrandEditModal(b));
+    el.appendChild(row);
+  });
+}
+
+let vendorEditCtx = null;
+
+function openVendorEditModal(vendor) {
+  vendorEditCtx = { isNew: !vendor, vendor };
+  document.getElementById('vendorEditTitle').textContent = vendor ? '✏️ 編輯廠商' : '➕ 新增廠商';
+  document.getElementById('vendorDeleteBtn').style.display = vendor ? 'inline-block' : 'none';
+  setFormStatus('vendorEditStatus', '', '');
+  document.getElementById('vendorNameInput').value = vendor ? vendor.name : '';
+  document.getElementById('vendorTypeSelect').value = vendor ? (vendor.type || '廠商') : '廠商';
+  document.getElementById('vendorRemitMethodInput').value = vendor ? vendor.remittanceMethod : '';
+  document.getElementById('vendorRemitRuleInput').value = vendor ? vendor.remittanceRule : '';
+  document.getElementById('vendorContactInput').value = vendor ? vendor.contact : '';
+  document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
+  document.getElementById('vendorEditModal').classList.add('show');
+}
+function closeVendorEditModal() {
+  document.getElementById('vendorEditModal').classList.remove('show');
+  vendorEditCtx = null;
+}
+document.getElementById('vendorSaveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('vendorNameInput').value.trim();
+  if (!name) { setFormStatus('vendorEditStatus', '請輸入廠商名稱', 'error'); return; }
+  const payload = {
+    name,
+    vendorType: document.getElementById('vendorTypeSelect').value,
+    remittanceMethod: document.getElementById('vendorRemitMethodInput').value.trim(),
+    remittanceRule: document.getElementById('vendorRemitRuleInput').value.trim(),
+    contact: document.getElementById('vendorContactInput').value.trim(),
+    note: document.getElementById('vendorNoteInput').value.trim()
+  };
+  const btn = document.getElementById('vendorSaveBtn');
+  btn.disabled = true;
+  setFormStatus('vendorEditStatus', '儲存中…', '');
+  try {
+    if (vendorEditCtx.isNew) {
+      await postTask(Object.assign({ type: 'vendor-db-add' }, payload));
+    } else {
+      await postTask(Object.assign({ type: 'vendor-db-update', id: vendorEditCtx.vendor.id }, payload));
+    }
+    closeVendorEditModal();
+    await fetchMemos();
+  } catch (err) {
+    setFormStatus('vendorEditStatus', '儲存失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+document.getElementById('vendorDeleteBtn').addEventListener('click', async () => {
+  if (!vendorEditCtx || vendorEditCtx.isNew) return;
+  if (!confirm('確定要刪除「' + vendorEditCtx.vendor.name + '」這個廠商嗎？底下的品牌不會被刪除，只會解除連結')) return;
+  const btn = document.getElementById('vendorDeleteBtn');
+  btn.disabled = true;
+  setFormStatus('vendorEditStatus', '刪除中…', '');
+  try {
+    await postTask({ type: 'vendor-db-delete', id: vendorEditCtx.vendor.id });
+    closeVendorEditModal();
+    await fetchMemos();
+  } catch (err) {
+    setFormStatus('vendorEditStatus', '刪除失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+
+let brandEditCtx = null;
+
+function fillVendorSelect(selectEl, currentId) {
+  selectEl.innerHTML = '<option value="">（不指定廠商）</option>';
+  vendorDb.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.id;
+    opt.textContent = v.id + '　' + v.name;
+    selectEl.appendChild(opt);
+  });
+  selectEl.value = currentId || '';
+}
+
+function openBrandEditModal(brand) {
+  brandEditCtx = { isNew: !brand, brand };
+  document.getElementById('brandEditTitle').textContent = brand ? '✏️ 編輯品牌' : '➕ 新增品牌';
+  document.getElementById('brandDeleteBtn').style.display = brand ? 'inline-block' : 'none';
+  setFormStatus('brandEditStatus', '', '');
+  fillVendorSelect(document.getElementById('brandVendorSelect'), brand ? brand.vendorId : '');
+  document.getElementById('brandNameInput').value = brand ? brand.name : '';
+  document.getElementById('brandImageInput').value = brand ? brand.imageUrl : '';
+  document.getElementById('brandLineInput').value = brand ? brand.lineContact : '';
+  document.getElementById('brandEmailInput').value = brand ? brand.emailContact : '';
+  document.getElementById('brandIgInput').value = brand ? brand.igContact : '';
+  document.getElementById('brandNoteInput').value = brand ? brand.note : '';
+  document.getElementById('brandEditModal').classList.add('show');
+}
+function closeBrandEditModal() {
+  document.getElementById('brandEditModal').classList.remove('show');
+  brandEditCtx = null;
+}
+document.getElementById('brandSaveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('brandNameInput').value.trim();
+  if (!name) { setFormStatus('brandEditStatus', '請輸入品牌名稱', 'error'); return; }
+  const payload = {
+    vendorId: document.getElementById('brandVendorSelect').value,
+    name,
+    imageUrl: document.getElementById('brandImageInput').value.trim(),
+    lineContact: document.getElementById('brandLineInput').value.trim(),
+    emailContact: document.getElementById('brandEmailInput').value.trim(),
+    igContact: document.getElementById('brandIgInput').value.trim(),
+    note: document.getElementById('brandNoteInput').value.trim()
+  };
+  const btn = document.getElementById('brandSaveBtn');
+  btn.disabled = true;
+  setFormStatus('brandEditStatus', '儲存中…', '');
+  try {
+    if (brandEditCtx.isNew) {
+      await postTask(Object.assign({ type: 'brand-db-add' }, payload));
+    } else {
+      await postTask(Object.assign({ type: 'brand-db-update', id: brandEditCtx.brand.id }, payload));
+    }
+    closeBrandEditModal();
+    await fetchMemos();
+  } catch (err) {
+    setFormStatus('brandEditStatus', '儲存失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+document.getElementById('brandDeleteBtn').addEventListener('click', async () => {
+  if (!brandEditCtx || brandEditCtx.isNew) return;
+  if (!confirm('確定要刪除「' + brandEditCtx.brand.name + '」這個品牌嗎？')) return;
+  const btn = document.getElementById('brandDeleteBtn');
+  btn.disabled = true;
+  setFormStatus('brandEditStatus', '刪除中…', '');
+  try {
+    await postTask({ type: 'brand-db-delete', id: brandEditCtx.brand.id });
+    closeBrandEditModal();
+    await fetchMemos();
+  } catch (err) {
+    setFormStatus('brandEditStatus', '刪除失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+document.getElementById('vendorDbAddBtn').addEventListener('click', () => openVendorEditModal(null));
+document.getElementById('brandDbAddBtn').addEventListener('click', () => openBrandEditModal(null));
+
+// ===== 【新】排行事曆時：團名跟品牌資料庫完全比對，自動帶出參考資訊 =====
+function findGroupBuyDatesForBrand_(brandName, excludeEventId) {
+  return allEvents
+    .filter(ev => ev.title === brandName && ev.id !== excludeEventId)
+    .sort((a, b) => b.start - a.start)
+    .slice(0, 8);
+}
+
+function renderEvBrandMatchInfo() {
+  const box = document.getElementById('evBrandMatchInfo');
+  if (!box) return;
+  const title = document.getElementById('evTitleInput').value.trim();
+  const excludeId = eventEditCtx && !eventEditCtx.isNew ? eventEditCtx.ev.id : null;
+
+  if (!title) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const brand = brandDb.find(b => b.name.trim() === title);
+  if (!brand) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  const vendor = brand.vendorId ? vendorDb.find(v => v.id === brand.vendorId) : null;
+  const pastDates = findGroupBuyDatesForBrand_(title, excludeId);
+
+  let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
+  const lines = [];
+  if (brand.lineContact) lines.push('LINE窗口：' + brand.lineContact);
+  if (brand.emailContact) lines.push('Email窗口：' + brand.emailContact);
+  if (brand.igContact) lines.push('IG窗口：' + brand.igContact);
+  if (vendor) {
+    lines.push('所屬廠商：' + vendor.name + (vendor.type ? '（' + vendor.type + '）' : ''));
+    if (vendor.remittanceMethod) lines.push('匯款方式：' + vendor.remittanceMethod);
+    if (vendor.remittanceRule) lines.push('請款規則：' + vendor.remittanceRule);
+    if (vendor.contact) lines.push('廠商窗口：' + vendor.contact);
+  }
+  if (brand.note) lines.push('品牌備註：' + brand.note);
+  if (lines.length) html += lines.map(l => escHtml(l)).join('<br>');
+  if (pastDates.length) {
+    html += '<div style="margin-top:6px;">🗓 過去開團日期：' +
+      pastDates.map(ev => fmtSingleDate(ev.start) + '–' + fmtSingleDate(ev.displayEnd)).join('、') + '</div>';
+  }
+
+  if (brand.igContact) {
+    const btnIg = document.getElementById('evIconRow') ? document.getElementById('evIconRow').querySelector('[data-key="iconIg"]') : null;
+    if (btnIg && !evIconValues.iconIg) {
+      evIconValues.iconIg = brand.igContact;
+      btnIg.classList.add('set');
+      html += '<div style="margin-top:6px; color:#5C9147;">✅ 已自動帶入 IG 圖示網址（可在「更多設定」裡手動修改）</div>';
+    }
+  }
+
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+document.getElementById('evTitleInput').addEventListener('input', () => {
+  clearTimeout(window._evBrandMatchTimer);
+  window._evBrandMatchTimer = setTimeout(renderEvBrandMatchInfo, 300);
 });
