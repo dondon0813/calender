@@ -3050,6 +3050,7 @@
           <button class="menu-item" data-view="memo">📝 備忘錄</button>
           <button class="menu-item" data-view="todoList">🗒️ 待辦事項</button>
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
+          <button class="menu-item" data-view="brandVendor">🏢 品牌廠商</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -3221,6 +3222,29 @@
     </div>
     <div class="group-list" id="groupStatusList"></div>
   </div>
+
+  <!-- ===== 品牌廠商管理 ===== -->
+  <div class="view" id="viewBrandVendor">
+    <h2 class="view-title">品牌廠商管理</h2>
+
+    <div style="text-align:center; margin-bottom:10px;"><span class="task-section-title">🏭 廠商</span></div>
+    <div style="text-align:center; margin-bottom:10px;">
+      <button class="task-mini-btn" id="vendorDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增廠商</button>
+    </div>
+    <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
+      <div id="vendorDbList"></div>
+    </div>
+
+    <div style="text-align:center; margin:22px 0 10px;"><span class="task-section-title">🏷 品牌</span></div>
+    <div style="text-align:center; margin-bottom:10px;">
+      <button class="task-mini-btn" id="brandDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增品牌</button>
+    </div>
+    <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
+      <div id="brandDbList"></div>
+    </div>
+  </div>
+
+</parameter>
   
   <!-- ===== 待辦事項 ===== -->
   <div class="view" id="viewTodoList">
