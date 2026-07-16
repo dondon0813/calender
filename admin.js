@@ -841,7 +841,7 @@ function renderGroupStatusList(targetId) {
   });
 
   closingItems.sort((a, b) => a.displayEnd - b.displayEnd);
-  activeItems.sort((a, b) => a.displayEnd - b.displayEnd);
+  activeItems.sort((a, b) => b.start - a.start);
 
   const buildCard = (ev, grayOut) => {
     const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
