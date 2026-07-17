@@ -714,7 +714,7 @@ function getBrandDbSheet_() {
   let sheet = ss.getSheetByName(BRAND_DB_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(BRAND_DB_SHEET_NAME);
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '經典商品圖片網址', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間']);
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '經典商品圖片網址', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -821,7 +821,9 @@ function getBrandDbList_() {
       igContact: String(row[6] || ''),
       note: String(row[7] || ''),
       created: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
-      updated: row[9] instanceof Date ? fmtDateTime_(row[9]) : String(row[9] || '')
+      updated: row[9] instanceof Date ? fmtDateTime_(row[9]) : String(row[9] || ''),
+      showInRecipe: String(row[10] || '').trim() === '是',
+      intro: String(row[11] || '')
     });
   }
   return list;
@@ -840,7 +842,9 @@ function addBrandDb_(fields) {
     fields.emailContact || '',
     fields.igContact || '',
     fields.note || '',
-    now, now
+    now, now,
+    fields.showInRecipe || '',
+    fields.intro || ''
   ]);
   return id;
 }
@@ -857,6 +861,8 @@ function updateBrandDb_(id, fields) {
   setIf(6, fields.emailContact);
   setIf(7, fields.igContact);
   setIf(8, fields.note);
+  setIf(11, fields.showInRecipe);
+  setIf(12, fields.intro);
   sheet.getRange(row, 10).setValue(new Date());
   return true;
 }
@@ -1655,8 +1661,14 @@ function doGet(e) {
     return jsonResult_(getEventsAsGviz_());
   }
 
+  // 前台食材/食譜頁的品牌篩選＋品牌介紹：改由「團購品牌資料庫」勾選「顯示於食材食譜=是」的品牌提供。
+  // ⚠️ 這是免登入公開範圍，只輸出「品牌名稱／品牌介紹」兩欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
+  const publicBrands = getBrandDbList_()
+    .filter(b => b.showInRecipe && b.name)
+    .map(b => ({ '品牌名稱': b.name, '品牌介紹': b.intro }));
+
   const publicResult = {
-    brands: sheetRowsAsObjects_(BRAND_SHEET_NAME),
+    brands: publicBrands,
     ingredients: getMergedIngredientsAndProducts_(),
     recipes: sheetRowsAsObjects_(RECIPE_SHEET_NAME),
     schoolList: sheetRowsAsObjects_(SCHOOL_LIST_SHEET_NAME),
@@ -1863,7 +1875,9 @@ function doPost(e) {
         lineContact: String(body.lineContact || ''),
         emailContact: String(body.emailContact || ''),
         igContact: String(body.igContact || ''),
-        note: String(body.note || '')
+        note: String(body.note || ''),
+        showInRecipe: body.showInRecipe ? '是' : '',
+        intro: String(body.intro || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -1878,6 +1892,8 @@ function doPost(e) {
       if (body.emailContact !== undefined) fields.emailContact = String(body.emailContact);
       if (body.igContact !== undefined) fields.igContact = String(body.igContact);
       if (body.note !== undefined) fields.note = String(body.note);
+      if (body.showInRecipe !== undefined) fields.showInRecipe = body.showInRecipe ? '是' : '';
+      if (body.intro !== undefined) fields.intro = String(body.intro);
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }

@@ -5584,6 +5584,8 @@ function openBrandEditModal(brand) {
   document.getElementById('brandEmailInput').value = brand ? brand.emailContact : '';
   document.getElementById('brandIgInput').value = brand ? brand.igContact : '';
   document.getElementById('brandNoteInput').value = brand ? brand.note : '';
+  document.getElementById('brandShowInRecipeInput').checked = brand ? !!brand.showInRecipe : false;
+  document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
   document.getElementById('brandEditModal').classList.add('show');
 }
 function closeBrandEditModal() {
@@ -5600,7 +5602,9 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     lineContact: document.getElementById('brandLineInput').value.trim(),
     emailContact: document.getElementById('brandEmailInput').value.trim(),
     igContact: document.getElementById('brandIgInput').value.trim(),
-    note: document.getElementById('brandNoteInput').value.trim()
+    note: document.getElementById('brandNoteInput').value.trim(),
+    showInRecipe: document.getElementById('brandShowInRecipeInput').checked,
+    intro: document.getElementById('brandIntroInput').value.trim()
   };
   const btn = document.getElementById('brandSaveBtn');
   btn.disabled = true;

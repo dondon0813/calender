@@ -4099,6 +4099,12 @@
       <input type="text" id="brandIgInput" placeholder="IG 帳號或連結">
       <label for="brandNoteInput">品牌備註</label>
       <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
+        <input type="checkbox" id="brandShowInRecipeInput" style="width:auto; margin:0;">
+        顯示於食材／食譜頁（勾選後這個品牌會出現在前台食材/食譜的品牌篩選）
+      </label>
+      <label for="brandIntroInput">品牌介紹（顯示在前台食材頁的品牌介紹卡，可留空）</label>
+      <textarea id="brandIntroInput" rows="3" placeholder="這個品牌的介紹文字…"></textarea>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="brandSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="brandDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
