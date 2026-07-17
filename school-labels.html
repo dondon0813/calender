@@ -278,7 +278,8 @@ function effectiveEnd(end, extendRaw) {
 
 // 從行事曆找 B21 團購，回傳「現在開團中」那一場的網址，沒有就回傳 null
 async function findOpenGroupUrl() {
-  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
+  const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
   const text = await res.text();
   const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
   const rows = json.table.rows || [];

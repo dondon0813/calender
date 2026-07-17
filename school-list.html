@@ -948,7 +948,8 @@ function computeDisplayEnd(end, extend) {
 }
 
 async function loadCalendar() {
-  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
+  const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
   const text = await res.text();
   const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
   const data = JSON.parse(jsonStr);
@@ -962,19 +963,28 @@ async function loadCalendar() {
     const extendRaw = c[3] ? c[3].v : null;
     const title = c[4] ? c[4].v : '';
     const url = c[7] ? c[7].v : '';
+    // V欄(idx21)「對應品項」：空白=一般團（對品牌所有品項）；有填=特殊團（只對填的品項），可用｜分隔多個
+    // 註：J~U(idx9~20)後台admin.js已使用（早鳥禮/食譜品牌/顏色/整日/時間/團購/顯示/社群圖示），故用admin不會碰的V欄
+    const itemsRaw = c[21] ? c[21].v : '';
+    const items = String(itemsRaw || '').split(/[|｜、,，]/).map(s => s.trim()).filter(Boolean);
     const start = parseDateStr(startRaw);
     const end = parseDateStr(endRaw);
     if (!start || !end || !title) return;
     const extend = parseExtendRaw(extendRaw);
     const displayEnd = computeDisplayEnd(end, extend);
-    events.push({ title, start, displayEnd, url });
+    events.push({ title, start, displayEnd, url, items });
   });
   CALENDAR_EVENTS = events;
 }
 
-function getBrandStatus(brandName) {
+function getBrandStatus(brandName, itemName) {
   const today = startOfDay(new Date());
-  const matches = CALENDAR_EVENTS.filter(ev => ev.title.includes(brandName));
+  const matches = CALENDAR_EVENTS.filter(ev => {
+    if (!ev.title.includes(brandName)) return false;
+    // 一般團（J欄空白）：對品牌所有品項都算；特殊團（J欄有填）：只對填寫的品項算
+    if (!ev.items || ev.items.length === 0) return true;
+    return ev.items.includes(itemName);
+  });
   const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
   if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url };
   const future = matches
@@ -1236,7 +1246,7 @@ function openSchoolItemModal(item) {
       const hasOwnShopeeLink = shopeeLinks[idx] && isValidUrl(shopeeLinks[idx]);
       const shopeeUrl = hasOwnShopeeLink ? shopeeLinks[idx] : '';
       const note = brandNotes[idx] || '';
-      const status = getBrandStatus(brand);
+      const status = getBrandStatus(brand, String(item['項目名稱'] || '').trim());
 
       const block = document.createElement('div');
       block.className = 'school-brand-block';

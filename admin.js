@@ -271,7 +271,8 @@ async function loadData() {
   statusEl.textContent = '資料載入中…';
   statusEl.classList.remove('error');
   try {
-    const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+    // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('網路錯誤 ' + res.status);
     const text = await res.text();
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);

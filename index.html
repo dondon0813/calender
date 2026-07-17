@@ -996,7 +996,8 @@ async function loadData() {
   statusEl.textContent = '資料載入中…';
   statusEl.classList.remove('error');
   try {
-    const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+    // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
+    const res = await fetch(STATS_BACKEND_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('網路錯誤 ' + res.status);
     const text = await res.text();
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
@@ -1044,7 +1045,7 @@ async function loadData() {
     populateMonthSelect();
     render();
   } catch (err) {
-    statusEl.textContent = '讀取試算表失敗，請確認試算表已設定「知道連結的人可檢視」。(' + err.message + ')';
+    statusEl.textContent = '讀取行事曆失敗，請確認 Apps Script 已重新部署且可正常存取。(' + err.message + ')';
     statusEl.classList.add('error');
   }
 }

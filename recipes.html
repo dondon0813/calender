@@ -1675,7 +1675,8 @@ async function loadRecipeDb() {
 }
 
 async function loadCalendar() {
-  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
+  const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
   const text = await res.text();
   const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
   const data = JSON.parse(jsonStr);
