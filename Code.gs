@@ -987,6 +987,40 @@ function importBrandsFromCalendar() {
   return { added: added, skipped: skipped, noVendor: noVendor };
 }
 
+// ===== 品牌去背小圖：把 GitHub 上的圖片網址寫進「團購品牌資料庫」的「去背小圖」欄 =====
+// 圖片放在 repo 的 images/brands/，push 之後執行 updateBrandThumbs() 即可，不必手動貼網址。
+// 要加新品牌圖片：把圖片放進 images/brands/、在下面這張表加一行、重新部署後再跑一次。
+var BRAND_THUMB_BASE_ = 'https://dondon0813.github.io/calender/images/brands/';
+var BRAND_THUMB_MAP_ = {
+  '寶可樂收袋': 'haru-bag.webp',
+  'UBMOM': 'ubmom.webp',
+  'Wewee!': 'wewee.webp',
+  'Picaboo': 'picaboo.webp',
+  'Aribebe': 'aribebe.webp',
+  '伯尼寢具': 'bernie.webp'
+};
+
+function updateBrandThumbs() {
+  var brands = getBrandDbList_();
+  var byName = {};
+  brands.forEach(function (b) { byName[b.name.trim()] = b; });
+
+  var updated = [], missing = [], unchanged = [];
+  Object.keys(BRAND_THUMB_MAP_).forEach(function (name) {
+    var brand = byName[name];
+    if (!brand) { missing.push(name); return; }
+    var url = BRAND_THUMB_BASE_ + BRAND_THUMB_MAP_[name];
+    if (brand.thumbUrl === url) { unchanged.push(name); return; }
+    updateBrandDb_(brand.id, { thumbUrl: url });
+    updated.push(name);
+  });
+
+  Logger.log('已更新 ' + updated.length + ' 個品牌的去背小圖：' + updated.join('、'));
+  if (unchanged.length) Logger.log('網址相同、略過 ' + unchanged.length + ' 個：' + unchanged.join('、'));
+  if (missing.length) Logger.log('⚠ 品牌資料庫裡找不到這些品牌，請先執行 importBrandsFromCalendar()：' + missing.join('、'));
+  return { updated: updated, unchanged: unchanged, missing: missing };
+}
+
 function findBrandDbByExactName_(name) {
   const target = String(name || '').trim();
   if (!target) return null;
