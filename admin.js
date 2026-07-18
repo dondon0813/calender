@@ -5451,6 +5451,11 @@ function vendorNameById_(id) {
   return v ? v.name : '';
 }
 
+// 品牌可對應多家廠商，回傳「甲、乙」這樣的字串
+function vendorNamesOf_(brand) {
+  return (brand.vendorIds || []).map(vendorNameById_).filter(Boolean).join('、');
+}
+
 function renderBrandVendorView() {
   renderVendorDbList();
   renderBrandDbList();
@@ -5465,7 +5470,7 @@ function renderVendorDbList() {
     return;
   }
   vendorDb.forEach(v => {
-    const brandCount = brandDb.filter(b => b.vendorId === v.id).length;
+    const brandCount = brandDb.filter(b => (b.vendorIds || []).indexOf(v.id) !== -1).length;
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
     row.innerHTML =
@@ -5488,7 +5493,7 @@ function renderBrandDbList() {
   brandDb.forEach(b => {
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
-    const vendorName = vendorNameById_(b.vendorId);
+    const vendorName = vendorNamesOf_(b);
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
       `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>`;
@@ -5561,15 +5566,21 @@ document.getElementById('vendorDeleteBtn').addEventListener('click', async () =>
 
 let brandEditCtx = null;
 
-function fillVendorSelect(selectEl, currentId) {
-  selectEl.innerHTML = '<option value="">（不指定廠商）</option>';
+// 複選版：currentIds 是陣列。不選＝不指定廠商
+function fillVendorSelect(selectEl, currentIds) {
+  const selected = currentIds || [];
+  selectEl.innerHTML = '';
   vendorDb.forEach(v => {
     const opt = document.createElement('option');
     opt.value = v.id;
     opt.textContent = v.id + '　' + v.name;
+    opt.selected = selected.indexOf(v.id) !== -1;
     selectEl.appendChild(opt);
   });
-  selectEl.value = currentId || '';
+}
+
+function getSelectedVendorIds(selectEl) {
+  return Array.from(selectEl.selectedOptions).map(o => o.value).filter(Boolean);
 }
 
 function openBrandEditModal(brand) {
@@ -5577,9 +5588,10 @@ function openBrandEditModal(brand) {
   document.getElementById('brandEditTitle').textContent = brand ? '✏️ 編輯品牌' : '➕ 新增品牌';
   document.getElementById('brandDeleteBtn').style.display = brand ? 'inline-block' : 'none';
   setFormStatus('brandEditStatus', '', '');
-  fillVendorSelect(document.getElementById('brandVendorSelect'), brand ? brand.vendorId : '');
+  fillVendorSelect(document.getElementById('brandVendorSelect'), brand ? brand.vendorIds : []);
   document.getElementById('brandNameInput').value = brand ? brand.name : '';
-  document.getElementById('brandImageInput').value = brand ? brand.imageUrl : '';
+  document.getElementById('brandThumbInput').value = brand ? (brand.thumbUrl || '') : '';
+  document.getElementById('brandBrandImageInput').value = brand ? (brand.brandImageUrl || '') : '';
   document.getElementById('brandLineInput').value = brand ? brand.lineContact : '';
   document.getElementById('brandEmailInput').value = brand ? brand.emailContact : '';
   document.getElementById('brandIgInput').value = brand ? brand.igContact : '';
@@ -5596,9 +5608,10 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
   const name = document.getElementById('brandNameInput').value.trim();
   if (!name) { setFormStatus('brandEditStatus', '請輸入品牌名稱', 'error'); return; }
   const payload = {
-    vendorId: document.getElementById('brandVendorSelect').value,
+    vendorIds: getSelectedVendorIds(document.getElementById('brandVendorSelect')),
     name,
-    imageUrl: document.getElementById('brandImageInput').value.trim(),
+    thumbUrl: document.getElementById('brandThumbInput').value.trim(),
+    brandImageUrl: document.getElementById('brandBrandImageInput').value.trim(),
     lineContact: document.getElementById('brandLineInput').value.trim(),
     emailContact: document.getElementById('brandEmailInput').value.trim(),
     igContact: document.getElementById('brandIgInput').value.trim(),
@@ -5658,7 +5671,7 @@ function renderEvBrandMatchInfo() {
   const brand = brandDb.find(b => b.name.trim() === title);
   if (!brand) { box.style.display = 'none'; box.innerHTML = ''; return; }
 
-  const vendor = brand.vendorId ? vendorDb.find(v => v.id === brand.vendorId) : null;
+  const vendors = (brand.vendorIds || []).map(vid => vendorDb.find(v => v.id === vid)).filter(Boolean);
   const pastDates = findGroupBuyDatesForBrand_(title, excludeId);
 
   let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
@@ -5666,12 +5679,13 @@ function renderEvBrandMatchInfo() {
   if (brand.lineContact) lines.push('LINE窗口：' + brand.lineContact);
   if (brand.emailContact) lines.push('Email窗口：' + brand.emailContact);
   if (brand.igContact) lines.push('IG窗口：' + brand.igContact);
-  if (vendor) {
+  vendors.forEach(vendor => {
+    const prefix = vendors.length > 1 ? '［' + vendor.name + '］' : '';
     lines.push('所屬廠商：' + vendor.name + (vendor.type ? '（' + vendor.type + '）' : ''));
-    if (vendor.remittanceMethod) lines.push('匯款方式：' + vendor.remittanceMethod);
-    if (vendor.remittanceRule) lines.push('請款規則：' + vendor.remittanceRule);
-    if (vendor.contact) lines.push('廠商窗口：' + vendor.contact);
-  }
+    if (vendor.remittanceMethod) lines.push(prefix + '匯款方式：' + vendor.remittanceMethod);
+    if (vendor.remittanceRule) lines.push(prefix + '請款規則：' + vendor.remittanceRule);
+    if (vendor.contact) lines.push(prefix + '廠商窗口：' + vendor.contact);
+  });
   if (brand.note) lines.push('品牌備註：' + brand.note);
   if (lines.length) html += lines.map(l => escHtml(l)).join('<br>');
   if (pastDates.length) {

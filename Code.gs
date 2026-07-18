@@ -714,7 +714,8 @@ function getBrandDbSheet_() {
   let sheet = ss.getSheetByName(BRAND_DB_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(BRAND_DB_SHEET_NAME);
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '經典商品圖片網址', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹']);
+    // 所屬廠商ID 可填多個，用逗號分隔（例：V001,V004）——同品牌跟不同廠商開不同聯名款
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -804,6 +805,11 @@ function deleteVendorDb_(id) {
   return true;
 }
 
+// 「V001,V004」→ ['V001','V004']；空字串→[]
+function splitIds_(val) {
+  return String(val || '').split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+}
+
 function getBrandDbList_() {
   const sheet = getBrandDbSheet_();
   const data = sheet.getDataRange().getValues();
@@ -813,9 +819,9 @@ function getBrandDbList_() {
     if (!row[0]) continue;
     list.push({
       id: String(row[0]),
-      vendorId: String(row[1] || ''),
+      vendorIds: splitIds_(row[1]),
       name: String(row[2] || ''),
-      imageUrl: String(row[3] || ''),
+      thumbUrl: String(row[3] || ''),   // 去背小圖（品牌預設，行事曆該檔可覆寫）
       lineContact: String(row[4] || ''),
       emailContact: String(row[5] || ''),
       igContact: String(row[6] || ''),
@@ -823,7 +829,8 @@ function getBrandDbList_() {
       created: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
       updated: row[9] instanceof Date ? fmtDateTime_(row[9]) : String(row[9] || ''),
       showInRecipe: String(row[10] || '').trim() === '是',
-      intro: String(row[11] || '')
+      intro: String(row[11] || ''),
+      brandImageUrl: String(row[12] || '')  // 品牌圖片（大合照／介紹頁用）
     });
   }
   return list;
@@ -835,16 +842,17 @@ function addBrandDb_(fields) {
   const now = new Date();
   sheet.appendRow([
     id,
-    fields.vendorId || '',
+    (fields.vendorIds || []).join(','),
     fields.name || '',
-    fields.imageUrl || '',
+    fields.thumbUrl || '',
     fields.lineContact || '',
     fields.emailContact || '',
     fields.igContact || '',
     fields.note || '',
     now, now,
     fields.showInRecipe || '',
-    fields.intro || ''
+    fields.intro || '',
+    fields.brandImageUrl || ''
   ]);
   return id;
 }
@@ -854,15 +862,16 @@ function updateBrandDb_(id, fields) {
   const row = findDbRowById_(sheet, id);
   if (row === -1) return false;
   const setIf = (col, val) => { if (val !== undefined) sheet.getRange(row, col).setValue(val); };
-  setIf(2, fields.vendorId);
+  if (fields.vendorIds !== undefined) sheet.getRange(row, 2).setValue(fields.vendorIds.join(','));
   setIf(3, fields.name);
-  setIf(4, fields.imageUrl);
+  setIf(4, fields.thumbUrl);
   setIf(5, fields.lineContact);
   setIf(6, fields.emailContact);
   setIf(7, fields.igContact);
   setIf(8, fields.note);
   setIf(11, fields.showInRecipe);
   setIf(12, fields.intro);
+  setIf(13, fields.brandImageUrl);
   sheet.getRange(row, 10).setValue(new Date());
   return true;
 }
@@ -875,13 +884,119 @@ function deleteBrandDb_(id) {
   return true;
 }
 
+// ===== 一次性：把行事曆現有合作品牌匯入「團購品牌資料庫」=====
+// 在 Apps Script 編輯器選這個函式按執行即可。以「品牌名稱」比對，已存在就跳過，
+// 所以重跑不會產生重複列。執行後看「執行紀錄」會列出新增/略過的品牌。
+var BRAND_IMPORT_LIST_ = [
+  { name: '年年姓名貼' },
+  { name: 'Scoot&Ride' },
+  { name: 'Silipot' },
+  { name: 'Yookidoo' },
+  { name: 'trixie', note: '常與 Yookidoo 合團' },
+  { name: 'Mongdies' },
+  { name: '雪坊優格' },
+  { name: 'Stokke' },
+  { name: 'Aspor' },
+  { name: 'Pato Pato' },
+  // 品牌名一律用「客人看得懂」的寫法（跟開學清單品牌推薦欄一致），不用原廠品牌名
+  { name: 'B21pro', note: '標籤機（原廠品牌：精臣）。同時對應兩家廠商（不同 IP 聯名款），請到後台把兩家都勾起來' },
+  { name: 'Kigo' },
+  { name: 'Yaber' },
+  { name: 'Aribebe' },
+  { name: '永圻魚湯' },
+  { name: 'Poled' },
+  { name: 'Kidmory' },
+  { name: 'KOM' },
+  { name: '林貝兒' },
+  { name: '伯尼寢具' },
+  { name: 'Kolin' },
+  { name: '卡蘿琳', note: '益生菌與軟糖／Q凍分開兩檔開團' },
+  { name: '寶可樂收袋', note: '原廠品牌：HARU' },
+  { name: 'Learning Resources' },
+  { name: 'ifind' },
+  { name: 'Picaboo' },
+  { name: '兔比媽咪' },
+  { name: 'recolte麗克特' },
+  { name: '齒妍堂' },
+  { name: '台東初鹿' },
+  { name: 'LMG' },
+  { name: 'Wewee!' },
+  { name: 'MOMAX', vendorNames: ['樂奎'], note: '防偷拍定位器' },
+  { name: '台灣好車隊' },
+  { name: '森森星球' },
+  { name: '安可堡泡泡' },
+  { name: 'Lapo' },
+  { name: '韓爸米餅' },
+  { name: 'Horay' },
+  { name: 'Jolly' },
+  { name: 'Bonsons' },
+  { name: 'Bruno' },
+  { name: '美姬饅頭' },
+  { name: '禾流文創' },
+  { name: '森林麵食' },
+  { name: '愛子伴桌' },
+  { name: '島嶼生吐司' },
+  { name: 'Mideer' },
+  { name: '2angels' },
+  { name: 'Parakito' },
+  { name: '愛兒館' },
+  { name: '媽媽友' },
+  { name: 'LeapFrog' },
+  { name: '童蒔樂' },
+  { name: 'UBMOM' },
+  { name: 'Nadle' },
+  { name: '冊子' },
+  { name: '賽爸爸' }
+];
+
+function importBrandsFromCalendar() {
+  var existing = {};
+  getBrandDbList_().forEach(function (b) { existing[b.name.trim()] = b.id; });
+
+  var vendorByName = {};
+  getVendorDbList_().forEach(function (v) { vendorByName[v.name.trim()] = v.id; });
+
+  var added = [], skipped = [], noVendor = [];
+  BRAND_IMPORT_LIST_.forEach(function (item) {
+    var name = item.name.trim();
+    if (existing[name]) { skipped.push(name); return; }
+
+    var vendorIds = [];
+    (item.vendorNames || []).forEach(function (vn) {
+      var vid = vendorByName[vn.trim()];
+      if (vid) vendorIds.push(vid);
+      else noVendor.push(name + ' → ' + vn);
+    });
+
+    var id = addBrandDb_({
+      vendorIds: vendorIds,
+      name: name,
+      note: item.note || '',
+      showInRecipe: '',   // 預設不顯示在食材／食譜頁，要公開再自己勾
+      intro: '',
+      thumbUrl: '',
+      brandImageUrl: ''
+    });
+    existing[name] = id;
+    added.push(name);
+  });
+
+  Logger.log('新增 ' + added.length + ' 個品牌：' + added.join('、'));
+  Logger.log('已存在略過 ' + skipped.length + ' 個：' + skipped.join('、'));
+  if (noVendor.length) Logger.log('⚠ 找不到廠商，所屬廠商留空：' + noVendor.join('、'));
+  return { added: added, skipped: skipped, noVendor: noVendor };
+}
+
 function findBrandDbByExactName_(name) {
   const target = String(name || '').trim();
   if (!target) return null;
   const brand = getBrandDbList_().find(b => b.name.trim() === target);
   if (!brand) return null;
-  const vendor = brand.vendorId ? getVendorDbList_().find(v => v.id === brand.vendorId) : null;
-  return { brand: brand, vendor: vendor || null };
+  const all = getVendorDbList_();
+  const vendors = brand.vendorIds.map(function (vid) {
+    return all.find(function (v) { return v.id === vid; });
+  }).filter(Boolean);
+  return { brand: brand, vendors: vendors };
 }
 
 // ===== 【新】公關品位置清單 =====
@@ -1066,7 +1181,8 @@ const EVENT_COL = {
   RECIPE_BRAND: 11,
   COLOR: 12, ALLDAY: 13, START_TIME: 14, END_TIME: 15, IS_GROUPBUY: 16, PUBLISHED: 17,
   ICON_IG: 18, ICON_TIKTOK: 19, ICON_FB: 20, ICON_EMAIL: 21,
-  MATCH_ITEMS: 22
+  MATCH_ITEMS: 22,
+  THUMB: 23  // 去背小圖（這檔專用）；空白＝自動用品牌資料庫的品牌預設小圖
 };
 
 function getEventSheet_() {
@@ -1132,6 +1248,7 @@ function addEvent_(fields) {
   row[EVENT_COL.ICON_FB - 1] = fields.iconFb || '';
   row[EVENT_COL.ICON_EMAIL - 1] = fields.iconEmail || '';
   row[EVENT_COL.MATCH_ITEMS - 1] = fields.matchItems || '';
+  row[EVENT_COL.THUMB - 1] = fields.thumbUrl || '';
 
   sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
   return id;
@@ -1177,6 +1294,7 @@ function updateEvent_(id, fields) {
   if (fields.iconFb !== undefined) sheet.getRange(row, EVENT_COL.ICON_FB).setValue(fields.iconFb);
   if (fields.iconEmail !== undefined) sheet.getRange(row, EVENT_COL.ICON_EMAIL).setValue(fields.iconEmail);
   if (fields.matchItems !== undefined) sheet.getRange(row, EVENT_COL.MATCH_ITEMS).setValue(fields.matchItems);
+  if (fields.thumbUrl !== undefined) sheet.getRange(row, EVENT_COL.THUMB).setValue(fields.thumbUrl);
   return true;
 }
 
@@ -1194,7 +1312,7 @@ function deleteEvent_(id) {
 function getEventsAsGviz_() {
   const sheet = getEventSheet_();
   const data = sheet.getDataRange().getValues();
-  const COLS = EVENT_COL.MATCH_ITEMS; // 一路讀到 V 欄（含對應品項）
+  const COLS = EVENT_COL.THUMB; // 一路讀到 W 欄（含對應品項、該檔去背小圖）
   const rows = [];
   for (let i = 1; i < data.length; i++) {
     const r = data[i];
@@ -1667,8 +1785,17 @@ function doGet(e) {
     .filter(b => b.showInRecipe && b.name)
     .map(b => ({ '品牌名稱': b.name, '品牌介紹': b.intro }));
 
+  // 前台開學清單「現正開團中」要用的品牌去背小圖：品牌名稱 → 去背小圖。
+  // ⚠️ 同樣是免登入公開範圍，只輸出「品牌名稱／去背小圖」，不可帶出聯絡窗口等內部欄位。
+  // 這裡刻意不看 showInRecipe（那是「食材/食譜頁顯示」的旗標，語意不同），
+  // 改成「有填去背小圖才輸出」＝填了圖就等於願意公開這張圖。
+  const publicBrandThumbs = getBrandDbList_()
+    .filter(b => b.name && b.thumbUrl)
+    .map(b => ({ '品牌名稱': b.name, '去背小圖': b.thumbUrl }));
+
   const publicResult = {
     brands: publicBrands,
+    brandThumbs: publicBrandThumbs,
     ingredients: getMergedIngredientsAndProducts_(),
     recipes: sheetRowsAsObjects_(RECIPE_SHEET_NAME),
     schoolList: sheetRowsAsObjects_(SCHOOL_LIST_SHEET_NAME),
@@ -1855,8 +1982,11 @@ function doPost(e) {
     if (type === 'vendor-db-delete') {
       const id = String(body.id || '').trim();
       if (!id) return jsonResult_({ success: false, error: '缺少廠商資訊' });
-      const brands = getBrandDbList_().filter(b => b.vendorId === id);
-      brands.forEach(b => updateBrandDb_(b.id, { vendorId: '' }));
+      // 只把這家廠商從品牌的廠商清單移掉，其他廠商連結保留
+      const brands = getBrandDbList_().filter(b => b.vendorIds.indexOf(id) !== -1);
+      brands.forEach(b => updateBrandDb_(b.id, {
+        vendorIds: b.vendorIds.filter(function (vid) { return vid !== id; })
+      }));
       const ok = deleteVendorDb_(id);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個廠商' });
     }
@@ -1869,15 +1999,16 @@ function doPost(e) {
       const name = String(body.name || '').trim();
       if (!name) return jsonResult_({ success: false, error: '請輸入品牌名稱' });
       const id = addBrandDb_({
-        vendorId: String(body.vendorId || ''),
+        vendorIds: Array.isArray(body.vendorIds) ? body.vendorIds.map(String) : splitIds_(body.vendorIds),
         name: name,
-        imageUrl: String(body.imageUrl || ''),
+        thumbUrl: String(body.thumbUrl || ''),
         lineContact: String(body.lineContact || ''),
         emailContact: String(body.emailContact || ''),
         igContact: String(body.igContact || ''),
         note: String(body.note || ''),
         showInRecipe: body.showInRecipe ? '是' : '',
-        intro: String(body.intro || '')
+        intro: String(body.intro || ''),
+        brandImageUrl: String(body.brandImageUrl || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -1885,15 +2016,18 @@ function doPost(e) {
       const id = String(body.id || '').trim();
       if (!id) return jsonResult_({ success: false, error: '缺少品牌資訊' });
       const fields = {};
-      if (body.vendorId !== undefined) fields.vendorId = String(body.vendorId);
+      if (body.vendorIds !== undefined) {
+        fields.vendorIds = Array.isArray(body.vendorIds) ? body.vendorIds.map(String) : splitIds_(body.vendorIds);
+      }
       if (body.name !== undefined) fields.name = String(body.name);
-      if (body.imageUrl !== undefined) fields.imageUrl = String(body.imageUrl);
+      if (body.thumbUrl !== undefined) fields.thumbUrl = String(body.thumbUrl);
       if (body.lineContact !== undefined) fields.lineContact = String(body.lineContact);
       if (body.emailContact !== undefined) fields.emailContact = String(body.emailContact);
       if (body.igContact !== undefined) fields.igContact = String(body.igContact);
       if (body.note !== undefined) fields.note = String(body.note);
       if (body.showInRecipe !== undefined) fields.showInRecipe = body.showInRecipe ? '是' : '';
       if (body.intro !== undefined) fields.intro = String(body.intro);
+      if (body.brandImageUrl !== undefined) fields.brandImageUrl = String(body.brandImageUrl);
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }
@@ -2195,7 +2329,8 @@ function doPost(e) {
           iconTiktok: body.iconTiktok || '',
           iconFb: body.iconFb || '',
           iconEmail: body.iconEmail || '',
-          matchItems: body.matchItems || ''
+          matchItems: body.matchItems || '',
+          thumbUrl: body.thumbUrl || ''
         });
         return jsonResult_({ success: true, id: id });
       } catch (err) {
@@ -2226,6 +2361,7 @@ function doPost(e) {
       if (body.iconFb !== undefined) fields.iconFb = String(body.iconFb);
       if (body.iconEmail !== undefined) fields.iconEmail = String(body.iconEmail);
       if (body.matchItems !== undefined) fields.matchItems = String(body.matchItems);
+      if (body.thumbUrl !== undefined) fields.thumbUrl = String(body.thumbUrl);
       const ok = updateEvent_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個活動' });
     }

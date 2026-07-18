@@ -361,6 +361,70 @@
     font-weight: 700;
     margin-bottom: 14px;
   }
+  /* 現正開團中的開學用品品牌（最上方橫向捲動列） */
+  .ogb-bar {
+    background: #FFF6F8;
+    border: 1.5px solid #FFD6E0;
+    border-radius: 14px;
+    padding: 10px 0 12px;
+    margin-bottom: 14px;
+  }
+  .ogb-title {
+    font-size: 12.5px;
+    font-weight: 900;
+    color: #FF6F91;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .ogb-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 0 12px 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ogb-item {
+    flex: 0 0 auto;
+    width: 76px;
+    text-decoration: none;
+    text-align: center;
+    color: inherit;
+  }
+  .ogb-thumb {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 4px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #FFE3EA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .ogb-thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  /* 沒有去背小圖時的替代：顯示品牌名稱第一個字 */
+  .ogb-thumb-fallback {
+    font-size: 24px;
+    font-weight: 900;
+    color: #FFAFC2;
+  }
+  .ogb-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8a7462;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .ogb-end {
+    font-size: 10px;
+    color: #b9a99a;
+    margin-top: 1px;
+  }
   .school-remove-btn {
     position: absolute;
     top: 6px;
@@ -757,6 +821,7 @@
     <img class="school-title-img" src="icons/title-header.webp" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
   </div>
   <div id="statusMsg" class="status-msg" style="display:none;">資料載入中…</div>
+  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;"></div>
   <div class="school-progress" id="schoolProgress"></div>
   <div id="schoolListContent"></div>
   <div class="empty-state" id="schoolListEmpty" style="display:none;">目前還沒有設定開學清單項目</div>
@@ -860,6 +925,8 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9
 
 let SCHOOL_ITEMS = [];
 let CALENDAR_EVENTS = [];
+// 品牌名稱 → 去背小圖（品牌資料庫的預設圖；行事曆該檔 W 欄有填就優先用那張）
+let BRAND_THUMBS = {};
 // 這兩個 key 名稱原本漏掉宣告，導致存 localStorage 一律失敗（錯誤被下面函式的 try/catch 悄悄吞掉，
 // 畫面上完全看不出來），才會出現「打勾／打叉都沒反應」的狀況。這裡補回正式宣告：
 const SCHOOL_STORAGE_KEY = 'school_checked_v1';
@@ -888,6 +955,14 @@ async function loadSchoolItems() {
   const noCacheUrl = APPS_SCRIPT_URL + '?scope=public&t=' + Date.now();
   const res = await fetch(noCacheUrl, { cache: 'no-store' });
   const data = await res.json();
+  // key 一律轉小寫，因為開學清單「品牌推薦」欄的英文大小寫跟品牌資料庫不一定一致
+  // （清單裡本身就同時出現 Trixie/trixie、Wewee!/wewee! 兩種寫法）
+  BRAND_THUMBS = {};
+  (data.brandThumbs || []).forEach(b => {
+    const name = String(b['品牌名稱'] || '').trim();
+    const url = String(b['去背小圖'] || '').trim();
+    if (name && url) BRAND_THUMBS[normalizeBrandKey(name)] = url;
+  });
   const rawSchoolList = (data.schoolList || []).filter(s => s['編號']);
   // 「顯示」欄位是店家控制的預設隱藏（填「否」就對所有人隱藏），
   // 跟客人自己點✕移除（存在客人自己裝置）是兩回事：這裡先把店家設定隱藏的項目整個濾掉
@@ -967,26 +1042,36 @@ async function loadCalendar() {
     // 註：J~U(idx9~20)後台admin.js已使用（早鳥禮/食譜品牌/顏色/整日/時間/團購/顯示/社群圖示），故用admin不會碰的V欄
     const itemsRaw = c[21] ? c[21].v : '';
     const items = String(itemsRaw || '').split(/[|｜、,，]/).map(s => s.trim()).filter(Boolean);
+    // W欄(idx22)「去背小圖」：這檔專用；空白就 fallback 到品牌資料庫的品牌預設小圖
+    const thumb = c[22] ? String(c[22].v || '').trim() : '';
     const start = parseDateStr(startRaw);
     const end = parseDateStr(endRaw);
     if (!start || !end || !title) return;
     const extend = parseExtendRaw(extendRaw);
     const displayEnd = computeDisplayEnd(end, extend);
-    events.push({ title, start, displayEnd, url, items });
+    events.push({ title, start, displayEnd, url, items, thumb });
   });
   CALENDAR_EVENTS = events;
 }
 
+// 品牌名比對前先正規化：轉小寫＋去掉空格。
+// 因為行事曆團名跟「品牌推薦」欄的寫法不一定一致，例如
+// 行事曆「B21 Pro/三麗鷗/標籤機」vs 品牌推薦「B21pro」，不正規化就永遠比對不到。
+function normalizeBrandKey(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '');
+}
+
 function getBrandStatus(brandName, itemName) {
   const today = startOfDay(new Date());
+  const brandKey = normalizeBrandKey(brandName);
   const matches = CALENDAR_EVENTS.filter(ev => {
-    if (!ev.title.includes(brandName)) return false;
+    if (!brandKey || !normalizeBrandKey(ev.title).includes(brandKey)) return false;
     // 一般團（J欄空白）：對品牌所有品項都算；特殊團（J欄有填）：只對填寫的品項算
     if (!ev.items || ev.items.length === 0) return true;
     return ev.items.includes(itemName);
   });
   const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
-  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url };
+  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url, thumb: openEvent.thumb, end: openEvent.displayEnd };
   const future = matches
     .filter(ev => startOfDay(ev.start) > today)
     .sort((a, b) => a.start - b.start);
@@ -1052,7 +1137,100 @@ function restoreSchoolItem(id) {
   renderSchoolList();
 }
 
+// 最上方「現正開團中」：掃過目前顯示中的開學清單品項，收集正在開團的品牌推薦。
+// 小圖優先序：行事曆該檔 W 欄 > 品牌資料庫預設 > 品牌名稱第一個字。
+function getOpenSchoolBrands() {
+  const removedIds = getRemovedSchoolIds();
+  const seen = new Set();
+  const result = [];
+  SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號'])).forEach(item => {
+    const brands = String(item['品牌推薦'] || '').split(/[|｜]/).map(s => s.trim()).filter(Boolean);
+    const itemName = String(item['項目名稱'] || '').trim();
+    brands.forEach(brand => {
+      if (seen.has(brand)) return;
+      const status = getBrandStatus(brand, itemName);
+      if (status.status !== 'open') return;
+      seen.add(brand);
+      result.push({
+        brand: brand,
+        url: status.url,
+        thumb: status.thumb || BRAND_THUMBS[normalizeBrandKey(brand)] || '',
+        end: status.end
+      });
+    });
+  });
+  return result;
+}
+
+function renderOpenGroupBuyBar() {
+  const bar = document.getElementById('openGroupBuyBar');
+  if (!bar) return;
+  const open = getOpenSchoolBrands();
+  bar.innerHTML = '';
+  if (!open.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+
+  const title = document.createElement('div');
+  title.className = 'ogb-title';
+  title.textContent = '🟢 現正開團中的開學用品';
+  bar.appendChild(title);
+
+  const scroll = document.createElement('div');
+  scroll.className = 'ogb-scroll';
+  open.forEach(o => {
+    // 有團購連結才做成可點的 a，沒有就用 div，避免產生 href="undefined" 的死連結
+    const canLink = isValidUrl(o.url);
+    const cell = document.createElement(canLink ? 'a' : 'div');
+    cell.className = 'ogb-item';
+    if (canLink) {
+      cell.href = o.url;
+      cell.target = '_blank';
+      cell.rel = 'noopener noreferrer';
+    }
+
+    const thumbBox = document.createElement('div');
+    thumbBox.className = 'ogb-thumb';
+    if (isValidUrl(o.thumb)) {
+      const img = document.createElement('img');
+      img.src = o.thumb;
+      img.alt = o.brand;
+      img.loading = 'lazy';
+      // 圖片掛掉時退回文字，不要留一個破圖框
+      img.onerror = function () {
+        thumbBox.innerHTML = '';
+        const fb = document.createElement('span');
+        fb.className = 'ogb-thumb-fallback';
+        fb.textContent = o.brand.charAt(0);
+        thumbBox.appendChild(fb);
+      };
+      thumbBox.appendChild(img);
+    } else {
+      const fb = document.createElement('span');
+      fb.className = 'ogb-thumb-fallback';
+      fb.textContent = o.brand.charAt(0);
+      thumbBox.appendChild(fb);
+    }
+    cell.appendChild(thumbBox);
+
+    const name = document.createElement('div');
+    name.className = 'ogb-name';
+    name.textContent = o.brand;
+    cell.appendChild(name);
+
+    if (o.end) {
+      const end = document.createElement('div');
+      end.className = 'ogb-end';
+      end.textContent = fmtSingleDate(o.end) + ' 收單';
+      cell.appendChild(end);
+    }
+
+    scroll.appendChild(cell);
+  });
+  bar.appendChild(scroll);
+}
+
 function renderSchoolList() {
+  renderOpenGroupBuyBar();
   const contentEl = document.getElementById('schoolListContent');
   const emptyEl = document.getElementById('schoolListEmpty');
   const progressEl = document.getElementById('schoolProgress');
