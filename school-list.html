@@ -376,31 +376,30 @@
     text-align: center;
     margin-bottom: 8px;
   }
-  .ogb-scroll {
+  /* 置中排列。用 wrap 而不是橫向捲動：品牌數量少時才置得漂亮，
+     數量多時自動換行，也不會有「捲動內容被切掉又沒有捲軸提示」的問題 */
+  .ogb-items {
     display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 0 12px 2px;
-    -webkit-overflow-scrolling: touch;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 6px;
+    padding: 0 10px 2px;
   }
   .ogb-item {
     flex: 0 0 auto;
-    width: 76px;
+    width: 80px;
     text-decoration: none;
     text-align: center;
     color: inherit;
   }
+  /* 直接用去背圖，不加白底框 */
   .ogb-thumb {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 72px;
     margin: 0 auto 4px;
-    border-radius: 12px;
-    background: #fff;
-    border: 1px solid #FFE3EA;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
   }
   .ogb-thumb img {
     max-width: 100%;
@@ -1176,7 +1175,7 @@ function renderOpenGroupBuyBar() {
   bar.appendChild(title);
 
   const scroll = document.createElement('div');
-  scroll.className = 'ogb-scroll';
+  scroll.className = 'ogb-items';
   open.forEach(o => {
     // 有團購連結才做成可點的 a，沒有就用 div，避免產生 href="undefined" 的死連結
     const canLink = isValidUrl(o.url);
