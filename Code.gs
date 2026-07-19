@@ -1216,7 +1216,9 @@ const EVENT_COL = {
   COLOR: 12, ALLDAY: 13, START_TIME: 14, END_TIME: 15, IS_GROUPBUY: 16, PUBLISHED: 17,
   ICON_IG: 18, ICON_TIKTOK: 19, ICON_FB: 20, ICON_EMAIL: 21,
   MATCH_ITEMS: 22,
-  THUMB: 23  // 去背小圖（這檔專用）；空白＝自動用品牌資料庫的品牌預設小圖
+  THUMB: 23,  // 去背小圖（這檔專用）；空白＝自動用品牌資料庫的品牌預設小圖
+  DISCOUNT_CODE: 24,  // 折扣碼；有填就會在前台小視窗顯示可點擊複製的折扣碼
+  DISCOUNT_DESC: 25   // 折扣說明（例如「滿 1000 折 100」）
 };
 
 function getEventSheet_() {
@@ -1301,6 +1303,8 @@ function addEvent_(fields) {
   row[EVENT_COL.ICON_EMAIL - 1] = fields.iconEmail || '';
   row[EVENT_COL.MATCH_ITEMS - 1] = fields.matchItems || '';
   row[EVENT_COL.THUMB - 1] = fields.thumbUrl || '';
+  row[EVENT_COL.DISCOUNT_CODE - 1] = fields.discountCode || '';
+  row[EVENT_COL.DISCOUNT_DESC - 1] = fields.discountDesc || '';
 
   const newRow = sheet.getLastRow() + 1;
   sheet.getRange(newRow, 1, 1, row.length).setValues([row]);
@@ -1347,6 +1351,8 @@ function updateEvent_(id, fields) {
   if (fields.iconEmail !== undefined) sheet.getRange(row, EVENT_COL.ICON_EMAIL).setValue(fields.iconEmail);
   if (fields.matchItems !== undefined) sheet.getRange(row, EVENT_COL.MATCH_ITEMS).setValue(fields.matchItems);
   if (fields.thumbUrl !== undefined) sheet.getRange(row, EVENT_COL.THUMB).setValue(fields.thumbUrl);
+  if (fields.discountCode !== undefined) sheet.getRange(row, EVENT_COL.DISCOUNT_CODE).setValue(fields.discountCode);
+  if (fields.discountDesc !== undefined) sheet.getRange(row, EVENT_COL.DISCOUNT_DESC).setValue(fields.discountDesc);
   return true;
 }
 
@@ -1373,6 +1379,29 @@ function repairEventExtendColumn() {
   return { fixed: fixed };
 }
 
+// 診斷用：把行事曆前幾欄的實際值、型別、儲存格格式印出來，用來確認 1900 年是出現在哪一欄。
+// 在 Apps Script 編輯器執行後看「執行紀錄」。
+function dumpEventColumns() {
+  const sheet = getEventSheet_();
+  const last = Math.min(sheet.getLastRow(), 40);
+  if (last < 2) { Logger.log('沒有資料列'); return; }
+  const COLS = 6; // A~F：編號、開始、結束、延長、標題、標籤
+  const vals = sheet.getRange(1, 1, last, COLS).getValues();
+  const fmts = sheet.getRange(1, 1, last, COLS).getNumberFormats();
+  Logger.log('分頁名稱：' + sheet.getName());
+  Logger.log('標題列：' + vals[0].join(' | '));
+  for (let i = 1; i < last; i++) {
+    const parts = [];
+    for (let j = 0; j < COLS; j++) {
+      const v = vals[i][j];
+      if (v === '' || v === null) continue;
+      const type = (v instanceof Date) ? 'Date(' + v.getFullYear() + ')' : typeof v;
+      parts.push(String.fromCharCode(65 + j) + '=[' + v + '] ' + type + ' 格式:' + fmts[i][j]);
+    }
+    Logger.log('第 ' + (i + 1) + ' 列  ' + parts.join('  '));
+  }
+}
+
 function deleteEvent_(id) {
   const sheet = getEventSheet_();
   const row = findEventRowById_(sheet, id);
@@ -1387,7 +1416,7 @@ function deleteEvent_(id) {
 function getEventsAsGviz_() {
   const sheet = getEventSheet_();
   const data = sheet.getDataRange().getValues();
-  const COLS = EVENT_COL.THUMB; // 一路讀到 W 欄（含對應品項、該檔去背小圖）
+  const COLS = EVENT_COL.DISCOUNT_DESC; // 一路讀到 Y 欄（含對應品項、去背小圖、折扣碼）
   const rows = [];
   for (let i = 1; i < data.length; i++) {
     const r = data[i];
@@ -2405,7 +2434,9 @@ function doPost(e) {
           iconFb: body.iconFb || '',
           iconEmail: body.iconEmail || '',
           matchItems: body.matchItems || '',
-          thumbUrl: body.thumbUrl || ''
+          thumbUrl: body.thumbUrl || '',
+          discountCode: body.discountCode || '',
+          discountDesc: body.discountDesc || ''
         });
         return jsonResult_({ success: true, id: id });
       } catch (err) {
@@ -2437,6 +2468,8 @@ function doPost(e) {
       if (body.iconEmail !== undefined) fields.iconEmail = String(body.iconEmail);
       if (body.matchItems !== undefined) fields.matchItems = String(body.matchItems);
       if (body.thumbUrl !== undefined) fields.thumbUrl = String(body.thumbUrl);
+      if (body.discountCode !== undefined) fields.discountCode = String(body.discountCode);
+      if (body.discountDesc !== undefined) fields.discountDesc = String(body.discountDesc);
       const ok = updateEvent_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個活動' });
     }

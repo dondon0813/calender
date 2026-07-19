@@ -215,7 +215,7 @@
     margin-top: 8px;
   }
   .pr-save-btn {
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-weight: 700;
     font-size: 13px;
     color: #fff;
@@ -391,7 +391,7 @@
     background: #fff;
     color: #D63A2E;
     border-radius: var(--r-pill);
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-size: 12.5px;
     font-weight: 800;
     padding: 8px;
@@ -406,7 +406,7 @@
 
   .view-title {
     text-align: center;
-    font-family: 'Baloo 2', var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 22px;
     color: var(--c-text);
@@ -648,7 +648,7 @@
     border-radius: var(--r-pill);
     background: var(--c-primary);
     color: #fff;
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 14.5px;
     padding: 12px;
@@ -774,7 +774,7 @@
     flex: none;
     border: none;
     border-radius: var(--r-pill);
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 11px;
     padding: 5px 10px;
@@ -959,7 +959,7 @@
   .stage-quick-btn {
     border: none;
     border-radius: var(--r-pill);
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-weight: 700;
     font-size: 12px;
     padding: 6px 13px;
@@ -1027,7 +1027,7 @@
   }
   .rc-title {
     text-align: center;
-    font-family: 'Baloo 2', var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 20px;
     color: var(--c-text);
@@ -1637,7 +1637,7 @@
     border: none;
     background: none;
     color: var(--c-brown);
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 13.5px;
     cursor: pointer;
@@ -1761,7 +1761,7 @@
   .pnote-btn {
     border: none;
     border-radius: var(--r-pill);
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 12px;
     padding: 7px 12px;
@@ -2103,7 +2103,7 @@
     margin-bottom: 16px;
   }
   .pgp-title {
-    font-family: 'Baloo 2', var(--font-body);
+    font-family: var(--font-round);
     font-weight: 800;
     font-size: 50px;
     color: #E0954A;
@@ -2819,7 +2819,7 @@
     border-radius: 12px;
     background: #FFF6EC;
     color: var(--c-text);
-    font-family: var(--font-body);
+    font-family: var(--font-round);
     font-size: 18px;
     font-weight: 800;
     padding: 16px 0;
@@ -2871,7 +2871,7 @@
     margin-bottom: 4px;
     text-align: center;
   }
-  .cb-title { font-family: 'Baloo 2', var(--font-body); font-weight: 700; }
+  .cb-title { font-family: var(--font-round); font-weight: 700; }
   .cb-subtitle { font-size: 12.5px; opacity: 0.85; margin-top: 4px; }
   .cb-disabled { opacity: 0.45; }
   .cb-admin-wrap { margin-bottom: 14px; }
@@ -3785,6 +3785,12 @@
 
         <label for="evCategoryInput">分類標記（可不填，例如：冷凍）</label>
         <input type="text" id="evCategoryInput" placeholder="例如：冷凍">
+
+        <label for="evDiscountCodeInput">折扣碼（可不填，填了前台點擊會跳出小視窗）</label>
+        <input type="text" id="evDiscountCodeInput" placeholder="例如：DONDON100">
+
+        <label for="evDiscountDescInput">折扣說明（可不填，顯示在折扣碼下方）</label>
+        <textarea id="evDiscountDescInput" rows="2" placeholder="例如：滿 1000 元折 100 元，不可與其他優惠併用"></textarea>
 
         <label style="margin-top:14px;">社群小圖示（點圖示輸入網址，前後台都會顯示；留空可清除）</label>
         <div class="ev-icon-row" id="evIconRow">

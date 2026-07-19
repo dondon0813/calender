@@ -9,12 +9,16 @@
    ⚠ 改配色 / 圓角 / 陰影請改下面的 :root 變數，不要在各頁硬寫色碼。
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&family=Huninn&display=swap');
 
 :root {
-  /* ---------- 字體 ---------- */
+  /* ---------- 字體 ----------
+     Huninn（jf open 粉圓）＝圓體，用在標題與按鈕；說明小字維持 Noto Sans TC。
+     英數排在中文前面，所以英文數字仍由 Baloo 2 負責，中文才落到粉圓。
+     注意：Huninn 在 Google Fonts 只有 400 一個字重，700/800 是瀏覽器合成的。 */
   --font-body:    'Noto Sans TC', sans-serif;
-  --font-display: 'Baloo 2', 'Noto Sans TC', sans-serif;
+  --font-display: 'Baloo 2', 'Huninn', 'Noto Sans TC', sans-serif;
+  --font-round:   'Baloo 2', 'Huninn', 'Noto Sans TC', sans-serif;
 
   /* ---------- 文字色 ---------- */
   --c-text:        #5a4a3f;  /* 主要文字（棕） */
@@ -292,4 +296,87 @@ body {
   font-size: 16px;
   color: var(--c-brown);
   cursor: pointer;
+}
+
+/* ============================================================
+   圓體（全站）
+   標題與按鈕用圓體，說明小字（*-subtitle、*-label）維持 Noto Sans TC。
+   .page-title / .modal-box h3 等已經走 --font-display，不必列在這裡。
+   刻意逐一列出 class 而不用 [class*="title"]：因為 subtitle 也含 "title"，
+   萬用字元會把說明小字一起改掉。新增頁面時記得把新的標題／按鈕 class 加進來。
+   ============================================================ */
+
+/* ---- 標題 ---- */
+.ev-title,
+.gs-card-name,
+.gs-section-title,
+.view-title,
+.cal-edit-day-row-name,
+.il-card-name,
+.mtree-folder-name,
+.mtree-note-title,
+.perm-row-name,
+.pgp-title,
+.pri-card-title,
+.rc-title,
+.rc-section-title,
+.rc-tip-title,
+.task-name-line,
+.task-section-title,
+.todo-item-name,
+.my-taskname-tag,
+.brand-intro-name,
+.home-card-title,
+.home-explore-title,
+.home-explore-item-title,
+.ing-category-title,
+.ing-select-title,
+.ing-tile-name,
+.recipe-reco-title,
+.card-title,
+.modal-title,
+.section-title,
+.a4-category-title,
+.a4-item-name,
+.ogb-title,
+.ogb-name,
+.school-card-name,
+.school-category-title,
+.sticker-modal-title,
+.sticker-name,
+/* ---- 按鈕 ---- */
+.action-btn,
+.action-btn-alt,
+.action-btn-ghost,
+.back-btn,
+.site-home-btn,
+.home-btn,
+.home-calendar-btn,
+.oil-toggle-btn,
+.rc-close-btn,
+.main-tab,
+.danger-btn,
+.mode-btn,
+.school-generate-btn,
+.school-remove-btn,
+.school-restore-btn,
+.sticker-size-btn,
+.calc-btn,
+.ev-icon-btn,
+.icon-btn,
+.menu-btn,
+.mtree-back-btn,
+.mtree-icon-btn,
+.pnote-btn,
+.pnote-btn-copy,
+.pnote-btn-delete,
+.pnote-btn-save,
+.pr-go-btn,
+.pr-save-btn,
+.save-btn,
+.stage-quick-btn,
+.task-mini-btn,
+.task-submit-btn,
+.urgent-toggle-btn {
+  font-family: var(--font-round);
 }

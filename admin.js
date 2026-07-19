@@ -315,6 +315,9 @@ async function loadData() {
       const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
       const iconFb = c[19] ? String(c[19].v || '').trim() : '';
       const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
+      // X=折扣碼(idx23)　Y=折扣說明(idx24)
+      const discountCode = c[23] ? String(c[23].v || '').trim() : '';
+      const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
       const start = parseDateStr(startRaw);
       const end = parseDateStr(endRaw);
       if (!start || !end || !title) return;
@@ -328,7 +331,7 @@ async function loadData() {
       events.push({
         id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird,
         color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published,
-        iconIg, iconTiktok, iconFb, iconEmail
+        iconIg, iconTiktok, iconFb, iconEmail, discountCode, discountDesc
       });
     });
 
@@ -1695,6 +1698,8 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evTagInput').value = ev ? (ev.tag || '') : '';
   document.getElementById('evExtendInput').value = (ev && ev.extend && ev.extend.type === 'days') ? ev.extend.value : '';
   document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
+  document.getElementById('evDiscountCodeInput').value = ev ? (ev.discountCode || '') : '';
+  document.getElementById('evDiscountDescInput').value = ev ? (ev.discountDesc || '') : '';
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
   setEventIconButtons(ev);
   document.getElementById('evBrandMatchInfo').style.display = 'none';
@@ -1749,12 +1754,15 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
     .split('\n').map(s => s.trim()).filter(s => s !== '').join('/');
   const startTime = allDay ? '' : getEvTimeValue('evStartAmPmInput', 'evStartHourInput', 'evStartMinuteInput');
   const endTime = allDay ? '' : getEvTimeValue('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput');
+  const discountCode = document.getElementById('evDiscountCodeInput').value.trim();
+  const discountDesc = document.getElementById('evDiscountDescInput').value.trim();
 
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
     allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime,
     iconIg: evIconValues.iconIg || '', iconTiktok: evIconValues.iconTiktok || '',
-    iconFb: evIconValues.iconFb || '', iconEmail: evIconValues.iconEmail || ''
+    iconFb: evIconValues.iconFb || '', iconEmail: evIconValues.iconEmail || '',
+    discountCode, discountDesc
   };
 
   const btn = document.getElementById('evSaveBtn');

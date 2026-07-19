@@ -9,6 +9,15 @@
   /* index.html 專屬樣式。共用的 reset / 版面 / 按鈕 / modal / 頁尾在 shared.css。
      色碼、圓角、陰影一律用 shared.css 的 :root 變數，不要再硬寫。 */
 
+  /* 圓體：字型本身與大部分標題／按鈕由 shared.css 統一處理，
+     這裡只補這頁專屬、shared.css 沒有的三個。 */
+  .gc-title,
+  .gc-btn,
+  .gc-code-hint,
+  .gc-discount-label {
+    font-family: var(--font-round);
+  }
+
   .wrap { position: relative; }
 
   /* ===== 頁首 ===== */
@@ -360,6 +369,63 @@
   .gc-btn-order { background: var(--c-primary); }
   .gc-btn-order:hover { background: var(--c-primary-dark); }
 
+  /* 折扣碼區塊：沒有折扣碼時整塊隱藏（由 JS 切換 .show） */
+  .gc-discount { display: none; }
+  .gc-discount.show { display: block; }
+  .gc-btns + .gc-discount.show {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--c-line);
+  }
+  .gc-discount-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--c-text-soft);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .gc-code {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;  /* 折扣碼很長時讓提示標籤換行，不要撐破視窗 */
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border: 2px dashed var(--c-border);
+    border-radius: var(--r-md);
+    background: var(--c-bg-bottom);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .gc-code:hover { background: #FFE7D6; border-color: var(--c-primary); }
+  .gc-code-text {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--c-text);
+    line-height: 1.2;
+    word-break: break-all;
+  }
+  .gc-code-hint {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--c-primary);
+    border-radius: var(--r-pill);
+    padding: 9px 18px;
+    white-space: nowrap;
+  }
+  .gc-code.copied .gc-code-hint { background: var(--c-cat-2); }
+  .gc-discount-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--c-text-soft);
+    margin-top: 10px;
+    white-space: pre-line;
+  }
+
   /* ===== 活動內容元件 ===== */
   .badge {
     flex: none;
@@ -559,6 +625,14 @@
       <a class="gc-btn gc-btn-intro" id="gcIntroBtn" target="_blank" rel="noopener noreferrer">📖 前往觀看介紹</a>
       <a class="gc-btn gc-btn-recipe" id="gcRecipeBtn" target="_blank" rel="noopener noreferrer">🍽 食譜大全</a>
       <a class="gc-btn gc-btn-order" id="gcOrderBtn" target="_blank" rel="noopener noreferrer">🛒 前往下單</a>
+    </div>
+    <div class="gc-discount" id="gcDiscount">
+      <div class="gc-discount-label">專屬折扣碼</div>
+      <button type="button" class="gc-code" id="gcCodeBtn">
+        <span class="gc-code-text" id="gcCodeText"></span>
+        <span class="gc-code-hint" id="gcCodeHint">點擊複製</span>
+      </button>
+      <div class="gc-discount-desc" id="gcDiscountDesc"></div>
     </div>
   </div>
 </div>
@@ -850,8 +924,9 @@ function isLinkUnlocked(ev) {
   return new Date() >= ev.start;
 }
 
-function hasAdvancedIntro(ev) {
-  return !!(ev.recipeBrand && ev.recipeBrand.trim());
+// 有食譜品牌（食材／食譜入口）或有折扣碼，點擊時都要先跳小視窗而不是直接開網頁
+function needsGroupModal(ev) {
+  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()));
 }
 
 function parseExtendRaw(raw, originalEnd) {
@@ -923,6 +998,8 @@ async function loadData() {
       const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
       const iconFb = c[19] ? String(c[19].v || '').trim() : '';
       const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
+      const discountCode = c[23] ? String(c[23].v || '').trim() : '';
+      const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
       const start = parseDateStr(startRaw);
       const end = parseDateStr(endRaw);
       if (!start || !end || !title) return;
@@ -934,7 +1011,7 @@ async function loadData() {
       const isGroupBuy = isGroupBuyRaw === '' ? true : (isGroupBuyRaw === '是');
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
       if (!published) return;
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail });
+      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, discountCode, discountDesc });
     });
 
     allEvents = events;
@@ -1063,7 +1140,7 @@ function renderGroupList() {
     const isToday = !grayOut && daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
     const frozen = isFrozenEvent(ev);
     const clickable = isLinkUnlocked(ev);
-    const advanced = clickable && hasAdvancedIntro(ev);
+    const advanced = clickable && needsGroupModal(ev);
 
     const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
     card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '') + (grayOut ? ' gs-card-gray' : '');
@@ -1210,7 +1287,7 @@ function renderAllMode() {
       const gbNumber = groupBuyNumberMap.get(item.ev.id);
       const colorIdx = gbNumber ? (gbNumber - 1) % COLORS : (item.ev.id - 1) % COLORS;
       const clickable = isLinkUnlocked(item.ev);
-      const advanced = clickable && hasAdvancedIntro(item.ev);
+      const advanced = clickable && needsGroupModal(item.ev);
       const hasEarlyBird = !clickable && !isStarted(item.ev) && item.ev.earlyBird.length > 0;
       const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
       bar.className = `ebar c${colorIdx}` + (clickable ? ' clickable' : '') + (hasEarlyBird ? ' clickable' : '');
@@ -1339,7 +1416,7 @@ function renderSingleDayMode(mode) {
           const frozen = isFrozenEvent(ev);
           const status = getEventStatus(ev);
           const clickable = isLinkUnlocked(ev);
-          const advanced = clickable && hasAdvancedIntro(ev);
+          const advanced = clickable && needsGroupModal(ev);
           const hasEarlyBird = !clickable && status === 'upcoming' && ev.earlyBird.length > 0;
           const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
           const catClass = frozen ? 'cat-frozen' : `cat-${status}`;
@@ -1423,7 +1500,8 @@ function closeEarlyBirdModal() {
 
 function openGroupChoiceModal(ev) {
   const brand = (ev.recipeBrand || '').trim();
-  if (!brand) return;
+  const code = (ev.discountCode || '').trim();
+  if (!brand && !code) return;
 
   const modal = document.getElementById('groupChoiceModal');
   document.getElementById('groupChoiceTitle').textContent = ev.title;
@@ -1434,17 +1512,82 @@ function openGroupChoiceModal(ev) {
 
   const baseKey = getStatKey(ev);
 
-  introBtn.href = `${RECIPES_PAGE_URL}?view=ingredients&brand=${encodeURIComponent(brand)}`;
-  introBtn.onclick = () => sendStat(baseKey + '_intro', 'click');
+  // 沒有品牌時只留「前往下單」，不顯示食材／食譜入口
+  introBtn.style.display = brand ? '' : 'none';
+  recipeBtn.style.display = brand ? '' : 'none';
+  if (brand) {
+    introBtn.href = `${RECIPES_PAGE_URL}?view=ingredients&brand=${encodeURIComponent(brand)}`;
+    introBtn.onclick = () => sendStat(baseKey + '_intro', 'click');
 
-  recipeBtn.href = `${RECIPES_PAGE_URL}?view=recipes&brand=${encodeURIComponent(brand)}`;
-  recipeBtn.textContent = `🍽 ${brand} 食譜大全`;
-  recipeBtn.onclick = () => sendStat(baseKey + '_recipe', 'click');
+    recipeBtn.href = `${RECIPES_PAGE_URL}?view=recipes&brand=${encodeURIComponent(brand)}`;
+    recipeBtn.textContent = `🍽 ${brand} 食譜大全`;
+    recipeBtn.onclick = () => sendStat(baseKey + '_recipe', 'click');
+  }
 
   orderBtn.href = ev.url;
   orderBtn.onclick = () => sendStat(baseKey + '_order', 'click');
 
+  setupDiscountBlock(ev, code, baseKey);
+
   modal.classList.add('show');
+}
+
+function setupDiscountBlock(ev, code, baseKey) {
+  const wrap = document.getElementById('gcDiscount');
+  const codeBtn = document.getElementById('gcCodeBtn');
+  const hint = document.getElementById('gcCodeHint');
+  const descEl = document.getElementById('gcDiscountDesc');
+
+  if (!code) {
+    wrap.classList.remove('show');
+    return;
+  }
+
+  document.getElementById('gcCodeText').textContent = code;
+  const desc = (ev.discountDesc || '').trim();
+  descEl.textContent = desc;
+  descEl.style.display = desc ? '' : 'none';
+
+  codeBtn.classList.remove('copied');
+  hint.textContent = '點擊複製';
+  codeBtn.onclick = () => {
+    copyDiscountCode(code).then(ok => {
+      hint.textContent = ok ? '已複製 ✓' : '請手動複製';
+      codeBtn.classList.toggle('copied', ok);
+      if (ok) sendStat(baseKey + '_code', 'click');
+      setTimeout(() => {
+        hint.textContent = '點擊複製';
+        codeBtn.classList.remove('copied');
+      }, 2000);
+    });
+  };
+
+  wrap.classList.add('show');
+}
+
+// Apps Script 前台可能不是 https（或舊瀏覽器），navigator.clipboard 不一定存在，退回 execCommand
+function copyDiscountCode(code) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(code).then(() => true).catch(() => legacyCopy(code));
+  }
+  return Promise.resolve(legacyCopy(code));
+}
+
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 function closeGroupChoiceModal() {
