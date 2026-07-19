@@ -4,52 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>雪莉與朵栗 團購行事曆</title>
+<link rel="stylesheet" href="shared.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+  /* index.html 專屬樣式。共用的 reset / 版面 / 按鈕 / modal / 頁尾在 shared.css。
+     色碼、圓角、陰影一律用 shared.css 的 :root 變數，不要再硬寫。 */
 
-  * { box-sizing: border-box; min-width: 0; }
-  html, body { width: 100%; overflow-x: hidden; }
+  .wrap { position: relative; }
 
-  body {
-    margin: 0;
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
-    color: #5a4a3f;
-    padding: 16px 8px 50px;
-  }
-
-  .wrap {
-    max-width: 1080px;
-    margin: 0 auto;
-    background: #FFFBF5;
-    border-radius: 22px;
-    border: 3px solid #FFE3CC;
-    padding: 18px 14px 26px;
-    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
-    position: relative;
-  }
-
-  .site-home-btn {
-    position: fixed;
-    top: 14px;
-    right: 14px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #FFD3B6;
-    color: #b5755a;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    box-shadow: 0 3px 10px rgba(230,160,120,0.25);
-    z-index: 30;
-    cursor: pointer;
-  }
-  .site-home-btn:hover { background: #FFF1E6; }
-
+  /* ===== 頁首 ===== */
   .header {
     display: flex;
     align-items: center;
@@ -67,10 +29,10 @@
   }
 
   .month-num {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 46px;
-    color: #FF8FA3;
+    color: var(--c-primary);
     line-height: 1;
     text-shadow: 2px 2px 0 #FFE0E8;
     flex: none;
@@ -96,26 +58,7 @@
     flex-wrap: wrap;
   }
 
-  .controls select, .controls button {
-    font-family: 'Noto Sans TC', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
-    background: #fff;
-    color: #b5755a;
-    padding: 7px 14px;
-    cursor: pointer;
-  }
-  .controls button:hover { background: #FFF1E6; }
-
-  .status {
-    font-size: 11px;
-    color: #b39a8b;
-    margin-bottom: 10px;
-  }
-  .status.error { color: #e0654f; }
-
+  /* ===== 星期列 ===== */
   .weekdays {
     display: grid;
     gap: 5px;
@@ -124,36 +67,37 @@
   .weekday {
     text-align: center;
     padding: 6px 0;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     color: #fff;
     font-weight: 700;
     font-size: 12px;
     letter-spacing: 1px;
   }
-  .wd-0 { background: #FF8FA3; }
-  .wd-1 { background: #FFB37A; }
-  .wd-2 { background: #9ACB85; }
-  .wd-3 { background: #6FC8C2; }
-  .wd-4 { background: #7AAEEB; }
-  .wd-5 { background: #B79AE8; }
-  .wd-6 { background: #FF8FA3; }
+  .wd-0 { background: var(--c-cat-0); }
+  .wd-1 { background: var(--c-cat-1); }
+  .wd-2 { background: var(--c-cat-2); }
+  .wd-3 { background: var(--c-cat-3); }
+  .wd-4 { background: var(--c-cat-4); }
+  .wd-5 { background: var(--c-cat-5); }
+  .wd-6 { background: var(--c-cat-0); }
 
+  /* ===== 月曆格線 ===== */
   .month-grid {
-    border-top: 2px solid #F3E2D3;
-    border-left: 2px solid #F3E2D3;
-    border-radius: 12px;
+    border-top: 2px solid var(--c-line);
+    border-left: 2px solid var(--c-line);
+    border-radius: var(--r-md);
     overflow: hidden;
   }
 
   .week {
     display: grid;
-    border-bottom: 2px solid #F3E2D3;
+    border-bottom: 2px solid var(--c-line);
   }
 
   .daycell {
     grid-row: 1 / -1;
-    border-right: 2px solid #F3E2D3;
-    background: #FFFDFA;
+    border-right: 2px solid var(--c-line);
+    background: var(--c-surface-2);
     padding: 5px 4px 4px;
     min-height: 30px;
   }
@@ -165,14 +109,14 @@
   .daynum {
     font-weight: 700;
     font-size: 13px;
-    color: #a89888;
+    color: var(--c-muted);
   }
   .daycell.dim .daynum { color: #ddd0c2; }
   .daycell.today .daynum { color: #C97A1A; font-weight: 900; }
 
   .daycell-list {
-    border-right: 2px solid #F3E2D3;
-    background: #FFFDFA;
+    border-right: 2px solid var(--c-line);
+    background: var(--c-surface-2);
     padding: 5px 4px 6px;
     min-height: 30px;
   }
@@ -189,9 +133,10 @@
     margin-top: 3px;
   }
 
+  /* ===== 活動色條 ===== */
   .ebar {
     margin: 3px 2px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 2px 8px;
     display: flex;
     align-items: center;
@@ -219,7 +164,7 @@
     align-items: center;
     justify-content: center;
     white-space: normal;
-    border-radius: 10px;
+    border-radius: var(--r-sm);
     text-align: center;
     position: relative;
   }
@@ -258,6 +203,7 @@
     color: #2F6FB0;
   }
 
+  /* ===== 現正開團中：清單卡片 ===== */
   .group-list {
     padding: 4px 2px 8px;
   }
@@ -277,7 +223,7 @@
     position: relative;
     background: #B98868;
     color: #fff;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     padding: 14px 20px;
     margin-bottom: 14px;
     text-align: center;
@@ -338,19 +284,19 @@
     font-size: 11px;
     font-weight: 700;
     padding: 3px 9px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
   .gs-today-badge { background: #FF4D6D; }
   .gs-frozen-badge { background: #4F91D9; }
   .gs-empty {
     text-align: center;
-    color: #a89787;
+    color: var(--c-muted);
     padding: 30px 0;
     font-size: 14px;
   }
 
-  /* ===== 【新】品牌社群連結列（現正開團中最上方）===== */
+  /* ===== 品牌社群連結列（現正開團中最上方）===== */
   .site-social-row {
     display: flex;
     justify-content: center;
@@ -371,66 +317,22 @@
     font-size: 20px;
     color: #fff;
     text-decoration: none;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    box-shadow: var(--sh-soft);
     cursor: pointer;
     transition: filter 0.12s ease;
   }
   .site-social-icon svg { width: 52%; height: 52%; display: block; }
   .site-social-icon:hover { filter: brightness(1.12); }
 
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(90, 74, 63, 0.45);
-    z-index: 50;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-backdrop.show {
-    display: flex;
-  }
-  .modal-box {
-    position: relative;
-    background: #FFFBF5;
-    border-radius: 18px;
-    border: 3px solid #FFE3CC;
-    padding: 24px 22px;
-    max-width: 90%;
-    width: 360px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  }
-  .modal-box h3 {
-    margin: 0 0 12px;
-    color: #FF8FA3;
-    font-size: 17px;
-  }
-  .modal-box ul {
-    margin: 0;
-    padding-left: 18px;
-    color: #5a4a3f;
-    font-size: 14px;
-    line-height: 1.7;
-  }
-  .modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: none;
-    background: none;
-    font-size: 16px;
-    color: #b5755a;
-    cursor: pointer;
-  }
-
+  /* ===== 團購彈窗 ===== */
   .gc-modal-box {
     text-align: center;
   }
   .gc-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 17px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin: 4px 0 18px;
     padding-right: 10px;
   }
@@ -445,19 +347,20 @@
     text-decoration: none;
     font-weight: 800;
     font-size: 14px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 12px 14px;
     color: #fff;
     cursor: pointer;
     border: none;
   }
-  .gc-btn-intro { background: #7AAEEB; }
+  .gc-btn-intro { background: var(--c-cat-4); }
   .gc-btn-intro:hover { background: #5F97DB; }
-  .gc-btn-recipe { background: #FFB37A; }
+  .gc-btn-recipe { background: var(--c-cat-1); }
   .gc-btn-recipe:hover { background: #F0A05F; }
-  .gc-btn-order { background: #FF8FA3; }
-  .gc-btn-order:hover { background: #FF7391; }
+  .gc-btn-order { background: var(--c-primary); }
+  .gc-btn-order:hover { background: var(--c-primary-dark); }
 
+  /* ===== 活動內容元件 ===== */
   .badge {
     flex: none;
     width: 17px;
@@ -501,27 +404,20 @@
     color: #fff;
     font-weight: 800;
     font-size: 9px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 1px 6px;
     margin-left: auto;
   }
 
-  .c0 .badge { background: #FFE6EC; color: #FF8FA3; } .c0.ebar { background: #FF8FA3; }
-  .c1 .badge { background: #FFEcD6; color: #FFB37A; } .c1.ebar { background: #FFB37A; }
-  .c2 .badge { background: #E4F5DF; color: #9ACB85; } .c2.ebar { background: #9ACB85; }
-  .c3 .badge { background: #DEF5F4; color: #6FC8C2; } .c3.ebar { background: #6FC8C2; }
-  .c4 .badge { background: #E2EBFD; color: #7AAEEB; } .c4.ebar { background: #7AAEEB; }
-  .c5 .badge { background: #EFE4FB; color: #B79AE8; } .c5.ebar { background: #B79AE8; }
-  .c6 .badge { background: #FBEFD9; color: #D9A441; } .c6.ebar { background: #F0C36D; }
+  .c0 .badge { background: #FFE6EC; color: var(--c-cat-0); } .c0.ebar { background: var(--c-cat-0); }
+  .c1 .badge { background: #FFEcD6; color: var(--c-cat-1); } .c1.ebar { background: var(--c-cat-1); }
+  .c2 .badge { background: #E4F5DF; color: var(--c-cat-2); } .c2.ebar { background: var(--c-cat-2); }
+  .c3 .badge { background: #DEF5F4; color: var(--c-cat-3); } .c3.ebar { background: var(--c-cat-3); }
+  .c4 .badge { background: #E2EBFD; color: var(--c-cat-4); } .c4.ebar { background: var(--c-cat-4); }
+  .c5 .badge { background: #EFE4FB; color: var(--c-cat-5); } .c5.ebar { background: var(--c-cat-5); }
+  .c6 .badge { background: #FBEFD9; color: #D9A441; }        .c6.ebar { background: var(--c-cat-6); }
 
-  .footer {
-    text-align: center;
-    margin-top: 18px;
-    color: #FF8FA3;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
+  /* ===== 圖例 ===== */
   .legend {
     display: none;
     flex-wrap: wrap;
@@ -529,7 +425,7 @@
     gap: 14px;
     margin-top: 16px;
     padding-top: 10px;
-    border-top: 1.5px dashed #F3E2D3;
+    border-top: 1.5px dashed var(--c-line);
   }
   .legend.show {
     display: flex;
@@ -540,7 +436,7 @@
     gap: 5px;
     font-size: 11px;
     font-weight: 700;
-    color: #a89888;
+    color: var(--c-muted);
   }
   .legend-dot {
     width: 13px;
@@ -554,13 +450,6 @@
   .legend-closingSoon { background: #FFE1E8; border: 1.5px solid #FF6F91; }
   .legend-ended { background: #EFEBE5; border: 1.5px solid #B8AC9C; }
   .legend-frozen { background: #E6F1FC; border: 1.5px solid #4F91D9; }
-  .footer a {
-    color: inherit;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
 
   @media (max-width: 480px) {
     .month-num { font-size: 36px; }
@@ -572,9 +461,10 @@
     .ev-tag { font-size: 8px; }
   }
 
+  /* ===== 自訂橫幅卡片 ===== */
   .cb-card {
     display: block;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     padding: 14px 20px;
     margin-bottom: 14px;
     text-align: center;
@@ -584,7 +474,7 @@
   }
   .cb-card:hover { transform: scale(1.015); }
   .cb-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 700;
   }
   .cb-subtitle {

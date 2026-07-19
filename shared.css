@@ -1,0 +1,213 @@
+/* ============================================================
+   shared.css — 全站共用樣式與設計 tokens
+   雪莉與朵栗 團購行事曆
+
+   使用方式：在各頁 <head> 的 <style> 之前加入
+     <link rel="stylesheet" href="shared.css">
+   頁面專屬樣式仍留在該頁的 <style>，會覆蓋這裡的設定。
+
+   ⚠ 改配色 / 圓角 / 陰影請改下面的 :root 變數，不要在各頁硬寫色碼。
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+:root {
+  /* ---------- 字體 ---------- */
+  --font-body:    'Noto Sans TC', sans-serif;
+  --font-display: 'Baloo 2', 'Noto Sans TC', sans-serif;
+
+  /* ---------- 文字色 ---------- */
+  --c-text:        #5a4a3f;  /* 主要文字（棕） */
+  --c-text-soft:   #8a7462;  /* 次要文字 */
+  --c-muted:       #a89888;  /* 淡化文字、日期數字 */
+  --c-muted-light: #b39a8b;  /* 最淡：狀態列 */
+  --c-brown:       #b5755a;  /* 按鈕文字、圖示 */
+
+  /* ---------- 底色 / 面板 ---------- */
+  --c-bg-top:    #FFF7EE;  /* body 漸層上緣 */
+  --c-bg-bottom: #FFF1E6;  /* body 漸層下緣，也是 hover 底色 */
+  --c-surface:   #FFFBF5;  /* 卡片 / 面板底 */
+  --c-surface-2: #FFFDFA;  /* 日期格底 */
+
+  /* ---------- 邊框 / 分隔線 ---------- */
+  --c-border:       #FFD3B6;  /* 主要邊框（按鈕、輸入框） */
+  --c-border-light: #FFE3CC;  /* 外框（.wrap、modal） */
+  --c-line:         #F3E2D3;  /* 表格線、虛線分隔 */
+
+  /* ---------- 品牌 / 強調色 ---------- */
+  --c-primary:       #FF8FA3;  /* 主粉 */
+  --c-primary-dark:  #FF7391;  /* 主粉 hover */
+  --c-danger:        #e0654f;  /* 錯誤訊息 */
+
+  /* ---------- 分類色盤（星期、標籤共用）---------- */
+  --c-cat-0: #FF8FA3;  /* 粉 */
+  --c-cat-1: #FFB37A;  /* 橘 */
+  --c-cat-2: #9ACB85;  /* 綠 */
+  --c-cat-3: #6FC8C2;  /* 青 */
+  --c-cat-4: #7AAEEB;  /* 藍 */
+  --c-cat-5: #B79AE8;  /* 紫 */
+  --c-cat-6: #F0C36D;  /* 黃 */
+
+  /* ---------- 圓角 ---------- */
+  --r-sm:    10px;
+  --r-md:    12px;
+  --r-lg:    16px;
+  --r-modal: 18px;
+  --r-xl:    22px;
+  --r-pill:  999px;
+
+  /* ---------- 陰影 ---------- */
+  --sh-card:   0 10px 30px rgba(230, 160, 120, 0.15);
+  --sh-float:  0 3px 10px rgba(230, 160, 120, 0.25);
+  --sh-soft:   0 3px 8px rgba(0, 0, 0, 0.15);
+  --sh-modal:  0 10px 30px rgba(0, 0, 0, 0.2);
+
+  /* ---------- 版面 ---------- */
+  --wrap-max: 1080px;  /* 各頁可覆寫：star-card 640px、school-labels 560px */
+}
+
+/* ============================================================
+   基礎 reset
+   ============================================================ */
+
+* { box-sizing: border-box; min-width: 0; }
+html, body { width: 100%; overflow-x: hidden; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: linear-gradient(180deg, var(--c-bg-top) 0%, var(--c-bg-bottom) 100%);
+  color: var(--c-text);
+  padding: 16px 8px 50px;
+}
+
+/* ============================================================
+   版面容器
+   ============================================================ */
+
+.wrap {
+  max-width: var(--wrap-max);
+  margin: 0 auto;
+  background: var(--c-surface);
+  border-radius: var(--r-xl);
+  border: 3px solid var(--c-border-light);
+  padding: 18px 14px 26px;
+  box-shadow: var(--sh-card);
+}
+
+/* ============================================================
+   右上角回首頁按鈕
+   ============================================================ */
+
+.site-home-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--c-border);
+  color: var(--c-brown);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: var(--sh-float);
+  z-index: 30;
+  cursor: pointer;
+}
+.site-home-btn:hover { background: var(--c-bg-bottom); }
+
+/* ============================================================
+   膠囊型控制項（下拉選單、按鈕）
+   ============================================================ */
+
+.controls select,
+.controls button {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--c-border);
+  background: #fff;
+  color: var(--c-brown);
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.controls button:hover { background: var(--c-bg-bottom); }
+
+/* ============================================================
+   狀態訊息列
+   ============================================================ */
+
+.status {
+  font-size: 11px;
+  color: var(--c-muted-light);
+  margin-bottom: 10px;
+}
+.status.error { color: var(--c-danger); }
+
+/* ============================================================
+   頁尾
+   ============================================================ */
+
+.footer {
+  text-align: center;
+  margin-top: 18px;
+  color: var(--c-primary);
+  font-weight: 700;
+  font-size: 14px;
+}
+.footer a { color: inherit; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+/* ============================================================
+   彈窗 Modal
+   ============================================================ */
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(90, 74, 63, 0.45);
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+}
+.modal-backdrop.show { display: flex; }
+
+.modal-box {
+  position: relative;
+  background: var(--c-surface);
+  border-radius: var(--r-modal);
+  border: 3px solid var(--c-border-light);
+  padding: 24px 22px;
+  max-width: 90%;
+  width: 360px;
+  box-shadow: var(--sh-modal);
+}
+.modal-box h3 {
+  margin: 0 0 12px;
+  color: var(--c-primary);
+  font-size: 17px;
+}
+.modal-box ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--c-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: none;
+  font-size: 16px;
+  color: var(--c-brown);
+  cursor: pointer;
+}
