@@ -1252,6 +1252,24 @@ function parseYmdToDate_(s) {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
+// 寫入「延長時間」欄（D 欄）。這欄可能被試算表沿用成日期格式（前一筆是「指定延長至某天」時），
+// 直接 setValue(3) 會被顯示成 1900/1/2，而且 getValues() 讀回來變成 Date 物件，
+// 前台的 parseExtendRaw 就會誤判成「延長至 1900 年」。所以寫數字時一律把格式改回純數字。
+function setEventExtend_(sheet, row, val) {
+  const cell = sheet.getRange(row, EVENT_COL.EXTEND);
+  if (val === '' || val === undefined || val === null) {
+    cell.setNumberFormat('0').clearContent();
+    return;
+  }
+  const d = parseYmdToDate_(val); // 支援手動填「指定延長至 YYYY-MM-DD」
+  if (d) {
+    cell.setNumberFormat('yyyy-mm-dd').setValue(d);
+    return;
+  }
+  const n = Number(val);
+  cell.setNumberFormat('0').setValue(isNaN(n) ? '' : n);
+}
+
 function addEvent_(fields) {
   const sheet = getEventSheet_();
   const id = getNextEventId_(sheet);
@@ -1284,7 +1302,9 @@ function addEvent_(fields) {
   row[EVENT_COL.MATCH_ITEMS - 1] = fields.matchItems || '';
   row[EVENT_COL.THUMB - 1] = fields.thumbUrl || '';
 
-  sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  const newRow = sheet.getLastRow() + 1;
+  sheet.getRange(newRow, 1, 1, row.length).setValues([row]);
+  setEventExtend_(sheet, newRow, fields.extend); // 確保延長欄不會被沿用成日期格式
   return id;
 }
 
@@ -1306,9 +1326,7 @@ function updateEvent_(id, fields) {
   if (fields.url !== undefined) sheet.getRange(row, EVENT_COL.URL).setValue(fields.url);
   if (fields.tag !== undefined) sheet.getRange(row, EVENT_COL.TAG).setValue(fields.tag);
   if (fields.earlyBird !== undefined) sheet.getRange(row, EVENT_COL.EARLYBIRD).setValue(fields.earlyBird);
-  if (fields.extend !== undefined) {
-    sheet.getRange(row, EVENT_COL.EXTEND).setValue(fields.extend === '' ? '' : Number(fields.extend));
-  }
+  if (fields.extend !== undefined) setEventExtend_(sheet, row, fields.extend);
   if (fields.color !== undefined) sheet.getRange(row, EVENT_COL.COLOR).setValue(fields.color);
   if (fields.allDay !== undefined) {
     sheet.getRange(row, EVENT_COL.ALLDAY).setValue(fields.allDay ? '是' : '否');
@@ -1330,6 +1348,29 @@ function updateEvent_(id, fields) {
   if (fields.matchItems !== undefined) sheet.getRange(row, EVENT_COL.MATCH_ITEMS).setValue(fields.matchItems);
   if (fields.thumbUrl !== undefined) sheet.getRange(row, EVENT_COL.THUMB).setValue(fields.thumbUrl);
   return true;
+}
+
+// 修復已經被寫壞的「延長時間」欄：格式被沿用成日期時，數字 3 會被存成 1900 年初的某天。
+// 試算表裡實際的數值仍然是 3（1899-12-30 為序號 0），所以換算回天數就能救回來。
+// 在 Apps Script 編輯器直接執行這個函式即可，只會動到年份 < 2000 的異常列。
+function repairEventExtendColumn() {
+  const sheet = getEventSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return { fixed: [] };
+  const range = sheet.getRange(2, EVENT_COL.EXTEND, last - 1, 1);
+  const vals = range.getValues();
+  const EPOCH = new Date(1899, 11, 30);
+  const fixed = [];
+  vals.forEach((r, i) => {
+    const v = r[0];
+    if (!(v instanceof Date) || v.getFullYear() >= 2000) return;
+    const days = Math.round((v.getTime() - EPOCH.getTime()) / 86400000);
+    const cell = sheet.getRange(i + 2, EVENT_COL.EXTEND);
+    cell.setNumberFormat('0').setValue(days);
+    fixed.push('第 ' + (i + 2) + ' 列：' + Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM-dd') + ' → ' + days + ' 天');
+  });
+  Logger.log(fixed.length ? '已修復 ' + fixed.length + ' 列：\n' + fixed.join('\n') : '沒有需要修復的列');
+  return { fixed: fixed };
 }
 
 function deleteEvent_(id) {

@@ -865,7 +865,14 @@ function parseExtendRaw(raw, originalEnd) {
     return { type: 'days', value: parseInt(s, 10) };
   }
   const d = parseDateStr(s);
-  if (d) return { type: 'date', value: d };
+  if (d) {
+    // 試算表把「延長天數」存成日期格式時，數字會變成 1900 年初的某天，換算回天數
+    if (d.getFullYear() < 2000) {
+      const days = Math.round((d.getTime() - new Date(1899, 11, 30).getTime()) / 86400000);
+      return days > 0 ? { type: 'days', value: days } : null;
+    }
+    return { type: 'date', value: d };
+  }
   return null;
 }
 
