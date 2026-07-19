@@ -235,22 +235,6 @@ const SOCIAL_SVG_ICONS = {
 const ICON_SVG_CLICK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 3l7 16.5 2.2-7 7-2.2z"/></svg>';
 const ICON_SVG_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 const ICON_SVG_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v5h5"/><path d="M20 20v-5h-5"/><path d="M5.5 9a7 7 0 0 1 12.3-3.5"/><path d="M18.5 15a7 7 0 0 1-12.3 3.5"/></svg>';
-function buildEventIconElements(ev) {
-  return EVENT_ICON_DEFS.filter(d => ev[d.key]).map(d => {
-    let href = ev[d.key];
-    if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href)) href = 'https://' + href;
-    const span = document.createElement('span');
-    span.className = 'gs-card-icon';
-    span.title = d.label;
-    span.innerHTML = SOCIAL_SVG_ICONS[d.key];
-    span.addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.open(href, '_blank', 'noopener');
-    });
-    return span;
-  });
-}
-
 // ===== 【新】品牌社群連結列（現正開團中最上方），跟事件圖示共用同一份定義 =====
 function buildSocialIconRow() {
   const items = EVENT_ICON_DEFS.filter(d => socialLinks[d.key]);
@@ -486,7 +470,7 @@ function renderAllMode() {
     const weekEl = document.createElement('div');
     weekEl.className = 'week';
     weekEl.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
-    weekEl.style.gridTemplateRows = `22px repeat(${maxLanes}, 21px) 4px`;
+    weekEl.style.gridTemplateRows = `22px repeat(${maxLanes}, 25px) 4px`;
 
     weekDays.forEach((d, i) => {
       const cell = document.createElement('div');
@@ -528,12 +512,13 @@ function renderAllMode() {
         const badge = document.createElement('span');
         badge.className = 'badge';
         badge.textContent = gbNumber;
+        // 活動自訂了顏色時，圓圈數字要跟著自訂色走，不然會跟 c{idx} 分類色系對不上、看起來亂搭
+        if (item.ev.color) badge.style.color = item.ev.color;
         bar.appendChild(badge);
       } else if (item.ev.isGroupBuy === false) {
         const badge = document.createElement('span');
         badge.className = 'badge';
         badge.textContent = '📌';
-        badge.style.background = 'rgba(255,255,255,0.55)';
         bar.appendChild(badge);
       }
 
@@ -876,14 +861,6 @@ function renderGroupStatusList(targetId) {
     dateEl.className = 'gs-card-date';
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
-
-    const icons = buildEventIconElements(ev);
-    if (icons.length) {
-      const iconsWrap = document.createElement('div');
-      iconsWrap.className = 'gs-card-icons';
-      icons.forEach(el => iconsWrap.appendChild(el));
-      card.appendChild(iconsWrap);
-    }
 
     if (frozen || isToday) {
       const badges = document.createElement('div');
@@ -1455,15 +1432,25 @@ if (sessionStorage.getItem('admin_unlocked') === '1') {
 document.getElementById('refreshBtn').addEventListener('click', loadData);
 
 // ===== 行事曆編輯模式：開關、當日活動面板 =====
-document.getElementById('calEditToggleBtn').addEventListener('click', () => {
+document.getElementById('calEditToggleWrap').addEventListener('click', () => {
   calendarEditMode = !calendarEditMode;
   document.getElementById('calEditToggleBtn').classList.toggle('on', calendarEditMode);
+  document.getElementById('calQuickAddBtn').style.display = calendarEditMode ? '' : 'none';
   if (!calendarEditMode) closeCalEditDayPanel();
   // 【新】若活動彈窗目前開著，同步更新「顯示於前台」開關的可編輯狀態
   if (currentModalEv && document.getElementById('adminModal').classList.contains('show')) {
     renderAdminPublishBox(currentModalEv);
   }
   render();
+});
+
+// 編輯模式旁邊的快速新增：不用先點格子，直接跳出新增活動視窗（預設帶今天，或目前顯示月份的第一天）
+document.getElementById('calQuickAddBtn').addEventListener('click', () => {
+  const today = new Date();
+  const prefillDate = (today.getFullYear() === currentYear && today.getMonth() === currentMonth)
+    ? today
+    : new Date(currentYear, currentMonth, 1);
+  openEventEditModal(null, prefillDate);
 });
 
 function closeCalEditDayPanel() {
@@ -1633,6 +1620,13 @@ document.getElementById('evGroupBuySwitch').addEventListener('click', () => {
   setEvSwitch('evGroupBuySwitch', !isEvSwitchOn('evGroupBuySwitch'));
 });
 
+// 自動排色開關：開啟時交給畫面依序自動上色（隱藏手動選色列），關閉才顯示顏色選擇器
+document.getElementById('evAutoColorSwitch').addEventListener('click', () => {
+  const on = !isEvSwitchOn('evAutoColorSwitch');
+  setEvSwitch('evAutoColorSwitch', on);
+  document.getElementById('evColorRow').style.display = on ? 'none' : '';
+});
+
 // 「更多設定」可折疊區塊：標籤／延長時間／早鳥禮／網址／分類／前台顯示／社群圖示
 document.getElementById('evMoreToggle').addEventListener('click', () => {
   const toggle = document.getElementById('evMoreToggle');
@@ -1641,41 +1635,6 @@ document.getElementById('evMoreToggle').addEventListener('click', () => {
   body.style.display = open ? 'block' : 'none';
   document.getElementById('evMoreArrow').textContent = open ? '▴' : '▾';
 });
-
-// ===== 【新】社群小圖示按鈕：新增／編輯活動視窗裡的 4 個圖示，點擊跳出 prompt 輸入網址 =====
-let evIconValues = {};
-function initEventIconButtons() {
-  const box = document.getElementById('evIconRow');
-  if (!box || box.dataset.bound) return;
-  box.dataset.bound = '1';
-  EVENT_ICON_DEFS.forEach(def => {
-    const btn = box.querySelector(`[data-key="${def.key}"]`);
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const current = evIconValues[def.key] || '';
-      const input = prompt(`輸入${def.label}網址（留空即可清除）：`, current);
-      if (input === null) return; // 按取消不變更
-      evIconValues[def.key] = input.trim();
-      btn.classList.toggle('set', !!evIconValues[def.key]);
-    });
-  });
-}
-initEventIconButtons();
-
-function setEventIconButtons(ev) {
-  evIconValues = {
-    iconIg: ev ? (ev.iconIg || '') : '',
-    iconTiktok: ev ? (ev.iconTiktok || '') : '',
-    iconFb: ev ? (ev.iconFb || '') : '',
-    iconEmail: ev ? (ev.iconEmail || '') : ''
-  };
-  const box = document.getElementById('evIconRow');
-  if (!box) return;
-  EVENT_ICON_DEFS.forEach(def => {
-    const btn = box.querySelector(`[data-key="${def.key}"]`);
-    if (btn) btn.classList.toggle('set', !!evIconValues[def.key]);
-  });
-}
 
 function ymdStr(d) {
   const pad = n => String(n).padStart(2, '0');
@@ -1690,9 +1649,13 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
   setFormStatus('evEditStatus', '', '');
 
-  const defaultColor = ev ? (ev.color || EVENT_COLOR_PRESETS[(ev.id - 1) % EVENT_COLOR_PRESETS.length]) : EVENT_COLOR_PRESETS[0];
+  const hasCustomColor = !!(ev && ev.color);
+  const defaultColor = hasCustomColor ? ev.color : EVENT_COLOR_PRESETS[((ev ? ev.id : 0) - 1 + EVENT_COLOR_PRESETS.length) % EVENT_COLOR_PRESETS.length];
   document.getElementById('evTitleInput').value = ev ? ev.title : '';
   document.getElementById('evColorInput').value = defaultColor || '#FF8FA3';
+  // 沒有自訂顏色（新活動、或原本就是自動排色）→ 預設開啟自動排色，色票列先隱藏
+  setEvSwitch('evAutoColorSwitch', !hasCustomColor);
+  document.getElementById('evColorRow').style.display = hasCustomColor ? '' : 'none';
   document.getElementById('evUrlInput').value = ev ? (ev.url || '') : '';
   document.getElementById('evCategoryInput').value = ev ? (ev.category || '') : '';
   document.getElementById('evTagInput').value = ev ? (ev.tag || '') : '';
@@ -1701,7 +1664,6 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evDiscountCodeInput').value = ev ? (ev.discountCode || '') : '';
   document.getElementById('evDiscountDescInput').value = ev ? (ev.discountDesc || '') : '';
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
-  setEventIconButtons(ev);
   document.getElementById('evBrandMatchInfo').style.display = 'none';
   document.getElementById('evBrandMatchInfo').innerHTML = '';
   if (!isNew) setTimeout(renderEvBrandMatchInfo, 0);
@@ -1744,7 +1706,7 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const allDay = isEvSwitchOn('evAllDaySwitch');
   const isGroupBuy = isEvSwitchOn('evGroupBuySwitch');
   const published = document.getElementById('evPublishedInput').checked;
-  const color = document.getElementById('evColorInput').value;
+  const color = isEvSwitchOn('evAutoColorSwitch') ? '' : document.getElementById('evColorInput').value;
   const url = document.getElementById('evUrlInput').value.trim();
   const category = document.getElementById('evCategoryInput').value.trim();
   const tag = document.getElementById('evTagInput').value.trim();
@@ -1760,8 +1722,6 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
     allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime,
-    iconIg: evIconValues.iconIg || '', iconTiktok: evIconValues.iconTiktok || '',
-    iconFb: evIconValues.iconFb || '', iconEmail: evIconValues.iconEmail || '',
     discountCode, discountDesc
   };
 
@@ -5492,7 +5452,10 @@ function renderVendorDbList() {
       `<span class="cal-edit-day-swatch" style="background:#7AAEEB;"></span>` +
       `<span class="cal-edit-day-row-name">${escHtml(v.id)}　${escHtml(v.name)}${v.type ? '（' + escHtml(v.type) + '）' : ''}</span>` +
       `<span class="cal-edit-day-row-tag">${brandCount} 個品牌</span>`;
-    row.addEventListener('click', () => openVendorEditModal(v));
+    row.addEventListener('click', () => {
+      if (brandVendorEditMode) openVendorEditModal(v);
+      else openVendorDetailModal(v);
+    });
     el.appendChild(row);
   });
 }
@@ -5512,10 +5475,20 @@ function renderBrandDbList() {
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
       `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>`;
-    row.addEventListener('click', () => openBrandEditModal(b));
+    row.addEventListener('click', () => {
+      if (brandVendorEditMode) openBrandEditModal(b);
+      else openBrandDetailModal(b);
+    });
     el.appendChild(row);
   });
 }
+
+// 品牌廠商頁的編輯模式開關：關閉時點列表只看資料，開啟才會跳出編輯視窗
+let brandVendorEditMode = false;
+document.getElementById('bvEditToggleWrap').addEventListener('click', () => {
+  brandVendorEditMode = !brandVendorEditMode;
+  document.getElementById('bvEditSwitch').classList.toggle('on', brandVendorEditMode);
+});
 
 let vendorEditCtx = null;
 
@@ -5668,6 +5641,132 @@ document.getElementById('brandDeleteBtn').addEventListener('click', async () => 
 document.getElementById('vendorDbAddBtn').addEventListener('click', () => openVendorEditModal(null));
 document.getElementById('brandDbAddBtn').addEventListener('click', () => openBrandEditModal(null));
 
+// ===== 【新】廠商資料檢視（唯讀）：非編輯模式點廠商，顯示資料＋底下的品牌 =====
+let vendorDetailCtx = null;
+function openVendorDetailModal(vendor) {
+  vendorDetailCtx = vendor;
+  document.getElementById('vendorDetailTitle').textContent = `🏭 ${vendor.name}${vendor.type ? '（' + vendor.type + '）' : ''}`;
+
+  const lines = [];
+  lines.push(`<div><b>廠商編號：</b>${escHtml(vendor.id)}</div>`);
+  lines.push(`<div><b>類型：</b>${escHtml(vendor.type || '－')}</div>`);
+  if (vendor.remittanceMethod) lines.push(`<div><b>匯款方式：</b>${escHtml(vendor.remittanceMethod)}</div>`);
+  if (vendor.remittanceRule) lines.push(`<div><b>請款／匯款規則：</b>${escHtml(vendor.remittanceRule)}</div>`);
+  if (vendor.contact) lines.push(`<div><b>聯絡窗口：</b>${escHtml(vendor.contact)}</div>`);
+  if (vendor.note) lines.push(`<div><b>備註：</b>${escHtml(vendor.note)}</div>`);
+  document.getElementById('vendorDetailBody').innerHTML = lines.join('');
+
+  const brands = brandDb.filter(b => (b.vendorIds || []).indexOf(vendor.id) !== -1);
+  const listEl = document.getElementById('vendorDetailBrandList');
+  listEl.innerHTML = '';
+  if (!brands.length) {
+    listEl.innerHTML = '<div class="task-empty">這個廠商底下還沒有連結任何品牌</div>';
+  } else {
+    brands.forEach(b => {
+      const row = document.createElement('div');
+      row.className = 'cal-edit-day-row';
+      row.innerHTML =
+        `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
+        `<span class="cal-edit-day-row-name">${escHtml(b.name)}</span>`;
+      row.addEventListener('click', () => {
+        closeVendorDetailModal();
+        openBrandDetailModal(b);
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('vendorDetailModal').classList.add('show');
+}
+function closeVendorDetailModal() {
+  document.getElementById('vendorDetailModal').classList.remove('show');
+  vendorDetailCtx = null;
+}
+document.getElementById('vendorDetailEditBtn').addEventListener('click', () => {
+  if (!vendorDetailCtx) return;
+  const vendor = vendorDetailCtx;
+  closeVendorDetailModal();
+  openVendorEditModal(vendor);
+});
+
+// ===== 【新】品牌資料檢視（唯讀）：非編輯模式點品牌，顯示資料＋所屬廠商＋未來／過去的開團 =====
+function getBrandGroupBuys_(brandName) {
+  const todayStart = startOfDay(new Date());
+  const matched = allEvents.filter(ev => ev.title === brandName);
+  const upcoming = matched.filter(ev => startOfDay(ev.displayEnd) >= todayStart).sort((a, b) => a.start - b.start);
+  const past = matched.filter(ev => startOfDay(ev.displayEnd) < todayStart).sort((a, b) => b.start - a.start);
+  return { upcoming, past };
+}
+function renderBrandGroupBuyRow_(ev) {
+  const row = document.createElement('div');
+  row.className = 'cal-edit-day-row';
+  row.innerHTML =
+    `<span class="cal-edit-day-swatch" style="background:${ev.color || '#7AAEEB'};"></span>` +
+    `<span class="cal-edit-day-row-name">${fmtSingleDate(ev.start)}－${fmtSingleDate(ev.displayEnd)}</span>`;
+  row.addEventListener('click', () => {
+    closeBrandDetailModal();
+    if (brandVendorEditMode) openEventEditModal(ev);
+    else openAdminModal(ev);
+  });
+  return row;
+}
+
+let brandDetailCtx = null;
+function openBrandDetailModal(brand) {
+  brandDetailCtx = brand;
+  document.getElementById('brandDetailTitle').textContent = `🏷 ${brand.name}`;
+
+  const lines = [];
+  const vendorName = vendorNamesOf_(brand);
+  lines.push(`<div><b>所屬廠商：</b>${vendorName ? escHtml(vendorName) : '－'}</div>`);
+  if (brand.lineContact) lines.push(`<div><b>LINE窗口：</b>${escHtml(brand.lineContact)}</div>`);
+  if (brand.emailContact) lines.push(`<div><b>Email窗口：</b>${escHtml(brand.emailContact)}</div>`);
+  if (brand.igContact) lines.push(`<div><b>IG窗口：</b>${escHtml(brand.igContact)}</div>`);
+  if (brand.intro) lines.push(`<div><b>品牌介紹：</b>${escHtml(brand.intro)}</div>`);
+  if (brand.note) lines.push(`<div><b>備註：</b>${escHtml(brand.note)}</div>`);
+  document.getElementById('brandDetailBody').innerHTML = lines.join('');
+
+  const { upcoming, past } = getBrandGroupBuys_(brand.name);
+
+  const upcomingEl = document.getElementById('brandDetailUpcomingList');
+  upcomingEl.innerHTML = '';
+  if (!upcoming.length) {
+    upcomingEl.innerHTML = '<div class="task-empty">目前沒有排定中的開團</div>';
+  } else {
+    upcoming.forEach(ev => upcomingEl.appendChild(renderBrandGroupBuyRow_(ev)));
+  }
+
+  document.getElementById('brandDetailPastCount').textContent = past.length;
+  const pastEl = document.getElementById('brandDetailPastList');
+  pastEl.innerHTML = '';
+  if (!past.length) {
+    pastEl.innerHTML = '<div class="task-empty">還沒有過去的開團紀錄</div>';
+  } else {
+    past.forEach(ev => pastEl.appendChild(renderBrandGroupBuyRow_(ev)));
+  }
+  // 每次打開都先收合「過去的團」，畫面維持乾淨
+  document.getElementById('brandDetailPastToggle').classList.remove('open');
+  document.getElementById('brandDetailPastBody').style.display = 'none';
+
+  document.getElementById('brandDetailModal').classList.add('show');
+}
+function closeBrandDetailModal() {
+  document.getElementById('brandDetailModal').classList.remove('show');
+  brandDetailCtx = null;
+}
+document.getElementById('brandDetailEditBtn').addEventListener('click', () => {
+  if (!brandDetailCtx) return;
+  const brand = brandDetailCtx;
+  closeBrandDetailModal();
+  openBrandEditModal(brand);
+});
+document.getElementById('brandDetailPastToggle').addEventListener('click', () => {
+  const toggle = document.getElementById('brandDetailPastToggle');
+  const open = !toggle.classList.contains('open');
+  toggle.classList.toggle('open', open);
+  document.getElementById('brandDetailPastBody').style.display = open ? '' : 'none';
+});
+
 // ===== 【新】排行事曆時：團名跟品牌資料庫完全比對，自動帶出參考資訊 =====
 function findGroupBuyDatesForBrand_(brandName, excludeEventId) {
   return allEvents
@@ -5706,15 +5805,6 @@ function renderEvBrandMatchInfo() {
   if (pastDates.length) {
     html += '<div style="margin-top:6px;">🗓 過去開團日期：' +
       pastDates.map(ev => fmtSingleDate(ev.start) + '–' + fmtSingleDate(ev.displayEnd)).join('、') + '</div>';
-  }
-
-  if (brand.igContact) {
-    const btnIg = document.getElementById('evIconRow') ? document.getElementById('evIconRow').querySelector('[data-key="iconIg"]') : null;
-    if (btnIg && !evIconValues.iconIg) {
-      evIconValues.iconIg = brand.igContact;
-      btnIg.classList.add('set');
-      html += '<div style="margin-top:6px; color:#5C9147;">✅ 已自動帶入 IG 圖示網址（可在「更多設定」裡手動修改）</div>';
-    }
   }
 
   box.innerHTML = html;

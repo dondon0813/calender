@@ -1461,7 +1461,8 @@
     width: 17px;
     height: 17px;
     border-radius: 50%;
-    color: #fff;
+    background: rgba(255,255,255,0.55);
+    color: var(--c-text);
     font-weight: 800;
     font-size: 10px;
     display: flex;
@@ -1504,13 +1505,13 @@
     margin-left: auto;
   }
 
-  .c0 .badge { background: #FFE6EC; color: var(--c-primary); } .c0.ebar { background: var(--c-primary); }
-  .c1 .badge { background: #FFEcD6; color: var(--c-cat-1); } .c1.ebar { background: var(--c-cat-1); }
-  .c2 .badge { background: #E4F5DF; color: var(--c-cat-2); } .c2.ebar { background: var(--c-cat-2); }
-  .c3 .badge { background: #DEF5F4; color: var(--c-cat-3); } .c3.ebar { background: var(--c-cat-3); }
-  .c4 .badge { background: #E2EBFD; color: var(--c-cat-4); } .c4.ebar { background: var(--c-cat-4); }
-  .c5 .badge { background: #EFE4FB; color: var(--c-cat-5); } .c5.ebar { background: var(--c-cat-5); }
-  .c6 .badge { background: #FBEFD9; color: #D9A441; } .c6.ebar { background: var(--c-cat-6); }
+  .c0 .badge { color: var(--c-primary); } .c0.ebar { background: var(--c-primary); }
+  .c1 .badge { color: var(--c-cat-1); } .c1.ebar { background: var(--c-cat-1); }
+  .c2 .badge { color: var(--c-cat-2); } .c2.ebar { background: var(--c-cat-2); }
+  .c3 .badge { color: var(--c-cat-3); } .c3.ebar { background: var(--c-cat-3); }
+  .c4 .badge { color: var(--c-cat-4); } .c4.ebar { background: var(--c-cat-4); }
+  .c5 .badge { color: var(--c-cat-5); } .c5.ebar { background: var(--c-cat-5); }
+  .c6 .badge { color: var(--c-cat-6); } .c6.ebar { background: var(--c-cat-6); }
 
   .legend {
     display: none;
@@ -1938,26 +1939,6 @@
   }
   .gs-today-badge { background: #FF4D6D; }
   .gs-frozen-badge { background: #4F91D9; }
-  .gs-card-icons {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .gs-card-icon {
-    width: 26px;
-    height: 26px;
-    border-radius: 30%;
-    background: rgba(255,255,255,0.25);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .gs-card-icon svg { width: 62%; height: 62%; display: block; }
-  .gs-card-icon:hover { background: rgba(255,255,255,0.4); }
   .gs-empty {
     text-align: center;
     color: #a89787;
@@ -2294,9 +2275,6 @@
     min-height: 22px;
   }
 
-  /* ===== 行事曆編輯模式 ===== */
-  #calEditToggleBtn.on { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
-
   .daycell.editable, .daycell-list.editable { cursor: pointer; }
   .daycell.editable:hover, .daycell-list.editable:hover { outline: 2px solid #FFB4C2; outline-offset: -2px; }
 
@@ -2521,31 +2499,6 @@
   .ev-more-body {
     padding-top: 4px;
   }
-  .ev-icon-row {
-    display: flex;
-    gap: 10px;
-  }
-  .ev-icon-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 2px solid var(--c-border);
-    background: #fff;
-    color: var(--c-brown);
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-  .ev-icon-btn:hover { background: var(--c-bg-bottom); }
-  .ev-icon-btn.set {
-    background: var(--c-primary);
-    border-color: var(--c-primary);
-    color: #fff;
-  }
-
   /* ===== 圖片庫 ===== */
   .il-toolbar {
     max-width: 900px;
@@ -2978,6 +2931,9 @@
       <div class="home-card" onclick="switchView('tools')">
         <span class="hc-icon">🧰</span><span class="hc-name">便利小工具</span>
       </div>
+      <div class="home-card" onclick="switchView('brandVendor')">
+        <span class="hc-icon">🏢</span><span class="hc-name">品牌廠商</span>
+      </div>
     </div>
   </div>
 
@@ -3123,7 +3079,14 @@
 
   <!-- ===== 品牌廠商管理 ===== -->
   <div class="view" id="viewBrandVendor">
-    <h2 class="view-title">品牌廠商管理</h2>
+    <div class="pnote-header-wrap">
+      <h2 class="view-title">品牌廠商管理</h2>
+      <label class="pr-toggle show pnote-scope-toggle" id="bvEditToggleWrap" title="開啟後點廠商／品牌會直接跳出編輯視窗；關閉時點了只會顯示資料">
+        <span class="pr-toggle-text">✏️ 編輯</span>
+        <span class="pr-switch" id="bvEditSwitch"><span class="pr-knob"></span></span>
+      </label>
+    </div>
+    <p style="font-size:11.5px; color:#a89888; text-align:center; margin:-4px 0 10px;">點廠商／品牌預設只會顯示資料；開啟右上角「編輯」開關才會跳出可修改的編輯視窗</p>
 
     <div style="text-align:center; margin-bottom:10px;"><span class="task-section-title">🏭 廠商</span></div>
     <div style="text-align:center; margin-bottom:10px;">
@@ -3376,7 +3339,11 @@
       </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
-      <button id="calEditToggleBtn" title="開啟／關閉行事曆編輯模式">✏️ 編輯</button>
+      <label class="pr-toggle show" id="calEditToggleWrap" title="開啟／關閉行事曆編輯模式">
+        <span class="pr-toggle-text">✏️ 編輯</span>
+        <span class="pr-switch" id="calEditToggleBtn"><span class="pr-knob"></span></span>
+      </label>
+      <button id="calQuickAddBtn" title="新增活動" style="display:none;">＋</button>
       <label class="pr-toggle" id="prToggleWrap" title="在開團日／結團日的團購下方顯示公關品狀態小圖示">
         <span class="pr-toggle-text">公關品狀態</span>
         <span class="pr-switch" id="prSwitch"><span class="pr-knob"></span></span>
@@ -3718,8 +3685,15 @@
       <input type="text" id="evTitleInput" placeholder="例如：林貝兒米餅 開團">
       <div id="evBrandMatchInfo" style="display:none; margin-top:8px; background:#F0F6FF; border:1.5px solid #C9DEFB; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#4a7fb5; line-height:1.7;"></div>
 
-      <label for="evColorInput">顏色（顯示全部列表中的底色）</label>
-      <div class="ev-color-row">
+      <label>顏色（顯示全部列表中的底色）</label>
+      <div class="ev-toggle-row" style="margin-top:0;">
+        <div class="ev-toggle-item">
+          <span class="ev-toggle-label">🎨 自動排色</span>
+          <span class="pr-switch" id="evAutoColorSwitch"><span class="pr-knob"></span></span>
+        </div>
+      </div>
+      <p style="font-size:11px; color:#a89888; margin:4px 0 8px;">自動排色：畫面會依照順序自動輪流上色，避免相鄰的團撞色。只有想特別指定顏色的團才需要關閉自動、手動選色。</p>
+      <div class="ev-color-row" id="evColorRow">
         <input type="color" id="evColorInput" value="#FF8FA3">
         <div class="ev-color-presets" id="evColorPresets"></div>
       </div>
@@ -3766,7 +3740,7 @@
       <div class="ev-weekday-hint" id="evEndWeekdayHint"></div>
 
       <div class="ev-more-toggle" id="evMoreToggle">
-        <span>更多設定（標籤／延長時間／早鳥禮／網址／分類／前台顯示／社群圖示）</span>
+        <span>更多設定（標籤／延長時間／早鳥禮／網址／分類／前台顯示）</span>
         <span class="ev-more-arrow" id="evMoreArrow">▾</span>
       </div>
       <div class="ev-more-body" id="evMoreBody" style="display:none;">
@@ -3791,14 +3765,6 @@
 
         <label for="evDiscountDescInput">折扣說明（可不填，顯示在折扣碼下方）</label>
         <textarea id="evDiscountDescInput" rows="2" placeholder="例如：滿 1000 元折 100 元，不可與其他優惠併用"></textarea>
-
-        <label style="margin-top:14px;">社群小圖示（點圖示輸入網址，前後台都會顯示；留空可清除）</label>
-        <div class="ev-icon-row" id="evIconRow">
-          <button type="button" class="ev-icon-btn" data-key="iconIg" title="Instagram">📷</button>
-          <button type="button" class="ev-icon-btn" data-key="iconTiktok" title="TikTok">🎵</button>
-          <button type="button" class="ev-icon-btn" data-key="iconFb" title="Facebook">📘</button>
-          <button type="button" class="ev-icon-btn" data-key="iconEmail" title="Email／其他連結">✉️</button>
-        </div>
 
         <label class="urgent-check" style="color:#5C9147;" id="evPublishedRow">
           <input type="checkbox" id="evPublishedInput">顯示於前台（不勾＝尚未確認，先不顯示）
@@ -4019,7 +3985,41 @@
     </div>
   </div>
 </div>
-  
+
+<!-- ===== 廠商資料檢視（非編輯模式點廠商跳出） ===== -->
+<div class="modal-backdrop" id="vendorDetailModal" onclick="if(event.target===this) closeVendorDetailModal()">
+  <div class="modal-box" style="width:400px;">
+    <button class="modal-close" onclick="closeVendorDetailModal()">✕</button>
+    <h3 id="vendorDetailTitle">廠商資料</h3>
+    <div id="vendorDetailBody" style="font-size:13.5px; line-height:1.9; color:var(--c-text);"></div>
+    <div style="text-align:center; margin:14px 0 4px;"><span class="task-section-title">🏷 這個廠商底下的品牌</span></div>
+    <div id="vendorDetailBrandList"></div>
+    <button class="task-submit-btn" id="vendorDetailEditBtn" style="margin-top:16px;">✏️ 編輯這個廠商</button>
+  </div>
+</div>
+
+<!-- ===== 品牌資料檢視（非編輯模式點品牌跳出） ===== -->
+<div class="modal-backdrop" id="brandDetailModal" onclick="if(event.target===this) closeBrandDetailModal()">
+  <div class="modal-box" style="width:400px;">
+    <button class="modal-close" onclick="closeBrandDetailModal()">✕</button>
+    <h3 id="brandDetailTitle">品牌資料</h3>
+    <div id="brandDetailBody" style="font-size:13.5px; line-height:1.9; color:var(--c-text);"></div>
+
+    <div style="text-align:center; margin:14px 0 4px;"><span class="task-section-title">🗓 未來已排定的開團</span></div>
+    <div id="brandDetailUpcomingList"></div>
+
+    <div class="ev-more-toggle" id="brandDetailPastToggle">
+      <span>🗓 過去的團（<span id="brandDetailPastCount">0</span>）</span>
+      <span class="ev-more-arrow" id="brandDetailPastArrow">▾</span>
+    </div>
+    <div class="ev-more-body" id="brandDetailPastBody" style="display:none;">
+      <div id="brandDetailPastList"></div>
+    </div>
+
+    <button class="task-submit-btn" id="brandDetailEditBtn" style="margin-top:16px;">✏️ 編輯這個品牌</button>
+  </div>
+</div>
+
 <!-- ===== 社群連結設定浮動視窗 ===== -->
 <div class="modal-backdrop" id="socialLinkModal" onclick="if(event.target===this) closeSocialLinkEditor()">
   <div class="modal-box" style="width:380px;">
@@ -4044,7 +4044,7 @@
 </div>
 
 <script src="vendor/html2canvas.min.js"></script>
-<script src="admin.js?v=36"></script>
+<script src="admin.js?v=42"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

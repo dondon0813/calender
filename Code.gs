@@ -1214,6 +1214,8 @@ const EVENT_COL = {
   ID: 1, START: 2, END: 3, EXTEND: 4, TITLE: 5, TAG: 6, CATEGORY: 7, URL: 8, ADMIN_URL: 9, EARLYBIRD: 10,
   RECIPE_BRAND: 11,
   COLOR: 12, ALLDAY: 13, START_TIME: 14, END_TIME: 15, IS_GROUPBUY: 16, PUBLISHED: 17,
+  // 【備用欄位】原本是「每個活動」各自的社群圖示，後來確認社群圖示應該走全域設定（社群連結設定→現正開團中最上方），
+  // 這四欄已經沒有 UI 在寫入，故意留著沒刪，之後如果有其他跟活動相關的資料要存，可以直接借用這幾欄，不用申請新欄位
   ICON_IG: 18, ICON_TIKTOK: 19, ICON_FB: 20, ICON_EMAIL: 21,
   MATCH_ITEMS: 22,
   THUMB: 23,  // 去背小圖（這檔專用）；空白＝自動用品牌資料庫的品牌預設小圖
