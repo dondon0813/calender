@@ -1403,10 +1403,19 @@ function openSchoolItemModal(item) {
 function preloadImage(src) {
   return new Promise((resolve) => {
     if (!src) { resolve({ ok: false }); return; }
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      resolve(result);
+    };
+    // 有些圖片網址在手機網路或被擋盜連時，img 的 onload/onerror 可能永遠不會觸發，
+    // 導致 Promise.all 卡死、整個「產生中」按鈕永遠沒反應。加上 timeout 保底，逾時就當作失敗。
+    const timer = setTimeout(() => finish({ ok: false }), 8000);
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve({ ok: true, w: img.naturalWidth, h: img.naturalHeight });
-    img.onerror = () => resolve({ ok: false });
+    img.onload = () => { clearTimeout(timer); finish({ ok: true, w: img.naturalWidth, h: img.naturalHeight }); };
+    img.onerror = () => { clearTimeout(timer); finish({ ok: false }); };
     img.src = src;
   });
 }
@@ -1514,7 +1523,8 @@ async function generateA4Image() {
       scale: outputScale,
       backgroundColor: '#FFFBF5',
       useCORS: true,
-      allowTaint: true
+      allowTaint: true,
+      imageTimeout: 8000
     });
 
     // A4 比例（794 x 1123，跟樣板寬度一致）＊輸出倍率
@@ -1679,7 +1689,8 @@ async function generateNameStickerImage() {
       scale: outputScale,
       backgroundColor: '#ffffff',
       useCORS: true,
-      allowTaint: true
+      allowTaint: true,
+      imageTimeout: 8000
     });
 
     // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底（大小尺寸的實際成品紙張大小相同，只是格數不同）
