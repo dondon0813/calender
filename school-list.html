@@ -1503,51 +1503,67 @@ async function buildA4Poster() {
   return true;
 }
 
+function canvasToBlobAsync(canvas) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
+
+// 整個流程的看門狗：不管卡在哪一步（圖片載入、html2canvas 截圖、toBlob 轉檔…），
+// 超過時間都強制結束並跳出錯誤訊息，不再讓按鈕永遠停在「產生中」不會動
+function withWatchdog(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('WATCHDOG_TIMEOUT')), ms))
+  ]);
+}
+
 async function generateA4Image() {
   const btn = document.getElementById('generateA4Btn');
   btn.disabled = true;
 
   try {
-    const hasItems = await buildA4Poster();
-    if (!hasItems) {
-      alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
-      return;
-    }
+    await withWatchdog((async () => {
+      const hasItems = await buildA4Poster();
+      if (!hasItems) {
+        alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
+        return;
+      }
 
-    // 等字體 / 版面穩定
-    await new Promise(r => setTimeout(r, 150));
+      // 等字體 / 版面穩定
+      await new Promise(r => setTimeout(r, 150));
 
-    const posterEl = document.getElementById('a4Poster');
-    const outputScale = 2;
-    const capturedCanvas = await html2canvas(posterEl, {
-      scale: outputScale,
-      backgroundColor: '#FFFBF5',
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 8000
-    });
+      const posterEl = document.getElementById('a4Poster');
+      const outputScale = 2;
+      const capturedCanvas = await html2canvas(posterEl, {
+        scale: outputScale,
+        backgroundColor: '#FFFBF5',
+        useCORS: true,
+        allowTaint: true,
+        imageTimeout: 8000
+      });
 
-    // A4 比例（794 x 1123，跟樣板寬度一致）＊輸出倍率
-    const a4W = 794 * outputScale;
-    const a4H = 1123 * outputScale;
+      // A4 比例（794 x 1123，跟樣板寬度一致）＊輸出倍率
+      const a4W = 794 * outputScale;
+      const a4H = 1123 * outputScale;
 
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = a4W;
-    finalCanvas.height = a4H;
-    const ctx = finalCanvas.getContext('2d');
-    ctx.fillStyle = '#FFFBF5';
-    ctx.fillRect(0, 0, a4W, a4H);
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = a4W;
+      finalCanvas.height = a4H;
+      const ctx = finalCanvas.getContext('2d');
+      ctx.fillStyle = '#FFFBF5';
+      ctx.fillRect(0, 0, a4W, a4H);
 
-    // 項目太多、內容比一張A4還高的話，整張等比例縮小塞進A4裡；
-    // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準A4尺寸
-    const fitScale = Math.min(1, a4H / capturedCanvas.height, a4W / capturedCanvas.width);
-    const drawW = capturedCanvas.width * fitScale;
-    const drawH = capturedCanvas.height * fitScale;
-    const dx = (a4W - drawW) / 2;
-    const dy = (a4H - drawH) / 2;
-    ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
+      // 項目太多、內容比一張A4還高的話，整張等比例縮小塞進A4裡；
+      // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準A4尺寸
+      const fitScale = Math.min(1, a4H / capturedCanvas.height, a4W / capturedCanvas.width);
+      const drawW = capturedCanvas.width * fitScale;
+      const drawH = capturedCanvas.height * fitScale;
+      const dx = (a4W - drawW) / 2;
+      const dy = (a4H - drawH) / 2;
+      ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
 
-    finalCanvas.toBlob((blob) => {
+      const blob = await canvasToBlobAsync(finalCanvas);
       if (!blob) {
         alert('圖片產生失敗，請再試一次');
         return;
@@ -1562,10 +1578,14 @@ async function generateA4Image() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
-    }, 'image/png');
+    })(), 20000);
   } catch (err) {
     console.error(err);
-    alert('圖片產生失敗，請再試一次');
+    if (err && err.message === 'WATCHDOG_TIMEOUT') {
+      alert('圖片產生逾時了，可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩告訴我們是哪一款手機、哪個瀏覽器 🙏');
+    } else {
+      alert('圖片產生失敗，請再試一次');
+    }
   } finally {
     btn.disabled = false;
   }
@@ -1674,46 +1694,47 @@ async function generateNameStickerImage() {
   btn.textContent = '圖片產生中…';
 
   try {
-    const hasItems = await buildStickerPoster(name);
-    if (!hasItems) {
-      alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
-      return;
-    }
+    await withWatchdog((async () => {
+      const hasItems = await buildStickerPoster(name);
+      if (!hasItems) {
+        alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
+        return;
+      }
 
-    // 等字體 / 版面穩定
-    await new Promise(r => setTimeout(r, 150));
+      // 等字體 / 版面穩定
+      await new Promise(r => setTimeout(r, 150));
 
-    const posterEl = document.getElementById('stickerPoster');
-    const outputScale = 3;
-    const capturedCanvas = await html2canvas(posterEl, {
-      scale: outputScale,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 8000
-    });
+      const posterEl = document.getElementById('stickerPoster');
+      const outputScale = 3;
+      const capturedCanvas = await html2canvas(posterEl, {
+        scale: outputScale,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        allowTaint: true,
+        imageTimeout: 8000
+      });
 
-    // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底（大小尺寸的實際成品紙張大小相同，只是格數不同）
-    const targetW = 384 * outputScale;
-    const targetH = 576 * outputScale;
+      // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底（大小尺寸的實際成品紙張大小相同，只是格數不同）
+      const targetW = 384 * outputScale;
+      const targetH = 576 * outputScale;
 
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = targetW;
-    finalCanvas.height = targetH;
-    const ctx = finalCanvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, targetW, targetH);
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = targetW;
+      finalCanvas.height = targetH;
+      const ctx = finalCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetW, targetH);
 
-    // 項目太多、內容比 4x6 還高的話，整張等比例縮小塞進畫布裡；
-    // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準 4x6 尺寸
-    const fitScale = Math.min(1, targetH / capturedCanvas.height, targetW / capturedCanvas.width);
-    const drawW = capturedCanvas.width * fitScale;
-    const drawH = capturedCanvas.height * fitScale;
-    const dx = (targetW - drawW) / 2;
-    const dy = (targetH - drawH) / 2;
-    ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
+      // 項目太多、內容比 4x6 還高的話，整張等比例縮小塞進畫布裡；
+      // 內容沒那麼高的話就置中貼上，維持輸出永遠是標準 4x6 尺寸
+      const fitScale = Math.min(1, targetH / capturedCanvas.height, targetW / capturedCanvas.width);
+      const drawW = capturedCanvas.width * fitScale;
+      const drawH = capturedCanvas.height * fitScale;
+      const dx = (targetW - drawW) / 2;
+      const dy = (targetH - drawH) / 2;
+      ctx.drawImage(capturedCanvas, dx, dy, drawW, drawH);
 
-    finalCanvas.toBlob((blob) => {
+      const blob = await canvasToBlobAsync(finalCanvas);
       if (!blob) {
         alert('圖片產生失敗，請再試一次');
         return;
@@ -1730,10 +1751,14 @@ async function generateNameStickerImage() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
       closeModal('stickerNameModal');
-    }, 'image/png');
+    })(), 20000);
   } catch (err) {
     console.error(err);
-    alert('圖片產生失敗，請再試一次');
+    if (err && err.message === 'WATCHDOG_TIMEOUT') {
+      alert('圖片產生逾時了，可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩告訴我們是哪一款手機、哪個瀏覽器 🙏');
+    } else {
+      alert('圖片產生失敗，請再試一次');
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = originalBtnText;
