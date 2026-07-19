@@ -841,7 +841,24 @@
   </div>
 </div>
 
-<script src="vendor/html2canvas.min.js"></script>
+<script>
+// html2canvas（約 200KB）延後到使用者真的點「產生圖片」/「製作姓名貼」才載入，
+// 其他只是來看清單的人不用白白多下載這包函式庫
+let html2canvasLoadPromise = null;
+function ensureHtml2Canvas() {
+  if (typeof html2canvas === 'function') return Promise.resolve();
+  if (!html2canvasLoadPromise) {
+    html2canvasLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'vendor/html2canvas.min.js';
+      s.onload = resolve;
+      s.onerror = () => { html2canvasLoadPromise = null; reject(new Error('html2canvas 載入失敗')); };
+      document.head.appendChild(s);
+    });
+  }
+  return html2canvasLoadPromise;
+}
+</script>
 <script>
 // ===== 設定 =====
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
@@ -1592,6 +1609,9 @@ async function generateA4Image() {
 
   try {
     await withWatchdog((async () => {
+      step = '載入截圖工具';
+      await ensureHtml2Canvas();
+
       const hasItems = await buildA4Poster();
       if (!hasItems) {
         alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
@@ -1781,6 +1801,9 @@ async function generateNameStickerImage() {
 
   try {
     await withWatchdog((async () => {
+      step = '載入截圖工具';
+      await ensureHtml2Canvas();
+
       const hasItems = await buildStickerPoster(name);
       if (!hasItems) {
         alert('目前清單上沒有項目可以產生圖片唷（可能都被移除了），可以到「已移除的項目」加回來看看 🎒');
