@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>雪莉與朵栗 內部後台行事曆</title>
+
+<!-- PWA：讓後台可以「加到主畫面」像 App 一樣開，靜態殼由 admin-sw.js 快取 -->
+<link rel="manifest" href="admin-manifest.json">
+<meta name="theme-color" content="#FF8FA3">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="團購後台">
+
 <link rel="stylesheet" href="shared.css">
 <style>
   /* admin.html 專屬樣式。共用的 reset / 版面 / 控制項 / 狀態列 / modal / 頁尾在 shared.css。
@@ -4044,7 +4054,7 @@
 </div>
 
 <script src="vendor/html2canvas.min.js"></script>
-<script src="admin.js?v=42"></script>
+<script src="admin.js?v=44"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

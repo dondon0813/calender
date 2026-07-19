@@ -1,3 +1,10 @@
+// PWA：註冊 service worker，讓「加到主畫面」安裝的殼可以秒開（不影響後端資料的即時性，見 admin-sw.js 註解）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('admin-sw.js').catch(() => {});
+  });
+}
+
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -1402,6 +1409,7 @@ async function tryUnlock() {
       sessionStorage.setItem('admin_token', currentToken);
       document.getElementById('passwordGate').style.display = 'none';
       document.getElementById('mainWrap').style.visibility = 'visible';
+      switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
       await fetchMemos();
       initAppUI();
     } else {
@@ -1425,6 +1433,7 @@ if (sessionStorage.getItem('admin_unlocked') === '1') {
   currentToken = sessionStorage.getItem('admin_token') || null;
   document.getElementById('passwordGate').style.display = 'none';
   document.getElementById('mainWrap').style.visibility = 'visible';
+  switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
   fetchMemos().then(() => initAppUI()); // 重新用 token 跟後端要一次資料，順便確認 token 沒過期
 } else {
   document.getElementById('gatePasswordInput').focus();
@@ -4133,7 +4142,8 @@ document.getElementById('priAddBtn').addEventListener('click', async () => {
 });
 
 loadData();
-fetchMemos();
+// 注意：不在這裡重複呼叫 fetchMemos()——已登入時 session 還原分支、剛登入時 tryUnlock() 都各自呼叫過一次，
+// 這裡再呼叫等於同時打兩個一樣的請求給本來就慢的 Apps Script，會讓「剛登入」的空白等待更久。
 setInterval(loadData, 60000);
 setInterval(fetchMemos, 60000);
 
