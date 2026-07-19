@@ -1548,7 +1548,8 @@ async function generateA4Image() {
 
       step = '截圖排版（html2canvas）';
       const posterEl = document.getElementById('a4Poster');
-      const outputScale = 2;
+      // 降倍率減少 html2canvas 的運算量，部分手機（尤其 Safari）在複雜版面下算圖本身就偏慢
+      const outputScale = 1.5;
       const capturedCanvas = await html2canvas(posterEl, {
         scale: outputScale,
         backgroundColor: '#FFFBF5',
@@ -1594,7 +1595,7 @@ async function generateA4Image() {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
-    })(), 20000);
+    })(), 40000);
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
@@ -1723,7 +1724,8 @@ async function generateNameStickerImage() {
 
       step = '截圖排版（html2canvas）';
       const posterEl = document.getElementById('stickerPoster');
-      const outputScale = 3;
+      // 降倍率減少 html2canvas 的運算量，部分手機（尤其 Safari）在複雜版面下算圖本身就偏慢
+      const outputScale = 2;
       const capturedCanvas = await html2canvas(posterEl, {
         scale: outputScale,
         backgroundColor: '#ffffff',
@@ -1771,7 +1773,7 @@ async function generateNameStickerImage() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 3000);
       closeModal('stickerNameModal');
-    })(), 20000);
+    })(), 40000);
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
