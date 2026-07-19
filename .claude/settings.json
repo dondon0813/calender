@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git ls-files*)",
+      "Bash(git ls-tree*)",
+      "Bash(git rev-parse*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(node --check *)",
+      "Bash(curl -s https://dondon0813.github.io/calender/*)",
+      "Bash(curl -sL https://dondon0813.github.io/calender/*)",
+      "Bash(curl -sI https://dondon0813.github.io/calender/*)",
+      "Bash(curl -sL https://script.google.com/macros/s/*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git checkout -- .)",
+      "Bash(rm -rf *)",
+      "PowerShell(Remove-Item * -Recurse*)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git reset --hard*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \".claude/hooks/guard-big-read.ps1\""
+          }
+        ]
+      }
+    ]
+  }
+}
