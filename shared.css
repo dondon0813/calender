@@ -200,6 +200,27 @@ body {
 }
 
 /* ============================================================
+   主要動作按鈕
+   共用的是外觀（膠囊、粉底、白字）；尺寸與排版方式各頁不同，
+   由各頁覆寫 flex / width / font-size / padding
+   ============================================================ */
+
+.action-btn {
+  text-align: center;
+  text-decoration: none;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--c-primary);
+  color: #fff;
+  cursor: pointer;
+}
+.action-btn:hover { background: var(--c-primary-dark); }
+
+.action-btn-alt { background: var(--c-cat-4); }
+.action-btn-alt:hover { background: #5F97DB; }
+
+/* ============================================================
    狀態訊息列
    ============================================================ */
 

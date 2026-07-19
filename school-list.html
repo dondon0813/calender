@@ -4,98 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>雪莉與朵栗 開學用品清單</title>
+<link rel="stylesheet" href="shared.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
-
-  * { box-sizing: border-box; min-width: 0; }
-  html, body { width: 100%; overflow-x: hidden; }
-
-  body {
-    margin: 0;
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
-    color: #5a4a3f;
-    padding: 16px 8px 50px;
-  }
-
-  .wrap {
-    max-width: 1080px;
-    margin: 0 auto;
-    background: #FFFBF5;
-    border-radius: 22px;
-    border: 3px solid #FFE3CC;
-    padding: 18px 14px 26px;
-    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
-  }
-
-  /* 【新】右上角小房子：回到首頁（recipes.html） */
-  .site-home-btn {
-    position: fixed;
-    top: 14px;
-    right: 14px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #FFD3B6;
-    color: #b5755a;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    box-shadow: 0 3px 10px rgba(230,160,120,0.25);
-    z-index: 30;
-    cursor: pointer;
-  }
-  .site-home-btn:hover { background: #FFF1E6; }
+  /* school-list.html 專屬樣式。
+     共用的 reset / 版面 / 回首頁鈕 / 返回鈕 / 動作按鈕 / modal / 頁尾在 shared.css。 */
 
   .empty-state {
     text-align: center;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     font-size: 13px;
     padding: 40px 0;
   }
   .status-msg {
     text-align: center;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     font-size: 12px;
     padding: 20px 0;
   }
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(90, 74, 63, 0.45);
-    z-index: 50;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .modal-backdrop.show { display: flex; }
+
+  /* ===== Modal：本頁內容較長，需可捲動 ===== */
+  .modal-backdrop { padding: 16px; }
   .modal-box {
-    position: relative;
-    background: #FFFBF5;
-    border-radius: 18px;
-    border: 3px solid #FFE3CC;
     padding: 22px 20px;
     max-width: 92%;
     width: 400px;
     max-height: 86vh;
     overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   }
-  .modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: none;
-    background: none;
-    font-size: 16px;
-    color: #b5755a;
-    cursor: pointer;
-    z-index: 2;
-  }
+  .modal-close { z-index: 2; }
+
+  /* ===== 食譜卡彈窗 ===== */
   .recipe-card-modal {
     width: 380px;
     padding: 16px 18px 20px;
@@ -113,9 +51,9 @@
   .rc-badge-pill {
     font-size: 12px;
     font-weight: 800;
-    color: #FF8FA3;
-    background: #FFE9EF;
-    border-radius: 999px;
+    color: var(--c-primary);
+    background: var(--c-badge-bg);
+    border-radius: var(--r-pill);
     padding: 5px 12px;
   }
   .rc-close-btn {
@@ -123,7 +61,7 @@
     height: 26px;
     border-radius: 50%;
     border: none;
-    background: #FF8FA3;
+    background: var(--c-primary);
     color: #fff;
     font-size: 12px;
     cursor: pointer;
@@ -137,10 +75,10 @@
   }
   .rc-title {
     text-align: center;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 22px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin: 4px 0 6px;
     position: relative;
     padding-bottom: 10px;
@@ -150,7 +88,7 @@
     display: block;
     width: 78%;
     height: 0;
-    border-bottom: 2px dashed #FFC2CE;
+    border-bottom: 2px dashed var(--c-title-rule);
     margin: 8px auto 0;
   }
   .rc-section { margin-bottom: 16px; }
@@ -163,9 +101,9 @@
   .rc-section-title {
     font-size: 13.5px;
     font-weight: 800;
-    color: #5a4a3f;
+    color: var(--c-text);
     background: #FFE9CE;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 5px 14px;
   }
   .rc-footer {
@@ -175,28 +113,21 @@
     font-weight: 700;
     margin-top: 14px;
   }
+
   .modal-actions {
     display: flex;
     gap: 8px;
     margin-top: 10px;
     flex-wrap: wrap;
   }
+  /* 外觀在 shared.css，這裡只調尺寸與並排方式 */
   .action-btn {
     flex: 1 1 auto;
-    text-align: center;
-    text-decoration: none;
-    font-weight: 800;
     font-size: 13.5px;
-    border: none;
-    border-radius: 999px;
     padding: 11px 12px;
-    background: #FF8FA3;
-    color: #fff;
-    cursor: pointer;
   }
-  .action-btn:hover { background: #FF7391; }
-  .action-btn-alt { background: #7AAEEB; }
-  .action-btn-alt:hover { background: #5F97DB; }
+
+  /* ===== 購買狀態列 ===== */
   .buy-status-list { margin-top: 12px; }
   .buy-status-item {
     display: flex;
@@ -204,18 +135,18 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--r-sm);
     background: #FFF6EC;
     margin-bottom: 8px;
     font-size: 13px;
   }
-  .buy-status-item .bsi-brand { font-weight: 800; color: #5a4a3f; }
-  .buy-status-item .bsi-text { color: #a89888; font-size: 12px; }
+  .buy-status-item .bsi-brand { font-weight: 800; color: var(--c-text); }
+  .buy-status-item .bsi-text { color: var(--c-muted); font-size: 12px; }
   .buy-status-item .bsi-btn {
     flex: none;
     border: none;
-    border-radius: 999px;
-    background: #FF8FA3;
+    border-radius: var(--r-pill);
+    background: var(--c-primary);
     color: #fff;
     font-weight: 800;
     font-size: 12px;
@@ -223,25 +154,14 @@
     cursor: pointer;
     text-decoration: none;
   }
+
+  /* 本頁頁尾比共用的緊一點 */
   .footer {
-    text-align: center;
     margin-top: 22px;
-    color: #FF8FA3;
-    font-weight: 700;
     font-size: 13px;
   }
-  .back-btn {
-    display: inline-block;
-    background: none;
-    border: none;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #b5755a;
-    cursor: pointer;
-    padding: 4px 0;
-    margin-bottom: 14px;
-  }
-  .back-btn:hover { color: #FF8FA3; }
+
+  /* ===== 開學清單本體 ===== */
   .school-header {
     text-align: center;
     margin-bottom: 18px;
@@ -262,8 +182,8 @@
     font-size: 13.5px;
     font-weight: 800;
     color: #fff;
-    background: #5a4a3f;
-    border-radius: 999px;
+    background: var(--c-text);
+    border-radius: var(--r-pill);
     padding: 5px 14px;
     display: inline-block;
     margin: 18px 0 12px;
@@ -277,7 +197,7 @@
     position: relative;
     background: #FFEDE0;
     border: 2px solid #FFD9BB;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     padding: 16px 8px 10px;
     text-align: center;
     cursor: pointer;
@@ -285,7 +205,7 @@
   }
   .school-card:hover { transform: translateY(-2px); }
   .school-card.checked {
-    border-color: #9ACB85;
+    border-color: var(--c-cat-2);
     background: #EBF7E6;
   }
   .school-checkbox {
@@ -304,8 +224,8 @@
     color: #fff;
   }
   .school-card.checked .school-checkbox {
-    background: #9ACB85;
-    border-color: #9ACB85;
+    background: var(--c-cat-2);
+    border-color: var(--c-cat-2);
   }
   .school-icon-wrap {
     width: 100%;
@@ -331,7 +251,7 @@
   .school-card-name {
     font-size: 11.5px;
     font-weight: 800;
-    color: #8a7462;
+    color: var(--c-text-soft);
   }
   .school-card.checked .school-card-name { color: #5C9147; }
   .school-reminder-box {
@@ -348,7 +268,7 @@
   }
   .school-reminder-text {
     font-size: 12px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.6;
   }
   .school-reminder-text b {
@@ -357,11 +277,12 @@
   .school-progress {
     text-align: center;
     font-size: 12px;
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
     margin-bottom: 14px;
   }
-  /* 現正開團中的開學用品品牌（最上方橫向捲動列） */
+
+  /* ===== 現正開團中的開學用品品牌（最上方橫向捲動列）===== */
   .ogb-bar {
     background: #FFF6F8;
     border: 1.5px solid #FFD6E0;
@@ -415,7 +336,7 @@
   .ogb-name {
     font-size: 11px;
     font-weight: 700;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.3;
     word-break: break-word;
   }
@@ -424,6 +345,8 @@
     color: #b9a99a;
     margin-top: 1px;
   }
+
+  /* ===== 移除／還原品項 ===== */
   .school-remove-btn {
     position: absolute;
     top: 6px;
@@ -442,14 +365,14 @@
     cursor: pointer;
     line-height: 1;
   }
-  .school-remove-btn:hover { background: #FFE3CC; }
+  .school-remove-btn:hover { background: var(--c-border-light); }
   .school-removed-toggle {
     display: block;
     margin: 18px auto 0;
     text-align: center;
     font-size: 12px;
     font-weight: 800;
-    color: #b5755a;
+    color: var(--c-brown);
     background: none;
     border: none;
     cursor: pointer;
@@ -458,7 +381,7 @@
   .school-removed-box {
     margin-top: 10px;
     border: 2px dashed #E0C9B0;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     padding: 12px 14px;
   }
   .school-removed-item {
@@ -469,20 +392,21 @@
     padding: 8px 4px;
     border-bottom: 1px dotted #F0DFCB;
     font-size: 12.5px;
-    color: #8a7462;
+    color: var(--c-text-soft);
   }
   .school-removed-item:last-child { border-bottom: none; }
   .school-restore-btn {
     flex: none;
     border: none;
-    border-radius: 999px;
-    background: #9ACB85;
+    border-radius: var(--r-pill);
+    background: var(--c-cat-2);
     color: #fff;
     font-weight: 800;
     font-size: 11.5px;
     padding: 5px 12px;
     cursor: pointer;
   }
+
   .school-modal-icon-wrap {
     width: 60%;
     aspect-ratio: 1 / 1;
@@ -505,12 +429,14 @@
   }
   .school-brand-note {
     font-size: 11.5px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.6;
     background: #FFF6EC;
     border-radius: 0 0 10px 10px;
     padding: 2px 12px 10px;
   }
+
+  /* ===== 產生清單海報 ===== */
   .school-generate-box {
     text-align: center;
     margin: 18px 0 6px;
@@ -535,23 +461,25 @@
   }
   .school-generate-hint {
     font-size: 11px;
-    color: #a89888;
+    color: var(--c-muted);
     margin-top: 8px;
   }
+
+  /* ===== A4 海報（離畫面外渲染後截圖）===== */
   #a4PosterRoot {
     position: fixed;
     left: -99999px;
     top: 0;
     width: 794px;
-    background: #FFFBF5;
+    background: var(--c-surface);
   }
   .a4-poster {
     width: 794px;
     min-height: 1123px;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
+    background: linear-gradient(180deg, var(--c-bg-top) 0%, var(--c-bg-bottom) 100%);
     padding: 44px 46px 40px;
-    font-family: 'Noto Sans TC', sans-serif;
-    color: #5a4a3f;
+    font-family: var(--font-body);
+    color: var(--c-text);
   }
   .a4-header {
     text-align: center;
@@ -566,7 +494,7 @@
   }
   .a4-subtitle {
     font-size: 14px;
-    color: #b5755a;
+    color: var(--c-brown);
     font-weight: 700;
     margin-top: 14px;
   }
@@ -574,8 +502,8 @@
     font-size: 16px;
     font-weight: 800;
     color: #fff;
-    background: #5a4a3f;
-    border-radius: 999px;
+    background: var(--c-text);
+    border-radius: var(--r-pill);
     padding: 7px 18px;
     display: inline-block;
     margin: 22px 0 14px;
@@ -585,8 +513,8 @@
     font-size: 16px;
     font-weight: 800;
     color: #fff;
-    background: #5a4a3f;
-    border-radius: 999px;
+    background: var(--c-text);
+    border-radius: var(--r-pill);
     padding: 7px 18px;
     width: fit-content;
     margin: 18px 0 4px;
@@ -599,14 +527,14 @@
   }
   .a4-item {
     position: relative;
-    background: #FFFDFA;
+    background: var(--c-surface-2);
     border: 2px solid #FFD9BB;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     padding: 14px 8px 10px;
     text-align: center;
   }
   .a4-item.checked {
-    border-color: #9ACB85;
+    border-color: var(--c-cat-2);
     background: #EBF7E6;
   }
   .a4-item-checkbox {
@@ -626,8 +554,8 @@
     color: #fff;
   }
   .a4-item.checked .a4-item-checkbox {
-    background: #9ACB85;
-    border-color: #9ACB85;
+    background: var(--c-cat-2);
+    border-color: var(--c-cat-2);
   }
   .a4-item-icon-wrap {
     width: 100%;
@@ -650,12 +578,12 @@
   .a4-item-name {
     font-size: 13px;
     font-weight: 800;
-    color: #5a4a3f;
+    color: var(--c-text);
   }
   .a4-footer {
     text-align: center;
     margin-top: 36px;
-    color: #FF8FA3;
+    color: var(--c-primary);
     font-weight: 700;
     font-size: 13px;
   }
@@ -668,7 +596,7 @@
   }
   .a4-footer .a4-date {
     display: block;
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
     font-size: 11px;
     margin-top: 4px;
@@ -677,15 +605,15 @@
   /* ===== 姓名貼功能 ===== */
   .sticker-modal-icon { font-size: 34px; margin-bottom: 4px; }
   .sticker-modal-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 19px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin: 0 0 8px;
   }
   .sticker-modal-desc {
     font-size: 12.5px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.6;
     margin: 0 0 14px;
   }
@@ -693,17 +621,17 @@
     width: 100%;
     box-sizing: border-box;
     padding: 12px 14px;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     border: 2px solid #FFD9BB;
     background: #FFF6EC;
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-size: 15px;
     font-weight: 700;
-    color: #5a4a3f;
+    color: var(--c-text);
     text-align: center;
     outline: none;
   }
-  .sticker-name-input:focus { border-color: #7AAEEB; }
+  .sticker-name-input:focus { border-color: var(--c-cat-4); }
 
   .sticker-size-select {
     display: flex;
@@ -716,22 +644,22 @@
   .sticker-size-label {
     font-size: 12.5px;
     font-weight: 800;
-    color: #8a7462;
+    color: var(--c-text-soft);
   }
   .sticker-size-btn {
     border: 2px solid #FFD9BB;
     background: #FFF6EC;
-    color: #8a7462;
-    font-family: 'Noto Sans TC', sans-serif;
+    color: var(--c-text-soft);
+    font-family: var(--font-body);
     font-weight: 800;
     font-size: 12.5px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 7px 14px;
     cursor: pointer;
   }
   .sticker-size-btn.active {
-    background: #7AAEEB;
-    border-color: #7AAEEB;
+    background: var(--c-cat-4);
+    border-color: var(--c-cat-4);
     color: #fff;
   }
 
@@ -747,7 +675,7 @@
     background: #ffffff;
     padding: 16px 14px 10px;
     box-sizing: border-box;
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     display: flex;
     flex-direction: column;
   }
@@ -789,10 +717,10 @@
   .sticker-name {
     flex: none;
     margin-top: 0;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 11px;
-    color: #5a4a3f;
+    color: var(--c-text);
     text-align: center;
     white-space: nowrap;
     max-width: 100%;
@@ -805,7 +733,7 @@
     text-align: center;
     font-size: 10.5px;
     font-weight: 700;
-    color: #b5755a;
+    color: var(--c-brown);
     padding-top: 8px;
   }
 </style>

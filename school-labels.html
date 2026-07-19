@@ -63,29 +63,19 @@
   .box .desc b { color: #FF6F91; }
 
   /* ===== 主要動作按鈕 ===== */
+  /* 外觀在 shared.css，這裡只調尺寸（本頁是單顆滿版按鈕） */
   .action-btn {
     display: inline-block;
     width: 100%;
     max-width: 320px;
-    text-align: center;
-    text-decoration: none;
     font-family: var(--font-body);
-    font-weight: 800;
     font-size: 14.5px;
-    border: none;
-    border-radius: var(--r-pill);
     padding: 12px 14px;
-    background: var(--c-primary);
-    color: #fff;
-    cursor: pointer;
   }
-  .action-btn:hover { background: var(--c-primary-dark); }
   .action-btn:disabled {
     opacity: 0.6;
     cursor: default;
   }
-  .action-btn-alt { background: var(--c-cat-4); }
-  .action-btn-alt:hover { background: #5F97DB; }
   .action-btn-alt.disabled {
     opacity: 0.6;
     pointer-events: none;
