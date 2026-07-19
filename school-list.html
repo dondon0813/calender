@@ -1519,13 +1519,14 @@ function withWatchdog(promise, ms) {
 }
 
 // 逾時當下沒辦法連線除錯，先把裝置/網路資訊蒐集進錯誤訊息裡，方便使用者截圖回報
-function collectDiagnostics() {
+function collectDiagnostics(cloneMs) {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   const parts = [
     `UA: ${navigator.userAgent}`,
     `記憶體: ${navigator.deviceMemory ? navigator.deviceMemory + 'GB' : '未知'}`,
     `網路類型: ${conn ? (conn.effectiveType || '未知') + (conn.saveData ? '（省流量模式開啟）' : '') : '未知'}`,
-    `html2canvas: ${typeof html2canvas === 'function' ? '已載入' : '未載入或載入失敗'}`
+    `html2canvas: ${typeof html2canvas === 'function' ? '已載入' : '未載入或載入失敗'}`,
+    `複製畫面階段: ${cloneMs != null ? `已完成，用了 ${cloneMs}ms` : '卡在複製畫面這一步，還沒完成'}`
   ];
   return parts.join(' / ');
 }
@@ -1534,6 +1535,7 @@ async function generateA4Image() {
   const btn = document.getElementById('generateA4Btn');
   btn.disabled = true;
   let step = '準備清單';
+  let cloneMs = null;
 
   try {
     await withWatchdog((async () => {
@@ -1546,16 +1548,27 @@ async function generateA4Image() {
       // 等字體 / 版面穩定
       await new Promise(r => setTimeout(r, 150));
 
-      step = '截圖排版（html2canvas）';
+      step = '截圖排版 - 複製畫面（html2canvas clone）';
       const posterEl = document.getElementById('a4Poster');
       // 降倍率減少 html2canvas 的運算量，部分手機（尤其 Safari）在複雜版面下算圖本身就偏慢
       const outputScale = 1.5;
+      // 明確指定寬高，不要讓 html2canvas 自己去量測 DOM 尺寸——
+      // 後台食譜貼文產生器同樣用 html2canvas 但一律傳明確寬高，測試下來很穩定；
+      // school-list 這裡原本沒傳，讓 html2canvas 自己量測，懷疑就是卡住的原因
+      const measuredW = posterEl.offsetWidth;
+      const measuredH = posterEl.scrollHeight;
+      const cloneStartedAt = Date.now();
       const capturedCanvas = await html2canvas(posterEl, {
+        width: measuredW,
+        height: measuredH,
         scale: outputScale,
         backgroundColor: '#FFFBF5',
         useCORS: true,
-        allowTaint: true,
-        imageTimeout: 8000
+        imageTimeout: 8000,
+        onclone: () => {
+          cloneMs = Date.now() - cloneStartedAt;
+          step = '截圖排版 - 畫面繪製（html2canvas render）';
+        }
       });
 
       // A4 比例（794 x 1123，跟樣板寬度一致）＊輸出倍率
@@ -1599,7 +1612,7 @@ async function generateA4Image() {
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
-      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們 🙏\n\n${collectDiagnostics()}`);
+      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們 🙏\n\n${collectDiagnostics(cloneMs)}`);
     } else {
       alert('圖片產生失敗，請再試一次');
     }
@@ -1710,6 +1723,7 @@ async function generateNameStickerImage() {
   btn.disabled = true;
   btn.textContent = '圖片產生中…';
   let step = '準備清單';
+  let cloneMs = null;
 
   try {
     await withWatchdog((async () => {
@@ -1722,16 +1736,24 @@ async function generateNameStickerImage() {
       // 等字體 / 版面穩定
       await new Promise(r => setTimeout(r, 150));
 
-      step = '截圖排版（html2canvas）';
+      step = '截圖排版 - 複製畫面（html2canvas clone）';
       const posterEl = document.getElementById('stickerPoster');
       // 降倍率減少 html2canvas 的運算量，部分手機（尤其 Safari）在複雜版面下算圖本身就偏慢
       const outputScale = 2;
+      // 明確指定寬高（樣板本身就是固定 384x576），不要讓 html2canvas 自己去量測 DOM 尺寸——
+      // 後台食譜貼文產生器同樣用 html2canvas 但一律傳明確寬高，測試下來很穩定
+      const cloneStartedAt = Date.now();
       const capturedCanvas = await html2canvas(posterEl, {
+        width: 384,
+        height: 576,
         scale: outputScale,
         backgroundColor: '#ffffff',
         useCORS: true,
-        allowTaint: true,
-        imageTimeout: 8000
+        imageTimeout: 8000,
+        onclone: () => {
+          cloneMs = Date.now() - cloneStartedAt;
+          step = '截圖排版 - 畫面繪製（html2canvas render）';
+        }
       });
 
       // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底（大小尺寸的實際成品紙張大小相同，只是格數不同）
@@ -1777,7 +1799,7 @@ async function generateNameStickerImage() {
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
-      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們 🙏\n\n${collectDiagnostics()}`);
+      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們 🙏\n\n${collectDiagnostics(cloneMs)}`);
     } else {
       alert('圖片產生失敗，請再試一次');
     }
