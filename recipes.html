@@ -4,82 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>雪莉與朵栗 食材與食譜</title>
+<link rel="stylesheet" href="shared.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+  /* recipes.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 等在 shared.css。
+     色碼、圓角、字體一律用 shared.css 的 :root 變數。 */
 
-  * { box-sizing: border-box; min-width: 0; }
-  html, body { width: 100%; overflow-x: hidden; }
+  /* ===== 對 shared.css 的覆寫 ===== */
 
-  body {
-    margin: 0;
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
-    color: #5a4a3f;
-    padding: 16px 8px 50px;
+  /* 本頁頁尾比共用的緊一點 */
+  .footer {
+    margin-top: 22px;
+    font-size: 13px;
   }
 
-  .wrap {
-    max-width: 1080px;
-    margin: 0 auto;
-    background: #FFFBF5;
-    border-radius: 22px;
-    border: 3px solid #FFE3CC;
-    padding: 18px 14px 26px;
-    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
+  /* 外觀在 shared.css，這裡只調尺寸與並排方式 */
+  .action-btn {
+    flex: 1 1 auto;
+    font-size: 13.5px;
+    padding: 11px 12px;
   }
 
-  /* 【新】右上角小房子：在首頁本身時，點擊會把畫面切回首頁區塊 */
-  .site-home-btn {
-    position: fixed;
-    top: 14px;
-    right: 14px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #FFD3B6;
-    color: #b5755a;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 3px 10px rgba(230,160,120,0.25);
-    z-index: 30;
-    cursor: pointer;
+  /* 本頁 modal 內容較長，需可捲動且較寬 */
+  .modal-backdrop { padding: 16px; }
+  .modal-box {
+    padding: 22px 20px;
+    max-width: 92%;
+    width: 400px;
+    max-height: 86vh;
+    overflow-y: auto;
   }
-  .site-home-btn:hover { background: #FFF1E6; }
+  .modal-box h3 {
+    font-size: 18px;
+    margin: 0 0 6px;
+  }
+  .modal-close { z-index: 2; }
 
-  .page-title-wrap {
-    text-align: center;
-    margin: 4px 0 18px;
-  }
-  .page-title-badge {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 800;
-    color: #FF8FA3;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 5px 14px;
-    margin-bottom: 6px;
-  }
-  .page-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 28px;
-    color: #5a4a3f;
-    position: relative;
-    padding-bottom: 10px;
-  }
-  .page-title::after {
-    content: '';
-    display: block;
-    width: 120px;
-    height: 0;
-    border-bottom: 2px dashed #FFC2CE;
-    margin: 8px auto 0;
-  }
-
+  /* ===== 主分頁切換 ===== */
   .main-tabs {
     display: flex;
     justify-content: center;
@@ -87,20 +47,20 @@
     margin-bottom: 18px;
   }
   .main-tab {
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-weight: 800;
     font-size: 14px;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
+    border-radius: var(--r-pill);
+    border: 2px solid var(--c-border);
     background: #fff;
-    color: #b5755a;
+    color: var(--c-brown);
     padding: 10px 22px;
     cursor: pointer;
     transition: transform .15s ease, box-shadow .15s ease;
   }
   .main-tab.active {
-    background: #FF8FA3;
-    border-color: #FF8FA3;
+    background: var(--c-primary);
+    border-color: var(--c-primary);
     color: #fff;
     box-shadow: 0 4px 10px rgba(255,143,163,0.4);
     transform: translateY(-1px);
@@ -112,7 +72,7 @@
   .filter-label {
     font-size: 13px;
     font-weight: 800;
-    color: #a89888;
+    color: var(--c-muted);
     margin-bottom: 6px;
     letter-spacing: 1px;
   }
@@ -125,17 +85,17 @@
   .chip {
     font-size: 12px;
     font-weight: 700;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
+    border-radius: var(--r-pill);
+    border: 2px solid var(--c-border);
     background: #fff;
-    color: #b5755a;
+    color: var(--c-brown);
     padding: 6px 14px;
     cursor: pointer;
     white-space: nowrap;
   }
   .chip.active {
-    background: #FF8FA3;
-    border-color: #FF8FA3;
+    background: var(--c-primary);
+    border-color: var(--c-primary);
     color: #fff;
   }
   .chip-clear {
@@ -158,10 +118,10 @@
   }
 
   .ing-select-title {
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-weight: 800;
     font-size: 13px;
-    color: #a89888;
+    color: var(--c-muted);
     letter-spacing: 1px;
     margin: 6px 0 10px;
   }
@@ -172,18 +132,18 @@
   }
   .ing-search-input {
     width: 100%;
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     font-weight: 700;
-    color: #5a4a3f;
-    border: 2px solid #FFD3B6;
-    border-radius: 999px;
+    color: var(--c-text);
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-pill);
     padding: 9px 16px;
     background: #fff;
     outline: none;
   }
   .ing-search-input::placeholder { color: #cbb8a8; }
-  .ing-search-input:focus { border-color: #FF8FA3; }
+  .ing-search-input:focus { border-color: var(--c-primary); }
 
   .ing-selected-chips {
     display: flex;
@@ -192,8 +152,8 @@
     margin-bottom: 10px;
   }
   .ing-selected-chip {
-    background: #FF8FA3 !important;
-    border-color: #FF8FA3 !important;
+    background: var(--c-primary) !important;
+    border-color: var(--c-primary) !important;
     color: #fff !important;
   }
 
@@ -205,8 +165,8 @@
   }
   .ing-tile {
     position: relative;
-    background: #FFFDFA;
-    border: 2px solid #FFE3CC;
+    background: var(--c-surface-2);
+    border: 2px solid var(--c-border-light);
     border-radius: 16px;
     padding: 10px 6px 8px;
     text-align: center;
@@ -215,7 +175,7 @@
   }
   .ing-tile:hover { transform: translateY(-2px); }
   .ing-tile.active {
-    border-color: #FF8FA3;
+    border-color: var(--c-primary);
     background: #FFF0F3;
     box-shadow: 0 4px 12px rgba(255,143,163,0.25);
   }
@@ -224,7 +184,7 @@
     aspect-ratio: 1 / 1;
     border-radius: 12px;
     object-fit: cover;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
     margin-bottom: 6px;
     display: block;
   }
@@ -237,9 +197,9 @@
   .ing-tile-name {
     font-size: 11.5px;
     font-weight: 800;
-    color: #8a7462;
+    color: var(--c-text-soft);
   }
-  .ing-tile.active .ing-tile-name { color: #FF7391; }
+  .ing-tile.active .ing-tile-name { color: var(--c-primary-dark); }
 
   /* 【新】成品類原料（例如寶寶吐司、鬆餅）的小標記，跟一般食材區分開來 */
   .ing-tile-product-badge {
@@ -250,7 +210,7 @@
     font-weight: 800;
     color: #8E6BB5;
     background: #EFE4FB;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 1px 6px;
     line-height: 1.5;
   }
@@ -260,10 +220,10 @@
   }
 
   .recipe-reco-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 700;
     font-size: 16px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin: 6px 0 12px;
   }
   .recipe-card-grid {
@@ -272,8 +232,8 @@
     gap: 14px;
   }
   .recipe-reco-card {
-    background: #FFFDFA;
-    border: 2px solid #FFE3CC;
+    background: var(--c-surface-2);
+    border: 2px solid var(--c-border-light);
     border-radius: 20px;
     overflow: hidden;
     cursor: pointer;
@@ -288,17 +248,17 @@
     width: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
     display: block;
   }
   .recipe-reco-card .rrc-body {
     padding: 10px 10px 12px;
   }
   .recipe-reco-card .rrc-name {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 700;
     font-size: 13.5px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin-bottom: 6px;
   }
   .recipe-reco-card .rrc-tags {
@@ -313,8 +273,8 @@
 
   .item-card {
     position: relative;
-    background: #FFFDFA;
-    border: 2px solid #FFE3CC;
+    background: var(--c-surface-2);
+    border: 2px solid var(--c-border-light);
     border-radius: 20px;
     overflow: hidden;
     cursor: pointer;
@@ -332,7 +292,7 @@
     width: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
   }
   /* 縮圖右上角的油品標籤：有底色的小標籤，兩個以上直向往下排列 */
   .oil-badge-wrap {
@@ -350,8 +310,8 @@
     font-weight: 800;
     color: #8a5a2b;
     background: rgba(255, 246, 224, 0.95);
-    border: 1px solid #F0C36D;
-    border-radius: 999px;
+    border: 1px solid var(--c-cat-6);
+    border-radius: var(--r-pill);
     padding: 2px 8px;
     white-space: nowrap;
     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
@@ -364,10 +324,10 @@
     gap: 4px;
   }
   .item-card .card-name {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 700;
     font-size: 13.5px;
-    color: #5a4a3f;
+    color: var(--c-text);
   }
   .card-tags {
     display: flex;
@@ -378,7 +338,7 @@
   .mini-tag {
     font-size: 10px;
     font-weight: 700;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 2px 8px;
   }
   .tag-brand { background: #E2EBFD; color: #5F87C9; }
@@ -400,7 +360,7 @@
     left: 8px;
     font-size: 10.5px;
     font-weight: 800;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 3px 10px;
     color: #fff;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
@@ -426,7 +386,7 @@
     justify-content: space-between;
     padding: 7px 9px 9px;
     font-size: 10.5px;
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
   }
   .recipe-card .rc-meta-row span {
@@ -437,51 +397,16 @@
 
   .empty-state {
     text-align: center;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     font-size: 13px;
     padding: 40px 0;
   }
 
   .status-msg {
     text-align: center;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     font-size: 12px;
     padding: 20px 0;
-  }
-
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(90, 74, 63, 0.45);
-    z-index: 50;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .modal-backdrop.show { display: flex; }
-  .modal-box {
-    position: relative;
-    background: #FFFBF5;
-    border-radius: 18px;
-    border: 3px solid #FFE3CC;
-    padding: 22px 20px;
-    max-width: 92%;
-    width: 400px;
-    max-height: 86vh;
-    overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  }
-  .modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: none;
-    background: none;
-    font-size: 16px;
-    color: #b5755a;
-    cursor: pointer;
-    z-index: 2;
   }
 
   .recipe-card-modal {
@@ -501,9 +426,9 @@
   .rc-badge-pill {
     font-size: 12px;
     font-weight: 800;
-    color: #FF8FA3;
-    background: #FFE9EF;
-    border-radius: 999px;
+    color: var(--c-primary);
+    background: var(--c-badge-bg);
+    border-radius: var(--r-pill);
     padding: 5px 12px;
   }
   .rc-close-btn {
@@ -511,7 +436,7 @@
     height: 26px;
     border-radius: 50%;
     border: none;
-    background: #FF8FA3;
+    background: var(--c-primary);
     color: #fff;
     font-size: 12px;
     cursor: pointer;
@@ -528,14 +453,14 @@
     aspect-ratio: 4 / 3;
     object-fit: cover;
     display: block;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
   }
   .rc-title {
     text-align: center;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 800;
     font-size: 22px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin: 4px 0 6px;
     position: relative;
     padding-bottom: 10px;
@@ -545,13 +470,13 @@
     display: block;
     width: 78%;
     height: 0;
-    border-bottom: 2px dashed #FFC2CE;
+    border-bottom: 2px dashed var(--c-title-rule);
     margin: 8px auto 0;
   }
   .rc-subtitle {
     text-align: center;
     font-size: 12.5px;
-    color: #a89888;
+    color: var(--c-muted);
     line-height: 1.6;
     margin-bottom: 14px;
   }
@@ -570,14 +495,14 @@
   .rc-info-item .rc-info-icon { font-size: 15px; }
   .rc-info-item .rc-info-label {
     font-size: 10px;
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
     margin: 2px 0;
   }
   .rc-info-item .rc-info-value {
     font-size: 12.5px;
     font-weight: 800;
-    color: #FF8FA3;
+    color: var(--c-primary);
   }
   .spec-list {
     background: #FFF6EC;
@@ -592,13 +517,13 @@
   .spec-list-item:last-child { border-bottom: none; }
   .spec-list-label {
     font-size: 11px;
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
     margin-bottom: 3px;
   }
   .spec-list-value {
     font-size: 12.5px;
-    color: #5a4a3f;
+    color: var(--c-text);
     font-weight: 700;
     line-height: 1.5;
     word-break: break-word;
@@ -613,9 +538,9 @@
   .rc-section-title {
     font-size: 13.5px;
     font-weight: 800;
-    color: #5a4a3f;
+    color: var(--c-text);
     background: #FFE9CE;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 5px 14px;
   }
   .rc-ing-list {
@@ -623,7 +548,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 6px 14px;
     font-size: 12.5px;
-    color: #5a4a3f;
+    color: var(--c-text);
   }
   .rc-ing-item {
     display: flex;
@@ -640,7 +565,7 @@
     font-size: 9px;
     margin-right: 4px;
   }
-  .rc-ing-item .rc-ing-qty { color: #b5755a; font-weight: 700; white-space: nowrap; }
+  .rc-ing-item .rc-ing-qty { color: var(--c-brown); font-weight: 700; white-space: nowrap; }
   .rc-steps-list {
     list-style: none;
     margin: 0;
@@ -653,7 +578,7 @@
     align-items: flex-start;
     gap: 10px;
     font-size: 13px;
-    color: #5a4a3f;
+    color: var(--c-text);
     line-height: 1.6;
     margin-bottom: 10px;
   }
@@ -663,7 +588,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #FF8FA3;
+    background: var(--c-primary);
     color: #fff;
     font-size: 11px;
     font-weight: 800;
@@ -687,7 +612,7 @@
   }
   .rc-tip-text {
     font-size: 12px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.6;
   }
   .rc-footer {
@@ -702,35 +627,30 @@
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 12px;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
     margin-bottom: 12px;
-  }
-  .modal-box h3 {
-    margin: 0 0 6px;
-    color: #FF8FA3;
-    font-size: 18px;
   }
   .spec-table {
     width: 100%;
     font-size: 12.5px;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin: 10px 0;
     border-collapse: collapse;
   }
   .spec-table td {
     padding: 4px 0;
-    border-bottom: 1px dashed #F3E2D3;
+    border-bottom: 1px dashed var(--c-line);
     vertical-align: top;
   }
   .spec-table td:first-child {
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
     width: 76px;
     white-space: nowrap;
   }
   .modal-desc {
     font-size: 13px;
-    color: #5a4a3f;
+    color: var(--c-text);
     line-height: 1.7;
     margin: 8px 0 14px;
     white-space: pre-wrap;
@@ -738,12 +658,12 @@
   .related-recipes {
     margin-top: 14px;
     padding-top: 12px;
-    border-top: 1.5px dashed #F3E2D3;
+    border-top: 1.5px dashed var(--c-line);
   }
   .related-recipes .rr-label {
     font-size: 12px;
     font-weight: 800;
-    color: #a89888;
+    color: var(--c-muted);
     margin-bottom: 8px;
   }
   .rr-item {
@@ -763,17 +683,17 @@
     border-radius: 8px;
     object-fit: cover;
     flex: none;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
   }
   .rr-item .rr-name {
     font-weight: 700;
     font-size: 12.5px;
-    color: #5a4a3f;
+    color: var(--c-text);
   }
 
   .steps-box {
     font-size: 13px;
-    color: #5a4a3f;
+    color: var(--c-text);
     line-height: 1.8;
     white-space: pre-wrap;
     background: #FFF6EC;
@@ -788,22 +708,6 @@
     margin-top: 10px;
     flex-wrap: wrap;
   }
-  .action-btn {
-    flex: 1 1 auto;
-    text-align: center;
-    text-decoration: none;
-    font-weight: 800;
-    font-size: 13.5px;
-    border: none;
-    border-radius: 999px;
-    padding: 11px 12px;
-    background: #FF8FA3;
-    color: #fff;
-    cursor: pointer;
-  }
-  .action-btn:hover { background: #FF7391; }
-  .action-btn-alt { background: #7AAEEB; }
-  .action-btn-alt:hover { background: #5F97DB; }
 
   .buy-status-list { margin-top: 12px; }
 
@@ -818,27 +722,19 @@
     margin-bottom: 8px;
     font-size: 13px;
   }
-  .buy-status-item .bsi-brand { font-weight: 800; color: #5a4a3f; }
-  .buy-status-item .bsi-text { color: #a89888; font-size: 12px; }
+  .buy-status-item .bsi-brand { font-weight: 800; color: var(--c-text); }
+  .buy-status-item .bsi-text { color: var(--c-muted); font-size: 12px; }
   .buy-status-item .bsi-btn {
     flex: none;
     border: none;
-    border-radius: 999px;
-    background: #FF8FA3;
+    border-radius: var(--r-pill);
+    background: var(--c-primary);
     color: #fff;
     font-weight: 800;
     font-size: 12px;
     padding: 7px 14px;
     cursor: pointer;
     text-decoration: none;
-  }
-
-  .footer {
-    text-align: center;
-    margin-top: 22px;
-    color: #FF8FA3;
-    font-weight: 700;
-    font-size: 13px;
   }
 
   @media (max-width: 480px) {
@@ -849,7 +745,7 @@
   .home-subtitle {
     text-align: center;
     font-size: 13px;
-    color: #b5755a;
+    color: var(--c-brown);
     font-weight: 700;
     margin-bottom: 22px;
   }
@@ -921,12 +817,12 @@
     font-weight: 800;
     color: #fff;
     background: #C9A66B;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 3px 8px;
   }
   .home-card-icon { font-size: 34px; margin-bottom: 8px; }
   .home-card-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 800;
     font-size: 17px;
   }
@@ -939,11 +835,11 @@
     margin: 8px auto;
     opacity: .5;
   }
-  .home-card-pink .home-card-title-divider { border-color: #FF8FA3; }
+  .home-card-pink .home-card-title-divider { border-color: var(--c-primary); }
   .home-card-peach .home-card-title-divider { border-color: #E0954A; }
   .home-card-desc {
     font-size: 11.5px;
-    color: #8a7462;
+    color: var(--c-text-soft);
   }
   .home-explore-box {
     border: 2px dashed #FFD3AC;
@@ -953,23 +849,23 @@
   }
   .home-calendar-btn {
     display: inline-block;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 800;
     font-size: 17px;
     color: #fff;
-    background: #FF8FA3;
-    border-radius: 999px;
+    background: var(--c-primary);
+    border-radius: var(--r-pill);
     padding: 16px 36px;
     text-decoration: none;
     box-shadow: 0 6px 16px rgba(255,143,163,0.45);
   }
-  .home-calendar-btn:hover { background: #FF7391; }
+  .home-calendar-btn:hover { background: var(--c-primary-dark); }
   .home-explore-title {
     text-align: center;
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 700;
     font-size: 15px;
-    color: #FF7391;
+    color: var(--c-primary-dark);
     margin-bottom: 16px;
   }
   .home-explore-grid {
@@ -982,26 +878,14 @@
   .home-explore-item-title {
     font-size: 11.5px;
     font-weight: 800;
-    color: #5a4a3f;
+    color: var(--c-text);
     margin-bottom: 4px;
   }
   .home-explore-item-desc {
     font-size: 9.5px;
-    color: #a89888;
+    color: var(--c-muted);
     line-height: 1.5;
   }
-  .back-btn {
-    display: inline-block;
-    background: none;
-    border: none;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #b5755a;
-    cursor: pointer;
-    padding: 4px 0;
-    margin-bottom: 14px;
-  }
-  .back-btn:hover { color: #FF8FA3; }
 
   @media (max-width: 420px) {
     .home-card-icon { font-size: 28px; }
@@ -1019,7 +903,7 @@
     text-align: center;
   }
   .brand-intro-name {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 800;
     font-size: 19px;
     color: #E0954A;
@@ -1027,7 +911,7 @@
   }
   .brand-intro-text {
     font-size: 12.5px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.7;
     white-space: pre-wrap;
   }
@@ -1041,9 +925,9 @@
   .ing-category-title {
     font-size: 14px;
     font-weight: 800;
-    color: #5a4a3f;
+    color: var(--c-text);
     background: #FFE9CE;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 6px 16px;
   }
   .oil-toggle-btn {
@@ -1051,26 +935,26 @@
     font-weight: 800;
     color: #8a5a2b;
     background: #FFF6E4;
-    border: 1.5px solid #F0C36D;
-    border-radius: 999px;
+    border: 1.5px solid var(--c-cat-6);
+    border-radius: var(--r-pill);
     padding: 5px 12px;
     cursor: pointer;
     white-space: nowrap;
   }
   .oil-toggle-btn:hover { background: #FFEcC4; }
   .oil-toggle-btn.oil-hidden {
-    color: #a89888;
-    background: #FFFDFA;
-    border-color: #FFD3B6;
+    color: var(--c-muted);
+    background: var(--c-surface-2);
+    border-color: var(--c-border);
   }
   .ing-category-empty {
     font-size: 12px;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     padding: 10px 4px 4px;
   }
   .ing-brand-prompt {
     text-align: center;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     font-size: 13px;
     padding: 34px 10px;
     border: 2px dashed #FFD3AC;
@@ -1083,13 +967,13 @@
     margin: -16px -18px 0;
     border-radius: 26px 26px 0 0;
     overflow: hidden;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
   }
   .rc-hero-img {
     width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
     display: block;
   }
   .rc-close-floating {
@@ -1098,7 +982,7 @@
     right: 10px;
     z-index: 5;
     background: rgba(255,255,255,0.88);
-    color: #FF7391;
+    color: var(--c-primary-dark);
     box-shadow: 0 2px 8px rgba(0,0,0,0.18);
   }
 
@@ -1133,14 +1017,14 @@
   .prep-ing-label {
     font-size: 10.5px;
     font-weight: 800;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.35;
   }
 
   /* 調味料：不放圖片，純文字一行，用頓號分隔，放在食材圖磚區下方 */
   .prep-seasoning-line {
     font-size: 12px;
-    color: #5a4a3f;
+    color: var(--c-text);
     line-height: 1.8;
     background: #FFF6EC;
     border-radius: 14px;
@@ -1157,7 +1041,7 @@
     cursor: pointer;
   }
   .prep-seasoning-item:hover {
-    color: #FF8FA3;
+    color: var(--c-primary);
     text-decoration: underline;
   }
 
@@ -1173,7 +1057,7 @@
     left: 51%;
     top: 47%;
     transform: translate(-50%, -50%);
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: 'Baloo 2', var(--font-body);
     font-weight: 800;
     font-size: 19px;
     color: #fff;
@@ -1196,9 +1080,9 @@
     aspect-ratio: 1 / 1;
     object-fit: cover;
     border-radius: 14px;
-    background: #FFF1E6;
+    background: var(--c-bg-bottom);
     display: block;
-    border: 2px solid #FFE3CC;
+    border: 2px solid var(--c-border-light);
   }
   .step-number-badge {
     position: absolute;
@@ -1218,7 +1102,7 @@
   }
   .step-caption {
     font-size: 10.5px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.45;
   }
 
@@ -1254,7 +1138,7 @@
     align-items: flex-start;
     gap: 6px;
     font-size: 12px;
-    color: #8a7462;
+    color: var(--c-text-soft);
     line-height: 1.7;
     margin-bottom: 6px;
   }
