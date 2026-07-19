@@ -9,7 +9,10 @@
    ⚠ 改配色 / 圓角 / 陰影請改下面的 :root 變數，不要在各頁硬寫色碼。
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&family=Huninn&display=swap');
+/* 字型改自託（fonts.css + fonts/），不再跨網域連 Google Fonts。
+   原因：html2canvas 截圖（A4清單圖／姓名貼）在等外部字型下載時沒有 timeout，
+   遇到手機網路不穩或字型快取沒命中就會整個卡死，改成同源檔案後不再受外部網路影響。 */
+@import url('fonts.css');
 
 :root {
   /* ---------- 字體 ----------
