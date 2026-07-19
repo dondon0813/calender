@@ -4,72 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>我的集點卡・雪莉與朵栗</title>
+<link rel="stylesheet" href="shared.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Baloo+2:wght@600;700;800&display=swap');
+  /* star-card.html 專屬樣式。共用的 reset / 版面 / 返回鈕 / 標題 / modal / 頁尾在 shared.css。 */
 
-  * { box-sizing: border-box; min-width: 0; }
-  html, body { width: 100%; overflow-x: hidden; }
-
-  body {
-    margin: 0;
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(180deg, #FFF7EE 0%, #FFF1E6 100%);
-    color: #5a4a3f;
-    padding: 16px 8px 50px;
+  :root {
+    --wrap-max:     640px;
+    --title-size:   26px;
+    --title-rule-w: 110px;
   }
 
-  .wrap {
-    max-width: 640px;
-    margin: 0 auto;
-    background: #FFFBF5;
-    border-radius: 22px;
-    border: 3px solid #FFE3CC;
-    padding: 18px 14px 26px;
-    box-shadow: 0 10px 30px rgba(230, 160, 120, 0.15);
-  }
+  .back-btn { margin-bottom: 10px; }
+  .page-title-wrap { margin: 4px 0 16px; }
 
-  .back-btn {
-    display: inline-block;
-    background: none;
-    border: none;
-    font-size: 12.5px;
-    font-weight: 800;
-    color: #b5755a;
-    cursor: pointer;
-    padding: 4px 0;
-    margin-bottom: 10px;
-  }
-  .back-btn:hover { color: #FF8FA3; }
-
-  .page-title-wrap { text-align: center; margin: 4px 0 16px; }
-  .page-title-badge {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 800;
-    color: #FF8FA3;
-    background: #FFE9EF;
-    border-radius: 999px;
-    padding: 5px 14px;
-    margin-bottom: 6px;
-  }
-  .page-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
-    font-weight: 800;
-    font-size: 26px;
-    color: #5a4a3f;
-    position: relative;
-    padding-bottom: 10px;
-  }
-  .page-title::after {
-    content: '';
-    display: block;
-    width: 110px;
-    height: 0;
-    border-bottom: 2px dashed #FFC2CE;
-    margin: 8px auto 0;
-  }
-
-  /* 模式切換 */
+  /* ===== 模式切換 ===== */
   .mode-switch-row {
     display: flex;
     justify-content: center;
@@ -77,24 +25,24 @@
     margin-bottom: 16px;
   }
   .mode-btn {
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-weight: 800;
     font-size: 13px;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
+    border-radius: var(--r-pill);
+    border: 2px solid var(--c-border);
     background: #fff;
-    color: #b5755a;
+    color: var(--c-brown);
     padding: 9px 18px;
     cursor: pointer;
   }
   .mode-btn.active {
-    background: #FF8FA3;
-    border-color: #FF8FA3;
+    background: var(--c-primary);
+    border-color: var(--c-primary);
     color: #fff;
     box-shadow: 0 4px 10px rgba(255,143,163,0.4);
   }
 
-  /* 小朋友選擇列 */
+  /* ===== 小朋友選擇列 ===== */
   .profile-row {
     display: flex;
     flex-wrap: wrap;
@@ -108,17 +56,17 @@
     gap: 6px;
     font-size: 13px;
     font-weight: 800;
-    border-radius: 999px;
-    border: 2px solid #FFD3B6;
+    border-radius: var(--r-pill);
+    border: 2px solid var(--c-border);
     background: #fff;
-    color: #8a7462;
+    color: var(--c-text-soft);
     padding: 7px 14px;
     cursor: pointer;
   }
   .profile-chip .emoji { font-size: 16px; }
   .profile-chip.active {
     background: #FFF0F3;
-    border-color: #FF8FA3;
+    border-color: var(--c-primary);
     color: #FF6F91;
   }
   .profile-chip-add {
@@ -130,14 +78,14 @@
 
   .empty-state {
     text-align: center;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     font-size: 13px;
     padding: 34px 10px;
     border: 2px dashed #FFD3AC;
-    border-radius: 18px;
+    border-radius: var(--r-modal);
   }
 
-  /* 集點卡本體 */
+  /* ===== 集點卡本體 ===== */
   .card-nav-row {
     display: flex;
     align-items: center;
@@ -149,9 +97,9 @@
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    border: 2px solid #FFD3B6;
+    border: 2px solid var(--c-border);
     background: #fff;
-    color: #b5755a;
+    color: var(--c-brown);
     font-size: 15px;
     font-weight: 800;
     cursor: pointer;
@@ -159,19 +107,19 @@
   }
   .nav-arrow:disabled { opacity: .35; cursor: default; }
   .card-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 16px;
-    color: #5a4a3f;
+    color: var(--c-text);
     text-align: center;
     min-width: 160px;
   }
   .card-title small {
     display: block;
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-weight: 700;
     font-size: 12px;
-    color: #FF8FA3;
+    color: var(--c-primary);
     margin-top: 2px;
   }
 
@@ -194,14 +142,14 @@
     align-items: center;
     justify-content: center;
     font-size: 26px;
-    background: #FFFBF5;
-    border: 2.5px dashed #FFC2CE;
+    background: var(--c-surface);
+    border: 2.5px dashed var(--c-title-rule);
     color: #FFD3E0;
     user-select: none;
   }
   .star-slot.filled {
     background: #FFF6DD;
-    border: 2.5px solid #F0C36D;
+    border: 2.5px solid var(--c-cat-6);
     color: #F0A93C;
     animation: pop .35s ease;
   }
@@ -212,6 +160,7 @@
     100% { transform: scale(1); }
   }
 
+  /* ===== 家長操作按鈕 ===== */
   .parent-actions {
     display: flex;
     gap: 10px;
@@ -224,19 +173,19 @@
     font-weight: 800;
     font-size: 13.5px;
     border: none;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 11px 12px;
-    background: #FF8FA3;
+    background: var(--c-primary);
     color: #fff;
     cursor: pointer;
   }
-  .action-btn:hover { background: #FF7391; }
-  .action-btn-alt { background: #7AAEEB; }
+  .action-btn:hover { background: var(--c-primary-dark); }
+  .action-btn-alt { background: var(--c-cat-4); }
   .action-btn-alt:hover { background: #5F97DB; }
   .action-btn-ghost {
     background: #fff;
-    color: #b5755a;
-    border: 2px solid #FFD3B6;
+    color: var(--c-brown);
+    border: 2px solid var(--c-border);
   }
 
   .settings-link-row {
@@ -245,7 +194,7 @@
   }
   .settings-link {
     font-size: 11.5px;
-    color: #a89888;
+    color: var(--c-muted);
     font-weight: 700;
     background: none;
     border: none;
@@ -253,75 +202,48 @@
     text-decoration: underline;
   }
 
+  /* 本頁頁尾比共用的緊一點 */
   .footer {
-    text-align: center;
     margin-top: 22px;
-    color: #FF8FA3;
-    font-weight: 700;
     font-size: 13px;
   }
 
-  /* Modal */
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(90, 74, 63, 0.45);
-    z-index: 50;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .modal-backdrop.show { display: flex; }
+  /* ===== Modal：本頁內容較長，需可捲動 ===== */
+  .modal-backdrop { padding: 16px; }
   .modal-box {
-    position: relative;
-    background: #FFFBF5;
     border-radius: 20px;
-    border: 3px solid #FFE3CC;
     padding: 22px 20px;
     max-width: 92%;
-    width: 360px;
     max-height: 86vh;
     overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  }
-  .modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: none;
-    background: none;
-    font-size: 16px;
-    color: #b5755a;
-    cursor: pointer;
   }
   .modal-title {
-    font-family: 'Baloo 2', 'Noto Sans TC', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     font-size: 18px;
-    color: #FF8FA3;
+    color: var(--c-primary);
     margin: 0 0 14px;
     text-align: center;
   }
   .field-label {
     font-size: 12px;
     font-weight: 800;
-    color: #a89888;
+    color: var(--c-muted);
     margin: 10px 0 6px;
   }
   .field-input {
     width: 100%;
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     font-weight: 700;
-    color: #5a4a3f;
-    border: 2px solid #FFD3B6;
-    border-radius: 12px;
+    color: var(--c-text);
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-md);
     padding: 10px 14px;
     background: #fff;
     outline: none;
   }
-  .field-input:focus { border-color: #FF8FA3; }
+  .field-input:focus { border-color: var(--c-primary); }
 
   .avatar-pick-row {
     display: flex;
@@ -333,7 +255,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 2px solid #FFD3B6;
+    border: 2px solid var(--c-border);
     background: #fff;
     font-size: 20px;
     display: flex;
@@ -341,11 +263,11 @@
     justify-content: center;
     cursor: pointer;
   }
-  .avatar-pick.active { border-color: #FF8FA3; background: #FFF0F3; }
+  .avatar-pick.active { border-color: var(--c-primary); background: #FFF0F3; }
 
   .modal-hint {
     font-size: 11.5px;
-    color: #b39a8b;
+    color: var(--c-muted-light);
     line-height: 1.6;
     margin-top: 6px;
   }
@@ -364,7 +286,7 @@
   }
 
   .celebrate-emoji { font-size: 46px; text-align: center; margin-bottom: 6px; }
-  .celebrate-text { text-align: center; font-size: 14px; color: #5a4a3f; line-height: 1.7; margin-bottom: 16px; }
+  .celebrate-text { text-align: center; font-size: 14px; color: var(--c-text); line-height: 1.7; margin-bottom: 16px; }
 
   .danger-btn {
     background: #fff;
