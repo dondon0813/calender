@@ -841,7 +841,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
 <script>
 // ===== 設定 =====
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
@@ -1518,6 +1518,18 @@ function withWatchdog(promise, ms) {
   ]);
 }
 
+// 逾時當下沒辦法連線除錯，先把裝置/網路資訊蒐集進錯誤訊息裡，方便使用者截圖回報
+function collectDiagnostics() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const parts = [
+    `UA: ${navigator.userAgent}`,
+    `記憶體: ${navigator.deviceMemory ? navigator.deviceMemory + 'GB' : '未知'}`,
+    `網路類型: ${conn ? (conn.effectiveType || '未知') + (conn.saveData ? '（省流量模式開啟）' : '') : '未知'}`,
+    `html2canvas: ${typeof html2canvas === 'function' ? '已載入' : '未載入或載入失敗'}`
+  ];
+  return parts.join(' / ');
+}
+
 async function generateA4Image() {
   const btn = document.getElementById('generateA4Btn');
   btn.disabled = true;
@@ -1586,7 +1598,7 @@ async function generateA4Image() {
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
-      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們，並告訴我們是哪一款手機、哪個瀏覽器 🙏`);
+      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們 🙏\n\n${collectDiagnostics()}`);
     } else {
       alert('圖片產生失敗，請再試一次');
     }
@@ -1763,7 +1775,7 @@ async function generateNameStickerImage() {
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
-      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們，並告訴我們是哪一款手機、哪個瀏覽器 🙏`);
+      alert(`圖片產生逾時了（卡在「${step}」這一步），可能是網路不穩或這台裝置暫時卡住，請再試一次；如果一直發生，麻煩把這個訊息截圖給我們 🙏\n\n${collectDiagnostics()}`);
     } else {
       alert('圖片產生失敗，請再試一次');
     }
