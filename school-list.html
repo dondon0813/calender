@@ -1531,6 +1531,59 @@ function collectDiagnostics(cloneMs) {
   return parts.join(' / ');
 }
 
+// html2canvas 截圖時會把「整個頁面」複製一份到暗處理（不是只複製目標元素），
+// 這個頁面項目多、DOM 大，複製起來對效能較弱的裝置負擔很大；改成把要截圖的樣板
+// 複製進一個乾淨、幾乎空白的 iframe 裡再截圖，讓 html2canvas 只需要複製一個很小的頁面，
+// 跟獨立測試頁（test-html2canvas.html）用的是同一招，那邊已確認在卡住的手機上能正常跑
+async function captureInIsolatedFrame(sourceEl, options) {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed; left:-99999px; top:0; border:0;';
+  iframe.width = String(options.width || sourceEl.offsetWidth || 400);
+  iframe.height = String(options.height || sourceEl.offsetHeight || 400);
+  document.body.appendChild(iframe);
+
+  try {
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><base href="${location.href}"></head><body style="margin:0;"></body></html>`);
+    doc.close();
+
+    // 樣板的排版樣式（grid/flex 等）是寫在主頁面的 <style> 裡，不是外部檔案，
+    // 這裡把主頁面 <head> 裡所有的 <style> 內容和 <link rel="stylesheet"> 都複製一份過去，
+    // 這個 iframe 才會有跟主頁面一樣的樣式可以用
+    document.querySelectorAll('head style').forEach(styleEl => {
+      const s = doc.createElement('style');
+      s.textContent = styleEl.textContent;
+      doc.head.appendChild(s);
+    });
+    document.querySelectorAll('head link[rel="stylesheet"]').forEach(linkEl => {
+      const l = doc.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = linkEl.href;
+      doc.head.appendChild(l);
+    });
+
+    const clone = sourceEl.cloneNode(true);
+    doc.body.appendChild(clone);
+
+    // 等 iframe 裡的字型 / 圖片都載入完成，避免截到空白或缺字
+    const fontsReady = doc.fonts && doc.fonts.ready ? doc.fonts.ready : Promise.resolve();
+    const imgs = Array.from(clone.querySelectorAll('img'));
+    const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+      img.addEventListener('load', resolve);
+      img.addEventListener('error', resolve);
+    })));
+    await Promise.race([
+      Promise.all([fontsReady, imgsReady]),
+      new Promise(resolve => setTimeout(resolve, 3000))
+    ]);
+
+    return await html2canvas(clone, options);
+  } finally {
+    document.body.removeChild(iframe);
+  }
+}
+
 async function generateA4Image() {
   const btn = document.getElementById('generateA4Btn');
   btn.disabled = true;
@@ -1559,7 +1612,7 @@ async function generateA4Image() {
       const measuredW = posterEl.offsetWidth;
       const measuredH = posterEl.scrollHeight;
       const cloneStartedAt = Date.now();
-      const capturedCanvas = await html2canvas(posterEl, {
+      const capturedCanvas = await captureInIsolatedFrame(posterEl, {
         width: measuredW,
         height: measuredH,
         scale: outputScale,
@@ -1745,7 +1798,7 @@ async function generateNameStickerImage() {
       // 明確指定寬高（樣板本身就是固定 384x576），不要讓 html2canvas 自己去量測 DOM 尺寸——
       // 後台食譜貼文產生器同樣用 html2canvas 但一律傳明確寬高，測試下來很穩定
       const cloneStartedAt = Date.now();
-      const capturedCanvas = await html2canvas(posterEl, {
+      const capturedCanvas = await captureInIsolatedFrame(posterEl, {
         width: 384,
         height: 576,
         scale: outputScale,
