@@ -2869,6 +2869,132 @@
   .cb-anim-shake { animation: cbShake 0.6s ease-in-out infinite; }
   .cb-anim-bounce { animation: cbBounce 0.9s ease-in-out infinite; }
   .cb-anim-vibrate { animation: cbVibrate 0.35s ease-in-out infinite; }
+
+  /* ===== 寬螢幕雙欄工作區 ===== */
+  #sideNav { display: none; }
+  #splitDivider { display: none; }
+  #paneRight { display: none; }
+
+  @media (min-width: 1200px) {
+    :root { --wrap-max: 1680px; }
+
+    #mainWrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+    }
+
+    #sideNav {
+      display: block;
+      flex: 0 0 200px;
+      width: 200px;
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      background: var(--c-surface-2);
+      border: 2px solid var(--c-border-light);
+      border-radius: var(--r-lg);
+      padding: 10px 8px;
+    }
+    #sideNav .sn-group-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--c-muted);
+      padding: 10px 10px 4px;
+    }
+    #sideNav .sn-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      border: none;
+      background: none;
+      font-family: var(--font-body);
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--c-text);
+      padding: 9px 10px;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-align: left;
+    }
+    #sideNav .sn-item:hover { background: var(--c-bg-bottom); }
+    #sideNav .sn-item.active { background: var(--c-bg-bottom); color: var(--c-primary); }
+    #sideNav .sn-item .mi-urgent-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-danger);
+      margin-left: auto;
+    }
+
+    #mainContentCol { flex: 1 1 auto; min-width: 0; }
+
+    .menu-wrap { display: none; }
+
+    #splitWorkspace {
+      display: flex;
+      align-items: stretch;
+    }
+
+    #paneLeft {
+      flex: 0 0 60%;
+      min-width: 0;
+      overflow-y: auto;
+      max-height: calc(100vh - 150px);
+      padding-right: 14px;
+    }
+
+    #splitDivider {
+      display: block;
+      flex: 0 0 6px;
+      width: 6px;
+      border-radius: var(--r-pill);
+      background: var(--c-border);
+      cursor: col-resize;
+    }
+    #splitDivider:hover, #splitDivider.sd-dragging { background: var(--c-primary); }
+
+    #paneRight {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-y: auto;
+      max-height: calc(100vh - 150px);
+      padding-left: 14px;
+      border-left: 2px solid var(--c-border-light);
+    }
+    #paneRightPicker { margin-bottom: 10px; }
+    #paneRightEmpty {
+      text-align: center;
+      color: var(--c-muted);
+      font-size: 13px;
+      padding: 40px 10px;
+    }
+
+    #splitWorkspace.right-closed #paneRight,
+    #splitWorkspace.right-closed #splitDivider {
+      display: none;
+    }
+    #splitWorkspace.right-closed #paneLeft {
+      flex: 1 1 auto;
+    }
+
+    body.split-dragging,
+    body.split-dragging * {
+      user-select: none;
+      cursor: col-resize;
+    }
+
+    /* 備忘錄放進右欄要強制單欄，照抄 .mtree-wrap 手機版那組屬性（860px 斷點那段），
+       確保跟手機版表現一致，不要自創新樣式 */
+    #paneRight .mtree-wrap { display: block; }
+    #paneRight .mtree-wrap:not(.show-editor) .mtree-editor-pane { display: none; }
+    #paneRight .mtree-wrap.show-editor .mtree-list-pane { display: none; }
+    #paneRight .mtree-wrap.show-editor .mtree-back-btn { display: inline-block; }
+  }
 </style>
 </head>
 <body>
@@ -2886,6 +3012,28 @@
 </div>
 
 <div class="wrap" id="mainWrap" style="visibility:hidden;">
+
+  <!-- ===== 寬螢幕側邊欄（≥1200px 才顯示，取代漢堡選單）===== -->
+  <div id="sideNav">
+    <div class="sn-group-title">工作</div>
+    <button class="sn-item" data-view="home">🏠 工作首頁</button>
+    <button class="sn-item" data-view="calendar">📅 行事曆</button>
+    <button class="sn-item" data-view="dispatch">📨 派遣任務</button>
+    <button class="sn-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
+    <button class="sn-item" data-view="memo">📝 備忘錄</button>
+    <button class="sn-item" data-view="todoList">🗒️ 待辦事項</button>
+    <button class="sn-item" data-view="prItems">🎀 公關品狀態</button>
+    <button class="sn-item" data-view="groupStatus">📢 開團狀態</button>
+    <button class="sn-item" data-view="brandVendor">🏢 品牌廠商</button>
+    <div class="sn-group-title">工具</div>
+    <button class="sn-item" data-view="tools">🧰 便利小工具</button>
+    <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
+    <button class="sn-item" data-view="imageLibrary">🖼️ 圖片庫</button>
+    <button class="sn-item" data-view="convertTool">🔄 轉檔小工具</button>
+    <button class="sn-item" data-view="calculator">🧮 計算機</button>
+  </div>
+
+  <div id="mainContentCol">
 
   <div class="urgent-banner" id="urgentBanner" onclick="switchView('myTasks')">
     🚨 現在有緊急任務，請點擊前往
@@ -2917,6 +3065,9 @@
       </div>
     </div>
   </div>
+
+  <div id="splitWorkspace" class="right-closed">
+  <div id="paneLeft">
 
   <!-- ===== 工作首頁 ===== -->
   <div class="view" id="viewHome">
@@ -3396,7 +3547,33 @@
   </div>
   </div><!-- /viewCalendar -->
 
+  </div><!-- /paneLeft -->
+  <div id="splitDivider" title="拖曳調整左右欄寬度"></div>
+  <div id="paneRight">
+    <select id="paneRightPicker">
+      <option value="">（關閉右欄）</option>
+      <option value="home">🏠 工作首頁</option>
+      <option value="calendar">📅 行事曆</option>
+      <option value="dispatch">📨 派遣任務</option>
+      <option value="myTasks">📋 我的任務</option>
+      <option value="memo">📝 備忘錄</option>
+      <option value="todoList">🗒️ 待辦事項</option>
+      <option value="prItems">🎀 公關品狀態</option>
+      <option value="groupStatus">📢 開團狀態</option>
+      <option value="brandVendor">🏢 品牌廠商</option>
+      <option value="tools">🧰 便利小工具</option>
+      <option value="lotteryTool">🎉 抽獎小幫手</option>
+      <option value="imageLibrary">🖼️ 圖片庫</option>
+      <option value="convertTool">🔄 轉檔小工具</option>
+      <option value="calculator">🧮 計算機</option>
+    </select>
+    <div id="paneRightEmpty">請選擇要在右側顯示的分頁</div>
+  </div>
+  </div><!-- /splitWorkspace -->
+
   <div class="footer">🔒 內部後台版本・僅供雪莉與員工使用</div>
+
+  </div><!-- /mainContentCol -->
 </div>
 
 <!-- 任務詳細浮動視窗：狀態切換／階段紀錄／回派對話／備忘錄 -->
@@ -4054,7 +4231,7 @@
 </div>
 
 <script src="vendor/html2canvas.min.js"></script>
-<script src="admin.js?v=44"></script>
+<script src="admin.js?v=45"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

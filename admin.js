@@ -46,6 +46,8 @@ const PR_STATUS_CLASS = {
 // 公關品狀態小圖示的顯示開關（放行事曆上方 toggle），記在 localStorage
 let prChipOn = localStorage.getItem('admin_pr_chip_on') === '1';
 let currentView = 'home';
+let currentRightView = ''; // 寬螢幕雙欄工作區：右欄目前顯示的分頁，關閉時為空字串
+let splitRatio = 60; // 寬螢幕雙欄工作區：左欄佔比（30~70）
 let doneExpanded = false;
 // 【新】待辦事項（所有人共用）
 let todoCategories = [];
@@ -1188,14 +1190,14 @@ async function savePrStatus(key, fields, msgElId) {
   const msgEl = msgElId ? document.getElementById(msgElId) : null;
   if (msgEl) { msgEl.textContent = '儲存中…'; msgEl.style.color = '#c9a892'; }
   // 若行事曆正顯示狀態小圖示，即時更新
-  if (currentView === 'calendar' && prChipOn) render();
+  if (isViewShown('calendar') && prChipOn) render();
   try {
     await postTask(Object.assign({ type: 'pr-status', key }, fields));
     if (msgEl) { msgEl.textContent = '已儲存 ✓'; msgEl.style.color = '#7BAF7B'; }
   } catch (err) {
     prStatusMap[key] = prev;
     if (msgEl) { msgEl.textContent = '儲存失敗'; msgEl.style.color = '#d9534f'; }
-    if (currentView === 'calendar' && prChipOn) render();
+    if (isViewShown('calendar') && prChipOn) render();
     throw err;
   }
 }
@@ -1320,8 +1322,8 @@ async function fetchMemos() {
     socialLinks = data.socialLinks || {};
     vendorDb = Array.isArray(data.vendorDb) ? data.vendorDb : [];
     brandDb = Array.isArray(data.brandDb) ? data.brandDb : [];
-    if (currentView === 'brandVendor') renderBrandVendorView();
-    
+    if (isViewShown('brandVendor')) renderBrandVendorView();
+
     renderGroupStatusList('groupStatusList');
     renderGroupStatusList('calGroupList');
     todoCategories = Array.isArray(data.todoCategories) ? data.todoCategories : [];
@@ -1329,10 +1331,10 @@ async function fetchMemos() {
     if (currentUser) {
       renderTaskUI();
     }
-    if (currentView === 'todoList' && typeof renderTodoGroups === 'function') {
+    if (isViewShown('todoList') && typeof renderTodoGroups === 'function') {
       renderTodoGroups();
     }
-    if (currentView === 'calendar' && typeof render === 'function') {
+    if (isViewShown('calendar') && typeof render === 'function') {
       render();
     }
     // 若目前正打開活動彈窗，順便刷新一次數據顯示
@@ -1932,17 +1934,70 @@ document.getElementById('prLocationNewBtn').addEventListener('click', async () =
 });
 
 // ===== 分頁切換與選單 =====
-function switchView(name) {
+// name→view元素id 對照表；switchView / 側邊欄 / 右欄下拉選單 / 視窗縮放搬移都共用同一份
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
+
+// 某分頁目前是否「看得到」（左欄或右欄），輪詢／資料更新後要不要重繪畫面看這個，而不是只看 currentView
+function isViewShown(name) {
+  return currentView === name || currentRightView === name;
+}
+
+// target 預設 'left'：所有既有 34 處呼叫端不傳第二參數，行為與改動前完全一樣。
+// target='right' 是寬螢幕雙欄工作區用的，把分頁搬進 #paneRight。
+function switchView(name, target) {
+  target = (target === 'right') ? 'right' : 'left';
   if (name === 'imageLibrary' && !(isAdmin || myPermissions.imageLibrary)) {
     alert('你沒有圖片庫的使用權限，如果需要請跟雪莉申請開通。');
     return;
   }
-  currentView = name;
-const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
-  Object.entries(map).forEach(([key, id]) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('active', key === name);
-  });
+  const el = document.getElementById(VIEW_ID_MAP[name]);
+  const paneLeft = document.getElementById('paneLeft');
+  const paneRight = document.getElementById('paneRight');
+
+  function activateWithin(container, activeEl) {
+    if (!container) return;
+    Array.from(container.children).forEach(c => {
+      if (c.classList && c.classList.contains('view') && c !== activeEl) c.classList.remove('active');
+    });
+    if (activeEl) activeEl.classList.add('active');
+  }
+
+  if (target === 'right' && paneRight) {
+    if (currentView === name) {
+      // 這個分頁目前在左欄顯示，改到右欄時左右對調：左欄改顯示原本右欄的分頁（沒有就退回首頁，不要留空欄）
+      let fallbackName = currentRightView || 'home';
+      if (fallbackName === name) {
+        // 自我碰撞防呆：換一個不等於 name 的分頁，避免左右欄同時指向同一個 DOM 節點
+        fallbackName = (name === 'home') ? 'calendar' : 'home';
+        if (fallbackName === name) {
+          fallbackName = Object.keys(VIEW_ID_MAP).find(k => k !== name) || fallbackName;
+        }
+      }
+      const fallbackEl = document.getElementById(VIEW_ID_MAP[fallbackName]);
+      if (fallbackEl && fallbackEl === el) return; // 最後保險：絕不把同一個節點同時搬進左右欄
+      currentView = fallbackName;
+      if (fallbackEl && paneLeft) {
+        paneLeft.appendChild(fallbackEl);
+        activateWithin(paneLeft, fallbackEl);
+      }
+    }
+    if (el) {
+      paneRight.appendChild(el);
+      activateWithin(paneRight, el);
+    }
+    currentRightView = name;
+  } else {
+    if (currentRightView === name) currentRightView = ''; // 避免左右同時顯示同一分頁
+    if (el && paneLeft) {
+      paneLeft.appendChild(el);
+      activateWithin(paneLeft, el);
+    }
+    currentView = name;
+  }
+
+  localStorage.setItem('admin_split_right_view', currentRightView);
+  syncPaneRightPicker();
+  updateSideNavActive();
   document.querySelectorAll('.menu-item[data-view]').forEach(mi => {
     mi.classList.toggle('active', mi.dataset.view === name);
   });
@@ -1962,6 +2017,164 @@ const map = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatc
   if (name === 'lotteryTool') renderLotteryWinnerList();
   if (name === 'imageLibrary') { ilLoadFolderOptions().then(() => ilLoad()); }
   if (name === 'brandVendor') renderBrandVendorView();
+}
+
+// ===== 寬螢幕雙欄工作區：側邊欄 / 右欄 / 拖曳分隔線 =====
+function updateSideNavActive() {
+  document.querySelectorAll('#sideNav .sn-item[data-view]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === currentView);
+  });
+}
+
+function syncPaneRightPicker() {
+  const picker = document.getElementById('paneRightPicker');
+  if (picker) picker.value = currentRightView || '';
+  const emptyEl = document.getElementById('paneRightEmpty');
+  if (emptyEl) emptyEl.style.display = currentRightView ? 'none' : 'block';
+}
+
+function applySplitRatio(pct) {
+  const r = Math.min(70, Math.max(30, pct || 60));
+  const paneLeft = document.getElementById('paneLeft');
+  const paneRight = document.getElementById('paneRight');
+  if (!paneLeft || !paneRight) return;
+  paneLeft.style.flex = '0 0 ' + r + '%';
+  paneRight.style.flex = '1 1 ' + (100 - r) + '%';
+}
+
+function setRightPaneOpen(isOpen) {
+  const workspace = document.getElementById('splitWorkspace');
+  const paneLeft = document.getElementById('paneLeft');
+  const paneRight = document.getElementById('paneRight');
+  if (!workspace) return;
+  workspace.classList.toggle('right-closed', !isOpen);
+  if (isOpen) {
+    applySplitRatio(splitRatio);
+  } else if (paneLeft && paneRight) {
+    paneLeft.style.flex = '';
+    paneRight.style.flex = '';
+  }
+}
+
+function closeRightPane() {
+  currentRightView = '';
+  localStorage.setItem('admin_split_right_view', '');
+  setRightPaneOpen(false);
+  syncPaneRightPicker();
+}
+
+// 捲動任務所在的那個 pane 回頂部；<1200px（沒有雙欄）就退回捲整頁
+function scrollPaneTop(el) {
+  const pane = el && el.closest ? el.closest('#paneLeft, #paneRight') : null;
+  // 只有「確實可捲動」的容器才捲它：overflow-y 是 auto/scroll 且內容真的比容器高；
+  // 窄螢幕時 #paneLeft 是 overflow:visible、scrollHeight===clientHeight，會落到這裡改捲 window。
+  const isScrollable = pane && /^(auto|scroll)$/.test(getComputedStyle(pane).overflowY) && pane.scrollHeight > pane.clientHeight;
+  if (isScrollable) {
+    pane.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function restoreSplitFromStorage() {
+  const rawRight = localStorage.getItem('admin_split_right_view');
+  const savedRatioRaw = parseInt(localStorage.getItem('admin_split_ratio'), 10);
+  splitRatio = (savedRatioRaw >= 30 && savedRatioRaw <= 70) ? savedRatioRaw : 60;
+
+  // 首次使用（localStorage 從未存過，key 不存在＝null，跟使用者主動關閉存的 '' 要分開判斷）
+  // 且是寬螢幕：預設左欄行事曆、右欄我的任務。
+  if (rawRight === null && window.matchMedia('(min-width: 1200px)').matches) {
+    switchView('calendar', 'left');
+    setRightPaneOpen(true);
+    switchView('myTasks', 'right');
+    return;
+  }
+
+  const savedRight = rawRight || '';
+  if (savedRight && VIEW_ID_MAP[savedRight] && savedRight !== currentView) {
+    setRightPaneOpen(true);
+    switchView(savedRight, 'right');
+  } else {
+    setRightPaneOpen(false);
+    syncPaneRightPicker();
+  }
+}
+
+function initSplitDrag() {
+  const divider = document.getElementById('splitDivider');
+  const workspace = document.getElementById('splitWorkspace');
+  if (!divider || !workspace) return;
+  let dragging = false;
+  divider.addEventListener('pointerdown', (e) => {
+    if (workspace.classList.contains('right-closed')) return;
+    dragging = true;
+    divider.classList.add('sd-dragging');
+    document.body.classList.add('split-dragging');
+    divider.setPointerCapture(e.pointerId);
+  });
+  divider.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const rect = workspace.getBoundingClientRect();
+    let pct = ((e.clientX - rect.left) / rect.width) * 100;
+    pct = Math.min(70, Math.max(30, pct));
+    splitRatio = Math.round(pct);
+    applySplitRatio(splitRatio);
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove('sd-dragging');
+    document.body.classList.remove('split-dragging');
+    localStorage.setItem('admin_split_ratio', String(splitRatio));
+  }
+  divider.addEventListener('pointerup', endDrag);
+  divider.addEventListener('pointercancel', endDrag);
+}
+
+let splitWorkspaceInited = false;
+function initSplitWorkspace() {
+  if (splitWorkspaceInited) return;
+  splitWorkspaceInited = true;
+
+  document.querySelectorAll('#sideNav .sn-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view, 'left'));
+  });
+
+  const picker = document.getElementById('paneRightPicker');
+  if (picker) {
+    picker.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (!val) {
+        closeRightPane();
+      } else {
+        setRightPaneOpen(true);
+        switchView(val, 'right');
+      }
+    });
+  }
+
+  initSplitDrag();
+  restoreSplitFromStorage();
+
+  // 視窗跨越 1200px 斷點時：寬→窄要把右欄內容搬回左欄；窄→寬依 localStorage 還原右欄
+  const wideMQ = window.matchMedia('(min-width: 1200px)');
+  wideMQ.addEventListener('change', (e) => {
+    if (!e.matches) {
+      const paneLeft = document.getElementById('paneLeft');
+      if (currentRightView) {
+        const rel = document.getElementById(VIEW_ID_MAP[currentRightView]);
+        if (rel && paneLeft) {
+          rel.classList.remove('active');
+          paneLeft.appendChild(rel);
+        }
+        currentRightView = '';
+        localStorage.setItem('admin_split_right_view', '');
+        syncPaneRightPicker();
+      }
+    } else {
+      restoreSplitFromStorage();
+    }
+  });
 }
 
 document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
@@ -1985,6 +2198,7 @@ function initAppUI() {
   document.getElementById('userChip').textContent = '👤 ' + currentUser;
   switchView('home');
   renderTaskUI();
+  initSplitWorkspace();
 }
 
 // ===== 開團文案產生器 =====
@@ -2865,9 +3079,11 @@ function updateUrgentUI() {
   document.getElementById('urgentBanner').classList.toggle('show', urgent);
   document.getElementById('menuUrgentDot').style.display = urgent ? 'block' : 'none';
   document.getElementById('homeUrgentIcon').style.display = urgent ? 'block' : 'none';
+  const sideDot = document.getElementById('sideNavUrgentDot');
+  if (sideDot) sideDot.style.display = urgent ? 'block' : 'none';
 
   // 綠色新任務提醒：排在緊急橫幅後面；人在我的任務頁時不用再提醒
-  const n = currentView === 'myTasks' ? 0 : newTaskCount();
+  const n = isViewShown('myTasks') ? 0 : newTaskCount();
   const banner = document.getElementById('newTaskBanner');
   banner.classList.toggle('show', n > 0);
   if (n > 0) banner.textContent = `🟢 你有 ${n} 個新任務，請點擊前往`;
@@ -3185,7 +3401,7 @@ document.getElementById('dispatchSubmitBtn').addEventListener('click', async () 
     renderExtraFields('dispatch'); // 清空附加欄位
     await fetchMemos(); // 立刻同步最新任務
     // 派遣完成後回到派遣任務頁面上方，方便馬上派下一個
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollPaneTop(btn);
   } catch (err) {
     setFormStatus('dispatchStatus', '派遣失敗：' + err.message, 'error');
   }
