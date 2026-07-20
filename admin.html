@@ -808,6 +808,73 @@
     margin: 8px auto 12px;
   }
   .pri-filter-btn.on { background: #FF8FA3; border-color: #FF8FA3; color: #fff; }
+  .pri-sort-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 12px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--c-brown);
+  }
+  .pri-sort-bar select {
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-pill);
+    font-family: var(--font-round);
+    font-size: 12px;
+    padding: 4px 10px;
+    background: #fff;
+    color: var(--c-brown);
+  }
+
+  /* 分組標題 */
+  .pri-group { margin-bottom: 16px; }
+  .pri-group-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--c-brown);
+    padding: 4px 2px 6px;
+    border-bottom: 2px solid var(--c-border);
+    margin-bottom: 6px;
+  }
+  .pri-group-count {
+    background: var(--c-bg-bottom);
+    border-radius: var(--r-pill);
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  /* 折疊卡片 */
+  .pri-card-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    cursor: pointer;
+    padding: 2px 0;
+  }
+  .pri-card-arrow { flex: none; font-size: 10px; color: #a89888; }
+  .pri-card-head .pri-card-title { flex: 1 1 auto; min-width: 0; }
+  .pri-card-brand {
+    flex: none;
+    font-size: 11px;
+    font-weight: 800;
+    color: #4a7fb5;
+  }
+  .pri-card-cat {
+    flex: none;
+    font-size: 10.5px;
+    font-weight: 800;
+    border-radius: var(--r-pill);
+    padding: 1px 8px;
+    background: #FFF0F3;
+    color: #C25A72;
+  }
+  .pri-card-body { margin-top: 8px; }
   .pri-inline-list { margin: 4px 0 8px; }
   .pri-inline-row {
     display: flex;
@@ -3290,6 +3357,14 @@
       <input type="text" id="priBrand" placeholder="品牌名稱（可不填）">
       <label for="priGroup">屬於哪一團</label>
       <select id="priGroup"></select>
+      <label for="priCategory">分類</label>
+      <select id="priCategory">
+        <option value="">（依團購時間自動分組）</option>
+        <option value="試用中">試用中</option>
+        <option value="準備安排開團">準備安排開團</option>
+        <option value="暫不安排">暫不安排</option>
+        <option value="公關分享禮">公關分享禮</option>
+      </select>
       <label for="priLocation">放置位置</label>
       <select id="priLocation"></select>
       <div class="newname-row" id="priLocationNewRow">
@@ -3308,6 +3383,14 @@
       <button class="task-mini-btn pri-filter-btn" data-pri-filter="received">已到但未拍攝</button>
       <button class="task-mini-btn pri-filter-btn" data-pri-filter="shot">已拍攝</button>
       <button class="task-mini-btn pri-filter-btn" data-pri-filter="unlinked">未關聯團購</button>
+    </div>
+    <div class="pri-sort-bar">
+      <label for="priSortSelect">排序</label>
+      <select id="priSortSelect">
+        <option value="created">依新增日期</option>
+        <option value="brand">依品牌</option>
+        <option value="eventDate">依開團日期</option>
+      </select>
     </div>
     <div id="priList"></div>
   </div>
@@ -4348,7 +4431,7 @@
 </div>
 
 <script src="vendor/html2canvas.min.js"></script>
-<script src="admin.js?v=50"></script>
+<script src="admin.js?v=51"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

@@ -4337,57 +4337,169 @@ async function loadPrItems(force) {
 
 // 清單頁篩選：狀態一律從所屬團購繼承，所以這裡篩的是團購狀態
 let priFilter = 'all';
+let priSort = 'created';        // brand｜created｜eventDate
+const priExpanded = {};         // id -> true，記住哪幾張卡片被展開
+
+// 分類是手動標的；沒標就依所屬團購的結團日自動分到「已結團」或「未來開團」
+const PR_CATEGORY_LIST = ['試用中', '準備安排開團', '暫不安排', '公關分享禮'];
+const PR_TRIAL_CATEGORIES = ['試用中', '準備安排開團', '暫不安排'];
+const PR_GROUP_DEFS = [
+  { key: 'upcoming', label: '📅 未來開團' },
+  { key: 'trial',    label: '🧪 試用中' },
+  { key: 'gift',     label: '🎁 公關分享禮' },
+  { key: 'ended',    label: '✅ 已結團' },
+  { key: 'other',    label: '❓ 未關聯團購' }
+];
 
 function priFilterMatch_(item) {
   const st = prStatusOfItem_(item);
   if (priFilter === 'received') return st === '已收到';
   if (priFilter === 'shot') return st === '已拍攝';
-  if (priFilter === 'unlinked') return !item.evKey;
+  // 跟分組用同一套判斷，免得「evKey 指向已刪除團購」的品項在兩邊分類不一致
+  if (priFilter === 'unlinked') return prGroupOf_(item) === 'other';
   return true;
+}
+
+function prEventOf_(evKey) {
+  return evKey ? allEvents.find(e => getMemoKey(e) === evKey) : null;
+}
+
+// 結團日＝含延長的實際結束日
+function prEventEndOf_(item) {
+  const ev = prEventOf_(item.evKey);
+  return ev ? (ev.displayEnd || ev.end) : null;
+}
+
+function prEventStartOf_(item) {
+  const ev = prEventOf_(item.evKey);
+  return ev ? ev.start : null;
+}
+
+function prGroupOf_(item) {
+  const cat = item.category || '';
+  if (cat === '公關分享禮') return 'gift';
+  if (PR_TRIAL_CATEGORIES.indexOf(cat) !== -1) return 'trial';
+  const end = prEventEndOf_(item);
+  if (!end) return 'other';
+  return end < startOfDay(new Date()) ? 'ended' : 'upcoming';
+}
+
+// 排序：依開團日時，未來的團由近到遠、已結團的由新到舊，都是「最相關的在最上面」
+function priSortItems_(items, groupKey) {
+  const arr = items.slice();
+  if (priSort === 'brand') {
+    return arr.sort((a, b) =>
+      (a.brand || '').localeCompare(b.brand || '', 'zh-Hant') ||
+      (a.name || '').localeCompare(b.name || '', 'zh-Hant'));
+  }
+  if (priSort === 'eventDate') {
+    const asc = groupKey === 'upcoming';
+    return arr.sort((a, b) => {
+      const da = prEventStartOf_(a), db = prEventStartOf_(b);
+      if (!da && !db) return 0;
+      if (!da) return 1;          // 沒關聯團購的排最後
+      if (!db) return -1;
+      return asc ? da - db : db - da;
+    });
+  }
+  // 依新增日期，新的在前。後端的「建立時間」是 M/d HH:mm 沒有年份也沒補零，
+  // 字串比大小會排錯，所以改用試算表的列順序（getPrItems_ 依列序回傳＝新增順序）
+  const order = priOrderMap_();
+  return arr.sort((a, b) => (order.get(b.id) || 0) - (order.get(a.id) || 0));
+}
+
+// id → 在 prItemsCache 裡的列序，每次重畫建一次就好（避免排序時反覆 indexOf）
+function priOrderMap_() {
+  const m = new Map();
+  prItemsCache.forEach((it, i) => m.set(it.id, i));
+  return m;
 }
 
 function renderPrItemsList() {
   const listEl = document.getElementById('priList');
+  if (!listEl) return;
   if (!prItemsCache.length) {
     listEl.innerHTML = '<div class="task-empty">目前沒有公關品紀錄</div>';
     return;
   }
-  const sorted = prItemsCache.slice()
-    .filter(priFilterMatch_)
-    .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
-  if (!sorted.length) {
+  const matched = prItemsCache.filter(priFilterMatch_);
+  if (!matched.length) {
     listEl.innerHTML = '<div class="task-empty">這個條件下沒有公關品</div>';
     return;
   }
-  listEl.innerHTML = sorted.map(it => {
-    const st = prStatusOfItem_(it);
-    const chip = st
-      ? `<span class="pri-card-chip pr-${PR_STATUS_CLASS[st] || 'st-none'}">${escHtml(st)}</span>`
-      : '<span class="pri-card-chip">未關聯團購</span>';
-    const groupText = prEventTitleOf_(it.evKey) || it.group || '—';
-    return `
-    <div class="pri-card" data-id="${escHtml(it.id)}">
-      <div class="pri-card-title">${escHtml(it.name || '（未命名）')}${chip}</div>
-      <div class="pri-card-meta">廠商：${escHtml(it.vendor || '—')}　團購：${escHtml(groupText)}</div>
-      <div class="pri-card-row">
-        <select class="pri-edit-group" data-id="${escHtml(it.id)}"></select>
-      </div>
-      <div class="pri-card-row">
-        <input type="text" class="pri-edit-brand" data-id="${escHtml(it.id)}" placeholder="品牌" value="${escHtml(it.brand || '')}">
-        <select class="pri-edit-location" data-id="${escHtml(it.id)}"></select>
-      </div>
-      <div class="pri-card-row">
-        <input type="text" class="pri-edit-note" data-id="${escHtml(it.id)}" placeholder="備註" value="${escHtml(it.note || '')}" style="flex:1 1 100%;">
-      </div>
-      <div class="pri-card-actions">
-        <button class="pnote-btn pnote-btn-save pri-save-btn" data-id="${escHtml(it.id)}">💾 儲存</button>
-        <button class="pnote-btn pnote-btn-delete pri-delete-btn" data-id="${escHtml(it.id)}">🗑 刪除</button>
-        <span class="pri-card-status" id="priStatus_${escHtml(it.id)}"></span>
-      </div>
-    </div>
-  `;
+  listEl.innerHTML = PR_GROUP_DEFS.map(def => {
+    const items = priSortItems_(matched.filter(it => prGroupOf_(it) === def.key), def.key);
+    if (!items.length) return '';   // 空的分組就不佔版面
+    return `<div class="pri-group">` +
+      `<div class="pri-group-head">${escHtml(def.label)}<span class="pri-group-count">${items.length}</span></div>` +
+      items.map(priCardHtml_).join('') +
+      `</div>`;
   }).join('');
+  bindPrItemCards_();
+}
 
+function priCardHtml_(it) {
+  const id = escHtml(it.id);
+  const st = prStatusOfItem_(it);
+  const chip = st
+    ? `<span class="pri-card-chip pr-${PR_STATUS_CLASS[st] || 'st-none'}">${escHtml(st)}</span>`
+    : '<span class="pri-card-chip">未關聯團購</span>';
+  const groupText = prEventTitleOf_(it.evKey) || it.group || '—';
+  const open = !!priExpanded[it.id];
+  const catTag = it.category ? `<span class="pri-card-cat">${escHtml(it.category)}</span>` : '';
+  return `
+    <div class="pri-card${open ? ' open' : ''}" data-id="${id}">
+      <div class="pri-card-head" data-id="${id}">
+        <span class="pri-card-arrow">${open ? '▾' : '▸'}</span>
+        <span class="pri-card-title">${escHtml(it.name || '（未命名）')}</span>
+        ${it.brand ? `<span class="pri-card-brand">${escHtml(it.brand)}</span>` : ''}
+        ${catTag}${chip}
+      </div>
+      <div class="pri-card-body"${open ? '' : ' style="display:none;"'}>
+        <div class="pri-card-meta">廠商：${escHtml(it.vendor || '—')}　團購：${escHtml(groupText)}</div>
+        <div class="pri-card-row">
+          <select class="pri-edit-group" data-id="${id}"></select>
+          <select class="pri-edit-category" data-id="${id}"></select>
+        </div>
+        <div class="pri-card-row">
+          <input type="text" class="pri-edit-brand" data-id="${id}" placeholder="品牌" value="${escHtml(it.brand || '')}">
+          <select class="pri-edit-location" data-id="${id}"></select>
+        </div>
+        <div class="pri-card-row">
+          <input type="text" class="pri-edit-note" data-id="${id}" placeholder="備註" value="${escHtml(it.note || '')}" style="flex:1 1 100%;">
+        </div>
+        <div class="pri-card-actions">
+          <button class="pnote-btn pnote-btn-save pri-save-btn" data-id="${id}">💾 儲存</button>
+          <button class="pnote-btn pnote-btn-delete pri-delete-btn" data-id="${id}">🗑 刪除</button>
+          <span class="pri-card-status" id="priStatus_${id}"></span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bindPrItemCards_() {
+  const listEl = document.getElementById('priList');
+  if (!listEl) return;
+
+  listEl.querySelectorAll('.pri-card-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const id = head.dataset.id;
+      priExpanded[id] = !priExpanded[id];
+      const card = head.parentElement;
+      card.classList.toggle('open', priExpanded[id]);
+      card.querySelector('.pri-card-body').style.display = priExpanded[id] ? '' : 'none';
+      head.querySelector('.pri-card-arrow').textContent = priExpanded[id] ? '▾' : '▸';
+    });
+  });
+
+  listEl.querySelectorAll('.pri-edit-category').forEach(sel => {
+    const id = sel.dataset.id;
+    const item = prItemsCache.find(x => x.id === id);
+    const cur = item ? (item.category || '') : '';
+    sel.innerHTML = '<option value="">（依團購時間自動分組）</option>' +
+      PR_CATEGORY_LIST.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+    sel.value = cur;
+  });
   listEl.querySelectorAll('.pri-edit-group').forEach(sel => {
     const id = sel.dataset.id;
     const item = prItemsCache.find(x => x.id === id);
@@ -4416,9 +4528,11 @@ async function savePrItemEdit(id) {
   const location = card.querySelector('.pri-edit-location').value;
   const note = card.querySelector('.pri-edit-note').value.trim();
   const evKey = card.querySelector('.pri-edit-group').value;
+  const category = card.querySelector('.pri-edit-category').value;
   const local = prItemsCache.find(x => x.id === id);
-  const evKeyChanged = !!local && (local.evKey || '') !== evKey;
-  const payload = { type: 'pr-item-update', id, brand, location, note, evKey };
+  // 換團或換分類都會讓卡片跳到別的分組，必須整份重畫
+  const regroup = !!local && ((local.evKey || '') !== evKey || (local.category || '') !== category);
+  const payload = { type: 'pr-item-update', id, brand, location, note, evKey, category };
   // 團購標題跟著關聯走；查不到標題（沒關聯／團購已被刪）就別動舊資料裡手打的名稱
   const evTitle = prEventTitleOf_(evKey);
   if (evTitle) payload.group = evTitle;
@@ -4427,14 +4541,19 @@ async function savePrItemEdit(id) {
   try {
     await postTask(payload);
     if (local) {
-      local.brand = brand; local.location = location; local.note = note; local.evKey = evKey;
+      local.brand = brand; local.location = location; local.note = note;
+      local.evKey = evKey; local.category = category;
       if (evTitle) local.group = evTitle;
     }
     if (statusEl) { statusEl.textContent = '已儲存 ✓'; statusEl.className = 'pri-card-status ok'; }
     renderPriInline('prEventItems');
     renderPriInline('taskPrItems');
-    // 換了所屬團購＝狀態徽章與篩選結果都會變，整份重畫
-    if (evKeyChanged) renderPrItemsList();
+    if (regroup) {
+      renderPrItemsList();
+      // 重畫會把上面那句「已儲存 ✓」連同舊 DOM 一起換掉，補寫回新卡片上
+      const after = document.getElementById('priStatus_' + id);
+      if (after) { after.textContent = '已儲存 ✓'; after.className = 'pri-card-status ok'; }
+    }
   } catch (err) {
     if (statusEl) { statusEl.textContent = err.message || '儲存失敗'; statusEl.className = 'pri-card-status error'; }
   }
@@ -4669,12 +4788,18 @@ document.querySelectorAll('.pri-filter-btn').forEach(btn => {
   });
 });
 
+document.getElementById('priSortSelect').addEventListener('change', (e) => {
+  priSort = e.target.value;
+  renderPrItemsList();
+});
+
 document.getElementById('priAddBtn').addEventListener('click', async () => {
   const name = document.getElementById('priName').value.trim();
   const vendor = document.getElementById('priVendor').value.trim();
   const brand = document.getElementById('priBrand').value.trim();
   const evKey = document.getElementById('priGroup').value;
   const group = prEventTitleOf_(evKey);   // 團購名稱一律由關聯的團購決定，不再手打
+  const category = document.getElementById('priCategory').value;
   const locSel = document.getElementById('priLocation').value;
   const location = locSel === '__new__' ? '' : locSel;
   const note = document.getElementById('priNote').value.trim();
@@ -4683,11 +4808,13 @@ document.getElementById('priAddBtn').addEventListener('click', async () => {
   btn.disabled = true;
   setFormStatus('priAddStatus', '新增中…');
   try {
-    const result = await postTask({ type: 'pr-item-add', name, vendor, brand, group, location, note, evKey });
-    prItemsCache.unshift({ id: result.id, name, vendor, brand, group, location, note, created: '', updated: '', evKey });
+    const result = await postTask({ type: 'pr-item-add', name, vendor, brand, group, location, note, evKey, category });
+    // 一律 push：prItemsCache 的順序＝試算表列序＝新增順序，排序邏輯靠這個
+    prItemsCache.push({ id: result.id, name, vendor, brand, group, location, note, created: '', updated: '', evKey, category });
     renderPrItemsList();
     ['priName', 'priVendor', 'priBrand', 'priNote'].forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('priGroup').value = '';
+    document.getElementById('priCategory').value = '';
     document.getElementById('priLocation').value = '';
     setFormStatus('priAddStatus', '已新增 ✓', 'ok');
   } catch (err) {

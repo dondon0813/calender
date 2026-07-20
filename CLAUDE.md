@@ -6,6 +6,7 @@
 
 1. **禁止整檔讀大檔**：admin.js / admin.html / Code.gs / recipes.html / school-list.html / index.html 一律「查地圖 → Grep 定位 → Read 帶 offset/limit（≤200 行）」。跨檔調查派 Explore subagent，不要親自掃。（有 hook 硬擋，被擋到就照錯誤訊息做。）
 2. **沒過版本確認的驗證＝無效**：Code.gs 改動要等**使用者手動重新部署**才生效；GitHub Pages 有快取。驗證前必須照 `.claude/harness/50-deploy-verify.md` 做版本確認，否則你在對舊版本下結論。
+   - **前置鐵律**：Code.gs 沒 commit + push 上 `main`（不是分支、不是未提交）之前，**禁止開口叫使用者部署**。使用者是從 GitHub 複製檔案的，改動還在本機＝他一定部署到舊檔，而且 GAS 編輯器看不出版本、雙方會一起對著錯的東西 debug。開口前跑完 50 號檔 §6 的三項確認（含 `git show origin/main:Code.gs | grep` 直接驗遠端內容），並附上 commit hash。
 3. **實作者不得自我驗證**：改動完成後派 fresh-context subagent 驗收（規則在 20 號檔）。公開端點（scope=public / brands / brandThumbs）只准輸出品牌名稱、介紹、去背小圖——多吐一個欄位就是資安事故。
 
 ## 檔案路由（先讀對的檔，不要全讀）

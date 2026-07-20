@@ -1069,13 +1069,24 @@ function addPrLocation_(name) {
 
 // ===== 【新】公關品清單 =====
 
+const PR_ITEM_HEADERS = ['id', '名稱', '廠商', '品牌', '團購', '位置', '備註', '建立時間', '更新時間', '關聯key', '分類'];
+
 function getPrItemSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(PR_ITEM_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(PR_ITEM_SHEET_NAME);
-    sheet.appendRow(['id', '名稱', '廠商', '品牌', '團購', '位置', '備註', '建立時間', '更新時間', '關聯key']);
+    sheet.appendRow(PR_ITEM_HEADERS);
     sheet.setFrozenRows(1);
+    return sheet;
+  }
+  // 舊表只有 10 欄時自動補第 11 欄「分類」：先確保格線夠寬再寫標題，
+  // 否則後面 appendRow 帶 11 個值會直接中止
+  if (sheet.getMaxColumns() < 11) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 11 - sheet.getMaxColumns());
+  }
+  if (String(sheet.getRange(1, 11).getValue() || '').trim() === '') {
+    sheet.getRange(1, 11).setValue('分類');
   }
   return sheet;
 }
@@ -1097,7 +1108,8 @@ function getPrItems_() {
       note: String(row[6] || ''),
       created: row[7] instanceof Date ? fmtDateTime_(row[7]) : String(row[7] || ''),
       updated: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
-      evKey: String(row[9] || '')  // 所屬團購；前端靠它把狀態接回「公關品狀態」表
+      evKey: String(row[9] || ''),  // 所屬團購；前端靠它把狀態接回「公關品狀態」表
+      category: String(row[10] || '')  // 試用中／準備安排開團／暫不安排／公關分享禮；空白＝依團購時間自動分組
     });
   }
   return items;
@@ -1136,7 +1148,8 @@ function addPrItem_(fields) {
     fields.note || '',
     now,
     now,
-    fields.evKey || ''
+    fields.evKey || '',
+    fields.category || ''
   ]);
   return id;
 }
@@ -1152,6 +1165,7 @@ function updatePrItem_(id, fields) {
   if (fields.location !== undefined) sheet.getRange(row, 6).setValue(fields.location);
   if (fields.note !== undefined) sheet.getRange(row, 7).setValue(fields.note);
   if (fields.evKey !== undefined) sheet.getRange(row, 10).setValue(fields.evKey);
+  if (fields.category !== undefined) sheet.getRange(row, 11).setValue(fields.category);
   sheet.getRange(row, 9).setValue(new Date());
   return true;
 }
@@ -2336,7 +2350,8 @@ function doPost(e) {
         group: String(body.group || '').trim(),
         location: String(body.location || '').trim(),
         note: String(body.note || '').trim(),
-        evKey: String(body.evKey || '').trim()
+        evKey: String(body.evKey || '').trim(),
+        category: String(body.category || '').trim()
       };
       if (!fields.name) return jsonResult_({ success: false, error: '請至少輸入名稱' });
       const id = addPrItem_(fields);
@@ -2347,7 +2362,7 @@ function doPost(e) {
       const id = String(body.id || '').trim();
       if (!id) return jsonResult_({ success: false, error: '缺少公關品資訊' });
       const fields = {};
-      ['name', 'vendor', 'brand', 'group', 'location', 'note', 'evKey'].forEach(function (k) {
+      ['name', 'vendor', 'brand', 'group', 'location', 'note', 'evKey', 'category'].forEach(function (k) {
         if (body[k] !== undefined) fields[k] = String(body[k]);
       });
       const ok = updatePrItem_(id, fields);
