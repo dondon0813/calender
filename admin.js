@@ -48,6 +48,10 @@ let prChipOn = localStorage.getItem('admin_pr_chip_on') === '1';
 let currentView = 'home';
 let currentRightView = ''; // 寬螢幕雙欄工作區：右欄目前顯示的分頁，關閉時為空字串
 let splitRatio = 60; // 寬螢幕雙欄工作區：左欄佔比（30~70）
+// 開機期間 switchView 會被呼叫（initAppUI 先跑 switchView('home')），此時還不能寫
+// admin_split_right_view——否則會把「key 不存在＝首次使用」的訊號洗成空字串，
+// restoreSplitFromStorage 就永遠判定成「使用者主動關過右欄」，預設組合再也不會套用。
+let splitPersistReady = false;
 let doneExpanded = false;
 // 【新】待辦事項（所有人共用）
 let todoCategories = [];
@@ -1995,7 +1999,7 @@ function switchView(name, target) {
     currentView = name;
   }
 
-  localStorage.setItem('admin_split_right_view', currentRightView);
+  if (splitPersistReady) localStorage.setItem('admin_split_right_view', currentRightView);
   syncPaneRightPicker();
   updateSideNavActive();
   document.querySelectorAll('.menu-item[data-view]').forEach(mi => {
@@ -2087,6 +2091,8 @@ function restoreSplitFromStorage() {
     switchView('calendar', 'left');
     setRightPaneOpen(true);
     switchView('myTasks', 'right');
+    splitPersistReady = true;
+    localStorage.setItem('admin_split_right_view', currentRightView);
     return;
   }
 
@@ -2098,6 +2104,7 @@ function restoreSplitFromStorage() {
     setRightPaneOpen(false);
     syncPaneRightPicker();
   }
+  splitPersistReady = true;
 }
 
 function initSplitDrag() {
@@ -2168,7 +2175,8 @@ function initSplitWorkspace() {
           paneLeft.appendChild(rel);
         }
         currentRightView = '';
-        localStorage.setItem('admin_split_right_view', '');
+        // 這裡刻意不寫 localStorage：視窗變窄是被動收合，不是使用者主動關閉右欄。
+        // 寫下去的話再拉寬就還原不回來了（存的值會變成「已關閉」）。
         syncPaneRightPicker();
       }
     } else {
