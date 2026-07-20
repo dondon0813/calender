@@ -15,6 +15,8 @@
 | `picaboo.webp` | Picaboo | 黃色不鏽鋼碗＋分隔盤＋小鳥叉匙 |
 | `aribebe.webp` | Aribebe | 汪汪隊藍色兒童睡袋組 |
 | `bernie.webp` | 伯尼寢具 | 粉色小熊睡墊組 |
+| `kom.webp` | KOM | 三色不鏽鋼保溫碗（藍/綠/黃，附刻花蓋） |
+| `lab52.webp` | 齒妍堂 | 汪汪隊嬰幼兒牙刷＋含鈣牙膏 |
 
 ## 圖片建議
 
