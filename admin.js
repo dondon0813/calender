@@ -52,6 +52,11 @@ let splitRatio = 60; // 寬螢幕雙欄工作區：左欄佔比（30~70）
 // admin_split_right_view——否則會把「key 不存在＝首次使用」的訊號洗成空字串，
 // restoreSplitFromStorage 就永遠判定成「使用者主動關過右欄」，預設組合再也不會套用。
 let splitPersistReady = false;
+// name→view元素id 對照表；switchView / 側邊欄 / 右欄下拉選單 / 視窗縮放搬移都共用同一份。
+// 必須宣告在這裡（檔案最前段）：已登入時 admin.js:1442 附近會在**最外層**直接呼叫
+// switchView('home')，若這個 const 宣告在它後面，會踩到 TDZ 而拋 ReferenceError，
+// 導致那行之後的最外層程式（initAppUI、漢堡選單監聽…）全部不執行，整頁變磚。
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
 let doneExpanded = false;
 // 【新】待辦事項（所有人共用）
 let todoCategories = [];
@@ -1940,8 +1945,6 @@ document.getElementById('prLocationNewBtn').addEventListener('click', async () =
 });
 
 // ===== 分頁切換與選單 =====
-// name→view元素id 對照表；switchView / 側邊欄 / 右欄下拉選單 / 視窗縮放搬移都共用同一份
-const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
 
 // 某分頁目前是否「看得到」（左欄或右欄），輪詢／資料更新後要不要重繪畫面看這個，而不是只看 currentView
 function isViewShown(name) {
@@ -2185,9 +2188,10 @@ function initSplitWorkspace() {
   }
 
   initSplitDrag();
-  restoreSplitFromStorage();
 
-  // 視窗跨越 1200px 斷點時：寬→窄要把右欄內容搬回左欄；窄→寬依 localStorage 還原右欄
+  // 視窗跨越 1200px 斷點時：寬→窄要把右欄內容搬回左欄；窄→寬依 localStorage 還原右欄。
+  // 這個監聽刻意掛在 restoreSplitFromStorage() 之前：還原過程會呼叫 switchView，而
+  // switchView 帶著各分頁的資料渲染副作用，任一個丟例外都不該害這個監聽沒掛上。
   const wideMQ = window.matchMedia('(min-width: 1200px)');
   wideMQ.addEventListener('change', (e) => {
     if (!e.matches) {
@@ -2204,9 +2208,12 @@ function initSplitWorkspace() {
         syncPaneRightPicker();
       }
     } else {
-      restoreSplitFromStorage();
+      try { restoreSplitFromStorage(); } catch (err) { console.error('restoreSplitFromStorage', err); }
     }
   });
+
+  // 放在監聽掛好之後才還原，且獨立包起來：還原失敗不影響已掛上的監聽與側邊欄。
+  try { restoreSplitFromStorage(); } catch (err) { console.error('restoreSplitFromStorage', err); }
 }
 
 document.getElementById('homeBtn').addEventListener('click', () => switchView('home'));
