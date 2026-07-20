@@ -57,6 +57,43 @@ let splitPersistReady = false;
 // switchView('home')，若這個 const 宣告在它後面，會踩到 TDZ 而拋 ReferenceError，
 // 導致那行之後的最外層程式（initAppUI、漢堡選單監聽…）全部不執行，整頁變磚。
 const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
+
+// ===== 開機期就會被讀到的模組層狀態，一律宣告在這裡 =====
+// 理由同上面 VIEW_ID_MAP：initAppUI() 會還原上次停留的分頁，於**最外層**同步呼叫
+// switchView(該分頁)，進而執行 renderBrandVendorView() / loadPrItems() 等渲染函式。
+// 這些函式讀到的變數若宣告在檔案後段，開機當下還在 TDZ，會拋 ReferenceError，
+// 導致該行之後的最外層程式（把側邊欄接起來的那段也在內）全部不執行，整頁變磚。
+// 2026-07-21 實際事故：bvSearchScope 原本宣告在 6127 行，開機還原到品牌廠商頁就變磚。
+// 品牌廠商管理頁的搜尋列
+let bvSearchScope = 'vendor';
+// 公關品清單頁
+let prItemsLoaded = false;
+let prItemsCache = [];
+let priFilter = 'all';          // all｜received｜shot｜unlinked
+let priSort = 'created';        // brand｜created｜eventDate
+const priExpanded = {};         // id -> true，記住哪幾張卡片被展開
+const priInlineCtx = {};        // prefix -> { evKey, vendor, group }，共用明細區塊用
+// 分類是手動標的；沒標就依所屬團購的結團日自動分到「已結團」或「未來開團」
+const PR_CATEGORY_LIST = ['試用中', '準備安排開團', '暫不安排', '公關分享禮'];
+const PR_TRIAL_CATEGORIES = ['試用中', '準備安排開團', '暫不安排'];
+const PR_GROUP_DEFS = [
+  { key: 'upcoming', label: '📅 未來開團' },
+  { key: 'trial',    label: '🧪 試用中' },
+  { key: 'gift',     label: '🎁 公關分享禮' },
+  { key: 'ended',    label: '✅ 已結團' },
+  { key: 'other',    label: '❓ 未關聯團購' }
+];
+// 雙欄工作區：initAppUI → initSplitWorkspace 開機必讀，宣告晚一步就整個側邊欄接不起來
+let splitWorkspaceInited = false;
+// 抽獎工具：右欄還原到 lotteryTool 時開機就會讀到
+let lotteryWinnerLog = []; // 新的在最前面：[{prize, winner}, ...]
+// 已完成任務分組：目前靠「開機時 tasksMap 是空的」擋住，改成宣告在前段才是真的安全
+const expandedDoneDates = new Set(); // 展開中的日期分組
+let doneDatesInitialized = false;
+// 自訂區塊樣式對照：同上，目前靠「開機時 customBlocks 是空的」擋住
+const CB_TITLE_SIZE_PX = { '小': '14px', '中': '17px', '大': '21px', '特大': '26px' };
+const CB_BORDER_STYLE_CSS = { '無': 'none', '實線': 'solid', '虛線': 'dashed' };
+const CB_ANIM_CLASS = { '無': '', '搖晃': 'cb-anim-shake', '跳動': 'cb-anim-bounce', '震動': 'cb-anim-vibrate' };
 let doneExpanded = false;
 // 【新】待辦事項（所有人共用）
 let todoCategories = [];
@@ -2190,7 +2227,7 @@ function initSplitDrag() {
   divider.addEventListener('pointercancel', endDrag);
 }
 
-let splitWorkspaceInited = false;
+// splitWorkspaceInited 宣告在檔案最前段（開機期 TDZ），見 VIEW_ID_MAP 附近
 function initSplitWorkspace() {
   if (splitWorkspaceInited) return;
   splitWorkspaceInited = true;
@@ -2364,7 +2401,7 @@ async function copyGenCopyText() {
 // 設計原則：獎項清單／參加名單隨時可以編輯，不鎖住；每次抽獎都即時重新讀取最新的清單內容，
 // 只用「中獎紀錄 lotteryWinnerLog」記錄已經抽出的結果，靠這份紀錄反推目前剩餘的獎項數量／機會，
 // 這樣「重抽」只要把最後一筆紀錄拿掉再重抽一次就好，也方便隨時修改清單內容（例如多加機會）。
-let lotteryWinnerLog = []; // 新的在最前面：[{prize, winner}, ...]
+// lotteryWinnerLog 宣告在檔案最前段（開機期 TDZ），見 VIEW_ID_MAP 附近
 
 // 把「名稱*數量」格式的多行文字解析成 [{name, count}]
 function parseLotteryLines_(text) {
@@ -3715,8 +3752,7 @@ function buildDoneItem(task) {
   return item;
 }
 
-const expandedDoneDates = new Set(); // 展開中的日期分組
-let doneDatesInitialized = false;
+// expandedDoneDates / doneDatesInitialized 宣告在檔案最前段（開機期 TDZ），見 VIEW_ID_MAP 附近
 
 function renderMyTaskLists() {
   const pendingEl = document.getElementById('pendingList');
@@ -4292,8 +4328,7 @@ function renderTaskUI() {
 }
 
 // ===== 公關品狀態列表（首頁「公關品狀態」卡片頁面） =====
-let prItemsLoaded = false;
-let prItemsCache = [];
+// prItemsLoaded / prItemsCache 等模組層狀態宣告在檔案最前段（避免開機期 TDZ），見 VIEW_ID_MAP 附近
 
 function cssEscapeAdmin(str) { return String(str).replace(/(["\\])/g, '\\$1'); }
 
@@ -4335,21 +4370,7 @@ async function loadPrItems(force) {
   renderPrItemsList();
 }
 
-// 清單頁篩選：狀態一律從所屬團購繼承，所以這裡篩的是團購狀態
-let priFilter = 'all';
-let priSort = 'created';        // brand｜created｜eventDate
-const priExpanded = {};         // id -> true，記住哪幾張卡片被展開
-
-// 分類是手動標的；沒標就依所屬團購的結團日自動分到「已結團」或「未來開團」
-const PR_CATEGORY_LIST = ['試用中', '準備安排開團', '暫不安排', '公關分享禮'];
-const PR_TRIAL_CATEGORIES = ['試用中', '準備安排開團', '暫不安排'];
-const PR_GROUP_DEFS = [
-  { key: 'upcoming', label: '📅 未來開團' },
-  { key: 'trial',    label: '🧪 試用中' },
-  { key: 'gift',     label: '🎁 公關分享禮' },
-  { key: 'ended',    label: '✅ 已結團' },
-  { key: 'other',    label: '❓ 未關聯團購' }
-];
+// 清單頁篩選／排序／分組的狀態與常數宣告在檔案最前段（避免開機期 TDZ），見 VIEW_ID_MAP 附近
 
 function priFilterMatch_(item) {
   const st = prStatusOfItem_(item);
@@ -4634,7 +4655,7 @@ function handlePrLocationNewOption_(selectEl, onDone) {
   });
 }
 
-const priInlineCtx = {};  // prefix -> { evKey, vendor, group }
+// priInlineCtx 宣告在檔案最前段（避免開機期 TDZ），見 VIEW_ID_MAP 附近
 
 function priInlineField_(prefix) {
   return document.querySelector('.pri-inline-field[data-pri-prefix="' + prefix + '"]');
@@ -5821,9 +5842,7 @@ function taxRound(n) {
   });
 })();
 // ===== 【新】開團狀態清單：自訂區塊（文字按鈕等） =====
-const CB_TITLE_SIZE_PX = { '小': '14px', '中': '17px', '大': '21px', '特大': '26px' };
-const CB_BORDER_STYLE_CSS = { '無': 'none', '實線': 'solid', '虛線': 'dashed' };
-const CB_ANIM_CLASS = { '無': '', '搖晃': 'cb-anim-shake', '跳動': 'cb-anim-bounce', '震動': 'cb-anim-vibrate' };
+// CB_TITLE_SIZE_PX / CB_BORDER_STYLE_CSS / CB_ANIM_CLASS 宣告在檔案最前段（開機期 TDZ），見 VIEW_ID_MAP 附近
 
 function appendCustomBlocksAdmin(listEl, position) {
   const items = customBlocks.filter(b => b.position === position).sort((a, b) => a.order - b.order);
@@ -6124,7 +6143,7 @@ function vendorNamesOf_(brand) {
 }
 
 // 品牌廠商頁搜尋：scope 決定搜尋對象，有關鍵字時只顯示該區塊
-let bvSearchScope = 'vendor';
+// bvSearchScope 宣告在檔案最前段（避免開機期 TDZ），見 VIEW_ID_MAP 附近
 
 function bvSearchText_() {
   const el = document.getElementById('bvSearchInput');
