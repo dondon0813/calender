@@ -1094,7 +1094,8 @@ function getPrItems_() {
       location: String(row[5] || ''),
       note: String(row[6] || ''),
       created: row[7] instanceof Date ? fmtDateTime_(row[7]) : String(row[7] || ''),
-      updated: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || '')
+      updated: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
+      evKey: String(row[9] || '')  // 所屬團購；前端靠它把狀態接回「公關品狀態」表
     });
   }
   return items;
@@ -1148,6 +1149,7 @@ function updatePrItem_(id, fields) {
   if (fields.group !== undefined) sheet.getRange(row, 5).setValue(fields.group);
   if (fields.location !== undefined) sheet.getRange(row, 6).setValue(fields.location);
   if (fields.note !== undefined) sheet.getRange(row, 7).setValue(fields.note);
+  if (fields.evKey !== undefined) sheet.getRange(row, 10).setValue(fields.evKey);
   sheet.getRange(row, 9).setValue(new Date());
   return true;
 }
@@ -2331,7 +2333,8 @@ function doPost(e) {
         brand: String(body.brand || '').trim(),
         group: String(body.group || '').trim(),
         location: String(body.location || '').trim(),
-        note: String(body.note || '').trim()
+        note: String(body.note || '').trim(),
+        evKey: String(body.evKey || '').trim()
       };
       if (!fields.name) return jsonResult_({ success: false, error: '請至少輸入名稱' });
       const id = addPrItem_(fields);
@@ -2342,7 +2345,7 @@ function doPost(e) {
       const id = String(body.id || '').trim();
       if (!id) return jsonResult_({ success: false, error: '缺少公關品資訊' });
       const fields = {};
-      ['name', 'vendor', 'brand', 'group', 'location', 'note'].forEach(function (k) {
+      ['name', 'vendor', 'brand', 'group', 'location', 'note', 'evKey'].forEach(function (k) {
         if (body[k] !== undefined) fields[k] = String(body[k]);
       });
       const ok = updatePrItem_(id, fields);
@@ -2363,6 +2366,12 @@ function doPost(e) {
       ['name', 'vendor', 'brand', 'group', 'location', 'note'].forEach(function (k) {
         if (body[k] !== undefined) fields[k] = String(body[k]);
       });
+      // 一場團購可以有多件公關品：已經建過就不再覆寫（避免蓋掉手動填的品牌／備註）
+      const existing = findPrItemRowByEvKey_(evKey);
+      if (existing !== -1) {
+        const sheet = getPrItemSheet_();
+        return jsonResult_({ success: true, id: String(sheet.getRange(existing, 1).getValue()), skipped: true });
+      }
       const id = upsertPrItemByEvKey_(evKey, fields);
       return jsonResult_({ success: true, id: id });
     }

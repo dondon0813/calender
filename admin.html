@@ -799,6 +799,80 @@
   .task-mini-btn.danger { border-color: #F1998F; color: #D63A2E; }
   .task-mini-btn.restore { border-color: var(--c-cat-2); color: #5C9147; }
 
+  /* ===== 公關品明細（行事曆彈窗／任務彈窗共用）＋清單頁篩選 ===== */
+  .pri-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 8px auto 12px;
+  }
+  .pri-filter-btn.on { background: #FF8FA3; border-color: #FF8FA3; color: #fff; }
+  .pri-inline-list { margin: 4px 0 8px; }
+  .pri-inline-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--c-border);
+  }
+  .pri-inline-row:last-child { border-bottom: none; }
+  .pri-inline-row input[type="text"] { flex: 1 1 90px; min-width: 0; }
+  .pri-inline-row select { flex: 0 1 110px; min-width: 0; }
+  .pri-inline-del {
+    flex: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 4px;
+  }
+  .pri-inline-add-row { display: flex; gap: 6px; align-items: center; }
+  .pri-inline-add-row input { flex: 1 1 auto; min-width: 0; }
+  .pri-inline-empty { font-size: 11.5px; color: #a89888; padding: 6px 0; }
+  .pri-inline-count { font-size: 11px; color: #a89888; font-weight: 700; }
+  .pri-card-chip {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    border-radius: var(--r-pill);
+    padding: 1px 8px;
+    margin-left: 6px;
+    background: var(--c-bg-bottom);
+    color: var(--c-brown);
+  }
+
+  /* ===== 品牌廠商管理：搜尋列 ===== */
+  .bv-search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    max-width: 640px;
+    margin: 0 auto 14px;
+  }
+  .bv-search-bar input[type="text"] {
+    flex: 1 1 180px;
+    min-width: 0;
+    border: 2px solid var(--c-border);
+    border-radius: var(--r-pill);
+    font-family: var(--font-round);
+    font-size: 12.5px;
+    padding: 6px 12px;
+    background: #fff;
+    color: var(--c-brown);
+  }
+  .bv-search-bar input[type="text"]:focus { outline: none; border-color: #7AAEEB; }
+  .bv-scope-btn.on { background: #7AAEEB; border-color: #7AAEEB; color: #fff; }
+  .bv-search-empty {
+    text-align: center;
+    font-size: 12.5px;
+    color: #a89888;
+    padding: 14px 8px;
+  }
+
   /* ===== 已完成分組（依日期摺疊）===== */
   .done-group-head {
     display: flex;
@@ -3215,7 +3289,7 @@
       <label for="priBrand">品牌</label>
       <input type="text" id="priBrand" placeholder="品牌名稱（可不填）">
       <label for="priGroup">屬於哪一團</label>
-      <input type="text" id="priGroup" placeholder="團購標題（可不填）">
+      <select id="priGroup"></select>
       <label for="priLocation">放置位置</label>
       <select id="priLocation"></select>
       <div class="newname-row" id="priLocationNewRow">
@@ -3229,6 +3303,12 @@
     </div>
 
     <div style="text-align:center;"><span class="task-section-title">🎀 公關品清單</span></div>
+    <div class="pri-filter-bar">
+      <button class="task-mini-btn pri-filter-btn on" data-pri-filter="all">全部</button>
+      <button class="task-mini-btn pri-filter-btn" data-pri-filter="received">已到但未拍攝</button>
+      <button class="task-mini-btn pri-filter-btn" data-pri-filter="shot">已拍攝</button>
+      <button class="task-mini-btn pri-filter-btn" data-pri-filter="unlinked">未關聯團購</button>
+    </div>
     <div id="priList"></div>
   </div>
 
@@ -3253,20 +3333,31 @@
     </div>
     <p style="font-size:11.5px; color:#a89888; text-align:center; margin:-4px 0 10px;">點廠商／品牌預設只會顯示資料；開啟右上角「編輯」開關才會跳出可修改的編輯視窗</p>
 
-    <div style="text-align:center; margin-bottom:10px;"><span class="task-section-title">🏭 廠商</span></div>
-    <div style="text-align:center; margin-bottom:10px;">
-      <button class="task-mini-btn" id="vendorDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增廠商</button>
-    </div>
-    <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
-      <div id="vendorDbList"></div>
+    <div class="bv-search-bar">
+      <button class="task-mini-btn bv-scope-btn on" id="bvScopeVendorBtn" data-scope="vendor">🏭 廠商</button>
+      <button class="task-mini-btn bv-scope-btn" id="bvScopeBrandBtn" data-scope="brand">🏷 品牌</button>
+      <input type="text" id="bvSearchInput" placeholder="搜尋廠商…">
+      <button class="task-mini-btn" id="bvSearchClearBtn" title="清除搜尋">✕</button>
     </div>
 
-    <div style="text-align:center; margin:22px 0 10px;"><span class="task-section-title">🏷 品牌</span></div>
-    <div style="text-align:center; margin-bottom:10px;">
-      <button class="task-mini-btn" id="brandDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增品牌</button>
+    <div id="bvVendorSection">
+      <div style="text-align:center; margin-bottom:10px;"><span class="task-section-title">🏭 廠商</span></div>
+      <div style="text-align:center; margin-bottom:10px;">
+        <button class="task-mini-btn" id="vendorDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增廠商</button>
+      </div>
+      <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
+        <div id="vendorDbList"></div>
+      </div>
     </div>
-    <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
-      <div id="brandDbList"></div>
+
+    <div id="bvBrandSection">
+      <div style="text-align:center; margin:22px 0 10px;"><span class="task-section-title">🏷 品牌</span></div>
+      <div style="text-align:center; margin-bottom:10px;">
+        <button class="task-mini-btn" id="brandDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增品牌</button>
+      </div>
+      <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
+        <div id="brandDbList"></div>
+      </div>
     </div>
   </div>
   
@@ -3624,6 +3715,17 @@
           </div>
           <span class="pr-save-status" id="taskPrLocationSaveMsg"></span>
         </div>
+
+        <!-- 這團的公關品明細（與行事曆彈窗、「公關品狀態」頁共用同一份清單） -->
+        <div class="pr-field pri-inline-field" style="display:none;" data-pri-prefix="taskPrItems">
+          <label>🎀 這團的公關品 <span class="pri-inline-count"></span></label>
+          <div class="pri-inline-list"></div>
+          <div class="pri-inline-add-row">
+            <input type="text" class="pri-inline-add-input" placeholder="輸入公關品名稱…">
+            <button class="pr-save-btn pri-inline-add-btn" type="button">＋ 新增</button>
+          </div>
+          <span class="pr-save-status pri-inline-msg"></span>
+        </div>
         <div class="stage-add-row">
           <input type="text" id="stageInput" placeholder="例如：問題已丟給廠商，等待回覆中…">
           <button id="stageAddBtn">新增階段</button>
@@ -3741,6 +3843,17 @@
           <div class="pr-save-row">
             <span class="pr-save-status" id="prLocationSaveMsg"></span>
           </div>
+        </div>
+
+        <!-- 這團的公關品明細（與「公關品狀態」頁、派遣任務共用同一份清單） -->
+        <div class="pr-field pri-inline-field" style="display:none;" data-pri-prefix="prEventItems">
+          <label>🎀 這團的公關品 <span class="pri-inline-count"></span></label>
+          <div class="pri-inline-list"></div>
+          <div class="pri-inline-add-row">
+            <input type="text" class="pri-inline-add-input" placeholder="輸入公關品名稱…">
+            <button class="pr-save-btn pri-inline-add-btn" type="button">＋ 新增</button>
+          </div>
+          <span class="pr-save-status pri-inline-msg"></span>
         </div>
       </div>
     </div>
@@ -4235,7 +4348,7 @@
 </div>
 
 <script src="vendor/html2canvas.min.js"></script>
-<script src="admin.js?v=48"></script>
+<script src="admin.js?v=50"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

@@ -1135,6 +1135,9 @@ function renderPrPanel(key) {
 
   updatePrConditionalFields(status);
 
+  // 這團的公關品明細（跟公關品清單頁、派遣任務是同一份資料）
+  mountPriInline('prEventItems', key, { group: prEventTitleOf_(key) });
+
   // 面板預設收合，避免視窗過長
   document.getElementById('prPanel').classList.remove('open');
 }
@@ -1203,12 +1206,37 @@ async function savePrStatus(key, fields, msgElId) {
   try {
     await postTask(Object.assign({ type: 'pr-status', key }, fields));
     if (msgEl) { msgEl.textContent = '已儲存 ✓'; msgEl.style.color = '#7BAF7B'; }
+    // 團級位置改了就套用到這團所有公關品（收到／收納都是整團一起，避免兩個地方各存一份位置）
+    if (fields.location !== undefined) applyPrLocationToItems_(key, fields.location);
+    // 狀態是公關品明細的唯一來源，改完要讓清單頁與兩個共用面板跟著更新
+    refreshPrItemViews_();
   } catch (err) {
     prStatusMap[key] = prev;
     if (msgEl) { msgEl.textContent = '儲存失敗'; msgEl.style.color = '#d9534f'; }
     if (isViewShown('calendar') && prChipOn) render();
     throw err;
   }
+}
+
+// 把團級位置寫進這團每一件公關品（本地先更新，後端逐筆送出，失敗不擋主流程）
+async function applyPrLocationToItems_(evKey, location) {
+  // 清單可能還沒載入過；沒先拉就會漏掉既有的公關品
+  try { await ensurePrItemsLoaded(); } catch (err) { console.warn('公關品清單讀取失敗：', err); return; }
+  const items = prItemsOfEvent_(evKey).filter(it => it.location !== location);
+  if (!items.length) return;
+  items.forEach(it => { it.location = location; });
+  Promise.all(items.map(it =>
+    postTask({ type: 'pr-item-update', id: it.id, location }).catch(err => {
+      console.warn('公關品位置同步失敗：', it.id, err);
+    })
+  )).then(refreshPrItemViews_);
+}
+
+// 三處共用同一份資料，任何一處改動後統一重畫
+function refreshPrItemViews_() {
+  renderPriInline('prEventItems');
+  renderPriInline('taskPrItems');
+  if (isViewShown('prItems')) renderPrItemsList();
 }
 
 // 派遣「廠商選品」時，用廠商名找出對應的團購，自動更新公關品狀態為「選品中」
@@ -3899,6 +3927,7 @@ function renderStageQuick() {
     box.style.display = 'none';
     box.innerHTML = '';
     locField.style.display = 'none';
+    mountPriInline('taskPrItems', '');
     return;
   }
   const task = taskModalCtx.task;
@@ -3930,6 +3959,12 @@ function renderStageQuick() {
   } else {
     locField.style.display = 'none';
   }
+
+  // 這團的公關品明細（跟行事曆彈窗、公關品清單頁是同一份資料）
+  mountPriInline('taskPrItems', evKey, {
+    group: prEventTitleOf_(evKey),
+    vendor: (task.extra && task.extra['廠商']) || ''
+  });
 }
 
 // 點狀態按鈕：把對應團購的公關品狀態切到該狀態，並在任務裡留一筆階段紀錄
@@ -3973,12 +4008,20 @@ async function setTaskPrStatus(stage) {
 async function syncPrItemFromTask(evKey, location) {
   const ev = allEvents.find(e => getMemoKey(e) === evKey);
   const task = taskModalCtx ? taskModalCtx.task : null;
-  const vendor = task && task.extra ? (task.extra['廠商'] || '') : '';
-  const fields = { evKey, name: ev ? ev.title : '', vendor, group: ev ? ev.title : '' };
+  const extra = (task && task.extra) || {};
+  const vendor = extra['廠商'] || '';
+  const brand = extra['品牌'] || extra['識別名稱'] || '';
+  // 這團還沒登記任何公關品時才會建一筆佔位；已經有明細就不覆寫（後端會擋）
+  const fields = { evKey, name: brand || (ev ? ev.title : ''), vendor, brand, group: ev ? ev.title : '' };
   if (location) fields.location = location;
   try {
     await postTask(Object.assign({ type: 'pr-item-sync' }, fields));
-    prItemsLoaded = false; // 之後開公關品狀態列表時要重新拉一次
+    // 重新拉一次，讓兩個共用面板與清單頁馬上看到同一份資料
+    prItemsLoaded = false;
+    await ensurePrItemsLoaded();
+    renderPriInline('taskPrItems');
+    renderPriInline('prEventItems');
+    if (isViewShown('prItems')) renderPrItemsList();
   } catch (err) {
     console.warn('公關品清單同步失敗：', err);
   }
@@ -4016,8 +4059,8 @@ async function saveTaskPrLocation(location) {
   if (!evKey) return;
   setPrMsg('taskPrLocationSaveMsg', '儲存中…');
   try {
+    // savePrStatus 會把位置一併套到這團所有公關品，不用再另外呼叫同步（重複呼叫會搶快照）
     await savePrStatus(evKey, { location }, null);
-    await syncPrItemFromTask(evKey, location);
     setPrMsg('taskPrLocationSaveMsg', '已儲存 ✓', true);
   } catch (err) {
     setPrMsg('taskPrLocationSaveMsg', '儲存失敗', false);
@@ -4277,6 +4320,7 @@ document.getElementById('priLocationNewBtn').addEventListener('click', async () 
 });
 
 async function loadPrItems(force) {
+  fillPrEventSelect(document.getElementById('priGroup'), '');
   if (prItemsLoaded && !force) { renderPrItemsList(); return; }
   const listEl = document.getElementById('priList');
   listEl.innerHTML = '<div class="task-empty">載入中…</div>';
@@ -4291,17 +4335,43 @@ async function loadPrItems(force) {
   renderPrItemsList();
 }
 
+// 清單頁篩選：狀態一律從所屬團購繼承，所以這裡篩的是團購狀態
+let priFilter = 'all';
+
+function priFilterMatch_(item) {
+  const st = prStatusOfItem_(item);
+  if (priFilter === 'received') return st === '已收到';
+  if (priFilter === 'shot') return st === '已拍攝';
+  if (priFilter === 'unlinked') return !item.evKey;
+  return true;
+}
+
 function renderPrItemsList() {
   const listEl = document.getElementById('priList');
   if (!prItemsCache.length) {
     listEl.innerHTML = '<div class="task-empty">目前沒有公關品紀錄</div>';
     return;
   }
-  const sorted = prItemsCache.slice().sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
-  listEl.innerHTML = sorted.map(it => `
+  const sorted = prItemsCache.slice()
+    .filter(priFilterMatch_)
+    .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  if (!sorted.length) {
+    listEl.innerHTML = '<div class="task-empty">這個條件下沒有公關品</div>';
+    return;
+  }
+  listEl.innerHTML = sorted.map(it => {
+    const st = prStatusOfItem_(it);
+    const chip = st
+      ? `<span class="pri-card-chip pr-${PR_STATUS_CLASS[st] || 'st-none'}">${escHtml(st)}</span>`
+      : '<span class="pri-card-chip">未關聯團購</span>';
+    const groupText = prEventTitleOf_(it.evKey) || it.group || '—';
+    return `
     <div class="pri-card" data-id="${escHtml(it.id)}">
-      <div class="pri-card-title">${escHtml(it.name || '（未命名）')}</div>
-      <div class="pri-card-meta">廠商：${escHtml(it.vendor || '—')}　團購：${escHtml(it.group || '—')}</div>
+      <div class="pri-card-title">${escHtml(it.name || '（未命名）')}${chip}</div>
+      <div class="pri-card-meta">廠商：${escHtml(it.vendor || '—')}　團購：${escHtml(groupText)}</div>
+      <div class="pri-card-row">
+        <select class="pri-edit-group" data-id="${escHtml(it.id)}"></select>
+      </div>
       <div class="pri-card-row">
         <input type="text" class="pri-edit-brand" data-id="${escHtml(it.id)}" placeholder="品牌" value="${escHtml(it.brand || '')}">
         <select class="pri-edit-location" data-id="${escHtml(it.id)}"></select>
@@ -4315,25 +4385,20 @@ function renderPrItemsList() {
         <span class="pri-card-status" id="priStatus_${escHtml(it.id)}"></span>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
+  listEl.querySelectorAll('.pri-edit-group').forEach(sel => {
+    const id = sel.dataset.id;
+    const item = prItemsCache.find(x => x.id === id);
+    fillPrEventSelect(sel, item ? item.evKey : '');
+  });
   listEl.querySelectorAll('.pri-edit-location').forEach(sel => {
     const id = sel.dataset.id;
     const item = prItemsCache.find(x => x.id === id);
     fillPrLocationSelect(sel, item ? item.location : '');
     sel.addEventListener('change', (e) => {
-      if (e.target.value === '__new__') {
-        const name = prompt('請輸入新的位置選項：');
-        if (name && name.trim()) {
-          const trimmed = name.trim();
-          postTask({ type: 'pr-location-add', name: trimmed }).then(() => {
-            if (prLocations.indexOf(trimmed) === -1) prLocations.push(trimmed);
-            fillPrLocationSelect(e.target, trimmed);
-          }).catch(err => alert('新增位置失敗：' + err.message));
-        } else {
-          e.target.value = '';
-        }
-      }
+      if (e.target.value === '__new__') handlePrLocationNewOption_(e.target);
     });
   });
   listEl.querySelectorAll('.pri-save-btn').forEach(btn => {
@@ -4350,13 +4415,26 @@ async function savePrItemEdit(id) {
   const brand = card.querySelector('.pri-edit-brand').value.trim();
   const location = card.querySelector('.pri-edit-location').value;
   const note = card.querySelector('.pri-edit-note').value.trim();
+  const evKey = card.querySelector('.pri-edit-group').value;
+  const local = prItemsCache.find(x => x.id === id);
+  const evKeyChanged = !!local && (local.evKey || '') !== evKey;
+  const payload = { type: 'pr-item-update', id, brand, location, note, evKey };
+  // 團購標題跟著關聯走；查不到標題（沒關聯／團購已被刪）就別動舊資料裡手打的名稱
+  const evTitle = prEventTitleOf_(evKey);
+  if (evTitle) payload.group = evTitle;
   const statusEl = document.getElementById('priStatus_' + id);
   if (statusEl) { statusEl.textContent = '儲存中…'; statusEl.className = 'pri-card-status'; }
   try {
-    await postTask({ type: 'pr-item-update', id, brand, location, note });
-    const local = prItemsCache.find(x => x.id === id);
-    if (local) { local.brand = brand; local.location = location; local.note = note; }
+    await postTask(payload);
+    if (local) {
+      local.brand = brand; local.location = location; local.note = note; local.evKey = evKey;
+      if (evTitle) local.group = evTitle;
+    }
     if (statusEl) { statusEl.textContent = '已儲存 ✓'; statusEl.className = 'pri-card-status ok'; }
+    renderPriInline('prEventItems');
+    renderPriInline('taskPrItems');
+    // 換了所屬團購＝狀態徽章與篩選結果都會變，整份重畫
+    if (evKeyChanged) renderPrItemsList();
   } catch (err) {
     if (statusEl) { statusEl.textContent = err.message || '儲存失敗'; statusEl.className = 'pri-card-status error'; }
   }
@@ -4368,16 +4446,235 @@ async function deletePrItemRow(id) {
     await postTask({ type: 'pr-item-delete', id });
     prItemsCache = prItemsCache.filter(x => x.id !== id);
     renderPrItemsList();
+    renderPriInline('prEventItems');
+    renderPriInline('taskPrItems');
   } catch (err) {
     alert('刪除失敗：' + err.message);
   }
 }
 
+// ===================================================================
+// 公關品明細（行事曆彈窗／派遣任務彈窗共用）
+// 資料只有一份＝「公關品清單」表；狀態不自己存，一律繼承所屬團購在
+// 「公關品狀態」表的狀態（收到／拍攝都是整團一起，所以狀態掛在團上）
+// ===================================================================
+
+// 這份清單只在進公關品頁時才會載入，彈窗要用時先確保拉過一次
+async function ensurePrItemsLoaded() {
+  if (prItemsLoaded) return;
+  const result = await postTask({ type: 'pr-item-list' });
+  prItemsCache = Array.isArray(result.items) ? result.items : [];
+  prItemsLoaded = true;
+}
+
+function prItemsOfEvent_(evKey) {
+  if (!evKey) return [];
+  return prItemsCache.filter(it => it.evKey === evKey);
+}
+
+// 公關品的狀態＝所屬團購的狀態；沒關聯團購就沒有狀態
+function prStatusOfItem_(item) {
+  if (!item || !item.evKey) return '';
+  const pr = prStatusMap[item.evKey];
+  return (pr && pr.status) || '尚未選品';
+}
+
+function prEventTitleOf_(evKey) {
+  if (!evKey) return '';
+  const ev = allEvents.find(e => getMemoKey(e) === evKey);
+  return ev ? ev.title : '';
+}
+
+// 團購下拉：值是 memoKey，跟「公關品狀態」表用同一把鑰匙
+function fillPrEventSelect(selectEl, currentValue) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '<option value="">不指定團購</option>' + buildEventOptions_();
+  const prev = currentValue || '';
+  // 舊資料指到已被刪掉的團購時，補一個選項免得值被吃掉
+  if (prev && !Array.prototype.some.call(selectEl.options, o => o.value === prev)) {
+    const o = document.createElement('option');
+    o.value = prev;
+    o.textContent = '（已不存在的團購）';
+    selectEl.appendChild(o);
+  }
+  selectEl.value = prev;
+}
+
+// 位置下拉選到「＋新增更多」時的共用處理
+function handlePrLocationNewOption_(selectEl, onDone) {
+  const name = prompt('請輸入新的位置選項：');
+  if (!name || !name.trim()) { selectEl.value = ''; return; }
+  const trimmed = name.trim();
+  postTask({ type: 'pr-location-add', name: trimmed }).then(() => {
+    if (prLocations.indexOf(trimmed) === -1) prLocations.push(trimmed);
+    fillPrLocationSelect(selectEl, trimmed);
+    if (onDone) onDone(trimmed);
+  }).catch(err => {
+    selectEl.value = '';
+    alert('新增位置失敗：' + err.message);
+  });
+}
+
+const priInlineCtx = {};  // prefix -> { evKey, vendor, group }
+
+function priInlineField_(prefix) {
+  return document.querySelector('.pri-inline-field[data-pri-prefix="' + prefix + '"]');
+}
+
+function setPriInlineMsg(prefix, text, ok) {
+  const field = priInlineField_(prefix);
+  if (!field) return;
+  const el = field.querySelector('.pri-inline-msg');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = ok === true ? '#7BAF7B' : (ok === false ? '#d9534f' : '#c9a892');
+}
+
+// 掛載到某一場團購；evKey 為空時整區隱藏（例如任務沒指定對應團購）
+function mountPriInline(prefix, evKey, ctx) {
+  const field = priInlineField_(prefix);
+  if (!field) return;
+  priInlineCtx[prefix] = Object.assign({ evKey: evKey || '' }, ctx || {});
+  field.style.display = evKey ? 'block' : 'none';
+  setPriInlineMsg(prefix, '');
+  const input = field.querySelector('.pri-inline-add-input');
+  if (input) input.value = '';
+  if (!evKey) return;
+  renderPriInline(prefix);
+  ensurePrItemsLoaded()
+    .then(() => renderPriInline(prefix))
+    .catch(() => setPriInlineMsg(prefix, '公關品清單讀取失敗', false));
+}
+
+function renderPriInline(prefix) {
+  const field = priInlineField_(prefix);
+  if (!field) return;
+  const ctx = priInlineCtx[prefix] || {};
+  const listEl = field.querySelector('.pri-inline-list');
+  const countEl = field.querySelector('.pri-inline-count');
+  const items = prItemsOfEvent_(ctx.evKey);
+  if (countEl) countEl.textContent = items.length ? '（' + items.length + ' 件）' : '';
+  if (!items.length) {
+    listEl.innerHTML = '<div class="pri-inline-empty">還沒有登記公關品，在下面輸入名稱就能加一件</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(it => `
+    <div class="pri-inline-row" data-id="${escHtml(it.id)}">
+      <input type="text" class="pri-inline-name" value="${escHtml(it.name || '')}" placeholder="名稱">
+      <input type="text" class="pri-inline-brand" value="${escHtml(it.brand || '')}" placeholder="品牌">
+      <select class="pri-inline-loc"></select>
+      <button type="button" class="pri-inline-del" title="刪除這件">🗑</button>
+    </div>`).join('');
+
+  listEl.querySelectorAll('.pri-inline-row').forEach(row => {
+    const id = row.dataset.id;
+    const item = items.find(x => x.id === id);
+    const loc = row.querySelector('.pri-inline-loc');
+    fillPrLocationSelect(loc, item ? item.location : '');
+    loc.addEventListener('change', (e) => {
+      if (e.target.value === '__new__') {
+        handlePrLocationNewOption_(e.target, () => savePriInlineRow(prefix, id));
+        return;
+      }
+      savePriInlineRow(prefix, id);
+    });
+    row.querySelector('.pri-inline-name').addEventListener('change', () => savePriInlineRow(prefix, id));
+    row.querySelector('.pri-inline-brand').addEventListener('change', () => savePriInlineRow(prefix, id));
+    row.querySelector('.pri-inline-del').addEventListener('click', () => deletePriInlineRow(prefix, id));
+  });
+}
+
+async function savePriInlineRow(prefix, id) {
+  const field = priInlineField_(prefix);
+  if (!field) return;
+  const row = field.querySelector('.pri-inline-row[data-id="' + cssEscapeAdmin(id) + '"]');
+  if (!row) return;
+  const name = row.querySelector('.pri-inline-name').value.trim();
+  const brand = row.querySelector('.pri-inline-brand').value.trim();
+  const locVal = row.querySelector('.pri-inline-loc').value;
+  const location = locVal === '__new__' ? '' : locVal;
+  setPriInlineMsg(prefix, '儲存中…');
+  try {
+    await postTask({ type: 'pr-item-update', id, name, brand, location });
+    const local = prItemsCache.find(x => x.id === id);
+    if (local) { local.name = name; local.brand = brand; local.location = location; }
+    setPriInlineMsg(prefix, '已儲存 ✓', true);
+    if (isViewShown('prItems')) renderPrItemsList();
+  } catch (err) {
+    setPriInlineMsg(prefix, '儲存失敗：' + err.message, false);
+  }
+}
+
+async function deletePriInlineRow(prefix, id) {
+  if (!confirm('確定要刪除這件公關品嗎？')) return;
+  setPriInlineMsg(prefix, '刪除中…');
+  try {
+    await postTask({ type: 'pr-item-delete', id });
+    prItemsCache = prItemsCache.filter(x => x.id !== id);
+    renderPriInline(prefix);
+    setPriInlineMsg(prefix, '已刪除 ✓', true);
+    if (isViewShown('prItems')) renderPrItemsList();
+  } catch (err) {
+    setPriInlineMsg(prefix, '刪除失敗：' + err.message, false);
+  }
+}
+
+async function addPriInline(prefix) {
+  const field = priInlineField_(prefix);
+  if (!field) return;
+  const ctx = priInlineCtx[prefix] || {};
+  if (!ctx.evKey) return;
+  const input = field.querySelector('.pri-inline-add-input');
+  const name = (input.value || '').trim();
+  if (!name) { setPriInlineMsg(prefix, '請先輸入名稱', false); return; }
+  setPriInlineMsg(prefix, '新增中…');
+  try {
+    await ensurePrItemsLoaded();
+    const payload = {
+      type: 'pr-item-add',
+      name,
+      vendor: ctx.vendor || '',
+      group: ctx.group || '',
+      evKey: ctx.evKey
+    };
+    const result = await postTask(payload);
+    prItemsCache.push({
+      id: result.id, name, vendor: payload.vendor, brand: '', group: payload.group,
+      location: '', note: '', created: '', updated: '', evKey: ctx.evKey
+    });
+    input.value = '';
+    renderPriInline(prefix);
+    setPriInlineMsg(prefix, '已新增 ✓', true);
+    if (isViewShown('prItems')) renderPrItemsList();
+  } catch (err) {
+    setPriInlineMsg(prefix, '新增失敗：' + err.message, false);
+  }
+}
+
+// 兩個共用區塊的新增按鈕／Enter 送出，一次接線
+document.querySelectorAll('.pri-inline-field').forEach(field => {
+  const prefix = field.dataset.priPrefix;
+  field.querySelector('.pri-inline-add-btn').addEventListener('click', () => addPriInline(prefix));
+  field.querySelector('.pri-inline-add-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addPriInline(prefix); }
+  });
+});
+
+// 公關品清單頁的篩選鈕
+document.querySelectorAll('.pri-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    priFilter = btn.dataset.priFilter;
+    document.querySelectorAll('.pri-filter-btn').forEach(b => b.classList.toggle('on', b === btn));
+    renderPrItemsList();
+  });
+});
+
 document.getElementById('priAddBtn').addEventListener('click', async () => {
   const name = document.getElementById('priName').value.trim();
   const vendor = document.getElementById('priVendor').value.trim();
   const brand = document.getElementById('priBrand').value.trim();
-  const group = document.getElementById('priGroup').value.trim();
+  const evKey = document.getElementById('priGroup').value;
+  const group = prEventTitleOf_(evKey);   // 團購名稱一律由關聯的團購決定，不再手打
   const locSel = document.getElementById('priLocation').value;
   const location = locSel === '__new__' ? '' : locSel;
   const note = document.getElementById('priNote').value.trim();
@@ -4386,10 +4683,11 @@ document.getElementById('priAddBtn').addEventListener('click', async () => {
   btn.disabled = true;
   setFormStatus('priAddStatus', '新增中…');
   try {
-    const result = await postTask({ type: 'pr-item-add', name, vendor, brand, group, location, note });
-    prItemsCache.unshift({ id: result.id, name, vendor, brand, group, location, note, created: '', updated: '' });
+    const result = await postTask({ type: 'pr-item-add', name, vendor, brand, group, location, note, evKey });
+    prItemsCache.unshift({ id: result.id, name, vendor, brand, group, location, note, created: '', updated: '', evKey });
     renderPrItemsList();
-    ['priName', 'priVendor', 'priBrand', 'priGroup', 'priNote'].forEach(id => { document.getElementById(id).value = ''; });
+    ['priName', 'priVendor', 'priBrand', 'priNote'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('priGroup').value = '';
     document.getElementById('priLocation').value = '';
     setFormStatus('priAddStatus', '已新增 ✓', 'ok');
   } catch (err) {
@@ -5698,7 +5996,27 @@ function vendorNamesOf_(brand) {
   return (brand.vendorIds || []).map(vendorNameById_).filter(Boolean).join('、');
 }
 
+// 品牌廠商頁搜尋：scope 決定搜尋對象，有關鍵字時只顯示該區塊
+let bvSearchScope = 'vendor';
+
+function bvSearchText_() {
+  const el = document.getElementById('bvSearchInput');
+  return el ? (el.value || '').trim().toLowerCase() : '';
+}
+
+// 把多個欄位串成一條可比對的字串
+function bvMatch_(kw, fields) {
+  if (!kw) return true;
+  return fields.filter(Boolean).join(' ').toLowerCase().indexOf(kw) !== -1;
+}
+
 function renderBrandVendorView() {
+  const kw = bvSearchText_();
+  const vSec = document.getElementById('bvVendorSection');
+  const bSec = document.getElementById('bvBrandSection');
+  // 沒輸入關鍵字＝維持原本兩區都看得到；一旦搜尋就只留下被搜尋的那一區
+  if (vSec) vSec.style.display = (!kw || bvSearchScope === 'vendor') ? '' : 'none';
+  if (bSec) bSec.style.display = (!kw || bvSearchScope === 'brand') ? '' : 'none';
   renderVendorDbList();
   renderBrandDbList();
 }
@@ -5711,7 +6029,13 @@ function renderVendorDbList() {
     el.innerHTML = '<div class="task-empty">還沒有廠商資料，點上面「＋新增廠商」開始建立吧</div>';
     return;
   }
-  vendorDb.forEach(v => {
+  const kw = bvSearchScope === 'vendor' ? bvSearchText_() : '';
+  const list = vendorDb.filter(v => bvMatch_(kw, [v.id, v.name, v.type, v.note]));
+  if (!list.length) {
+    el.innerHTML = '<div class="bv-search-empty">找不到符合「' + escHtml(kw) + '」的廠商</div>';
+    return;
+  }
+  list.forEach(v => {
     const brandCount = brandDb.filter(b => (b.vendorIds || []).indexOf(v.id) !== -1).length;
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
@@ -5735,7 +6059,13 @@ function renderBrandDbList() {
     el.innerHTML = '<div class="task-empty">還沒有品牌資料，點上面「＋新增品牌」開始建立吧</div>';
     return;
   }
-  brandDb.forEach(b => {
+  const kw = bvSearchScope === 'brand' ? bvSearchText_() : '';
+  const list = brandDb.filter(b => bvMatch_(kw, [b.id, b.name, vendorNamesOf_(b), b.intro, b.note]));
+  if (!list.length) {
+    el.innerHTML = '<div class="bv-search-empty">找不到符合「' + escHtml(kw) + '」的品牌</div>';
+    return;
+  }
+  list.forEach(b => {
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
     const vendorName = vendorNamesOf_(b);
@@ -5755,6 +6085,25 @@ let brandVendorEditMode = false;
 document.getElementById('bvEditToggleWrap').addEventListener('click', () => {
   brandVendorEditMode = !brandVendorEditMode;
   document.getElementById('bvEditSwitch').classList.toggle('on', brandVendorEditMode);
+});
+
+// 品牌廠商頁搜尋列接線
+document.querySelectorAll('.bv-scope-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    bvSearchScope = btn.dataset.scope;
+    document.querySelectorAll('.bv-scope-btn').forEach(b => b.classList.toggle('on', b === btn));
+    const input = document.getElementById('bvSearchInput');
+    if (input) {
+      input.placeholder = bvSearchScope === 'vendor' ? '搜尋廠商…' : '搜尋品牌…';
+      input.focus();
+    }
+    renderBrandVendorView();
+  });
+});
+document.getElementById('bvSearchInput').addEventListener('input', () => renderBrandVendorView());
+document.getElementById('bvSearchClearBtn').addEventListener('click', () => {
+  document.getElementById('bvSearchInput').value = '';
+  renderBrandVendorView();
 });
 
 let vendorEditCtx = null;
