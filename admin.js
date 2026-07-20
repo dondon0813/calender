@@ -1416,8 +1416,8 @@ async function tryUnlock() {
       document.getElementById('passwordGate').style.display = 'none';
       document.getElementById('mainWrap').style.visibility = 'visible';
       switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
-      await fetchMemos();
-      initAppUI();
+      initAppUI(); // 介面接線（側邊欄監聽、雙欄工作區）不可依賴後端成功，否則抓資料失敗＝整頁變磚
+      try { await fetchMemos(); } catch (e) { console.error('fetchMemos 失敗，介面仍可操作', e); }
     } else {
       errEl.textContent = result.error || '姓名或密碼錯誤，請再試一次';
       input.value = '';
@@ -1440,7 +1440,9 @@ if (sessionStorage.getItem('admin_unlocked') === '1') {
   document.getElementById('passwordGate').style.display = 'none';
   document.getElementById('mainWrap').style.visibility = 'visible';
   switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
-  fetchMemos().then(() => initAppUI()); // 重新用 token 跟後端要一次資料，順便確認 token 沒過期
+  initAppUI(); // 同上：先把介面接起來，再去要資料
+  // 重新用 token 跟後端要一次資料，順便確認 token 沒過期；失敗不可中斷介面
+  fetchMemos().catch(e => console.error('fetchMemos 失敗，介面仍可操作', e));
 } else {
   document.getElementById('gatePasswordInput').focus();
 }
@@ -2035,6 +2037,19 @@ function syncPaneRightPicker() {
   if (picker) picker.value = currentRightView || '';
   const emptyEl = document.getElementById('paneRightEmpty');
   if (emptyEl) emptyEl.style.display = currentRightView ? 'none' : 'block';
+  const toggleBtn = document.getElementById('sideNavRightToggle');
+  if (toggleBtn) toggleBtn.textContent = currentRightView ? '▥ 關閉右欄' : '▥ 開啟右欄';
+}
+
+// 側邊欄的右欄開關：右欄關著時開啟（挑一個不跟左欄撞的分頁），開著時關閉。
+function toggleRightPaneFromSideNav() {
+  if (currentRightView) {
+    closeRightPane();
+    return;
+  }
+  const pick = currentView === 'myTasks' ? 'calendar' : 'myTasks';
+  setRightPaneOpen(true);
+  switchView(pick, 'right');
 }
 
 function applySplitRatio(pct) {
@@ -2085,9 +2100,15 @@ function restoreSplitFromStorage() {
   const savedRatioRaw = parseInt(localStorage.getItem('admin_split_ratio'), 10);
   splitRatio = (savedRatioRaw >= 30 && savedRatioRaw <= 70) ? savedRatioRaw : 60;
 
-  // 首次使用（localStorage 從未存過，key 不存在＝null，跟使用者主動關閉存的 '' 要分開判斷）
-  // 且是寬螢幕：預設左欄行事曆、右欄我的任務。
-  if (rawRight === null && window.matchMedia('(min-width: 1200px)').matches) {
+  // 舊版（v45）每次開機都會把 admin_split_right_view 寫成 ''，害得已經開過舊版的
+  // 瀏覽器永遠被判定成「使用者主動關過右欄」。用一個獨立的遷移旗標把那批壞掉的
+  // 狀態視為「還沒設定過」，讓預設組合能套用一次；之後就走正常的記憶邏輯。
+  const migrated = localStorage.getItem('admin_split_init_v2') !== null;
+  localStorage.setItem('admin_split_init_v2', '1');
+  const neverSet = rawRight === null || !migrated;
+
+  // 首次使用（或上述遷移情境）且是寬螢幕：預設左欄行事曆、右欄我的任務。
+  if (neverSet && window.matchMedia('(min-width: 1200px)').matches) {
     switchView('calendar', 'left');
     setRightPaneOpen(true);
     switchView('myTasks', 'right');
@@ -2147,6 +2168,9 @@ function initSplitWorkspace() {
     btn.addEventListener('click', () => switchView(btn.dataset.view, 'left'));
   });
 
+  const rightToggle = document.getElementById('sideNavRightToggle');
+  if (rightToggle) rightToggle.addEventListener('click', toggleRightPaneFromSideNav);
+
   const picker = document.getElementById('paneRightPicker');
   if (picker) {
     picker.addEventListener('change', (e) => {
@@ -2203,10 +2227,12 @@ document.querySelectorAll('.menu-item[data-view]').forEach(mi => {
 });
 
 function initAppUI() {
-  document.getElementById('userChip').textContent = '👤 ' + currentUser;
-  switchView('home');
-  renderTaskUI();
-  initSplitWorkspace();
+  // 每一步都獨立包起來：任何一步失敗都不可以讓後面的介面接線沒跑到。
+  // （歷史事故：fetchMemos 失敗 → initAppUI 沒執行 → 側邊欄沒監聽、整頁點不動。）
+  try { document.getElementById('userChip').textContent = '👤 ' + currentUser; } catch (e) { console.error('userChip', e); }
+  try { switchView('home'); } catch (e) { console.error('switchView(home)', e); }
+  try { renderTaskUI(); } catch (e) { console.error('renderTaskUI', e); }
+  try { initSplitWorkspace(); } catch (e) { console.error('initSplitWorkspace', e); }
 }
 
 // ===== 開團文案產生器 =====
