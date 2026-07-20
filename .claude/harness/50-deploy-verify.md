@@ -11,6 +11,8 @@
 | 試算表結構（加欄/改表頭/加分頁） | 使用者手動操作試算表 | **只有使用者能做** | §4 |
 | 試算表資料 | 後台操作或使用者直接編輯 | 使用者 | 重新 fetch 端點確認 |
 
+**前置鐵律（工作分支未合併＝尚未上線）**：在工作分支（`claude/*`）上 push 只是備份到那條分支，**不等於上線**。GitHub Pages 吃 **main**，所以 `images/` 圖片與前端檔停在分支時，github.io 網址一律 404；GitHub 上 main 的 Code.gs 也還是舊的，使用者照「repo 最新 Code.gs」貼進 Apps Script 會貼到舊版。**交付含 images/ 或 Code.gs 的改動時，先在回報中點明「要先合併進 main 才會生效」，前置沒做完不得叫使用者部署或跑 GAS 函式**（見 lessons L4）。另注意：Apps Script 那份 Code.gs 永遠不會自動同步 GitHub，一定要人手貼。
+
 ## 2. 前端驗證（GitHub Pages）
 
 1. push 完成後等 60–90 秒（背景執行 push——GCM 憑證互動的關係，前景跑會卡住）。

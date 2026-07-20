@@ -997,7 +997,9 @@ var BRAND_THUMB_MAP_ = {
   'Wewee!': 'wewee.webp',
   'Picaboo': 'picaboo.webp',
   'Aribebe': 'aribebe.webp',
-  '伯尼寢具': 'bernie.webp'
+  '伯尼寢具': 'bernie.webp',
+  'KOM': 'kom.webp',
+  '齒妍堂': 'lab52.webp'
 };
 
 function updateBrandThumbs() {
