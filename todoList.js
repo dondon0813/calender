@@ -252,10 +252,13 @@ document.getElementById('todoDeleteBtn').addEventListener('click', async () => {
   btn.disabled = true;
   setFormStatus('todoEditStatus', '刪除中…', '');
   try {
-    await postTask({ type: 'todo-delete', id: todoEditCtx.todo.id });
+    const delId = todoEditCtx.todo.id;
+    await postTask({ type: 'todo-delete', id: delId });
+    // 後端已確認刪除：立刻從本地清單移除並重畫，不等慢速的整份重抓（那要好幾秒，看起來像沒反應）
+    todos = todos.filter(t => t.id !== delId);
     closeTodoEditModal();
-    await fetchMemos();
     renderTodoGroups();
+    fetchMemos(); // 背景同步校正，不 await
   } catch (err) {
     setFormStatus('todoEditStatus', '刪除失敗：' + err.message, 'error');
   }
@@ -387,11 +390,17 @@ function renderTodoGroups() {
       delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm('確定要刪除這筆待辦事項嗎？')) return;
+        delBtn.disabled = true;
+        delBtn.textContent = '刪除中…'; // 後端要幾秒，沒有提示會看起來像沒反應
         try {
           await postTask({ type: 'todo-delete', id: t.id });
-          await fetchMemos();
+          // 後端已確認刪除：立刻從本地清單移除並重畫，不等慢速的整份重抓
+          todos = todos.filter(x => x.id !== t.id);
           renderTodoGroups();
+          fetchMemos(); // 背景同步校正，不 await
         } catch (err) {
+          delBtn.disabled = false;
+          delBtn.textContent = '🗑 刪除';
           alert('刪除失敗：' + err.message);
         }
       });
