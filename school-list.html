@@ -1623,9 +1623,9 @@ async function generateA4Image() {
 
       step = '截圖排版 - 複製畫面（html2canvas clone）';
       const posterEl = document.getElementById('a4Poster');
-      // 對齊後台食譜貼文產生器的 scale:1（那邊在同一台會卡住的手機上是正常的），
-      // 先讓運算量完全對齊已知能跑的設定，排除是不是單純運算量太大的問題
-      const outputScale = 1;
+      // 卡住的 bug 已經用「複製到獨立乾淨 iframe 再截圖」解決了，不再需要為了排錯
+      // 把 scale 壓到 1（那樣列印出來解析度太低、連文字都會糊），調回正常列印品質
+      const outputScale = 2;
       // 明確指定寬高，不要讓 html2canvas 自己去量測 DOM 尺寸——
       // 後台食譜貼文產生器同樣用 html2canvas 但一律傳明確寬高，測試下來很穩定；
       // school-list 這裡原本沒傳，讓 html2canvas 自己量測，懷疑就是卡住的原因
@@ -1815,9 +1815,9 @@ async function generateNameStickerImage() {
 
       step = '截圖排版 - 複製畫面（html2canvas clone）';
       const posterEl = document.getElementById('stickerPoster');
-      // 對齊後台食譜貼文產生器的 scale:1（那邊在同一台會卡住的手機上是正常的），
-      // 先讓運算量完全對齊已知能跑的設定，排除是不是單純運算量太大的問題
-      const outputScale = 1;
+      // 卡住的 bug 已經用「複製到獨立乾淨 iframe 再截圖」解決了，不再需要為了排錯
+      // 把 scale 壓到 1（那樣列印出來解析度太低、連文字都會糊），調回正常列印品質
+      const outputScale = 3;
       // 明確指定寬高（樣板本身就是固定 384x576），不要讓 html2canvas 自己去量測 DOM 尺寸——
       // 後台食譜貼文產生器同樣用 html2canvas 但一律傳明確寬高，測試下來很穩定
       const cloneStartedAt = Date.now();
