@@ -30,7 +30,7 @@ Google 試算表（兩份！）
 
 | 檔案 | 行數 | 用途 | 分級 |
 |---|---|---|---|
-| admin.js | 4318 | 後台前端邏輯主檔（見 §5 區塊索引；已拆出 6 個模組，見「已拆出的模組」） | 🔴 |
+| admin.js | 3671 | 後台前端邏輯主檔（見 §5 區塊索引；已拆出 7 個模組，見「已拆出的模組」） | 🔴 |
 | admin.html | 4440 | 員工後台頁（登入、行事曆編輯、任務、圖片庫、資料庫管理…） | 🔴 |
 | Code.gs | 3104 | GAS 後端全部邏輯（見 §4 端點目錄） | 🔴 |
 | recipes.html | 2639 | 公開食材/食譜庫＋育兒工具入口（腳本內嵌） | 🔴 |
@@ -43,14 +43,15 @@ Google 試算表（兩份！）
 | calculator.js | 137 | 計算機＋稅率互算（完全自足，不讀 admin.js 全域；同樣排在 admin.js 之前） | 🟢 |
 | todoList.js | 429 | 待辦事項：分組清單/編輯彈窗/加入行事曆（todos/todoCategories 資料層在 admin.js，本檔只讀；同樣排在 admin.js 之前） | 🟢 |
 | customBlocks.js | 307 | 開團狀態清單的自訂區塊＋編輯視窗（customBlocks 資料層在 admin.js；renderGroupStatusList 本體留在 admin.js；同樣排在 admin.js 之前） | 🟢 |
+| tools.js | 665 | 工具箱三件套：開團文案/抽獎/食譜貼文產生器＋轉檔佔位（按鈕多為 admin.html inline onclick；同樣排在 admin.js 之前） | 🟢 |
 | memo.js | 420 | 備忘錄樹狀模組（依賴 admin.js 的 postTask/currentUser） | 🟢 |
 | shared.css | 382 | 全站設計 tokens（:root 變數）＋共用元件 | 🟢 |
 | school-labels.html | 311 | 標籤機導購頁（獨立 LABELS_API_URL） | 🟢 |
 | kids.html | 153 | 兒童專區 hub（純連結頁） | 🟢 |
 | apps-script-*.md ×3 | - | **歷史部署說明**（已完成的部署步驟紀錄，非現況文件） | 🟢 |
 
-引用關係：admin.html → `prItems.js` → `brandVendor.js` → `imageLibrary.js` → `calculator.js` → `todoList.js` → `customBlocks.js` → `admin.js` → `memo.js`（各帶 `?v=N`）＋html2canvas(本地 vendor/)；school-list.html → html2canvas；全部頁面 → shared.css。改 admin.js/memo.js/prItems.js 時**記得把 admin.html 裡對應的 `?v=` 版本號 +1**（快取破解）。
-**載入順序鐵律**：所有拆出模組（prItems / brandVendor / imageLibrary / calculator / todoList / customBlocks）必須排在 admin.js **之前**——admin.js 開機還原分頁與資料載入後的重繪會同步呼叫模組函式（`loadPrItems()`、`renderBrandVendorView()`、`ilLoad()`、`appendCustomBlocksAdmin()`…），順序錯了整頁變磚。新拆模組若同樣被開機路徑呼叫，一律照此模式排在 admin.js 之前，且模組最外層只准「宣告＋DOM 事件掛載」，不准直接呼叫 admin.js 的函式。
+引用關係：admin.html → `prItems.js` → `brandVendor.js` → `imageLibrary.js` → `calculator.js` → `todoList.js` → `customBlocks.js` → `tools.js` → `admin.js` → `memo.js`（各帶 `?v=N`）＋html2canvas(本地 vendor/)；school-list.html → html2canvas；全部頁面 → shared.css。改 admin.js/memo.js/prItems.js 時**記得把 admin.html 裡對應的 `?v=` 版本號 +1**（快取破解）。
+**載入順序鐵律**：所有拆出模組（prItems / brandVendor / imageLibrary / calculator / todoList / customBlocks / tools）必須排在 admin.js **之前**——admin.js 開機還原分頁與資料載入後的重繪會同步呼叫模組函式（`loadPrItems()`、`renderBrandVendorView()`、`ilLoad()`、`appendCustomBlocksAdmin()`…），順序錯了整頁變磚。新拆模組若同樣被開機路徑呼叫，一律照此模式排在 admin.js 之前，且模組最外層只准「宣告＋DOM 事件掛載」，不准直接呼叫 admin.js 的函式。
 
 ## 3. 前端資料流速查
 
@@ -70,8 +71,8 @@ Google 試算表（兩份！）
 
 ## 5. admin.js 功能區塊索引（以 `// =====` 分隔線切區）
 
-找功能先 Grep 區塊標題或代表函式，別捲頁：行事曆渲染 `render`/`renderAllMode`（:420 起）；開團狀態清單 `renderGroupStatusList`（:849）；資料載入 `loadData`（:291）；活動編輯 `openEventEditModal`（:1708）；分頁切換 `switchView`（:1997）、開機接線 `initAppUI`（:2277）；任務系統 `postTask`（:3174，**所有 POST 的必經之路**）、`openTaskModal`（:3857）。
-已拆出的模組：**公關品清單頁／公關品明細 → prItems.js**（loadPrItems / renderPrItemsList / ensurePrItemsLoaded / mountPriInline 等）；**廠商/品牌資料庫 → brandVendor.js**（renderBrandVendorView / openBrandEditModal / renderEvBrandMatchInfo / findGroupBuyDatesForBrand_ 等；vendorDb/brandDb 的宣告與寫入仍在 admin.js 資料層）；**圖片庫 → imageLibrary.js**（ilLoad / ilRenderGrid / 批次轉WebP等；權限檢查在 admin.js 的 switchView）；**計算機 → calculator.js**（calc* / 稅率互算，完全自足）；**待辦事項 → todoList.js**（renderTodoGroups / openTodoEditModal 等；todos/todoCategories 的宣告與寫入仍在 admin.js 資料層）；**自訂區塊 → customBlocks.js**（appendCustomBlocksAdmin / openBlockEditModal / CB_* 常數；customBlocks 資料層與 renderGroupStatusList 本體仍在 admin.js）。行事曆彈窗裡的「公關品狀態面板」仍在 admin.js（Grep `prStatusSelect`）。
+找功能先 Grep 區塊標題或代表函式，別捲頁：行事曆渲染 `render`/`renderAllMode`（:419 起）；開團狀態清單 `renderGroupStatusList`（:848）；資料載入 `loadData`（:290）；活動編輯 `openEventEditModal`（:1707）；分頁切換 `switchView`（:1996）、開機接線 `initAppUI`（:2276）；任務系統 `postTask`（:2527，**所有 POST 的必經之路**）、`openTaskModal`（:3210）。
+已拆出的模組：**公關品清單頁／公關品明細 → prItems.js**（loadPrItems / renderPrItemsList / ensurePrItemsLoaded / mountPriInline 等）；**廠商/品牌資料庫 → brandVendor.js**（renderBrandVendorView / openBrandEditModal / renderEvBrandMatchInfo / findGroupBuyDatesForBrand_ 等；vendorDb/brandDb 的宣告與寫入仍在 admin.js 資料層）；**圖片庫 → imageLibrary.js**（ilLoad / ilRenderGrid / 批次轉WebP等；權限檢查在 admin.js 的 switchView）；**計算機 → calculator.js**（calc* / 稅率互算，完全自足）；**待辦事項 → todoList.js**（renderTodoGroups / openTodoEditModal 等；todos/todoCategories 的宣告與寫入仍在 admin.js 資料層）；**自訂區塊 → customBlocks.js**（appendCustomBlocksAdmin / openBlockEditModal / CB_* 常數；customBlocks 資料層與 renderGroupStatusList 本體仍在 admin.js）；**工具箱 → tools.js**（開團文案 openCopyGenModal / 抽獎 drawLottery、lotteryWinnerLog / 食譜貼文 openRecipePostModal 等）。行事曆彈窗裡的「公關品狀態面板」仍在 admin.js（Grep `prStatusSelect`）。
 
 ## 6. 圖片資產規則與陷阱
 
