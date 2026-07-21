@@ -2014,6 +2014,30 @@ function doPost(e) {
       return jsonResult_({ success: true });
     }
 
+    if (type === 'task-quick-add') {
+      const secret = PropertiesService.getScriptProperties().getProperty('QUICK_ADD_SECRET');
+      if (!secret || String(body.secret || '') !== secret) {
+        return jsonResult_({ success: false, error: '驗證失敗' });
+      }
+      const to = String(body.to || '').trim();
+      const source = String(body.source || '').trim();
+      const customerName = String(body.customerName || '').trim();
+      const question = String(body.question || '').trim();
+      if (!to || !question) {
+        return jsonResult_({ success: false, error: '缺少必要欄位' });
+      }
+      // 只允許寫入既有的任務分頁，避免打錯名字時自動建出新分頁
+      if (!SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_PREFIX + to)) {
+        return jsonResult_({ success: false, error: '找不到派遣對象' });
+      }
+      const lines = [];
+      if (source) lines.push('來源：' + source);
+      if (customerName) lines.push('客人：' + customerName);
+      lines.push('問題：' + question);
+      const id = addTask_(to, '手機捷徑', '顧客提問', lines.join('\n'), false, null, '');
+      return jsonResult_({ success: true, id: id });
+    }
+
     const token = String(body.token || '');
     const currentUser = getSessionUser_(token);
     if (!currentUser) {
