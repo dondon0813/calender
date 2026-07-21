@@ -220,11 +220,23 @@ async function collectAndSaveTodo_() {
   if (todoEditCtx.isNew) {
     const result = await postTask(Object.assign({ type: 'todo-add' }, fields));
     todoEditCtx = { isNew: false, todo: { id: result.id } };
+    upsertLocalTodo_(result.id, fields);
     return result.id;
   }
   const id = todoEditCtx.todo.id;
   await postTask(Object.assign({ type: 'todo-update', id }, fields));
+  upsertLocalTodo_(id, fields);
   return id;
+}
+
+// 後端確認成功後，把這筆同步進本地 todos 陣列（畫面即時更新用，不等慢速的整份重抓）
+function upsertLocalTodo_(id, fields) {
+  const existing = todos.find(t => t.id === id);
+  if (existing) {
+    Object.assign(existing, fields);
+  } else {
+    todos.push(Object.assign({ id: id, addedToCalendar: false }, fields));
+  }
 }
 
 document.getElementById('todoAddBtn').addEventListener('click', () => openTodoEditModal(null));
@@ -236,9 +248,10 @@ document.getElementById('todoSaveBtn').addEventListener('click', async () => {
   setFormStatus('todoEditStatus', '儲存中…', '');
   try {
     await collectAndSaveTodo_();
+    // collectAndSaveTodo_ 已把這筆同步進本地清單：立刻重畫，不等慢速的整份重抓
     closeTodoEditModal();
-    await fetchMemos();
     renderTodoGroups();
+    fetchMemos(); // 背景同步校正，不 await
   } catch (err) {
     setFormStatus('todoEditStatus', err.message || '儲存失敗', 'error');
   }
@@ -286,12 +299,14 @@ document.getElementById('todoAddToCalendarBtn').addEventListener('click', async 
       color: '', category: '', url: '', tag: '', extend: '', earlyBird: ''
     });
     await postTask({ type: 'todo-update', id: id, addedToCalendar: true });
+    const localTodo = todos.find(t => t.id === id);
+    if (localTodo) localTodo.addedToCalendar = true; // 本地同步旗標，畫面即時反應
     document.getElementById('todoAddedToCalendarNote').style.display = 'block';
     btn.style.display = 'none';
     setFormStatus('todoEditStatus', '已新增至行事曆 ✓ 記得之後到行事曆編輯模式按「確認顯示於前台」', 'ok');
-    await fetchMemos();
-    if (typeof loadData === 'function') loadData();
     renderTodoGroups();
+    fetchMemos(); // 背景同步校正，不 await
+    if (typeof loadData === 'function') loadData();
   } catch (err) {
     setFormStatus('todoEditStatus', '新增至行事曆失敗：' + err.message, 'error');
   }
