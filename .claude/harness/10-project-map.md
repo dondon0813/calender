@@ -1,7 +1,7 @@
 # 10 專案架構地圖
 
 用途：**先查地圖，再 Grep 定位，最後才小窗口 Read**。本檔讓任何 session 不必探索 repo 就知道「什麼在哪、多大、誰讀誰」。
-行號基準：2026-07-19。行號會隨改動漂移——**用行號前先以 Grep 找函式名確認現在位置**；漂移超過 ±50 行時，依 `60-knowledge-protocol.md` 更新本檔。
+行號基準：2026-07-21（prItems.js 拆檔後）。行號會隨改動漂移——**用行號前先以 Grep 找函式名確認現在位置**；漂移超過 ±50 行時，依 `60-knowledge-protocol.md` 更新本檔。
 
 ## 1. 系統全景
 
@@ -30,20 +30,22 @@ Google 試算表（兩份！）
 
 | 檔案 | 行數 | 用途 | 分級 |
 |---|---|---|---|
-| admin.js | 5727 | 後台全部前端邏輯（見 §5 區塊索引） | 🔴 |
-| admin.html | 4051 | 員工後台頁（登入、行事曆編輯、任務、圖片庫、資料庫管理…） | 🔴 |
-| Code.gs | 3076 | GAS 後端全部邏輯（見 §4 端點目錄） | 🔴 |
+| admin.js | 6048 | 後台前端邏輯主檔（見 §5 區塊索引；公關品清單已拆出） | 🔴 |
+| admin.html | 4440 | 員工後台頁（登入、行事曆編輯、任務、圖片庫、資料庫管理…） | 🔴 |
+| Code.gs | 3104 | GAS 後端全部邏輯（見 §4 端點目錄） | 🔴 |
 | recipes.html | 2639 | 公開食材/食譜庫＋育兒工具入口（腳本內嵌） | 🔴 |
-| school-list.html | 1805 | 公開開學用品清單，可產 A4 圖（html2canvas）；含「現正開團中」列 | 🔴 |
+| school-list.html | 1919 | 公開開學用品清單，可產 A4 圖（html2canvas）；含「現正開團中」列 | 🔴 |
 | index.html | 1610 | 公開團購行事曆（客人版）＋瀏覽/點擊統計（腳本內嵌） | 🔴 |
 | star-card.html | 874 | 兒童集點卡（純 CSS/emoji，無資料來源） | 🟡 |
+| prItems.js | 549 | 公關品清單頁＋公關品明細模組（**必須排在 admin.js 之前載入**，見 §2 引用關係） | 🟢 |
 | memo.js | 420 | 備忘錄樹狀模組（依賴 admin.js 的 postTask/currentUser） | 🟢 |
 | shared.css | 382 | 全站設計 tokens（:root 變數）＋共用元件 | 🟢 |
 | school-labels.html | 311 | 標籤機導購頁（獨立 LABELS_API_URL） | 🟢 |
 | kids.html | 153 | 兒童專區 hub（純連結頁） | 🟢 |
 | apps-script-*.md ×3 | - | **歷史部署說明**（已完成的部署步驟紀錄，非現況文件） | 🟢 |
 
-引用關係：admin.html → `admin.js?v=N`＋`memo.js?v=N`＋html2canvas(CDN)；school-list.html → html2canvas(CDN)；全部頁面 → shared.css。改 admin.js/memo.js 時**記得把 admin.html 裡的 `?v=` 版本號 +1**（快取破解）。
+引用關係：admin.html → `prItems.js?v=N` → `admin.js?v=N` → `memo.js?v=N`＋html2canvas(本地 vendor/)；school-list.html → html2canvas；全部頁面 → shared.css。改 admin.js/memo.js/prItems.js 時**記得把 admin.html 裡對應的 `?v=` 版本號 +1**（快取破解）。
+**載入順序鐵律**：prItems.js 必須排在 admin.js **之前**——admin.js 開機還原分頁會在最外層同步呼叫 `loadPrItems()` 等 prItems.js 函式，順序錯了整頁變磚。新拆模組若同樣被開機路徑呼叫，一律照此模式排在 admin.js 之前，且模組最外層只准「宣告＋DOM 事件掛載」，不准直接呼叫 admin.js 的函式。
 
 ## 3. 前端資料流速查
 
@@ -63,7 +65,8 @@ Google 試算表（兩份！）
 
 ## 5. admin.js 功能區塊索引（以 `// =====` 分隔線切區）
 
-找功能先 Grep 區塊標題或代表函式，別捲頁：行事曆渲染 `render`/`renderAllMode`（:405 起）；資料載入 `loadData`（:276）；活動編輯 `openEventEditModal`（:1686）；任務系統 `postTask`（:2907，**所有 POST 的必經之路**）、`openTaskModal`（:3591）；待辦 `openTodoEditModal`（:4317）；圖片庫 `ilLoad`（:4648）；計算機（:5043 起）；廠商/品牌資料庫 `openBrandEditModal`（:5601）；品牌自動比對 `findGroupBuyDatesForBrand_`（:5671）。
+找功能先 Grep 區塊標題或代表函式，別捲頁：行事曆渲染 `render`/`renderAllMode`（:428 起）；資料載入 `loadData`（:299）；活動編輯 `openEventEditModal`（:1716）；分頁切換 `switchView`（:2005）、開機接線 `initAppUI`（:2285）；任務系統 `postTask`（:3182，**所有 POST 的必經之路**）、`openTaskModal`（:3865）；待辦 `openTodoEditModal`（:4459）；圖片庫 `ilLoad`（:4790）；廠商/品牌資料庫 `openBrandEditModal`（:5805）；品牌自動比對 `findGroupBuyDatesForBrand_`（:6002）。
+**公關品清單頁／公關品明細（含彈窗共用區塊）→ 已拆到 prItems.js**（loadPrItems / renderPrItemsList / ensurePrItemsLoaded / mountPriInline 等都在該檔）；行事曆彈窗裡的「公關品狀態面板」仍在 admin.js（Grep `prStatusSelect`）。
 
 ## 6. 圖片資產規則與陷阱
 
