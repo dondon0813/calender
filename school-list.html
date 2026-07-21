@@ -301,6 +301,30 @@
   .sp-yellow { background: var(--c-cat-6); }
   .sp-green  { background: var(--c-cat-2); }
   .sp-blue   { background: var(--c-cat-4); }
+  /* 100% 全部完成的慶祝：進度條變流動彩虹＋柔光，下方彈出慶祝文字 */
+  .sp-fill.sp-done {
+    background: linear-gradient(90deg,
+      var(--c-cat-0), var(--c-cat-1), var(--c-cat-6), var(--c-cat-2),
+      var(--c-cat-3), var(--c-cat-4), var(--c-cat-5), var(--c-cat-0));
+    background-size: 300% 100%;
+    animation: spRainbow 2.5s linear infinite;
+    box-shadow: 0 0 8px rgba(255, 143, 163, 0.65);
+  }
+  @keyframes spRainbow {
+    from { background-position: 0% 0; }
+    to   { background-position: 300% 0; }
+  }
+  .sp-done-msg {
+    margin-top: 7px;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--c-primary-dark);
+    animation: spPop .55s cubic-bezier(.2, 1.6, .4, 1) both;
+  }
+  @keyframes spPop {
+    from { transform: scale(.3); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
 
   /* ===== 現正開團中的開學用品品牌（最上方橫向捲動列）===== */
   .ogb-bar {
@@ -1242,10 +1266,18 @@ function renderSchoolList() {
   const spTrack = document.createElement('div');
   spTrack.className = 'sp-track';
   const spFill = document.createElement('div');
-  spFill.className = 'sp-fill ' + spTier;
+  // 全部勾完（不只是四捨五入到 100）才觸發慶祝效果
+  const spDone = visibleItems.length > 0 && totalChecked === visibleItems.length;
+  spFill.className = 'sp-fill ' + spTier + (spDone ? ' sp-done' : '');
   spFill.style.width = spPct + '%';
   spTrack.appendChild(spFill);
   progressEl.appendChild(spTrack);
+  if (spDone) {
+    const spMsg = document.createElement('div');
+    spMsg.className = 'sp-done-msg';
+    spMsg.textContent = '🎉 全部準備完成，開學沒問題啦！🎒✨';
+    progressEl.appendChild(spMsg);
+  }
 
   generateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
   stickerGenerateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
