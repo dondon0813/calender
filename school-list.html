@@ -281,6 +281,26 @@
     font-weight: 700;
     margin-bottom: 14px;
   }
+  /* 準備進度條：依完成比例變色（<20% 紅、<40% 橘、<60% 黃、<80% 綠、≥80% 藍），
+     顏色一律取 shared.css 的分類色盤變數，不另外硬寫色碼 */
+  .sp-track {
+    width: min(320px, 80%);
+    height: 12px;
+    margin: 6px auto 0;
+    background: var(--c-line);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+  }
+  .sp-fill {
+    height: 100%;
+    border-radius: var(--r-pill);
+    transition: width .4s ease, background-color .4s ease;
+  }
+  .sp-red    { background: var(--c-danger); }
+  .sp-orange { background: var(--c-cat-1); }
+  .sp-yellow { background: var(--c-cat-6); }
+  .sp-green  { background: var(--c-cat-2); }
+  .sp-blue   { background: var(--c-cat-4); }
 
   /* ===== 現正開團中的開學用品品牌（最上方橫向捲動列）===== */
   .ogb-bar {
@@ -1208,7 +1228,24 @@ function renderSchoolList() {
   const checked = getCheckedSchoolIds();
   const totalChecked = visibleItems.filter(it => checked.has(it['編號'])).length;
   progressEl.style.display = visibleItems.length ? 'block' : 'none';
-  progressEl.textContent = `已準備 ${totalChecked} / ${visibleItems.length} 項`;
+  // 文字＋彩色進度條：比例門檻照「閱讀進度條」公式（>=80% 藍、>=60% 綠、>=40% 黃、>=20% 橘、其餘紅）
+  const spPct = visibleItems.length ? Math.round((totalChecked / visibleItems.length) * 100) : 0;
+  const spTier = spPct >= 80 ? 'sp-blue'
+    : spPct >= 60 ? 'sp-green'
+    : spPct >= 40 ? 'sp-yellow'
+    : spPct >= 20 ? 'sp-orange'
+    : 'sp-red';
+  progressEl.innerHTML = '';
+  const spLabel = document.createElement('div');
+  spLabel.textContent = `已準備 ${totalChecked} / ${visibleItems.length} 項（${spPct}%）`;
+  progressEl.appendChild(spLabel);
+  const spTrack = document.createElement('div');
+  spTrack.className = 'sp-track';
+  const spFill = document.createElement('div');
+  spFill.className = 'sp-fill ' + spTier;
+  spFill.style.width = spPct + '%';
+  spTrack.appendChild(spFill);
+  progressEl.appendChild(spTrack);
 
   generateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
   stickerGenerateBoxEl.style.display = visibleItems.length ? 'block' : 'none';
