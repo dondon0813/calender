@@ -116,13 +116,12 @@
   }
 
   /* ---------------- 場景：插畫背景圖＋動態疊層 ---------------- */
-  /* TODO(dual-mood-scenes)：雙貓四狀態場景圖尚未提供，之後改成依
-     agents[0].mood + agents[1].mood 的組合切換四張圖：
-       rest-rest → scene-rr.webp　work-rest → scene-wr.webp
-       rest-work → scene-rw.webp　work-work → scene-ww.webp
-     目前場景暫時仍只看槽 A（agents[0]）的 mood，沿用下面既有的
-     img-resting / img-working 兩張圖與 #scene.mood-* 切換邏輯，
-     先不引用新檔名，待美術資源到位後再擴充。 */
+  /* 雙貓四狀態場景圖：依 agents[0].mood（A／麻糬）+ agents[1].mood（B／Amanda）
+     的組合切換四張預載圖，槽 B 未設定時視同 resting：
+       mood-a-resting + mood-b-resting → scene-rr.webp（兩隻都在沙發休息）
+       mood-a-working + mood-b-resting → scene-wr.webp（麻糬工作、Amanda 休息）
+       mood-a-resting + mood-b-working → scene-rw.webp（麻糬休息、Amanda 工作）
+       mood-a-working + mood-b-working → scene-ww.webp（兩隻都在工作） */
   .scene-col{
     display:flex;
     align-items:center;
@@ -147,8 +146,10 @@
     opacity:0;
     transition: opacity .4s ease;
   }
-  #scene.mood-resting .scene-img.img-resting{ opacity:1; }
-  #scene.mood-working .scene-img.img-working{ opacity:1; }
+  #scene.mood-a-resting.mood-b-resting .scene-img.img-rr{ opacity:1; }
+  #scene.mood-a-working.mood-b-resting .scene-img.img-wr{ opacity:1; }
+  #scene.mood-a-resting.mood-b-working .scene-img.img-rw{ opacity:1; }
+  #scene.mood-a-working.mood-b-working .scene-img.img-ww{ opacity:1; }
 
   /* 對話泡泡：依 mood 切換位置，完整蓋住插畫裡烙印的對話框文字 */
   .speech-bubble{
@@ -168,18 +169,22 @@
   .speech-bubble.thinking{ font-style:italic; color:#7a6a58; }
   /* 泡泡尺寸貼合文字：寬度隨字數、高度隨行數（烙印對話框已從圖檔修掉，不需再蓋） */
   .speech-bubble{ width:max-content; max-width:42%; }
-  /* resting：泡泡放在沙發上的麻糬頭上（以中心點定位） */
-  #scene.mood-resting #speechBubble{ left:60%; top:22%; transform:translateX(-50%); }
-  /* working：泡泡放在書桌區上方偏右，避開螢幕與白板 */
-  #scene.mood-working #speechBubble{ left:38%; top:14%; transform:translateX(-50%); }
+  /* A（麻糬）resting：泡泡放在沙發左半的麻糬頭上（以中心點定位） */
+  #scene.mood-a-resting #speechBubble{ left:62%; top:22%; transform:translateX(-50%); }
+  /* A working：泡泡放在主書桌上方偏右，避開左側白板與螢幕（泡泡較窄以免文字過長時又蓋回白板） */
+  #scene.mood-a-working #speechBubble{ left:44%; top:15%; max-width:28%; transform:translateX(-50%); }
 
-  /* 槽 B（Amanda）泡泡：暫定位在書架前區域，樣式相同但邊框色稍深、emoji 改用 🐈 */
+  /* 槽 B（Amanda）泡泡：樣式與 A 相同但邊框色稍深、emoji 改用 🐈，位置依 mood 獨立切換 */
   .speech-bubble.speech-bubble-b{
-    left:78%; top:36%; max-width:30%;
+    max-width:30%;
     transform: translateX(-50%);
     border-color:#7a6248;
   }
   .speech-bubble.speech-bubble-b::before{ content:'🐈'; font-size:1.15em; flex-shrink:0; }
+  /* B resting：沙發右半的 Amanda 頭上，與 A resting 泡泡錯開高度避免重疊 */
+  #scene.mood-b-resting #speechBubbleB{ left:76%; top:30%; }
+  /* B working：前景第二張桌上方 */
+  #scene.mood-b-working #speechBubbleB{ left:52%; top:55%; }
 
   /* 底部膠囊：疊在插畫原生膠囊「喵貓 – 休花喵」的位置（兩張圖皆有，約 x41.5%~59.5%、y93.5%~99.5%），完整蓋住烙印文字 */
   .mood-capsule-row{
@@ -389,9 +394,11 @@
 
 <div class="office-layout">
   <div class="scene-col">
-    <div id="scene" class="scene-frame mood-resting">
-      <img class="scene-img img-resting" src="images/office/scene-resting.webp" alt="麻糬的辦公室：貓咪窩在沙發上">
-      <img class="scene-img img-working" src="images/office/scene-working.webp" alt="麻糬的辦公室：貓咪坐在書桌前打電腦">
+    <div id="scene" class="scene-frame mood-a-resting mood-b-resting">
+      <img class="scene-img img-rr" src="images/office/scene-rr.webp" alt="麻糬的辦公室：麻糬與 Amanda 都在沙發休息">
+      <img class="scene-img img-wr" src="images/office/scene-wr.webp" alt="麻糬的辦公室：麻糬在主書桌工作，Amanda 在沙發休息">
+      <img class="scene-img img-rw" src="images/office/scene-rw.webp" alt="麻糬的辦公室：麻糬在沙發休息，Amanda 在前景書桌工作">
+      <img class="scene-img img-ww" src="images/office/scene-ww.webp" alt="麻糬的辦公室：麻糬與 Amanda 都在工作">
       <div class="speech-bubble speech-bubble-a" id="speechBubble">麻糬在沙發上曬太陽…</div>
       <div class="speech-bubble speech-bubble-b" id="speechBubbleB" style="display:none;"></div>
       <div class="mood-capsule-row" id="moodCapsuleRow">
@@ -742,8 +749,8 @@
   function renderAgentA(){
     var a = agents[0];
     var effectiveMood = a.isThinking ? 'working' : (a.agent.mood === 'working' ? 'working' : 'resting');
-    sceneEl.classList.toggle('mood-working', effectiveMood === 'working');
-    sceneEl.classList.toggle('mood-resting', effectiveMood !== 'working');
+    sceneEl.classList.toggle('mood-a-working', effectiveMood === 'working');
+    sceneEl.classList.toggle('mood-a-resting', effectiveMood !== 'working');
 
     if (a.isThinking){
       speechBubble.textContent = (a.agent.name || DEFAULT_NAME[0]) + '思考中…';
@@ -764,6 +771,9 @@
       speechBubbleB.style.display = 'none';
       moodCapsuleB.style.display = 'none';
       moodCapsuleRow.classList.remove('dual');
+      // 槽 B 未設定：畫面上 Amanda 視為在沙發休息（單槽模式固定用 resting 圖）
+      sceneEl.classList.remove('mood-b-working');
+      sceneEl.classList.add('mood-b-resting');
       return;
     }
     speechBubbleB.style.display = '';
@@ -771,6 +781,8 @@
     moodCapsuleRow.classList.add('dual');
 
     var effectiveMood = a.isThinking ? 'working' : (a.agent.mood === 'working' ? 'working' : 'resting');
+    sceneEl.classList.toggle('mood-b-working', effectiveMood === 'working');
+    sceneEl.classList.toggle('mood-b-resting', effectiveMood !== 'working');
 
     if (a.isThinking){
       speechBubbleB.textContent = (a.agent.name || DEFAULT_NAME[1]) + '思考中…';
