@@ -1844,13 +1844,7 @@ async function saveMemo() {
   statusEl.textContent = '儲存中…';
   statusEl.style.color = '#a89888';
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免CORS預檢
-      body: JSON.stringify(withToken({ type: 'memo', key, text }))
-    });
-    const result = await res.json();
-    if (!result.success) throw new Error(result.error || '未知錯誤');
+    await postTask({ type: 'memo', key, text });
     memoMap[key] = text;
     statusEl.textContent = '已儲存 ✓';
     statusEl.style.color = '#9ACB85';
@@ -1878,13 +1872,7 @@ async function saveBackendUrl() {
   statusEl.textContent = '儲存中…';
   statusEl.style.color = '#a89888';
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(withToken({ type: 'url', key, text }))
-    });
-    const result = await res.json();
-    if (!result.success) throw new Error(result.error || '未知錯誤');
+    await postTask({ type: 'url', key, text });
     urlMap[key] = text;
     const backendEl = document.getElementById('adminBackendUrl');
     if (text) {
