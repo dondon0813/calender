@@ -1631,7 +1631,7 @@ function collectDiagnostics(cloneMs) {
 // html2canvas 截圖時會把「整個頁面」複製一份到暗處理（不是只複製目標元素），
 // 這個頁面項目多、DOM 大，複製起來對效能較弱的裝置負擔很大；改成把要截圖的樣板
 // 複製進一個乾淨、幾乎空白的 iframe 裡再截圖，讓 html2canvas 只需要複製一個很小的頁面，
-// 跟獨立測試頁（test-html2canvas.html）用的是同一招，那邊已確認在卡住的手機上能正常跑
+// 跟當時的獨立測試頁用的是同一招，已確認在卡住的手機上能正常跑（測試頁驗證完畢後已移除）
 async function captureInIsolatedFrame(sourceEl, options) {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed; left:-99999px; top:0; border:0;';
