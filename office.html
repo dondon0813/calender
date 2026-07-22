@@ -116,6 +116,13 @@
   }
 
   /* ---------------- 場景：插畫背景圖＋動態疊層 ---------------- */
+  /* TODO(dual-mood-scenes)：雙貓四狀態場景圖尚未提供，之後改成依
+     agents[0].mood + agents[1].mood 的組合切換四張圖：
+       rest-rest → scene-rr.webp　work-rest → scene-wr.webp
+       rest-work → scene-rw.webp　work-work → scene-ww.webp
+     目前場景暫時仍只看槽 A（agents[0]）的 mood，沿用下面既有的
+     img-resting / img-working 兩張圖與 #scene.mood-* 切換邏輯，
+     先不引用新檔名，待美術資源到位後再擴充。 */
   .scene-col{
     display:flex;
     align-items:center;
@@ -157,18 +164,33 @@
     box-shadow: 0 0.2cqw 0.6cqw rgba(0,0,0,.12);
     transition: left .4s ease, top .4s ease, width .4s ease, min-height .4s ease;
   }
-  .speech-bubble::before{ content:'🐱'; font-size:1.15em; flex-shrink:0; }
+  .speech-bubble.speech-bubble-a::before{ content:'🐱'; font-size:1.15em; flex-shrink:0; }
   .speech-bubble.thinking{ font-style:italic; color:#7a6a58; }
   /* 泡泡尺寸貼合文字：寬度隨字數、高度隨行數（烙印對話框已從圖檔修掉，不需再蓋） */
   .speech-bubble{ width:max-content; max-width:42%; }
   /* resting：泡泡放在沙發上的麻糬頭上（以中心點定位） */
-  #scene.mood-resting .speech-bubble{ left:60%; top:22%; transform:translateX(-50%); }
+  #scene.mood-resting #speechBubble{ left:60%; top:22%; transform:translateX(-50%); }
   /* working：泡泡放在書桌區上方偏右，避開螢幕與白板 */
-  #scene.mood-working .speech-bubble{ left:38%; top:14%; transform:translateX(-50%); }
+  #scene.mood-working #speechBubble{ left:38%; top:14%; transform:translateX(-50%); }
+
+  /* 槽 B（Amanda）泡泡：暫定位在書架前區域，樣式相同但邊框色稍深、emoji 改用 🐈 */
+  .speech-bubble.speech-bubble-b{
+    left:78%; top:36%; max-width:30%;
+    transform: translateX(-50%);
+    border-color:#7a6248;
+  }
+  .speech-bubble.speech-bubble-b::before{ content:'🐈'; font-size:1.15em; flex-shrink:0; }
 
   /* 底部膠囊：疊在插畫原生膠囊「喵貓 – 休花喵」的位置（兩張圖皆有，約 x41.5%~59.5%、y93.5%~99.5%），完整蓋住烙印文字 */
+  .mood-capsule-row{
+    position:absolute;
+    display:flex; align-items:stretch; justify-content:center; gap:1cqw;
+    left:36%; top:91.5%; width:28%; height:8.5%;
+  }
+  .mood-capsule-row.dual{ left:20%; width:60%; }
+  .mood-capsule-row:not(.dual) .mood-capsule{ width:100%; }
+  .mood-capsule-row.dual .mood-capsule{ flex:1 1 0; min-width:0; }
   .mood-capsule{
-    position:absolute; left:36%; top:91.5%; width:28%; height:8.5%;
     display:flex; align-items:center; justify-content:center; gap:1.1cqw;
     background:#faf6ec; color:#4a3b32;
     border: 0.4cqw solid #a88a6b;
@@ -178,7 +200,9 @@
     overflow:hidden;
     box-shadow: 0 0.2cqw 0.6cqw rgba(0,0,0,.12);
   }
-  .mood-capsule::before{ content:'🐱'; }
+  .mood-capsule.mood-capsule-a::before{ content:'🐱'; }
+  .mood-capsule.mood-capsule-b{ border-color:#7a6248; }
+  .mood-capsule.mood-capsule-b::before{ content:'🐈'; }
 
   /* ---------------- 右側面板 ---------------- */
   .tabs{
@@ -208,6 +232,13 @@
   .tab-panel.active{ display:flex; }
 
   /* 指揮台 */
+  .agent-switch{ display:flex; gap:8px; margin-bottom:10px; flex-shrink:0; }
+  .agent-switch-btn{
+    flex:1; border:2px solid var(--c-border, #FFD3B6); border-radius: var(--r-pill,999px);
+    background:#fff; color: var(--c-text-soft,#8a7462);
+    font-weight:800; font-size:12.5px; padding:7px 4px; cursor:pointer;
+  }
+  .agent-switch-btn.active{ background: var(--c-primary,#FF8FA3); color:#fff; border-color: var(--c-primary-dark,#FF7391); }
   #chatMessages{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:8px; }
   .msg-row{ display:flex; gap:8px; max-width:100%; }
   .msg-row.user{ justify-content:flex-end; }
@@ -255,6 +286,8 @@
 
   /* 任務板 */
   .section-label{ font-size:13px; font-weight:800; color: var(--c-brown,#b5755a); margin: 4px 0 8px; }
+  .section-subtitle{ font-size:12px; font-weight:700; color: var(--c-text-soft,#8a7462); margin: 4px 0 8px; }
+  .agent-task-section + .agent-task-section{ margin-top:18px; padding-top:14px; border-top:2px solid var(--c-border-light,#FFE3CC); }
   .card{
     background: var(--c-surface,#FFFBF5);
     border:2px solid var(--c-border-light,#FFE3CC);
@@ -288,6 +321,9 @@
   .cost-card .label{ font-size:11px; color: var(--c-text-soft,#8a7462); margin-top:4px; }
   .cost-card .sub{ font-size:11px; color: var(--c-muted,#a89888); margin-top:6px; line-height:1.6; }
   .cost-note{ font-size:11px; color: var(--c-muted-light,#b39a8b); text-align:center; margin-top:auto; }
+  .cost-agent-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .cost-agent-name{ font-size:12.5px; font-weight:800; color: var(--c-brown,#b5755a); white-space:nowrap; }
+  .cost-agent-detail{ font-size:11.5px; color: var(--c-text-soft,#8a7462); text-align:right; }
 
   /* ---------------- 設定畫面 ---------------- */
   .settings-overlay{
@@ -315,6 +351,8 @@
   }
   .settings-box input:focus{ border-color: var(--c-primary,#FF8FA3); }
   .settings-error{ color: var(--c-danger,#e0654f); font-size:12px; margin-top:10px; min-height:16px; }
+  .settings-agent-block + .settings-agent-block{ margin-top:14px; padding-top:14px; border-top:2px dashed var(--c-border-light,#FFE3CC); }
+  .settings-agent-title{ font-size:13px; font-weight:800; color: var(--c-primary,#FF8FA3); }
   .settings-actions{ display:flex; gap:10px; margin-top:16px; }
   .settings-actions button{
     flex:1; border:none; border-radius: var(--r-pill,999px);
@@ -354,8 +392,12 @@
     <div id="scene" class="scene-frame mood-resting">
       <img class="scene-img img-resting" src="images/office/scene-resting.webp" alt="麻糬的辦公室：貓咪窩在沙發上">
       <img class="scene-img img-working" src="images/office/scene-working.webp" alt="麻糬的辦公室：貓咪坐在書桌前打電腦">
-      <div class="speech-bubble" id="speechBubble">麻糬在沙發上曬太陽…</div>
-      <div class="mood-capsule" id="moodCapsule">麻糬 — 休息中</div>
+      <div class="speech-bubble speech-bubble-a" id="speechBubble">麻糬在沙發上曬太陽…</div>
+      <div class="speech-bubble speech-bubble-b" id="speechBubbleB" style="display:none;"></div>
+      <div class="mood-capsule-row" id="moodCapsuleRow">
+        <div class="mood-capsule mood-capsule-a" id="moodCapsuleA">麻糬 — 休息中</div>
+        <div class="mood-capsule mood-capsule-b" id="moodCapsuleB" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -367,6 +409,10 @@
     </div>
     <div class="tab-panels">
       <div class="tab-panel active" id="tab-chat">
+        <div class="agent-switch" id="agentSwitch" style="display:none;">
+          <button class="agent-switch-btn active" data-agent-idx="0" id="agentSwitchBtn0">🐱 麻糬</button>
+          <button class="agent-switch-btn" data-agent-idx="1" id="agentSwitchBtn1">🐈 Amanda</button>
+        </div>
         <div id="chatMessages"></div>
         <div class="chat-input-row">
           <input type="text" id="chatInput" placeholder="輸入指令給麻糬…" maxlength="2000">
@@ -375,14 +421,24 @@
       </div>
 
       <div class="tab-panel" id="tab-tasks">
-        <div class="section-label">今日排程</div>
-        <div id="scheduleList"><div class="empty-hint">尚無排程資料</div></div>
-        <div class="section-label" style="margin-top:18px;">昨日小記</div>
-        <div id="digestArea"><div class="empty-hint">還沒有小記 🌙</div></div>
+        <div class="agent-task-section" id="taskSection0">
+          <div class="section-label" id="taskTitle0">麻糬</div>
+          <div class="section-subtitle">今日排程</div>
+          <div id="scheduleList0"><div class="empty-hint">尚無排程資料</div></div>
+          <div class="section-subtitle" style="margin-top:14px;">昨日小記</div>
+          <div id="digestArea0"><div class="empty-hint">還沒有小記 🌙</div></div>
+        </div>
+        <div class="agent-task-section" id="taskSection1" style="display:none;">
+          <div class="section-label" id="taskTitle1">Amanda</div>
+          <div class="section-subtitle">今日排程</div>
+          <div id="scheduleList1"><div class="empty-hint">尚無排程資料</div></div>
+          <div class="section-subtitle" style="margin-top:14px;">昨日小記</div>
+          <div id="digestArea1"><div class="empty-hint">還沒有小記 🌙</div></div>
+        </div>
       </div>
 
       <div class="tab-panel" id="tab-cost">
-        <div class="cost-grid">
+        <div class="cost-grid" id="costGridSingle">
           <div class="cost-card">
             <div class="num" id="costToday">$0.00</div>
             <div class="label">今日花費</div>
@@ -401,6 +457,17 @@
             <div class="label">今日呼叫次數</div>
           </div>
         </div>
+        <div class="cost-grid" id="costGridDual" style="display:none;">
+          <div class="cost-card">
+            <div class="num" id="costTodayCombined">$0.00</div>
+            <div class="label">今日合計</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="costTotalCombined">$0.00</div>
+            <div class="label">總計合計</div>
+          </div>
+        </div>
+        <div id="costPerAgentList" style="display:none;"></div>
         <div class="cost-note">金額為 API 估算值（USD）</div>
       </div>
     </div>
@@ -409,13 +476,24 @@
 
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-box">
-    <h2>設定麻糬連線</h2>
+    <h2>設定助理連線</h2>
     <p>請貼上 GAS 後端網址與通行碼。資料只存在這台裝置的瀏覽器中（localStorage），不會上傳到任何地方。</p>
-    <label for="settingsUrlInput">後端網址</label>
-    <input type="text" id="settingsUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec">
-    <label for="settingsTokenInput">通行碼</label>
-    <input type="password" id="settingsTokenInput" placeholder="通行碼">
-    <div class="settings-error" id="settingsError"></div>
+    <div class="settings-agent-block">
+      <div class="settings-agent-title">助理 1</div>
+      <label for="settingsUrlInput0">後端網址</label>
+      <input type="text" id="settingsUrlInput0" placeholder="https://script.google.com/macros/s/xxx/exec">
+      <label for="settingsTokenInput0">通行碼</label>
+      <input type="password" id="settingsTokenInput0" placeholder="通行碼">
+      <div class="settings-error" id="settingsError0"></div>
+    </div>
+    <div class="settings-agent-block">
+      <div class="settings-agent-title">助理 2（選填）</div>
+      <label for="settingsUrlInput1">後端網址</label>
+      <input type="text" id="settingsUrlInput1" placeholder="https://script.google.com/macros/s/yyy/exec">
+      <label for="settingsTokenInput1">通行碼</label>
+      <input type="password" id="settingsTokenInput1" placeholder="通行碼（留空表示不啟用）">
+      <div class="settings-error" id="settingsError1"></div>
+    </div>
     <div class="settings-actions">
       <button id="settingsCancelBtn" style="display:none;">取消</button>
       <button id="settingsSaveBtn">儲存並連線</button>
@@ -427,36 +505,98 @@
 (function(){
   'use strict';
 
-  var CFG_URL_KEY = 'mochiApiUrl';
-  var CFG_TOKEN_KEY = 'mochiToken';
-  var CHAT_HISTORY_KEY = 'mochiChatHistory';
+  // 舊版單槽設定 key（僅用於一次性遷移讀取，不再寫入）。
+  var LEGACY_URL_KEY = 'mochiApiUrl';
+  var LEGACY_TOKEN_KEY = 'mochiToken';
+  // 新版雙槽設定：localStorage 存一個長度 2 的陣列 [{url,token}, {url,token}|null]。
+  var AGENTS_STORAGE_KEY = 'mochiAgentsV2';
   var POLL_MS = 30000;
+  var POLL_STAGGER_MS = 3000; // 槽 B 的輪詢刻意錯開，避免兩槽同時發請求
 
-  var state = {
-    agent: { name:'麻糬', mood:'resting', activity:'麻糬在沙發上曬太陽…', updatedAt:null },
-    schedules: [],
-    usage: { today:{ costUSD:0, inputTokens:0, outputTokens:0, calls:0 }, total:{ costUSD:0, tokens:0 } },
-    lastDigest: null,
-    online: false,
-    isThinking: false
-  };
+  var EMOJI = ['🐱', '🐈'];
+  var DEFAULT_NAME = ['麻糬', 'Amanda'];
+  var DEFAULT_ACTIVITY = ['麻糬在沙發上曬太陽…', 'Amanda 在忙碌中…'];
 
-  var pollTimer = null;
+  // 休息、且沒有具體 activity 時輪播的碎念池。槽 A 沿用既有的麻糬碎念；
+  // 槽 B（Amanda）另寫一組偏工作味的碎念。
+  var MURMUR_POOLS = [
+    [
+      '今天的陽光曬起來特別舒服…',
+      '在想晚餐要不要吃小魚乾 🐟',
+      '那盆龜背芋好像長新葉子了',
+      '等等再去巡一下信箱好了',
+      '老闆最近辛苦了，呼嚕嚕',
+      '咖啡機的聲音聽起來好療癒',
+      '尾巴收好，優雅是貓的本分',
+      '瞇一下下，五分鐘就好 zzZ',
+      '這首 lo-fi 不錯，加入歌單 🎵',
+      '在盤算下一波團購要提醒老闆什麼'
+    ],
+    [
+      '報表看完了，喝口水',
+      '在想怎麼回那封信比較得體',
+      '行事曆排得真滿…',
+      '螢幕看久了要遠眺一下',
+      '這份簡報還要再順一次',
+      '會議記錄先整理起來',
+      '收件匣又多了幾封要處理',
+      '待辦清單畫掉一項，繼續'
+    ]
+  ];
+  var MURMUR_ROTATE_MS = 25000;
 
-  // ---------- localStorage 設定 ----------
-  function getConfig(){
+  function isGenericActivity(idx, a){
+    return !a || a === '休息中' || a === DEFAULT_ACTIVITY[idx];
+  }
+
+  function createAgentState(idx){
     return {
-      url: localStorage.getItem(CFG_URL_KEY) || '',
-      token: localStorage.getItem(CFG_TOKEN_KEY) || ''
+      idx: idx,
+      config: null,
+      agent: { name: DEFAULT_NAME[idx], mood:'resting', activity: DEFAULT_ACTIVITY[idx], updatedAt:null },
+      schedules: [],
+      usage: { today:{ costUSD:0, inputTokens:0, outputTokens:0, calls:0 }, total:{ costUSD:0, tokens:0 } },
+      lastDigest: null,
+      online: false,
+      isThinking: false,
+      pollTimer: null,
+      murmurIndex: Math.floor(Math.random() * MURMUR_POOLS[idx].length),
+      chatHistory: null
     };
   }
-  function saveConfig(url, token){
-    localStorage.setItem(CFG_URL_KEY, url);
-    localStorage.setItem(CFG_TOKEN_KEY, token);
+
+  var agents = [ createAgentState(0), createAgentState(1) ];
+  var activeChatIndex = 0;
+
+  // ---------- localStorage 設定（雙槽 + 舊版遷移） ----------
+  function loadAgentsConfig(){
+    var raw = null;
+    try { raw = localStorage.getItem(AGENTS_STORAGE_KEY); } catch(e){}
+    if (raw){
+      try {
+        var parsed = JSON.parse(raw);
+        if (Object.prototype.toString.call(parsed) === '[object Array]'){
+          return [ parsed[0] || null, parsed[1] || null ];
+        }
+      } catch(e){}
+    }
+    // 遷移：舊版單槽設定（mochiApiUrl / mochiToken）搬進槽 A，僅讀取一次。
+    var legacyUrl = '', legacyToken = '';
+    try {
+      legacyUrl = localStorage.getItem(LEGACY_URL_KEY) || '';
+      legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY) || '';
+    } catch(e){}
+    if (legacyUrl && legacyToken){
+      var migrated = [ { url: legacyUrl, token: legacyToken }, null ];
+      saveAgentsConfig(migrated);
+      return migrated;
+    }
+    return [null, null];
   }
-  function hasConfig(){
-    var c = getConfig();
-    return !!(c.url && c.token);
+  function saveAgentsConfig(configs){
+    try{
+      localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify([ configs[0] || null, configs[1] || null ]));
+    }catch(e){}
   }
 
   function buildUrl(base, params){
@@ -469,18 +609,24 @@
 
   // ---------- 設定畫面 ----------
   var settingsOverlay = document.getElementById('settingsOverlay');
-  var settingsUrlInput = document.getElementById('settingsUrlInput');
-  var settingsTokenInput = document.getElementById('settingsTokenInput');
-  var settingsError = document.getElementById('settingsError');
+  var settingsUrlInputs = [ document.getElementById('settingsUrlInput0'), document.getElementById('settingsUrlInput1') ];
+  var settingsTokenInputs = [ document.getElementById('settingsTokenInput0'), document.getElementById('settingsTokenInput1') ];
+  var settingsErrors = [ document.getElementById('settingsError0'), document.getElementById('settingsError1') ];
   var settingsSaveBtn = document.getElementById('settingsSaveBtn');
   var settingsCancelBtn = document.getElementById('settingsCancelBtn');
   var gearBtn = document.getElementById('gearBtn');
 
+  function anyAgentConfigured(){
+    return !!(agents[0].config || agents[1].config);
+  }
+
   function openSettings(allowCancel){
-    var c = getConfig();
-    settingsUrlInput.value = c.url;
-    settingsTokenInput.value = c.token;
-    settingsError.textContent = '';
+    settingsUrlInputs[0].value = agents[0].config ? agents[0].config.url : '';
+    settingsTokenInputs[0].value = agents[0].config ? agents[0].config.token : '';
+    settingsUrlInputs[1].value = agents[1].config ? agents[1].config.url : '';
+    settingsTokenInputs[1].value = agents[1].config ? agents[1].config.token : '';
+    settingsErrors[0].textContent = '';
+    settingsErrors[1].textContent = '';
     settingsCancelBtn.style.display = allowCancel ? '' : 'none';
     settingsOverlay.classList.remove('hidden');
   }
@@ -488,39 +634,66 @@
     settingsOverlay.classList.add('hidden');
   }
 
-  gearBtn.addEventListener('click', function(){ openSettings(hasConfig()); });
+  gearBtn.addEventListener('click', function(){ openSettings(anyAgentConfigured()); });
   settingsCancelBtn.addEventListener('click', function(){
-    if (hasConfig()) closeSettings();
+    if (anyAgentConfigured()) closeSettings();
   });
 
+  function verifyAgentConnection(url, token){
+    return fetch(buildUrl(url, { token: token, scope: 'status' }))
+      .then(function(res){ return res.json(); })
+      .catch(function(){ return { ok:false, error:'network' }; });
+  }
+
   settingsSaveBtn.addEventListener('click', function(){
-    var url = (settingsUrlInput.value || '').trim();
-    var token = (settingsTokenInput.value || '').trim();
-    if (!url || !token){
-      settingsError.textContent = '請填寫網址與通行碼';
+    var url0 = (settingsUrlInputs[0].value || '').trim();
+    var token0 = (settingsTokenInputs[0].value || '').trim();
+    var url1 = (settingsUrlInputs[1].value || '').trim();
+    var token1 = (settingsTokenInputs[1].value || '').trim();
+    settingsErrors[0].textContent = '';
+    settingsErrors[1].textContent = '';
+
+    if (!url0 || !token0){
+      settingsErrors[0].textContent = '請填寫網址與通行碼';
       return;
     }
+    var slot1Provided = !!(url1 || token1);
+    if (slot1Provided && (!url1 || !token1)){
+      settingsErrors[1].textContent = '請同時填寫網址與通行碼，或兩者都留空';
+      return;
+    }
+
     settingsSaveBtn.disabled = true;
-    settingsError.textContent = '連線確認中…';
-    fetch(buildUrl(url, { token: token, scope: 'status' }))
-      .then(function(res){ return res.json(); })
-      .then(function(json){
-        settingsSaveBtn.disabled = false;
-        if (json && json.ok === true){
-          saveConfig(url, token);
-          closeSettings();
-          applyStatus(json);
-          startPolling();
-        } else if (json && json.ok === false && json.error === 'unauthorized'){
-          settingsError.textContent = '通行碼錯誤';
-        } else {
-          settingsError.textContent = '連線失敗，請確認網址是否正確';
-        }
-      })
-      .catch(function(){
-        settingsSaveBtn.disabled = false;
-        settingsError.textContent = '連不上麻糬，稍後再試';
-      });
+    settingsErrors[0].textContent = '連線確認中…';
+    if (slot1Provided) settingsErrors[1].textContent = '連線確認中…';
+
+    var check0 = verifyAgentConnection(url0, token0);
+    var check1 = slot1Provided ? verifyAgentConnection(url1, token1) : Promise.resolve({ skip: true });
+
+    Promise.all([check0, check1]).then(function(results){
+      settingsSaveBtn.disabled = false;
+      var r0 = results[0];
+      var r1 = results[1];
+      var ok0 = !!(r0 && r0.ok === true);
+      var ok1 = !!(r1.skip || (r1 && r1.ok === true));
+
+      settingsErrors[0].textContent = ok0 ? '' : (r0 && r0.error === 'unauthorized' ? '通行碼錯誤' : '連線失敗，請確認網址是否正確');
+      settingsErrors[1].textContent = ok1 ? '' : (r1 && r1.error === 'unauthorized' ? '通行碼錯誤' : '連線失敗，請確認網址是否正確');
+
+      if (!ok0 || !ok1) return;
+
+      var newConfigs = [
+        { url: url0, token: token0 },
+        slot1Provided ? { url: url1, token: token1 } : null
+      ];
+      saveAgentsConfig(newConfigs);
+      agents[0].config = newConfigs[0];
+      agents[1].config = newConfigs[1];
+      closeSettings();
+      applyStatus(0, r0);
+      if (slot1Provided) applyStatus(1, r1);
+      afterConfigChanged();
+    });
   });
 
   // ---------- 時鐘 ----------
@@ -557,64 +730,93 @@
   // ---------- 場景 / 角色狀態 ----------
   var sceneEl = document.getElementById('scene');
   var speechBubble = document.getElementById('speechBubble');
-  var moodCapsule = document.getElementById('moodCapsule');
+  var speechBubbleB = document.getElementById('speechBubbleB');
+  var moodCapsuleRow = document.getElementById('moodCapsuleRow');
+  var moodCapsuleA = document.getElementById('moodCapsuleA');
+  var moodCapsuleB = document.getElementById('moodCapsuleB');
   var statusDot = document.getElementById('statusDot');
   var statusLabel = document.getElementById('statusLabel');
 
-  // 休息時的碎念（activity 是「休息中」等籠統字樣時輪播顯示）
-  var IDLE_THOUGHTS = [
-    '今天的陽光曬起來特別舒服…',
-    '在想晚餐要不要吃小魚乾 🐟',
-    '那盆龜背芋好像長新葉子了',
-    '等等再去巡一下信箱好了',
-    '老闆最近辛苦了，呼嚕嚕',
-    '咖啡機的聲音聽起來好療癒',
-    '尾巴收好，優雅是貓的本分',
-    '瞇一下下，五分鐘就好 zzZ',
-    '這首 lo-fi 不錯，加入歌單 🎵',
-    '在盤算下一波團購要提醒老闆什麼'
-  ];
-  var idleThoughtIdx = Math.floor(Math.random() * IDLE_THOUGHTS.length);
-  function isGenericActivity(a){
-    return !a || a === '休息中' || a === '麻糬在沙發上曬太陽…';
-  }
-
-  function renderAgentDisplay(){
-    var effectiveMood = state.isThinking ? 'working' : (state.agent.mood === 'working' ? 'working' : 'resting');
+  // 槽 A：場景圖切換與泡泡邏輯完全沿用單貓時代的行為
+  // （見上方 TODO(dual-mood-scenes)；碎念輪播沿用既有的 MURMUR_POOLS[0]）。
+  function renderAgentA(){
+    var a = agents[0];
+    var effectiveMood = a.isThinking ? 'working' : (a.agent.mood === 'working' ? 'working' : 'resting');
     sceneEl.classList.toggle('mood-working', effectiveMood === 'working');
     sceneEl.classList.toggle('mood-resting', effectiveMood !== 'working');
 
-    if (state.isThinking){
-      speechBubble.textContent = '麻糬思考中…';
+    if (a.isThinking){
+      speechBubble.textContent = (a.agent.name || DEFAULT_NAME[0]) + '思考中…';
       speechBubble.classList.add('thinking');
     } else if (effectiveMood === 'working'){
-      speechBubble.textContent = state.agent.activity || '工作中…';
+      speechBubble.textContent = a.agent.activity || '工作中…';
       speechBubble.classList.remove('thinking');
     } else {
-      speechBubble.textContent = isGenericActivity(state.agent.activity) ? IDLE_THOUGHTS[idleThoughtIdx] : state.agent.activity;
+      speechBubble.textContent = isGenericActivity(0, a.agent.activity) ? MURMUR_POOLS[0][a.murmurIndex] : a.agent.activity;
       speechBubble.classList.remove('thinking');
     }
-    moodCapsule.textContent = '麻糬 — ' + (state.agent.mood === 'working' ? '工作中' : '休息中');
+    moodCapsuleA.textContent = (a.agent.name || DEFAULT_NAME[0]) + ' — ' + (a.agent.mood === 'working' ? '工作中' : '休息中');
   }
 
-  // 每 25 秒換一句碎念（僅在休息且無具體 activity 時）
-  setInterval(function(){
-    if (!state.isThinking && state.agent.mood !== 'working' && isGenericActivity(state.agent.activity)){
-      idleThoughtIdx = (idleThoughtIdx + 1) % IDLE_THOUGHTS.length;
-      renderAgentDisplay();
+  function renderAgentB(){
+    var a = agents[1];
+    if (!a.config){
+      speechBubbleB.style.display = 'none';
+      moodCapsuleB.style.display = 'none';
+      moodCapsuleRow.classList.remove('dual');
+      return;
     }
-  }, 25000);
+    speechBubbleB.style.display = '';
+    moodCapsuleB.style.display = '';
+    moodCapsuleRow.classList.add('dual');
 
-  function setOnline(isOnline){
-    state.online = isOnline;
+    var effectiveMood = a.isThinking ? 'working' : (a.agent.mood === 'working' ? 'working' : 'resting');
+
+    if (a.isThinking){
+      speechBubbleB.textContent = (a.agent.name || DEFAULT_NAME[1]) + '思考中…';
+      speechBubbleB.classList.add('thinking');
+    } else if (effectiveMood === 'working'){
+      speechBubbleB.textContent = a.agent.activity || '工作中…';
+      speechBubbleB.classList.remove('thinking');
+    } else {
+      speechBubbleB.textContent = isGenericActivity(1, a.agent.activity) ? MURMUR_POOLS[1][a.murmurIndex] : a.agent.activity;
+      speechBubbleB.classList.remove('thinking');
+    }
+    moodCapsuleB.textContent = (a.agent.name || DEFAULT_NAME[1]) + ' — ' + (a.agent.mood === 'working' ? '工作中' : '休息中');
+  }
+
+  function renderAgentDisplay(idx){
+    if (idx === 0) renderAgentA();
+    else renderAgentB();
+  }
+
+  // 每 25 秒讓兩槽各自換一句碎念（僅在休息且無具體 activity 時才會實際換字）。
+  setInterval(function(){
+    for (var i = 0; i < 2; i++){
+      var a = agents[i];
+      if (!a.config && i !== 0) continue; // 槽 A 一律有預設狀態可轉；槽 B 未設定就跳過
+      if (!a.isThinking && a.agent.mood !== 'working' && isGenericActivity(i, a.agent.activity)){
+        a.murmurIndex = (a.murmurIndex + 1) % MURMUR_POOLS[i].length;
+        renderAgentDisplay(i);
+      }
+    }
+  }, MURMUR_ROTATE_MS);
+
+  function updateGlobalOnlineIndicator(){
+    var isOnline = agents[0].online || agents[1].online;
     statusDot.classList.toggle('online', isOnline);
     statusDot.classList.toggle('offline', !isOnline);
     statusLabel.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
   }
 
+  function setAgentOnline(idx, isOnline){
+    agents[idx].online = isOnline;
+    updateGlobalOnlineIndicator();
+  }
+
   // ---------- 任務板 ----------
-  function renderSchedules(list){
-    var wrap = document.getElementById('scheduleList');
+  function renderSchedules(idx, list){
+    var wrap = document.getElementById('scheduleList' + idx);
     wrap.innerHTML = '';
     if (!list || !list.length){
       wrap.innerHTML = '<div class="empty-hint">尚無排程資料</div>';
@@ -632,8 +834,8 @@
     });
   }
 
-  function renderDigest(digest){
-    var wrap = document.getElementById('digestArea');
+  function renderDigest(idx, digest){
+    var wrap = document.getElementById('digestArea' + idx);
     wrap.innerHTML = '';
     if (!digest || !digest.text){
       wrap.innerHTML = '<div class="empty-hint">還沒有小記 🌙</div>';
@@ -646,18 +848,63 @@
     wrap.appendChild(card);
   }
 
+  function updateTaskSectionVisibility(){
+    document.getElementById('taskTitle0').textContent = agents[0].agent.name || DEFAULT_NAME[0];
+    document.getElementById('taskSection1').style.display = agents[1].config ? '' : 'none';
+    if (agents[1].config){
+      document.getElementById('taskTitle1').textContent = agents[1].agent.name || DEFAULT_NAME[1];
+    }
+  }
+
   // ---------- 成本 ----------
-  function renderUsage(usage){
-    if (!usage) return;
-    var today = usage.today || {};
-    var total = usage.total || {};
-    document.getElementById('costToday').textContent = '$' + Number(today.costUSD || 0).toFixed(2);
-    document.getElementById('costTotal').textContent = '$' + Number(total.costUSD || 0).toFixed(2);
-    var inTok = Number(today.inputTokens || 0);
-    var outTok = Number(today.outputTokens || 0);
-    document.getElementById('tokenToday').textContent = (inTok + outTok);
-    document.getElementById('tokenBreakdown').textContent = 'input ' + inTok + ' / output ' + outTok;
-    document.getElementById('callToday').textContent = Number(today.calls || 0);
+  var costGridSingle = document.getElementById('costGridSingle');
+  var costGridDual = document.getElementById('costGridDual');
+  var costPerAgentList = document.getElementById('costPerAgentList');
+
+  function renderUsage(){
+    if (!agents[1].config){
+      // 單槽：維持原本樣子。
+      costGridSingle.style.display = '';
+      costGridDual.style.display = 'none';
+      costPerAgentList.style.display = 'none';
+      var today = agents[0].usage.today || {};
+      var total = agents[0].usage.total || {};
+      document.getElementById('costToday').textContent = '$' + Number(today.costUSD || 0).toFixed(2);
+      document.getElementById('costTotal').textContent = '$' + Number(total.costUSD || 0).toFixed(2);
+      var inTok = Number(today.inputTokens || 0);
+      var outTok = Number(today.outputTokens || 0);
+      document.getElementById('tokenToday').textContent = (inTok + outTok);
+      document.getElementById('tokenBreakdown').textContent = 'input ' + inTok + ' / output ' + outTok;
+      document.getElementById('callToday').textContent = Number(today.calls || 0);
+      return;
+    }
+
+    // 雙槽：頂部合計卡 + 下方逐一助理明細。
+    costGridSingle.style.display = 'none';
+    costGridDual.style.display = '';
+    costPerAgentList.style.display = '';
+
+    var todayCombined = 0;
+    var totalCombined = 0;
+    var rowsHtml = '';
+    for (var i = 0; i < 2; i++){
+      if (!agents[i].config) continue;
+      var t = agents[i].usage.today || {};
+      var tt = agents[i].usage.total || {};
+      var todayCost = Number(t.costUSD || 0);
+      var totalCost = Number(tt.costUSD || 0);
+      var todayTokens = Number(t.inputTokens || 0) + Number(t.outputTokens || 0);
+      todayCombined += todayCost;
+      totalCombined += totalCost;
+      rowsHtml +=
+        '<div class="card cost-agent-row">' +
+          '<div class="cost-agent-name">' + EMOJI[i] + ' ' + escapeHtml(agents[i].agent.name || DEFAULT_NAME[i]) + '</div>' +
+          '<div class="cost-agent-detail">今日 $' + todayCost.toFixed(2) + ' ／ 總計 $' + totalCost.toFixed(2) + ' ／ 今日 tokens ' + todayTokens + '</div>' +
+        '</div>';
+    }
+    document.getElementById('costTodayCombined').textContent = '$' + todayCombined.toFixed(2);
+    document.getElementById('costTotalCombined').textContent = '$' + totalCombined.toFixed(2);
+    costPerAgentList.innerHTML = rowsHtml;
   }
 
   function escapeHtml(s){
@@ -667,43 +914,55 @@
   }
 
   // ---------- 套用 status 回應 ----------
-  function applyStatus(json){
-    if (json.agent) state.agent = json.agent;
-    if (json.schedules) state.schedules = json.schedules;
-    if (json.usage) state.usage = json.usage;
-    if ('lastDigest' in json) state.lastDigest = json.lastDigest;
-    renderAgentDisplay();
-    renderSchedules(state.schedules);
-    renderDigest(state.lastDigest);
-    renderUsage(state.usage);
+  function applyStatus(idx, json){
+    var a = agents[idx];
+    if (json.agent) a.agent = json.agent;
+    if (json.schedules) a.schedules = json.schedules;
+    if (json.usage) a.usage = json.usage;
+    if ('lastDigest' in json) a.lastDigest = json.lastDigest;
+    renderAgentDisplay(idx);
+    renderSchedules(idx, a.schedules);
+    renderDigest(idx, a.lastDigest);
+    renderUsage();
+    updateTaskSectionVisibility();
+    updateAgentSwitchLabels();
   }
 
-  function fetchStatus(){
-    var c = getConfig();
-    if (!c.url || !c.token) return;
-    fetch(buildUrl(c.url, { token: c.token, scope: 'status' }))
+  function showSlotAuthError(idx){
+    var otherIdx = idx === 0 ? 1 : 0;
+    var allowCancel = !!agents[otherIdx].online;
+    openSettings(allowCancel);
+    settingsErrors[idx].textContent = '通行碼錯誤';
+  }
+
+  function fetchStatus(idx){
+    var a = agents[idx];
+    if (!a.config) return;
+    fetch(buildUrl(a.config.url, { token: a.config.token, scope: 'status' }))
       .then(function(res){ return res.json(); })
       .then(function(json){
         if (json && json.ok === true){
-          setOnline(true);
-          applyStatus(json);
+          setAgentOnline(idx, true);
+          applyStatus(idx, json);
         } else if (json && json.ok === false && json.error === 'unauthorized'){
-          setOnline(false);
-          openSettings(false);
-          settingsError.textContent = '通行碼錯誤';
+          setAgentOnline(idx, false);
+          showSlotAuthError(idx);
         } else {
-          setOnline(false);
+          setAgentOnline(idx, false);
         }
       })
       .catch(function(){
-        setOnline(false);
+        setAgentOnline(idx, false);
       });
   }
 
-  function startPolling(){
-    fetchStatus();
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(fetchStatus, POLL_MS);
+  function startPolling(idx){
+    fetchStatus(idx);
+    if (agents[idx].pollTimer) clearInterval(agents[idx].pollTimer);
+    agents[idx].pollTimer = setInterval(function(){ fetchStatus(idx); }, POLL_MS);
+  }
+  function stopPolling(idx){
+    if (agents[idx].pollTimer){ clearInterval(agents[idx].pollTimer); agents[idx].pollTimer = null; }
   }
 
   // ---------- 分頁切換 ----------
@@ -721,27 +980,35 @@
   var chatMessages = document.getElementById('chatMessages');
   var chatInput = document.getElementById('chatInput');
   var chatSendBtn = document.getElementById('chatSendBtn');
-  var WELCOME_TEXT = '哈囉老闆！我是麻糬，有什麼指示嗎？';
+  var agentSwitch = document.getElementById('agentSwitch');
+  var agentSwitchBtns = [ document.getElementById('agentSwitchBtn0'), document.getElementById('agentSwitchBtn1') ];
+  var WELCOME_TEXT = [
+    '哈囉老闆！我是麻糬，有什麼指示嗎？',
+    '哈囉！我是 Amanda，工作上有什麼需要交代的嗎？'
+  ];
 
-  function loadHistory(){
+  function chatHistoryKey(idx){ return 'chatHistory_a' + idx; }
+
+  function loadHistory(idx){
     try{
-      var raw = sessionStorage.getItem(CHAT_HISTORY_KEY);
+      var raw = sessionStorage.getItem(chatHistoryKey(idx));
       if (raw) return JSON.parse(raw);
     }catch(e){}
-    var seeded = [{ role:'assistant', content: WELCOME_TEXT }];
-    sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(seeded));
+    var seeded = [{ role:'assistant', content: WELCOME_TEXT[idx] }];
+    try{ sessionStorage.setItem(chatHistoryKey(idx), JSON.stringify(seeded)); }catch(e){}
     return seeded;
   }
-  function saveHistory(list){
-    try{ sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list)); }catch(e){}
+  function saveHistory(idx, list){
+    try{ sessionStorage.setItem(chatHistoryKey(idx), JSON.stringify(list)); }catch(e){}
   }
 
-  var chatHistory = loadHistory();
+  agents[0].chatHistory = loadHistory(0);
+  agents[1].chatHistory = loadHistory(1);
 
-  function renderMessage(msg){
+  function renderMessage(idx, msg){
     var row = document.createElement('div');
     row.className = 'msg-row ' + (msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant'));
-    var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : '🐱');
+    var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : EMOJI[idx]);
     row.innerHTML =
       (msg.role !== 'user' ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
       '<div class="msg-bubble">' + escapeHtml(msg.content) + '</div>';
@@ -751,15 +1018,46 @@
 
   function renderAllMessages(){
     chatMessages.innerHTML = '';
-    chatHistory.forEach(renderMessage);
+    agents[activeChatIndex].chatHistory.forEach(function(msg){ renderMessage(activeChatIndex, msg); });
   }
   renderAllMessages();
 
+  function updateChatInputPlaceholder(){
+    var name = agents[activeChatIndex].agent.name || DEFAULT_NAME[activeChatIndex];
+    chatInput.placeholder = '輸入指令給' + name + '…';
+  }
+
+  function updateAgentSwitchLabels(){
+    agentSwitchBtns[0].textContent = EMOJI[0] + ' ' + (agents[0].agent.name || DEFAULT_NAME[0]);
+    agentSwitchBtns[1].textContent = EMOJI[1] + ' ' + (agents[1].agent.name || DEFAULT_NAME[1]);
+    updateChatInputPlaceholder();
+  }
+
+  function setActiveChatIndex(idx){
+    if (!agents[idx].config) return;
+    activeChatIndex = idx;
+    agentSwitchBtns[0].classList.toggle('active', idx === 0);
+    agentSwitchBtns[1].classList.toggle('active', idx === 1);
+    renderAllMessages();
+    updateChatInputPlaceholder();
+  }
+
+  agentSwitchBtns.forEach(function(btn, idx){
+    btn.addEventListener('click', function(){ setActiveChatIndex(idx); });
+  });
+
+  function updateAgentSwitchVisibility(){
+    agentSwitch.style.display = agents[1].config ? '' : 'none';
+    if (!agents[1].config && activeChatIndex !== 0){
+      setActiveChatIndex(0);
+    }
+  }
+
   var typingRow = null;
-  function showTyping(){
+  function showTyping(idx){
     typingRow = document.createElement('div');
     typingRow.className = 'msg-row assistant';
-    typingRow.innerHTML = '<div class="msg-avatar">🐱</div><div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
+    typingRow.innerHTML = '<div class="msg-avatar">' + EMOJI[idx] + '</div><div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
     chatMessages.appendChild(typingRow);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -769,62 +1067,64 @@
   }
 
   function sendMessage(){
+    var idx = activeChatIndex;
     var text = (chatInput.value || '').trim();
     if (!text) return;
-    var c = getConfig();
-    if (!c.url || !c.token){
+    var a = agents[idx];
+    if (!a.config){
       openSettings(false);
       return;
     }
 
-    var historyForRequest = chatHistory.slice(-12);
-    chatHistory.push({ role:'user', content: text });
-    saveHistory(chatHistory);
-    renderMessage({ role:'user', content: text });
+    var historyForRequest = a.chatHistory.slice(-12);
+    a.chatHistory.push({ role:'user', content: text });
+    saveHistory(idx, a.chatHistory);
+    renderMessage(idx, { role:'user', content: text });
     chatInput.value = '';
     chatSendBtn.disabled = true;
 
-    state.isThinking = true;
-    renderAgentDisplay();
-    showTyping();
+    a.isThinking = true;
+    renderAgentDisplay(idx);
+    showTyping(idx);
 
-    fetch(c.url, {
+    var name = a.agent.name || DEFAULT_NAME[idx];
+
+    fetch(a.config.url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ token: c.token, type: 'chat', message: text, history: historyForRequest })
+      body: JSON.stringify({ token: a.config.token, type: 'chat', message: text, history: historyForRequest })
     })
       .then(function(res){ return res.json(); })
       .then(function(json){
         hideTyping();
         chatSendBtn.disabled = false;
-        state.isThinking = false;
+        a.isThinking = false;
         if (json && json.ok === true){
-          setOnline(true);
+          setAgentOnline(idx, true);
           var reply = json.reply || '';
-          chatHistory.push({ role:'assistant', content: reply });
-          saveHistory(chatHistory);
-          renderMessage({ role:'assistant', content: reply });
-          fetchStatus();
+          a.chatHistory.push({ role:'assistant', content: reply });
+          saveHistory(idx, a.chatHistory);
+          if (activeChatIndex === idx) renderMessage(idx, { role:'assistant', content: reply });
+          fetchStatus(idx);
         } else if (json && json.ok === false && json.error === 'unauthorized'){
-          setOnline(false);
-          renderAgentDisplay();
-          openSettings(false);
-          settingsError.textContent = '通行碼錯誤';
+          setAgentOnline(idx, false);
+          renderAgentDisplay(idx);
+          showSlotAuthError(idx);
         } else {
-          renderAgentDisplay();
-          chatHistory.push({ role:'system', content: '連不上麻糬，稍後再試' });
-          saveHistory(chatHistory);
-          renderMessage({ role:'system', content: '連不上麻糬，稍後再試' });
+          renderAgentDisplay(idx);
+          a.chatHistory.push({ role:'system', content: '連不上' + name + '，稍後再試' });
+          saveHistory(idx, a.chatHistory);
+          if (activeChatIndex === idx) renderMessage(idx, { role:'system', content: '連不上' + name + '，稍後再試' });
         }
       })
       .catch(function(){
         hideTyping();
         chatSendBtn.disabled = false;
-        state.isThinking = false;
-        renderAgentDisplay();
-        chatHistory.push({ role:'system', content: '連不上麻糬，稍後再試' });
-        saveHistory(chatHistory);
-        renderMessage({ role:'system', content: '連不上麻糬，稍後再試' });
+        a.isThinking = false;
+        renderAgentDisplay(idx);
+        a.chatHistory.push({ role:'system', content: '連不上' + name + '，稍後再試' });
+        saveHistory(idx, a.chatHistory);
+        if (activeChatIndex === idx) renderMessage(idx, { role:'system', content: '連不上' + name + '，稍後再試' });
       });
   }
 
@@ -837,10 +1137,34 @@
   });
 
   // ---------- 開機 ----------
-  renderAgentDisplay();
-  if (hasConfig()){
+  function afterConfigChanged(){
+    updateAgentSwitchVisibility();
+    updateTaskSectionVisibility();
+    renderAgentDisplay(0);
+    renderAgentDisplay(1);
+    renderUsage();
+
+    if (agents[0].config){ startPolling(0); } else { stopPolling(0); }
+    if (agents[1].config){
+      setTimeout(function(){ startPolling(1); }, POLL_STAGGER_MS);
+    } else {
+      stopPolling(1);
+    }
+  }
+
+  var initialConfigs = loadAgentsConfig();
+  agents[0].config = initialConfigs[0];
+  agents[1].config = initialConfigs[1];
+
+  renderAgentDisplay(0);
+  renderAgentDisplay(1);
+  updateAgentSwitchVisibility();
+  updateTaskSectionVisibility();
+  renderUsage();
+
+  if (agents[0].config){
     closeSettings();
-    startPolling();
+    afterConfigChanged();
   } else {
     openSettings(false);
   }
