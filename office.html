@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小龍指揮中心 | XIAOLONG COMMAND CENTER</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     office.html — 小龍指揮中心（虛擬辦公室）
+     只用本頁專屬 CSS 變數畫像素場景美術；UI 面板顏色沿用 shared.css :root 變數。
+     ============================================================ */
+  :root{
+    --px-unit: 4px;
+    --px-wall: #241a3d;
+    --px-wall-2: #2c2050;
+    --px-wall-dark: #180f2b;
+    --px-floor: #150e26;
+    --px-floor-2: #1c1332;
+    --px-rug: #7c3f6b;
+    --px-rug-dark: #5c2c4e;
+    --px-sky: #140c2b;
+    --px-city: #0c0819;
+    --px-star: #ffe9a8;
+    --px-desk: #4b3a2f;
+    --px-desk-dark: #2f2318;
+    --px-screen: #8be9fd;
+    --px-screen-dark: #2b6f7d;
+    --px-chair: #3b2f4a;
+    --px-chair-dark: #251c30;
+    --px-sofa: #6a4fa0;
+    --px-sofa-dark: #4a3778;
+    --px-lamp: #e8b34a;
+    --px-lamp-pole: #4a3b52;
+    --px-plant: #4c8c5a;
+    --px-plant-dark: #316239;
+    --px-pot: #935e3e;
+    --lobster-body: #ff6b4a;
+    --lobster-dark: #d9502f;
+    --lobster-belly: #ffcf9e;
+    --lobster-eye: #1c1224;
+    --panel-radius: var(--r-lg, 12px);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--px-wall-dark);
+    color: var(--c-text, #5a4a3f);
+    font-family: var(--font-body, 'Noto Sans TC', sans-serif);
+    padding: 0;
+  }
+  .pixel-font { font-family: 'Press Start 2P', var(--font-body), monospace; }
+
+  /* ---------------- 頂部列 ---------------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 16px;
+    background: linear-gradient(180deg, var(--px-wall-2), var(--px-wall));
+    border-bottom: 4px solid var(--px-wall-dark);
+    box-shadow: 0 4px 0 rgba(0,0,0,.25);
+    position: relative;
+    z-index: 20;
+  }
+  .topbar-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .topbar-lobster-icon{ font-size:26px; filter: drop-shadow(0 2px 0 rgba(0,0,0,.4)); }
+  .topbar-titles{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .topbar-title-zh{ font-size:13px; font-weight:800; color:#fff5e8; letter-spacing:1px; }
+  .topbar-title-en{
+    font-size:9px;
+    color: var(--px-lamp);
+    letter-spacing:1px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .topbar-right{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
+  .status-pill{ display:flex; align-items:center; gap:6px; font-size:10px; color:#fff5e8; }
+  .status-dot{
+    width:10px;height:10px;border-radius:50%;
+    background:#666; box-shadow: 0 0 0 2px rgba(0,0,0,.3);
+    transition: background .3s, box-shadow .3s;
+  }
+  .status-dot.online{ background:#5fe07a; box-shadow: 0 0 8px 2px rgba(95,224,122,.8); }
+  .status-dot.offline{ background:#e0654f; box-shadow: 0 0 8px 2px rgba(224,101,79,.6); }
+  .pixel-clock{ text-align:right; }
+  .pixel-clock-time{
+    font-size:16px;
+    color: var(--px-screen);
+    text-shadow: 0 0 6px rgba(139,233,253,.7);
+    letter-spacing:1px;
+  }
+  .pixel-clock-date{ font-size:8px; color:#c9bfe0; margin-top:2px; }
+  .gear-btn{
+    position:fixed; top:10px; right:10px; z-index:200;
+    width:36px; height:36px; border-radius:50%;
+    background:#fff; border:2px solid var(--c-border, #FFD3B6);
+    font-size:16px; cursor:pointer;
+    box-shadow: var(--sh-float, 0 3px 10px rgba(0,0,0,.25));
+    display:flex; align-items:center; justify-content:center;
+  }
+  .gear-btn:hover{ background: var(--c-bg-bottom, #FFF1E6); }
+
+  /* ---------------- 主體版面 ---------------- */
+  .office-layout{
+    display:flex;
+    align-items:stretch;
+    min-height: calc(100vh - 64px);
+  }
+  .scene-col{
+    flex: 1.4 1 0;
+    position: relative;
+    overflow:hidden;
+    background: var(--px-wall);
+  }
+  .panel-col{
+    flex: 1 1 380px;
+    max-width: 460px;
+    background: var(--c-bg-top, #FFF7EE);
+    border-left: 4px solid var(--px-wall-dark);
+    display:flex;
+    flex-direction:column;
+    min-height: 100%;
+  }
+
+  @media (max-width: 860px){
+    .office-layout{ flex-direction:column; }
+    .scene-col{ min-height: 320px; height: 46vh; }
+    .panel-col{ max-width: none; border-left:none; border-top:4px solid var(--px-wall-dark); }
+  }
+
+  /* ---------------- 場景美術 ---------------- */
+  #scene{ position:absolute; inset:0; }
+
+  .wall{
+    position:absolute; inset:0;
+    background: linear-gradient(180deg, var(--px-wall) 0%, var(--px-wall) 62%, var(--px-floor-2) 62%, var(--px-floor) 100%);
+  }
+  .baseboard{
+    position:absolute; left:0; right:0; top:62%; height:6px;
+    background: var(--px-wall-dark);
+  }
+  .rug{
+    position:absolute; left:8%; right:32%; bottom:6%; height:16%;
+    background: var(--px-rug);
+    border: 4px solid var(--px-rug-dark);
+    border-radius: 6px;
+  }
+
+  .window{
+    position:absolute; top:8%; left:10%; width:26%; max-width:220px; height:34%;
+    background: linear-gradient(180deg, var(--px-sky), var(--px-city));
+    border: 6px solid #3a2c5c;
+    box-shadow: inset 0 0 0 3px #140c2b;
+  }
+  .window::before, .window::after{
+    content:''; position:absolute; background:#3a2c5c;
+  }
+  .window::before{ left:50%; top:0; bottom:0; width:6px; margin-left:-3px; }
+  .window::after{ top:50%; left:0; right:0; height:6px; margin-top:-3px; }
+  .star{
+    position:absolute; width:4px; height:4px; background: var(--px-star);
+    animation: twinkle 2.2s ease-in-out infinite;
+  }
+  .city-block{
+    position:absolute; bottom:0; width:14px; background:#241a3d;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:.25; }
+    50%{ opacity:1; }
+  }
+
+  .plant{ position:absolute; }
+  .plant .pot{
+    width:26px; height:20px; background: var(--px-pot);
+    border-top: 3px solid #6b3f26;
+  }
+  .plant .leaf{
+    position:absolute; width:10px; height:22px; background: var(--px-plant);
+    border-radius: 60% 60% 10% 10%;
+    bottom: 18px;
+  }
+  .plant .leaf.l1{ left:-6px; transform: rotate(-18deg); background: var(--px-plant-dark); }
+  .plant .leaf.l2{ left:6px; transform: rotate(4deg); }
+  .plant .leaf.l3{ left:16px; transform: rotate(20deg); background: var(--px-plant-dark); }
+
+  .lamp{ position:absolute; }
+  .lamp .pole{ width:6px; height:70px; background: var(--px-lamp-pole); margin:0 auto; }
+  .lamp .shade{
+    width:44px; height:20px; background: var(--px-lamp);
+    clip-path: polygon(20% 0, 80% 0, 100% 100%, 0% 100%);
+    margin:0 auto;
+  }
+  .lamp .glow{
+    position:absolute; top:14px; left:50%; width:120px; height:120px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(232,179,74,.35), rgba(232,179,74,0) 70%);
+    animation: lamp-pulse 3.2s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes lamp-pulse{
+    0%,100%{ opacity:.7; } 50%{ opacity:1; }
+  }
+
+  .desk{ position:absolute; }
+  .desk .top{ width:170px; height:14px; background: var(--px-desk); border-bottom:4px solid var(--px-desk-dark); }
+  .desk .leg{ position:absolute; bottom:-46px; width:10px; height:46px; background: var(--px-desk-dark); }
+  .desk .leg.l{ left:8px; } .desk .leg.r{ right:8px; }
+  .monitor{ position:absolute; }
+  .monitor .stand{ width:10px; height:12px; background:#20242c; margin:0 auto; }
+  .monitor .base{ width:34px; height:4px; background:#20242c; margin:0 auto; }
+  .monitor .screen{
+    width:64px; height:44px; background: #10161d;
+    border: 4px solid #2a2f38;
+    box-shadow: 0 0 18px 3px var(--px-screen);
+    position:relative; overflow:hidden;
+  }
+  .monitor .screen::after{
+    content:''; position:absolute; inset:0;
+    background: repeating-linear-gradient(180deg, rgba(139,233,253,.18) 0 2px, transparent 2px 5px);
+    animation: scan 2.4s linear infinite;
+  }
+  @keyframes scan{ 0%{ transform:translateY(0);} 100%{ transform:translateY(6px);} }
+
+  .chair{ position:absolute; }
+  .chair .back{ width:30px; height:40px; background: var(--px-chair); border-radius:6px 6px 0 0; }
+  .chair .seat{ width:36px; height:8px; background: var(--px-chair-dark); margin-top:-4px; }
+  .chair .stem{ width:6px; height:20px; background:#2a2130; margin:0 auto; }
+
+  .sofa{ position:absolute; }
+  .sofa .base{ width:150px; height:40px; background: var(--px-sofa); border-radius:8px; }
+  .sofa .back{ width:150px; height:26px; background: var(--px-sofa-dark); border-radius:10px 10px 0 0; }
+  .sofa .arm{ position:absolute; top:-6px; width:18px; height:44px; background: var(--px-sofa-dark); border-radius:8px; }
+  .sofa .arm.left{ left:-10px; } .sofa .arm.right{ right:-10px; }
+
+  /* ---------------- 小龍（像素龍蝦） ---------------- */
+  .lobster-wrap{
+    position:absolute;
+    width: 96px; height: 84px;
+    transition: left .6s ease, top .6s ease;
+  }
+  .lobster{ position:relative; width:100%; height:100%; }
+  .lobster .body{
+    position:absolute; left:22px; top:30px; width:52px; height:32px;
+    background: var(--lobster-body); border-radius:14px;
+    box-shadow: inset 0 -8px 0 var(--lobster-dark);
+  }
+  .lobster .belly{
+    position:absolute; left:30px; top:44px; width:36px; height:14px;
+    background: var(--lobster-belly); border-radius:0 0 10px 10px;
+  }
+  .lobster .tail-seg{ position:absolute; background: var(--lobster-dark); border-radius:6px; }
+  .lobster .tail-seg.t1{ left:32px; top:58px; width:32px; height:8px; }
+  .lobster .tail-seg.t2{ left:36px; top:64px; width:24px; height:7px; }
+  .lobster .tail-seg.t3{ left:40px; top:69px; width:16px; height:6px; }
+  .lobster .eye-stalk{ position:absolute; width:4px; height:14px; background: var(--lobster-dark); }
+  .lobster .eye-stalk.left{ left:34px; top:18px; }
+  .lobster .eye-stalk.right{ left:56px; top:18px; }
+  .lobster .eye{ position:absolute; width:8px; height:8px; background: var(--lobster-eye); border-radius:50%; }
+  .lobster .eye.left{ left:31px; top:12px; }
+  .lobster .eye.right{ left:53px; top:12px; }
+  .lobster .eye::after{ content:''; position:absolute; top:1px; left:1px; width:2px; height:2px; background:#fff; }
+  .lobster .antenna{
+    position:absolute; width:3px; height:26px; background: var(--lobster-dark);
+    transform-origin: bottom center;
+  }
+  .lobster .antenna.left{ left:24px; top:0; transform: rotate(-24deg); }
+  .lobster .antenna.right{ left:69px; top:0; transform: rotate(24deg); }
+  .lobster .claw{
+    position:absolute; width:24px; height:20px; background: var(--lobster-body);
+    border-radius: 10px;
+    box-shadow: inset 0 -5px 0 var(--lobster-dark);
+  }
+  .lobster .claw::before{
+    content:''; position:absolute; top:6px; left:-4px; width:12px; height:8px;
+    background: var(--lobster-body); border-radius:6px;
+    box-shadow: inset 0 -3px 0 var(--lobster-dark);
+  }
+  .lobster .claw.left{ left:2px; top:34px; transform-origin: right center; }
+  .lobster .claw.right{ left:70px; top:34px; transform: scaleX(-1); transform-origin: left center; }
+  .lobster .leg{ position:absolute; width:3px; height:12px; background: var(--lobster-dark); }
+  .lobster .leg.l1{ left:26px; top:56px; transform: rotate(18deg); }
+  .lobster .leg.l2{ left:66px; top:56px; transform: rotate(-18deg); }
+
+  /* 位置與動畫：休息（沙發） vs 工作（書桌） */
+  #scene.mood-resting .lobster-wrap{ animation: lobster-idle 2.6s ease-in-out infinite; }
+  #scene.mood-working .lobster-wrap{ animation: lobster-work 0.7s ease-in-out infinite; }
+  #scene.mood-working .lobster .claw.left{ animation: claw-tap 0.7s ease-in-out infinite; }
+  #scene.mood-working .lobster .claw.right{ animation: claw-tap 0.7s ease-in-out infinite reverse; }
+  @keyframes lobster-idle{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-5px);} }
+  @keyframes lobster-work{ 0%,100%{ transform: translateY(0) rotate(0deg);} 50%{ transform: translateY(-2px) rotate(-1deg);} }
+  @keyframes claw-tap{ 0%,100%{ transform: rotate(0deg);} 50%{ transform: rotate(-14deg);} }
+
+  /* 對話泡泡 */
+  .speech-bubble{
+    position:absolute; left:50%; top:-34px; transform: translateX(-50%);
+    min-width:120px; max-width:200px;
+    background:#fff5e8; color:#3a2c22;
+    border:2px dashed #a88a6b;
+    border-radius:10px;
+    padding:6px 10px;
+    font-size:11px; line-height:1.4;
+    text-align:center;
+    white-space:normal;
+  }
+  .speech-bubble::after{
+    content:''; position:absolute; left:50%; bottom:-8px; transform:translateX(-50%);
+    border-width:8px 6px 0 6px; border-style:solid;
+    border-color:#a88a6b transparent transparent transparent;
+  }
+  .speech-bubble.thinking{ font-style:italic; color:#7a6a58; }
+
+  .mood-capsule{
+    position:absolute; left:50%; bottom:4%; transform:translateX(-50%);
+    background: rgba(20,12,30,.72);
+    color:#ffe9a8;
+    border:2px solid var(--px-lamp);
+    border-radius: 999px;
+    padding:5px 16px;
+    font-size:11px;
+    white-space:nowrap;
+    z-index: 10;
+  }
+
+  /* ---------------- 右側面板 ---------------- */
+  .tabs{
+    display:flex;
+    border-bottom: 2px solid var(--c-border, #FFD3B6);
+    background: var(--c-surface, #FFFBF5);
+  }
+  .tab-btn{
+    flex:1;
+    padding:12px 4px;
+    text-align:center;
+    background:none;
+    border:none;
+    border-bottom: 3px solid transparent;
+    font-weight:800;
+    font-size:13px;
+    color: var(--c-text-soft, #8a7462);
+    cursor:pointer;
+    font-family: var(--font-round, inherit);
+  }
+  .tab-btn.active{
+    color: var(--c-primary, #FF8FA3);
+    border-bottom-color: var(--c-primary, #FF8FA3);
+  }
+  .tab-panels{ flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .tab-panel{ display:none; flex:1; min-height:0; flex-direction:column; padding:14px; overflow-y:auto; }
+  .tab-panel.active{ display:flex; }
+
+  /* 指揮台 */
+  #chatMessages{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:8px; }
+  .msg-row{ display:flex; gap:8px; max-width:100%; }
+  .msg-row.user{ justify-content:flex-end; }
+  .msg-avatar{ font-size:18px; flex-shrink:0; }
+  .msg-bubble{
+    background: var(--c-surface, #FFFBF5);
+    border:2px solid var(--c-border, #FFD3B6);
+    border-radius: var(--r-md, 12px);
+    padding:8px 12px;
+    font-size:13px;
+    line-height:1.5;
+    max-width: 78%;
+    white-space:pre-wrap;
+    word-break: break-word;
+  }
+  .msg-row.user .msg-bubble{ background: var(--c-primary, #FF8FA3); color:#fff; border-color: var(--c-primary-dark,#FF7391); }
+  .msg-row.system .msg-bubble{ background:#f3e2d3; color:#8a7462; font-size:12px; }
+  .typing-dots{ display:inline-flex; gap:3px; align-items:center; }
+  .typing-dots span{
+    width:6px; height:6px; border-radius:50%; background: var(--c-muted,#a89888);
+    animation: typing-blink 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2){ animation-delay:.2s; }
+  .typing-dots span:nth-child(3){ animation-delay:.4s; }
+  @keyframes typing-blink{ 0%,80%,100%{ opacity:.2; } 40%{ opacity:1; } }
+
+  .chat-input-row{ display:flex; gap:8px; margin-top:10px; flex-shrink:0; }
+  .chat-input-row input{
+    flex:1;
+    border: 2px solid var(--c-border, #FFD3B6);
+    border-radius: var(--r-pill, 999px);
+    padding:10px 14px;
+    font-size:14px;
+    font-family: var(--font-body, inherit);
+    outline:none;
+  }
+  .chat-input-row input:focus{ border-color: var(--c-primary, #FF8FA3); }
+  .chat-send-btn{
+    border:none; border-radius: var(--r-pill,999px);
+    background: var(--c-primary,#FF8FA3); color:#fff;
+    padding:0 18px; font-weight:800; cursor:pointer; font-size:14px;
+  }
+  .chat-send-btn:hover{ background: var(--c-primary-dark,#FF7391); }
+  .chat-send-btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  /* 任務板 */
+  .section-label{ font-size:13px; font-weight:800; color: var(--c-brown,#b5755a); margin: 4px 0 8px; }
+  .card{
+    background: var(--c-surface,#FFFBF5);
+    border:2px solid var(--c-border-light,#FFE3CC);
+    border-radius: var(--r-md,12px);
+    padding:10px 12px;
+    margin-bottom:8px;
+    box-shadow: var(--sh-soft, 0 3px 8px rgba(0,0,0,.1));
+  }
+  .schedule-card{ display:flex; align-items:center; gap:12px; }
+  .schedule-time{ font-size:18px; font-weight:800; color: var(--c-brown,#b5755a); min-width:56px; }
+  .schedule-label{ flex:1; font-size:13px; color: var(--c-text,#5a4a3f); }
+  .badge{
+    font-size:11px; font-weight:800; padding:3px 10px; border-radius: var(--r-pill,999px);
+    white-space:nowrap;
+  }
+  .badge.done{ background:#e3f3df; color:#3f8a4c; }
+  .badge.pending{ background:#ffeede; color:#c17a3a; }
+  .digest-card{ white-space:pre-wrap; font-size:13px; line-height:1.6; }
+  .empty-hint{ color: var(--c-muted,#a89888); font-size:13px; text-align:center; padding:20px 0; }
+
+  /* 成本 */
+  .cost-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .cost-card{
+    background: var(--c-surface,#FFFBF5);
+    border:2px solid var(--c-border-light,#FFE3CC);
+    border-radius: var(--r-md,12px);
+    padding:12px 10px;
+    text-align:center;
+  }
+  .cost-card .num{ font-size:20px; font-weight:800; color: var(--c-primary,#FF8FA3); }
+  .cost-card .label{ font-size:11px; color: var(--c-text-soft,#8a7462); margin-top:4px; }
+  .cost-card .sub{ font-size:11px; color: var(--c-muted,#a89888); margin-top:6px; line-height:1.6; }
+  .cost-note{ font-size:11px; color: var(--c-muted-light,#b39a8b); text-align:center; margin-top:auto; }
+
+  /* ---------------- 設定畫面 ---------------- */
+  .settings-overlay{
+    position:fixed; inset:0; z-index:500;
+    background: rgba(20,12,30,.86);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .settings-overlay.hidden{ display:none; }
+  .settings-box{
+    background: var(--c-surface,#FFFBF5);
+    border-radius: var(--r-modal,18px);
+    border:3px solid var(--c-border-light,#FFE3CC);
+    padding:24px 22px;
+    max-width:92%;
+    width:380px;
+    box-shadow: var(--sh-modal, 0 10px 30px rgba(0,0,0,.3));
+  }
+  .settings-box h2{ margin:0 0 6px; font-size:18px; color: var(--c-primary,#FF8FA3); }
+  .settings-box p{ font-size:12.5px; color: var(--c-text-soft,#8a7462); line-height:1.6; margin:0 0 16px; }
+  .settings-box label{ font-size:12px; font-weight:800; color: var(--c-brown,#b5755a); display:block; margin:10px 0 4px; }
+  .settings-box input{
+    width:100%; padding:10px 12px; border-radius: var(--r-sm,10px);
+    border:2px solid var(--c-border,#FFD3B6); font-size:13px; outline:none;
+  }
+  .settings-box input:focus{ border-color: var(--c-primary,#FF8FA3); }
+  .settings-error{ color: var(--c-danger,#e0654f); font-size:12px; margin-top:10px; min-height:16px; }
+  .settings-actions{ display:flex; gap:10px; margin-top:16px; }
+  .settings-actions button{
+    flex:1; border:none; border-radius: var(--r-pill,999px);
+    padding:11px 0; font-weight:800; font-size:13px; cursor:pointer;
+  }
+  #settingsSaveBtn{ background: var(--c-primary,#FF8FA3); color:#fff; }
+  #settingsSaveBtn:hover{ background: var(--c-primary-dark,#FF7391); }
+  #settingsSaveBtn:disabled{ opacity:.6; cursor:not-allowed; }
+  #settingsCancelBtn{ background:#fff; color: var(--c-brown,#b5755a); border:2px solid var(--c-border,#FFD3B6) !important; }
+</style>
+</head>
+<body>
+
+<button class="gear-btn" id="gearBtn" title="設定">⚙️</button>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-lobster-icon">🦞</span>
+    <div class="topbar-titles">
+      <div class="topbar-title-zh">小龍指揮中心</div>
+      <div class="topbar-title-en pixel-font">XIAOLONG COMMAND CENTER</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-pill">
+      <span class="status-dot offline" id="statusDot"></span>
+      <span id="statusLabel">OFFLINE</span>
+    </div>
+    <div class="pixel-clock">
+      <div class="pixel-clock-time pixel-font" id="clockTime">00:00:00</div>
+      <div class="pixel-clock-date" id="clockDate">2026/01/01</div>
+    </div>
+  </div>
+</div>
+
+<div class="office-layout">
+  <div class="scene-col">
+    <div id="scene" class="mood-resting">
+      <div class="wall"></div>
+      <div class="baseboard"></div>
+      <div class="rug"></div>
+
+      <div class="window" id="window">
+        <!-- stars & city blocks injected by JS -->
+      </div>
+
+      <div class="plant" style="left:4%; top:56%;">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+        <div class="pot"></div>
+      </div>
+      <div class="plant" style="right:6%; top:30%; transform:scale(.85);">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+        <div class="pot"></div>
+      </div>
+
+      <div class="lamp" style="left:6%; top:22%;">
+        <div class="glow"></div>
+        <div class="shade"></div>
+        <div class="pole"></div>
+      </div>
+
+      <div class="desk" style="left:12%; top:52%;">
+        <div class="monitor" style="position:absolute; left:52px; top:-58px;">
+          <div class="screen"></div>
+          <div class="stand"></div>
+          <div class="base"></div>
+        </div>
+        <div class="top"></div>
+        <div class="leg l"></div>
+        <div class="leg r"></div>
+      </div>
+      <div class="chair" style="left:18%; top:64%;">
+        <div class="back"></div>
+        <div class="seat"></div>
+        <div class="stem"></div>
+      </div>
+
+      <div class="sofa" style="right:8%; top:58%;">
+        <div class="arm left"></div>
+        <div class="back"></div>
+        <div class="base"></div>
+        <div class="arm right"></div>
+      </div>
+
+      <div class="lobster-wrap" id="lobsterWrap">
+        <div class="speech-bubble" id="speechBubble">休息中…</div>
+        <div class="lobster">
+          <div class="antenna left"></div>
+          <div class="antenna right"></div>
+          <div class="eye-stalk left"></div>
+          <div class="eye-stalk right"></div>
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="claw left"></div>
+          <div class="claw right"></div>
+          <div class="body"></div>
+          <div class="belly"></div>
+          <div class="leg l1"></div>
+          <div class="leg l2"></div>
+          <div class="tail-seg t1"></div>
+          <div class="tail-seg t2"></div>
+          <div class="tail-seg t3"></div>
+        </div>
+      </div>
+
+      <div class="mood-capsule" id="moodCapsule">小龍 — 休息中</div>
+    </div>
+  </div>
+
+  <div class="panel-col">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="chat">💬 指揮台</button>
+      <button class="tab-btn" data-tab="tasks">📋 任務板</button>
+      <button class="tab-btn" data-tab="cost">💰 成本</button>
+    </div>
+    <div class="tab-panels">
+      <div class="tab-panel active" id="tab-chat">
+        <div id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="輸入指令給小龍…" maxlength="2000">
+          <button class="chat-send-btn" id="chatSendBtn">送出</button>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-tasks">
+        <div class="section-label">今日排程</div>
+        <div id="scheduleList"><div class="empty-hint">尚無排程資料</div></div>
+        <div class="section-label" style="margin-top:18px;">昨日小記</div>
+        <div id="digestArea"><div class="empty-hint">還沒有小記 🌙</div></div>
+      </div>
+
+      <div class="tab-panel" id="tab-cost">
+        <div class="cost-grid">
+          <div class="cost-card">
+            <div class="num" id="costToday">$0.00</div>
+            <div class="label">今日花費</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="costTotal">$0.00</div>
+            <div class="label">累計花費</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="tokenToday">0</div>
+            <div class="label">今日 TOKEN</div>
+            <div class="sub" id="tokenBreakdown">input 0 / output 0</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="callToday">0</div>
+            <div class="label">今日呼叫次數</div>
+          </div>
+        </div>
+        <div class="cost-note">金額為 API 估算值（USD）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-box">
+    <h2>設定小龍連線</h2>
+    <p>請貼上 GAS 後端網址與通行碼。資料只存在這台裝置的瀏覽器中（localStorage），不會上傳到任何地方。</p>
+    <label for="settingsUrlInput">後端網址</label>
+    <input type="text" id="settingsUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec">
+    <label for="settingsTokenInput">通行碼</label>
+    <input type="password" id="settingsTokenInput" placeholder="通行碼">
+    <div class="settings-error" id="settingsError"></div>
+    <div class="settings-actions">
+      <button id="settingsCancelBtn" style="display:none;">取消</button>
+      <button id="settingsSaveBtn">儲存並連線</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var CFG_URL_KEY = 'xiaolongApiUrl';
+  var CFG_TOKEN_KEY = 'xiaolongToken';
+  var CHAT_HISTORY_KEY = 'xiaolongChatHistory';
+  var POLL_MS = 30000;
+
+  var state = {
+    agent: { name:'小龍', mood:'resting', activity:'休息中…', updatedAt:null },
+    schedules: [],
+    usage: { today:{ costUSD:0, inputTokens:0, outputTokens:0, calls:0 }, total:{ costUSD:0, tokens:0 } },
+    lastDigest: null,
+    online: false,
+    isThinking: false
+  };
+
+  var pollTimer = null;
+
+  // ---------- localStorage 設定 ----------
+  function getConfig(){
+    return {
+      url: localStorage.getItem(CFG_URL_KEY) || '',
+      token: localStorage.getItem(CFG_TOKEN_KEY) || ''
+    };
+  }
+  function saveConfig(url, token){
+    localStorage.setItem(CFG_URL_KEY, url);
+    localStorage.setItem(CFG_TOKEN_KEY, token);
+  }
+  function hasConfig(){
+    var c = getConfig();
+    return !!(c.url && c.token);
+  }
+
+  function buildUrl(base, params){
+    var sep = base.indexOf('?') >= 0 ? '&' : '?';
+    var qs = Object.keys(params).map(function(k){
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+    return base + sep + qs;
+  }
+
+  // ---------- 設定畫面 ----------
+  var settingsOverlay = document.getElementById('settingsOverlay');
+  var settingsUrlInput = document.getElementById('settingsUrlInput');
+  var settingsTokenInput = document.getElementById('settingsTokenInput');
+  var settingsError = document.getElementById('settingsError');
+  var settingsSaveBtn = document.getElementById('settingsSaveBtn');
+  var settingsCancelBtn = document.getElementById('settingsCancelBtn');
+  var gearBtn = document.getElementById('gearBtn');
+
+  function openSettings(allowCancel){
+    var c = getConfig();
+    settingsUrlInput.value = c.url;
+    settingsTokenInput.value = c.token;
+    settingsError.textContent = '';
+    settingsCancelBtn.style.display = allowCancel ? '' : 'none';
+    settingsOverlay.classList.remove('hidden');
+  }
+  function closeSettings(){
+    settingsOverlay.classList.add('hidden');
+  }
+
+  gearBtn.addEventListener('click', function(){ openSettings(hasConfig()); });
+  settingsCancelBtn.addEventListener('click', function(){
+    if (hasConfig()) closeSettings();
+  });
+
+  settingsSaveBtn.addEventListener('click', function(){
+    var url = (settingsUrlInput.value || '').trim();
+    var token = (settingsTokenInput.value || '').trim();
+    if (!url || !token){
+      settingsError.textContent = '請填寫網址與通行碼';
+      return;
+    }
+    settingsSaveBtn.disabled = true;
+    settingsError.textContent = '連線確認中…';
+    fetch(buildUrl(url, { token: token, scope: 'status' }))
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        settingsSaveBtn.disabled = false;
+        if (json && json.ok === true){
+          saveConfig(url, token);
+          closeSettings();
+          applyStatus(json);
+          startPolling();
+        } else if (json && json.ok === false && json.error === 'unauthorized'){
+          settingsError.textContent = '通行碼錯誤';
+        } else {
+          settingsError.textContent = '連線失敗，請確認網址是否正確';
+        }
+      })
+      .catch(function(){
+        settingsSaveBtn.disabled = false;
+        settingsError.textContent = '連不上小龍，稍後再試';
+      });
+  });
+
+  // ---------- 時鐘 ----------
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function tickClock(){
+    var now = new Date();
+    document.getElementById('clockTime').textContent =
+      pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
+    document.getElementById('clockDate').textContent =
+      now.getFullYear() + '/' + pad2(now.getMonth()+1) + '/' + pad2(now.getDate());
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // ---------- 場景星星 ----------
+  (function initStars(){
+    var win = document.getElementById('window');
+    for (var i = 0; i < 14; i++){
+      var s = document.createElement('div');
+      s.className = 'star';
+      s.style.left = (5 + Math.random() * 90) + '%';
+      s.style.top = (5 + Math.random() * 55) + '%';
+      s.style.animationDelay = (Math.random() * 2) + 's';
+      win.appendChild(s);
+    }
+    var heights = [18, 26, 14, 30, 20, 24];
+    var left = 4;
+    for (var j = 0; j < heights.length; j++){
+      var b = document.createElement('div');
+      b.className = 'city-block';
+      b.style.left = left + 'px';
+      b.style.height = heights[j] + 'px';
+      win.appendChild(b);
+      left += 16;
+    }
+  })();
+
+  // ---------- 場景 / 角色狀態 ----------
+  var sceneEl = document.getElementById('scene');
+  var speechBubble = document.getElementById('speechBubble');
+  var moodCapsule = document.getElementById('moodCapsule');
+  var statusDot = document.getElementById('statusDot');
+  var statusLabel = document.getElementById('statusLabel');
+
+  function renderAgentDisplay(){
+    var effectiveMood = state.isThinking ? 'working' : (state.agent.mood === 'working' ? 'working' : 'resting');
+    sceneEl.classList.toggle('mood-working', effectiveMood === 'working');
+    sceneEl.classList.toggle('mood-resting', effectiveMood !== 'working');
+
+    if (state.isThinking){
+      speechBubble.textContent = '小龍思考中…';
+      speechBubble.classList.add('thinking');
+    } else {
+      speechBubble.textContent = state.agent.activity || (effectiveMood === 'working' ? '工作中…' : '休息中…');
+      speechBubble.classList.remove('thinking');
+    }
+    moodCapsule.textContent = '小龍 — ' + (state.agent.mood === 'working' ? '工作中' : '休息中');
+  }
+
+  function setOnline(isOnline){
+    state.online = isOnline;
+    statusDot.classList.toggle('online', isOnline);
+    statusDot.classList.toggle('offline', !isOnline);
+    statusLabel.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+  }
+
+  // ---------- 任務板 ----------
+  function renderSchedules(list){
+    var wrap = document.getElementById('scheduleList');
+    wrap.innerHTML = '';
+    if (!list || !list.length){
+      wrap.innerHTML = '<div class="empty-hint">尚無排程資料</div>';
+      return;
+    }
+    list.forEach(function(item){
+      var card = document.createElement('div');
+      card.className = 'card schedule-card';
+      var done = item.status === 'done';
+      card.innerHTML =
+        '<div class="schedule-time">' + escapeHtml(item.time || '--:--') + '</div>' +
+        '<div class="schedule-label">' + escapeHtml(item.label || '') + '</div>' +
+        '<div class="badge ' + (done ? 'done' : 'pending') + '">' + (done ? '✅ 已完成' : '⏳ 待執行') + '</div>';
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderDigest(digest){
+    var wrap = document.getElementById('digestArea');
+    wrap.innerHTML = '';
+    if (!digest || !digest.text){
+      wrap.innerHTML = '<div class="empty-hint">還沒有小記 🌙</div>';
+      return;
+    }
+    var card = document.createElement('div');
+    card.className = 'card digest-card';
+    card.innerHTML = '<div class="section-label" style="margin:0 0 6px;">' + escapeHtml(digest.date || '') + '</div>' +
+      '<div>' + escapeHtml(digest.text) + '</div>';
+    wrap.appendChild(card);
+  }
+
+  // ---------- 成本 ----------
+  function renderUsage(usage){
+    if (!usage) return;
+    var today = usage.today || {};
+    var total = usage.total || {};
+    document.getElementById('costToday').textContent = '$' + Number(today.costUSD || 0).toFixed(2);
+    document.getElementById('costTotal').textContent = '$' + Number(total.costUSD || 0).toFixed(2);
+    var inTok = Number(today.inputTokens || 0);
+    var outTok = Number(today.outputTokens || 0);
+    document.getElementById('tokenToday').textContent = (inTok + outTok);
+    document.getElementById('tokenBreakdown').textContent = 'input ' + inTok + ' / output ' + outTok;
+    document.getElementById('callToday').textContent = Number(today.calls || 0);
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ---------- 套用 status 回應 ----------
+  function applyStatus(json){
+    if (json.agent) state.agent = json.agent;
+    if (json.schedules) state.schedules = json.schedules;
+    if (json.usage) state.usage = json.usage;
+    if ('lastDigest' in json) state.lastDigest = json.lastDigest;
+    renderAgentDisplay();
+    renderSchedules(state.schedules);
+    renderDigest(state.lastDigest);
+    renderUsage(state.usage);
+  }
+
+  function fetchStatus(){
+    var c = getConfig();
+    if (!c.url || !c.token) return;
+    fetch(buildUrl(c.url, { token: c.token, scope: 'status' }))
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        if (json && json.ok === true){
+          setOnline(true);
+          applyStatus(json);
+        } else if (json && json.ok === false && json.error === 'unauthorized'){
+          setOnline(false);
+          openSettings(false);
+          settingsError.textContent = '通行碼錯誤';
+        } else {
+          setOnline(false);
+        }
+      })
+      .catch(function(){
+        setOnline(false);
+      });
+  }
+
+  function startPolling(){
+    fetchStatus();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(fetchStatus, POLL_MS);
+  }
+
+  // ---------- 分頁切換 ----------
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('active');
+    });
+  });
+
+  // ---------- 指揮台聊天 ----------
+  var chatMessages = document.getElementById('chatMessages');
+  var chatInput = document.getElementById('chatInput');
+  var chatSendBtn = document.getElementById('chatSendBtn');
+  var WELCOME_TEXT = '哈囉老闆！我是小龍，有什麼指示嗎？';
+
+  function loadHistory(){
+    try{
+      var raw = sessionStorage.getItem(CHAT_HISTORY_KEY);
+      if (raw) return JSON.parse(raw);
+    }catch(e){}
+    var seeded = [{ role:'assistant', content: WELCOME_TEXT }];
+    sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+  function saveHistory(list){
+    try{ sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list)); }catch(e){}
+  }
+
+  var chatHistory = loadHistory();
+
+  function renderMessage(msg){
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + (msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant'));
+    var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : '🦞');
+    row.innerHTML =
+      (msg.role !== 'user' ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
+      '<div class="msg-bubble">' + escapeHtml(msg.content) + '</div>';
+    chatMessages.appendChild(row);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function renderAllMessages(){
+    chatMessages.innerHTML = '';
+    chatHistory.forEach(renderMessage);
+  }
+  renderAllMessages();
+
+  var typingRow = null;
+  function showTyping(){
+    typingRow = document.createElement('div');
+    typingRow.className = 'msg-row assistant';
+    typingRow.innerHTML = '<div class="msg-avatar">🦞</div><div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
+    chatMessages.appendChild(typingRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  function hideTyping(){
+    if (typingRow && typingRow.parentNode){ typingRow.parentNode.removeChild(typingRow); }
+    typingRow = null;
+  }
+
+  function sendMessage(){
+    var text = (chatInput.value || '').trim();
+    if (!text) return;
+    var c = getConfig();
+    if (!c.url || !c.token){
+      openSettings(false);
+      return;
+    }
+
+    var historyForRequest = chatHistory.slice(-12);
+    chatHistory.push({ role:'user', content: text });
+    saveHistory(chatHistory);
+    renderMessage({ role:'user', content: text });
+    chatInput.value = '';
+    chatSendBtn.disabled = true;
+
+    state.isThinking = true;
+    renderAgentDisplay();
+    showTyping();
+
+    fetch(c.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ token: c.token, type: 'chat', message: text, history: historyForRequest })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        hideTyping();
+        chatSendBtn.disabled = false;
+        state.isThinking = false;
+        if (json && json.ok === true){
+          setOnline(true);
+          var reply = json.reply || '';
+          chatHistory.push({ role:'assistant', content: reply });
+          saveHistory(chatHistory);
+          renderMessage({ role:'assistant', content: reply });
+          fetchStatus();
+        } else if (json && json.ok === false && json.error === 'unauthorized'){
+          setOnline(false);
+          renderAgentDisplay();
+          openSettings(false);
+          settingsError.textContent = '通行碼錯誤';
+        } else {
+          renderAgentDisplay();
+          chatHistory.push({ role:'system', content: '連不上小龍，稍後再試' });
+          saveHistory(chatHistory);
+          renderMessage({ role:'system', content: '連不上小龍，稍後再試' });
+        }
+      })
+      .catch(function(){
+        hideTyping();
+        chatSendBtn.disabled = false;
+        state.isThinking = false;
+        renderAgentDisplay();
+        chatHistory.push({ role:'system', content: '連不上小龍，稍後再試' });
+        saveHistory(chatHistory);
+        renderMessage({ role:'system', content: '連不上小龍，稍後再試' });
+      });
+  }
+
+  chatSendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ---------- 開機 ----------
+  renderAgentDisplay();
+  if (hasConfig()){
+    startPolling();
+  } else {
+    openSettings(false);
+  }
+})();
+</script>
+</body>
+</html>
