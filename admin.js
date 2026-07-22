@@ -1463,6 +1463,9 @@ async function tryUnlock() {
       switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
       initAppUI(); // 介面接線（側邊欄監聽、雙欄工作區）不可依賴後端成功，否則抓資料失敗＝整頁變磚
       try { await fetchMemos(); } catch (e) { console.error('fetchMemos 失敗，介面仍可操作', e); }
+      if (result.weakPassword) {
+        alert('提醒：你目前還在使用初始密碼，請到 設定→修改密碼 更換，避免帳號被盜用。');
+      }
     } else {
       errEl.textContent = result.error || '姓名或密碼錯誤，請再試一次';
       input.value = '';

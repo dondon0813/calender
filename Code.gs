@@ -10,7 +10,8 @@ const PRODUCT_DB_SHEET_NAME = '成品資料庫';
 const RECIPE_SHEET_NAME = '食譜';
 const SCHOOL_LIST_SHEET_NAME = '開學清單';
 
-const PASSWORD_PEPPER = 'dondon0813_uihwfie68sd6sd4s_abc123xyz';
+const LEGACY_PASSWORD_PEPPER = 'dondon0813_uihwfie68sd6sd4s_abc123xyz'; // 舊制單輪雜湊用；此值已隨原始碼公開洩漏，僅保留用於驗證舊資料，新雜湊一律改用 getPepper_()
+const HASH_ITERATIONS = 5000;
 const STAFF_SALT_LENGTH = 16;
 const STAFF_COL_NAME = 1;
 const STAFF_COL_HASH = 2;
@@ -249,8 +250,66 @@ function randomSalt_() {
   return Utilities.getUuid().replace(/-/g, '').substring(0, STAFF_SALT_LENGTH);
 }
 
+// 舊制單輪雜湊：已由 hashPasswordV2_ / verifyPassword_ 取代，新程式碼不應再呼叫；保留供對照與緊急排錯用
 function hashPassword_(password, salt) {
-  return sha256Hex_(String(password) + String(salt) + PASSWORD_PEPPER);
+  return sha256Hex_(String(password) + String(salt) + LEGACY_PASSWORD_PEPPER);
+}
+
+// 讀取 Script Properties 的 PASSWORD_PEPPER；未設定時 fallback 回 LEGACY_PASSWORD_PEPPER，不 throw
+function getPepper_() {
+  const p = PropertiesService.getScriptProperties().getProperty('PASSWORD_PEPPER');
+  return p || LEGACY_PASSWORD_PEPPER;
+}
+
+// pepper 指紋（sha256 前 8 碼），寫進雜湊字串裡以便日後判斷這筆雜湊當初是用哪把 pepper 產生的
+function pepperFp_(pepper) {
+  return sha256Hex_(String(pepper)).substring(0, 8);
+}
+
+// 新制：多輪雜湊。h0 = sha256(pw+salt+pepper)，之後 iterations-1 輪 h = sha256(h+salt)
+// 格式：'v2$' + iterations + '$' + pepperFp + '$' + hex
+function hashPasswordV2_(password, salt, iterations, pepper) {
+  let h = sha256Hex_(String(password) + String(salt) + String(pepper));
+  for (let i = 1; i < iterations; i++) {
+    h = sha256Hex_(h + String(salt));
+  }
+  return 'v2$' + iterations + '$' + pepperFp_(pepper) + '$' + h;
+}
+
+// 密碼比對：v2 格式依內嵌的 iterations/pepper 指紋重算比對（指紋對得上現行 pepper 或舊 pepper 都接受）；
+// 非 v2（舊制）用單輪 sha256(pw+salt+LEGACY_PASSWORD_PEPPER) 比對
+function verifyPassword_(password, salt, storedHash) {
+  const stored = String(storedHash || '');
+  if (stored.indexOf('v2$') === 0) {
+    const parts = stored.split('$');
+    if (parts.length !== 4) return false;
+    const iterations = parseInt(parts[1], 10);
+    const fp = parts[2];
+    if (!iterations || !fp) return false;
+    let pepper;
+    if (fp === pepperFp_(getPepper_())) {
+      pepper = getPepper_();
+    } else if (fp === pepperFp_(LEGACY_PASSWORD_PEPPER)) {
+      pepper = LEGACY_PASSWORD_PEPPER;
+    } else {
+      return false;
+    }
+    return hashPasswordV2_(password, salt, iterations, pepper) === stored;
+  }
+  return sha256Hex_(String(password) + String(salt) + LEGACY_PASSWORD_PEPPER) === stored;
+}
+
+// 是否需要重新雜湊寫回：非 v2、或輪數不是目前設定、或 pepper 指紋不是目前設定 → true
+function needsRehash_(storedHash) {
+  const stored = String(storedHash || '');
+  if (stored.indexOf('v2$') !== 0) return true;
+  const parts = stored.split('$');
+  if (parts.length !== 4) return true;
+  const iterations = parseInt(parts[1], 10);
+  const fp = parts[2];
+  if (iterations !== HASH_ITERATIONS) return true;
+  if (fp !== pepperFp_(getPepper_())) return true;
+  return false;
 }
 
 // ===== 員工名單 =====
@@ -263,8 +322,9 @@ function getStaffSheet_() {
     sheet.appendRow(['姓名', '密碼雜湊', 'Salt', '新密碼(打這裡存檔後自動加密並清空)']);
     const salt1 = randomSalt_();
     const salt2 = randomSalt_();
-    sheet.appendRow(['雪莉', hashPassword_(getPassword_(), salt1), salt1, '']);
-    sheet.appendRow(['曾曾', hashPassword_('0000', salt2), salt2, '']);
+    const pepper = getPepper_();
+    sheet.appendRow(['雪莉', hashPasswordV2_(getPassword_(), salt1, HASH_ITERATIONS, pepper), salt1, '']);
+    sheet.appendRow(['曾曾', hashPasswordV2_('0000', salt2, HASH_ITERATIONS, pepper), salt2, '']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -388,7 +448,7 @@ function setStaffPassword_(name, newPlainPassword) {
   const row = findStaffRowByName_(name);
   if (row === -1) return false;
   const salt = randomSalt_();
-  const hash = hashPassword_(newPlainPassword, salt);
+  const hash = hashPasswordV2_(newPlainPassword, salt, HASH_ITERATIONS, getPepper_());
   sheet.getRange(row, STAFF_COL_HASH).setValue(hash);
   sheet.getRange(row, STAFF_COL_SALT).setValue(salt);
   return true;
@@ -412,7 +472,7 @@ function onEdit(e) {
     if (!name) return;
 
     const salt = randomSalt_();
-    const hash = hashPassword_(newValue, salt);
+    const hash = hashPasswordV2_(newValue, salt, HASH_ITERATIONS, getPepper_());
     sheet.getRange(row, STAFF_COL_HASH).setValue(hash);
     sheet.getRange(row, STAFF_COL_SALT).setValue(salt);
     sheet.getRange(row, STAFF_COL_NEWPW).setValue('');
@@ -446,7 +506,7 @@ function migrateStaffPasswordsToHash_ONETIME() {
     const plainPassword = String(data[i][1] || '').trim();
     if (!name) continue;
     const salt = randomSalt_();
-    const hash = hashPassword_(plainPassword, salt);
+    const hash = hashPasswordV2_(plainPassword, salt, HASH_ITERATIONS, getPepper_());
     newRows.push([name, hash, salt, '']);
     count++;
   }
@@ -1484,8 +1544,25 @@ function getStatsMap_() {
   return map;
 }
 
+// 白名單涵蓋 index.html 實際會送出的 6 種 key 格式，範例：
+//   block_B1737510000000        自訂區塊（block.id = 'B'+時間戳，見 index.html:780）
+//   12_2026-7-22                團購活動瀏覽（ev.id + 西元年-月-日，月/日不補零，見 index.html:799-802）
+//   12_2026-7-22_src_list       分表單來源點擊（mode 來自 modeSelect：all/start/end/list，見 index.html:848）
+//   12_2026-7-22_intro          食材入口點擊（見 index.html:1559）
+//   12_2026-7-22_recipe         食譜入口點擊（見 index.html:1563）
+//   12_2026-7-22_order          下單按鈕點擊（見 index.html:1567）
+//   12_2026-7-22_code           折扣碼複製點擊（見 index.html:1596）
+const STAT_KEY_WHITELIST_RE = /^(block_[A-Za-z0-9]+|\d+_\d{4}-\d{1,2}-\d{1,2}(_(src_[a-z0-9]+|intro|recipe|order|code))?)$/;
+const STAT_KEY_ROW_CAP = 2000;
+
+function isValidStatKey_(key) {
+  if (typeof key !== 'string') return false;
+  if (key.length === 0 || key.length > 80) return false;
+  return STAT_KEY_WHITELIST_RE.test(key);
+}
+
 function incrementStat_(key, field) {
-  if (!key) return false;
+  if (!isValidStatKey_(key)) return false;
   const col = field === 'clicks' ? 3 : 2;
   const sheet = getStatSheet_();
   const data = sheet.getDataRange().getValues();
@@ -1494,6 +1571,7 @@ function incrementStat_(key, field) {
     if (String(data[i][0]) === key) { rowIndex = i + 1; break; }
   }
   if (rowIndex === -1) {
+    if (data.length - 1 >= STAT_KEY_ROW_CAP) return false; // 既有 key 數已達上限，不再新增；既有 key 累加不受此限制
     const row = [key, 0, 0, new Date()];
     row[col - 1] = 1;
     sheet.appendRow(row);
@@ -1984,9 +2062,9 @@ function doPost(e) {
       const staff = getStaff_();
       let matches;
       if (name) {
-        matches = staff.filter(function (s) { return s.name === name && s.hash === hashPassword_(password, s.salt); });
+        matches = staff.filter(function (s) { return s.name === name && verifyPassword_(password, s.salt, s.hash); });
       } else {
-        matches = staff.filter(function (s) { return s.hash === hashPassword_(password, s.salt); });
+        matches = staff.filter(function (s) { return verifyPassword_(password, s.salt, s.hash); });
       }
 
       if (matches.length === 0) {
@@ -1997,21 +2075,22 @@ function doPost(e) {
       }
 
       const token = createSession_(matches[0].name);
-      return jsonResult_({ success: true, token: token, name: matches[0].name });
+      if (needsRehash_(matches[0].hash)) {
+        try { setStaffPassword_(matches[0].name, password); } catch (rehashErr) { /* 寫回失敗不影響登入成功 */ }
+      }
+      return jsonResult_({ success: true, token: token, name: matches[0].name, weakPassword: (password === DEFAULT_PASSWORD) });
     }
 
     if (type === 'stat-view') {
       const key = String(body.key || '').trim();
       if (!key) return jsonResult_({ success: false, error: '缺少 key' });
-      incrementStat_(key, 'views');
-      return jsonResult_({ success: true });
+      return jsonResult_({ success: incrementStat_(key, 'views') });
     }
 
     if (type === 'stat-click') {
       const key = String(body.key || '').trim();
       if (!key) return jsonResult_({ success: false, error: '缺少 key' });
-      incrementStat_(key, 'clicks');
-      return jsonResult_({ success: true });
+      return jsonResult_({ success: incrementStat_(key, 'clicks') });
     }
 
     if (type === 'task-quick-add') {
@@ -2058,7 +2137,7 @@ function doPost(e) {
       if (!me) {
         return jsonResult_({ success: false, error: '找不到使用者資料' });
       }
-      if (hashPassword_(oldPassword, me.salt) !== me.hash) {
+      if (!verifyPassword_(oldPassword, me.salt, me.hash)) {
         return jsonResult_({ success: false, error: '舊密碼不正確' });
       }
       setStaffPassword_(currentUser, newPassword);
