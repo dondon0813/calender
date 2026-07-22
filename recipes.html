@@ -9,6 +9,17 @@
   /* recipes.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 等在 shared.css。
      色碼、圓角、字體一律用 shared.css 的 :root 變數。 */
 
+  /* ===== recipes.html 專屬色碼變數（跨頁重複值走 shared.css，本頁獨有值集中在此） ===== */
+  :root {
+    --rcp-peach-accent: #E0954A;    /* 桃橘強調色：標題文字／分隔線／邊框 */
+    --rcp-oil-text: #8a5a2b;        /* 油切徽章／按鈕的深棕文字 */
+    --rcp-hover-bg: #FFEDDB;        /* 食譜/食材清單項目 hover 底色 */
+    --rcp-pink-card-border: #FFC7D3; /* 首頁粉色卡片邊框 */
+    --rcp-oil-bg: #FFF6E4;          /* 油切切換按鈕底色 */
+    --rcp-oil-hover-bg: #FFEcC4;    /* 油切切換按鈕 hover 底色 */
+    --rcp-badge-pink: #EB99AC;      /* 小圓形數字徽章底色 */
+  }
+
   /* ===== 對 shared.css 的覆寫 ===== */
 
   /* 本頁頁尾比共用的緊一點 */
@@ -101,7 +112,7 @@
   .chip-clear {
     font-size: 11.5px;
     font-weight: 700;
-    color: #c99a3a;
+    color: var(--c-gold-text);
     background: none;
     border: none;
     cursor: pointer;
@@ -142,7 +153,7 @@
     background: #fff;
     outline: none;
   }
-  .ing-search-input::placeholder { color: #cbb8a8; }
+  .ing-search-input::placeholder { color: var(--c-placeholder); }
   .ing-search-input:focus { border-color: var(--c-primary); }
 
   .ing-selected-chips {
@@ -176,7 +187,7 @@
   .ing-tile:hover { transform: translateY(-2px); }
   .ing-tile.active {
     border-color: var(--c-primary);
-    background: #FFF0F3;
+    background: var(--c-pink-bg);
     box-shadow: 0 4px 12px rgba(255,143,163,0.25);
   }
   .ing-tile-icon {
@@ -208,8 +219,8 @@
     right: 4px;
     font-size: 9px;
     font-weight: 800;
-    color: #8E6BB5;
-    background: #EFE4FB;
+    color: var(--c-purple-text);
+    background: var(--c-purple-bg);
     border-radius: var(--r-pill);
     padding: 1px 6px;
     line-height: 1.5;
@@ -308,7 +319,7 @@
   .oil-badge {
     font-size: 9.5px;
     font-weight: 800;
-    color: #8a5a2b;
+    color: var(--rcp-oil-text);
     background: rgba(255, 246, 224, 0.95);
     border: 1px solid var(--c-cat-6);
     border-radius: var(--r-pill);
@@ -341,9 +352,9 @@
     border-radius: var(--r-pill);
     padding: 2px 8px;
   }
-  .tag-brand { background: #E2EBFD; color: #5F87C9; }
-  .tag-age { background: #E4F5DF; color: #5C9147; }
-  .tag-type-product { background: #EFE4FB; color: #8E6BB5; }
+  .tag-brand { background: var(--c-blue-bg); color: var(--c-blue-text); }
+  .tag-age { background: var(--c-mint-bg); color: var(--c-mint-text); }
+  .tag-type-product { background: var(--c-purple-bg); color: var(--c-purple-text); }
 
   .recipe-card {
     text-align: left;
@@ -412,7 +423,7 @@
   .recipe-card-modal {
     width: 380px;
     padding: 16px 18px 20px;
-    background: #FFFCF7;
+    background: var(--c-surface-3);
     border-radius: 26px;
     border: none;
     box-shadow: 0 16px 40px rgba(210,150,110,0.28);
@@ -483,7 +494,7 @@
   .rc-info-row {
     display: flex;
     justify-content: space-around;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     border-radius: 16px;
     padding: 10px 6px;
     margin-bottom: 16px;
@@ -505,14 +516,14 @@
     color: var(--c-primary);
   }
   .spec-list {
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     border-radius: 16px;
     padding: 4px 14px;
     margin-bottom: 16px;
   }
   .spec-list-item {
     padding: 9px 0;
-    border-bottom: 1px dotted #F0DFCB;
+    border-bottom: 1px dotted var(--c-line-2);
   }
   .spec-list-item:last-child { border-bottom: none; }
   .spec-list-label {
@@ -539,7 +550,7 @@
     font-size: 13.5px;
     font-weight: 800;
     color: var(--c-text);
-    background: #FFE9CE;
+    background: var(--c-orange-bg-2);
     border-radius: var(--r-pill);
     padding: 5px 14px;
   }
@@ -556,7 +567,7 @@
     justify-content: space-between;
     gap: 6px;
     padding: 3px 0;
-    border-bottom: 1px dotted #F0DFCB;
+    border-bottom: 1px dotted var(--c-line-2);
     cursor: pointer;
   }
   .rc-ing-item .rc-ing-name { font-weight: 700; }
@@ -598,8 +609,8 @@
     margin-top: 1px;
   }
   .rc-tip-box {
-    background: #FFF6EC;
-    border: 1.5px dashed #FFC79A;
+    background: var(--c-orange-bg);
+    border: 1.5px dashed var(--c-orange-dash-2);
     border-radius: 16px;
     padding: 12px 14px;
     margin-bottom: 4px;
@@ -607,7 +618,7 @@
   .rc-tip-title {
     font-size: 12.5px;
     font-weight: 800;
-    color: #E0954A;
+    color: var(--rcp-peach-accent);
     margin-bottom: 4px;
   }
   .rc-tip-text {
@@ -618,7 +629,7 @@
   .rc-footer {
     text-align: center;
     font-size: 11.5px;
-    color: #FFB4C2;
+    color: var(--c-pink-text);
     font-weight: 700;
     margin-top: 14px;
   }
@@ -672,11 +683,11 @@
     gap: 8px;
     padding: 8px;
     border-radius: 10px;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     margin-bottom: 6px;
     cursor: pointer;
   }
-  .rr-item:hover { background: #FFEDDB; }
+  .rr-item:hover { background: var(--rcp-hover-bg); }
   .rr-item img {
     width: 40px;
     height: 40px;
@@ -696,7 +707,7 @@
     color: var(--c-text);
     line-height: 1.8;
     white-space: pre-wrap;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     border-radius: 10px;
     padding: 10px 12px;
     margin: 8px 0 14px;
@@ -718,7 +729,7 @@
     gap: 8px;
     padding: 10px 12px;
     border-radius: 10px;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     margin-bottom: 8px;
     font-size: 13px;
   }
@@ -768,43 +779,43 @@
     box-shadow: 0 10px 20px rgba(230,160,110,0.22);
   }
   .home-card-pink {
-    background: #FFE7ED;
-    border-color: #FFC7D3;
+    background: var(--c-pink-bg-2);
+    border-color: var(--rcp-pink-card-border);
   }
   .home-card-peach {
-    background: #FFEcD9;
-    border-color: #FFD3AC;
+    background: var(--c-orange-badge-bg);
+    border-color: var(--c-orange-dash);
   }
   .home-card-mint {
-    background: #E4F5DF;
-    border-color: #B9E3AC;
+    background: var(--c-mint-bg);
+    border-color: var(--c-mint-border);
   }
-  .home-card-mint .home-card-title { color: #5C9147; }
-  .home-card-mint .home-card-title-divider { border-color: #5C9147; }
+  .home-card-mint .home-card-title { color: var(--c-mint-text); }
+  .home-card-mint .home-card-title-divider { border-color: var(--c-mint-text); }
   .home-card-blue {
-    background: #E2EBFD;
-    border-color: #B9CDF5;
+    background: var(--c-blue-bg);
+    border-color: var(--c-blue-border);
   }
-  .home-card-blue .home-card-title { color: #5F87C9; }
-  .home-card-blue .home-card-title-divider { border-color: #5F87C9; }
+  .home-card-blue .home-card-title { color: var(--c-blue-text); }
+  .home-card-blue .home-card-title-divider { border-color: var(--c-blue-text); }
   .home-card-purple {
-    background: #EFE4FB;
-    border-color: #D5BCF0;
+    background: var(--c-purple-bg);
+    border-color: var(--c-purple-border);
   }
-  .home-card-purple .home-card-title { color: #8E6BB5; }
-  .home-card-purple .home-card-title-divider { border-color: #8E6BB5; }
+  .home-card-purple .home-card-title { color: var(--c-purple-text); }
+  .home-card-purple .home-card-title-divider { border-color: var(--c-purple-text); }
   .home-card-yellow {
-    background: #FFF6DD;
-    border-color: #F0DBA0;
+    background: var(--c-gold-badge-bg);
+    border-color: var(--c-gold-border);
   }
-  .home-card-yellow .home-card-title { color: #C99A3A; }
-  .home-card-yellow .home-card-title-divider { border-color: #C99A3A; }
+  .home-card-yellow .home-card-title { color: var(--c-gold-text); }
+  .home-card-yellow .home-card-title-divider { border-color: var(--c-gold-text); }
   .home-card-coral {
-    background: #FFE3DC;
-    border-color: #FFB6A6;
+    background: var(--c-coral-bg);
+    border-color: var(--c-coral-border);
   }
-  .home-card-coral .home-card-title { color: #FF6F55; }
-  .home-card-coral .home-card-title-divider { border-color: #FF6F55; }
+  .home-card-coral .home-card-title { color: var(--c-coral-text); }
+  .home-card-coral .home-card-title-divider { border-color: var(--c-coral-text); }
   .soon-card {
     position: relative;
     opacity: 0.92;
@@ -816,7 +827,7 @@
     font-size: 9px;
     font-weight: 800;
     color: #fff;
-    background: #C9A66B;
+    background: var(--c-tag-bg);
     border-radius: var(--r-pill);
     padding: 3px 8px;
   }
@@ -826,8 +837,8 @@
     font-weight: 800;
     font-size: 17px;
   }
-  .home-card-pink .home-card-title { color: #FF6F91; }
-  .home-card-peach .home-card-title { color: #E0954A; }
+  .home-card-pink .home-card-title { color: var(--c-pink-deep); }
+  .home-card-peach .home-card-title { color: var(--rcp-peach-accent); }
   .home-card-title-divider {
     width: 60%;
     height: 0;
@@ -836,13 +847,13 @@
     opacity: .5;
   }
   .home-card-pink .home-card-title-divider { border-color: var(--c-primary); }
-  .home-card-peach .home-card-title-divider { border-color: #E0954A; }
+  .home-card-peach .home-card-title-divider { border-color: var(--rcp-peach-accent); }
   .home-card-desc {
     font-size: 11.5px;
     color: var(--c-text-soft);
   }
   .home-explore-box {
-    border: 2px dashed #FFD3AC;
+    border: 2px dashed var(--c-orange-dash);
     border-radius: 22px;
     padding: 20px 14px;
     margin-bottom: 20px;
@@ -895,8 +906,8 @@
 
   /* ===== 品牌介紹 + 分類區塊 ===== */
   .brand-intro-card {
-    background: linear-gradient(135deg, #FFF0D9 0%, #FFE7ED 100%);
-    border: 2px dashed #FFC79A;
+    background: linear-gradient(135deg, var(--c-gold-gradient) 0%, var(--c-pink-bg-2) 100%);
+    border: 2px dashed var(--c-orange-dash-2);
     border-radius: 20px;
     padding: 18px 16px;
     margin-bottom: 20px;
@@ -906,7 +917,7 @@
     font-family: var(--font-round);
     font-weight: 800;
     font-size: 19px;
-    color: #E0954A;
+    color: var(--rcp-peach-accent);
     margin-bottom: 8px;
   }
   .brand-intro-text {
@@ -926,22 +937,22 @@
     font-size: 14px;
     font-weight: 800;
     color: var(--c-text);
-    background: #FFE9CE;
+    background: var(--c-orange-bg-2);
     border-radius: var(--r-pill);
     padding: 6px 16px;
   }
   .oil-toggle-btn {
     font-size: 11px;
     font-weight: 800;
-    color: #8a5a2b;
-    background: #FFF6E4;
+    color: var(--rcp-oil-text);
+    background: var(--rcp-oil-bg);
     border: 1.5px solid var(--c-cat-6);
     border-radius: var(--r-pill);
     padding: 5px 12px;
     cursor: pointer;
     white-space: nowrap;
   }
-  .oil-toggle-btn:hover { background: #FFEcC4; }
+  .oil-toggle-btn:hover { background: var(--rcp-oil-hover-bg); }
   .oil-toggle-btn.oil-hidden {
     color: var(--c-muted);
     background: var(--c-surface-2);
@@ -957,7 +968,7 @@
     color: var(--c-muted-light);
     font-size: 13px;
     padding: 34px 10px;
-    border: 2px dashed #FFD3AC;
+    border: 2px dashed var(--c-orange-dash);
     border-radius: 18px;
   }
 
@@ -998,7 +1009,7 @@
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 14px 6px;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     border-radius: 20px;
     padding: 16px 12px 14px;
     margin-bottom: 4px;
@@ -1026,7 +1037,7 @@
     font-size: 12px;
     color: var(--c-text);
     line-height: 1.8;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     border-radius: 14px;
     padding: 10px 14px;
     margin-top: 10px;
@@ -1034,7 +1045,7 @@
   .prep-seasoning-line::before {
     content: '🧂 調味料：';
     font-weight: 800;
-    color: #E0954A;
+    color: var(--rcp-peach-accent);
   }
   .prep-seasoning-item {
     font-weight: 700;
@@ -1091,7 +1102,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: #EB99AC;
+    background: var(--rcp-badge-pink);
     color: #fff;
     font-weight: 800;
     font-size: 12px;
@@ -1111,8 +1122,8 @@
   .reminder-box {
     grid-column: span 3;
     position: relative;
-    background: #FFF6EC;
-    border: 1.5px dashed #FFC79A;
+    background: var(--c-orange-bg);
+    border: 1.5px dashed var(--c-orange-dash-2);
     border-radius: 16px;
     padding: 18px 14px 14px;
     text-align: left;
@@ -1130,7 +1141,7 @@
   .reminder-head span {
     font-size: 12px;
     font-weight: 800;
-    color: #E0954A;
+    color: var(--rcp-peach-accent);
   }
   .reminder-list { list-style: none; margin: 0; padding: 0; }
   .reminder-item {
@@ -2176,7 +2187,7 @@ function renderRecipes() {
     const age = recipe['適合月齡'];
     if (age) tags.innerHTML += ageTagHtml(age);
     const method = String(recipe['料理方式'] || '').trim();
-    if (method) tags.innerHTML += `<span class="mini-tag" style="background:#FFEcD9;color:#B5601C;">${method}</span>`;
+    if (method) tags.innerHTML += `<span class="mini-tag" style="background:var(--c-orange-badge-bg);color:var(--c-orange-text);">${method}</span>`;
     body.appendChild(tags);
 
     card.appendChild(body);
