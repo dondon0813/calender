@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麻糬指揮中心 | MOCHI COMMAND CENTER</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     office.html — 麻糬指揮中心（虛擬辦公室）
+     只用本頁專屬 CSS 變數畫像素場景美術；UI 面板顏色沿用 shared.css :root 變數。
+     ============================================================ */
+  :root{
+    /* 牆面：米白牆（頂列／面板底色沿用），場景本體改由插畫圖檔提供 */
+    --px-wall: #F5F1E8;
+    --px-wall-2: #EFE7D6;
+    --px-wall-dark: #DCCFB2;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow-x: hidden; }
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--px-wall);
+    color: var(--c-text, #5a4a3f);
+    font-family: var(--font-body, 'Noto Sans TC', sans-serif);
+    padding: 0;
+  }
+  .pixel-font { font-family: 'Press Start 2P', var(--font-body), monospace; }
+
+  /* ---------------- 頂部列 ---------------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 16px;
+    background: linear-gradient(180deg, var(--px-wall-2), var(--px-wall));
+    border-bottom: 4px solid var(--px-wall-dark);
+    box-shadow: 0 4px 0 rgba(180,160,120,.18);
+    position: relative;
+    z-index: 20;
+    flex-shrink: 0;
+  }
+  .topbar-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .topbar-cat-icon{ font-size:26px; filter: drop-shadow(0 2px 0 rgba(160,140,100,.25)); }
+  .topbar-titles{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .topbar-title-zh{ font-size:13px; font-weight:800; color:#4A3B32; letter-spacing:1px; }
+  .topbar-title-en{
+    font-size:9px;
+    color: #97A891;
+    letter-spacing:1px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .topbar-right{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+  .status-pill{ display:flex; align-items:center; gap:6px; font-size:10px; color:#6b5a4a; }
+  .status-dot{
+    width:10px;height:10px;border-radius:50%;
+    background:#c9bfa8; box-shadow: 0 0 0 2px rgba(180,160,120,.2);
+    transition: background .3s, box-shadow .3s;
+  }
+  .status-dot.online{ background:#7ba86e; box-shadow: 0 0 8px 2px rgba(123,168,110,.5); }
+  .status-dot.offline{ background:#d98a6f; box-shadow: 0 0 8px 2px rgba(217,138,111,.45); }
+  .pixel-clock{ text-align:right; }
+  .pixel-clock-time{
+    font-size:16px;
+    color: #6b8c62;
+    letter-spacing:1px;
+  }
+  .pixel-clock-date{ font-size:8px; color:#a8977e; margin-top:2px; }
+  .gear-btn{
+    position:relative; flex-shrink:0;
+    width:32px; height:32px; border-radius:50%;
+    background:#fff; border:2px solid var(--c-border, #FFD3B6);
+    font-size:15px; cursor:pointer;
+    box-shadow: var(--sh-float, 0 3px 10px rgba(0,0,0,.25));
+    display:flex; align-items:center; justify-content:center;
+  }
+  .gear-btn:hover{ background: var(--c-bg-bottom, #FFF1E6); }
+
+  /* ---------------- 主體版面 ---------------- */
+  .office-layout{
+    display:flex;
+    align-items:stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .scene-col{
+    flex: 1.4 1 0;
+    position: relative;
+    overflow:hidden;
+    background: var(--px-wall);
+  }
+  .panel-col{
+    flex: 1 1 380px;
+    max-width: 460px;
+    background: var(--c-bg-top, #FFF7EE);
+    border-left: 4px solid var(--px-wall-dark);
+    display:flex;
+    flex-direction:column;
+    min-height: 100%;
+  }
+
+  @media (max-width: 860px){
+    .office-layout{ flex-direction:column; }
+    .scene-col{ min-height: 220px; flex: 1 1 46%; }
+    .panel-col{ max-width: none; border-left:none; border-top:4px solid var(--px-wall-dark); flex: 1 1 54%; min-height: 0; }
+  }
+
+  /* ---------------- 場景：插畫背景圖＋動態疊層 ---------------- */
+  .scene-col{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px;
+    min-width:0;
+  }
+  .scene-frame{
+    position:relative;
+    overflow:hidden;
+    border-radius:10px;
+    background: var(--px-wall-2);
+    box-shadow: 0 2px 12px rgba(120,100,70,.16);
+    container-type: inline-size;
+  }
+  .scene-img{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+    image-rendering:pixelated;
+    pointer-events:none;
+    opacity:0;
+    transition: opacity .4s ease;
+  }
+  #scene.mood-resting .scene-img.img-resting{ opacity:1; }
+  #scene.mood-working .scene-img.img-working{ opacity:1; }
+
+  /* 對話泡泡：依 mood 切換位置，完整蓋住插畫裡烙印的對話框文字 */
+  .speech-bubble{
+    position:absolute;
+    display:flex; align-items:center; justify-content:center; gap:1.4cqw;
+    background:#faf6ec; color:#3a2c22;
+    border: 0.4cqw solid #a88a6b;
+    border-radius: 1.8cqw;
+    padding: 0.8cqw 1.6cqw;
+    font-size: 2.05cqw;
+    line-height:1.3;
+    text-align:center;
+    box-shadow: 0 0.2cqw 0.6cqw rgba(0,0,0,.12);
+    transition: left .4s ease, top .4s ease, width .4s ease, min-height .4s ease;
+  }
+  .speech-bubble::before{ content:'🐱'; font-size:1.15em; flex-shrink:0; }
+  .speech-bubble.thinking{ font-style:italic; color:#7a6a58; }
+  /* resting：蓋住沙發插畫裡烙印的對話框（原文字約 x48%~70.5%、y25.5%~31.5%），四周留餘裕 */
+  #scene.mood-resting .speech-bubble{ left:43%; top:19%; width:33%; min-height:17%; }
+  /* working：移到書桌區上方偏右，避開螢幕與白板（貓約在 x20%~38%、y42%~72%） */
+  #scene.mood-working .speech-bubble{ left:27%; top:13%; width:30%; min-height:11%; }
+
+  /* 底部膠囊：疊在插畫原生膠囊「喵貓 – 休花喵」的位置（兩張圖皆有，約 x41.5%~59.5%、y93.5%~99.5%），完整蓋住烙印文字 */
+  .mood-capsule{
+    position:absolute; left:36%; top:91.5%; width:28%; height:8.5%;
+    display:flex; align-items:center; justify-content:center; gap:1.1cqw;
+    background:#faf6ec; color:#4a3b32;
+    border: 0.4cqw solid #a88a6b;
+    border-radius: 999px;
+    font-size: 1.95cqw;
+    white-space:nowrap;
+    overflow:hidden;
+    box-shadow: 0 0.2cqw 0.6cqw rgba(0,0,0,.12);
+  }
+  .mood-capsule::before{ content:'🐱'; }
+
+  /* ---------------- 右側面板 ---------------- */
+  .tabs{
+    display:flex;
+    border-bottom: 2px solid var(--c-border, #FFD3B6);
+    background: var(--c-surface, #FFFBF5);
+  }
+  .tab-btn{
+    flex:1;
+    padding:12px 4px;
+    text-align:center;
+    background:none;
+    border:none;
+    border-bottom: 3px solid transparent;
+    font-weight:800;
+    font-size:13px;
+    color: var(--c-text-soft, #8a7462);
+    cursor:pointer;
+    font-family: var(--font-round, inherit);
+  }
+  .tab-btn.active{
+    color: var(--c-primary, #FF8FA3);
+    border-bottom-color: var(--c-primary, #FF8FA3);
+  }
+  .tab-panels{ flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .tab-panel{ display:none; flex:1; min-height:0; flex-direction:column; padding:14px; overflow-y:auto; }
+  .tab-panel.active{ display:flex; }
+
+  /* 指揮台 */
+  #chatMessages{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:8px; }
+  .msg-row{ display:flex; gap:8px; max-width:100%; }
+  .msg-row.user{ justify-content:flex-end; }
+  .msg-avatar{ font-size:18px; flex-shrink:0; }
+  .msg-bubble{
+    background: var(--c-surface, #FFFBF5);
+    border:2px solid var(--c-border, #FFD3B6);
+    border-radius: var(--r-md, 12px);
+    padding:8px 12px;
+    font-size:13px;
+    line-height:1.5;
+    max-width: 78%;
+    white-space:pre-wrap;
+    word-break: break-word;
+  }
+  .msg-row.user .msg-bubble{ background: var(--c-primary, #FF8FA3); color:#fff; border-color: var(--c-primary-dark,#FF7391); }
+  .msg-row.system .msg-bubble{ background:#f3e2d3; color:#8a7462; font-size:12px; }
+  .typing-dots{ display:inline-flex; gap:3px; align-items:center; }
+  .typing-dots span{
+    width:6px; height:6px; border-radius:50%; background: var(--c-muted,#a89888);
+    animation: typing-blink 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2){ animation-delay:.2s; }
+  .typing-dots span:nth-child(3){ animation-delay:.4s; }
+  @keyframes typing-blink{ 0%,80%,100%{ opacity:.2; } 40%{ opacity:1; } }
+
+  .chat-input-row{ display:flex; gap:8px; margin-top:10px; flex-shrink:0; }
+  .chat-input-row input{
+    flex:1;
+    border: 2px solid var(--c-border, #FFD3B6);
+    border-radius: var(--r-pill, 999px);
+    padding:10px 14px;
+    font-size:14px;
+    font-family: var(--font-body, inherit);
+    outline:none;
+  }
+  .chat-input-row input:focus{ border-color: var(--c-primary, #FF8FA3); }
+  .chat-send-btn{
+    border:none; border-radius: var(--r-pill,999px);
+    background: var(--c-primary,#FF8FA3); color:#fff;
+    padding:0 18px; font-weight:800; cursor:pointer; font-size:14px;
+  }
+  .chat-send-btn:hover{ background: var(--c-primary-dark,#FF7391); }
+  .chat-send-btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  /* 任務板 */
+  .section-label{ font-size:13px; font-weight:800; color: var(--c-brown,#b5755a); margin: 4px 0 8px; }
+  .card{
+    background: var(--c-surface,#FFFBF5);
+    border:2px solid var(--c-border-light,#FFE3CC);
+    border-radius: var(--r-md,12px);
+    padding:10px 12px;
+    margin-bottom:8px;
+    box-shadow: var(--sh-soft, 0 3px 8px rgba(0,0,0,.1));
+  }
+  .schedule-card{ display:flex; align-items:center; gap:12px; }
+  .schedule-time{ font-size:18px; font-weight:800; color: var(--c-brown,#b5755a); min-width:56px; }
+  .schedule-label{ flex:1; font-size:13px; color: var(--c-text,#5a4a3f); }
+  .badge{
+    font-size:11px; font-weight:800; padding:3px 10px; border-radius: var(--r-pill,999px);
+    white-space:nowrap;
+  }
+  .badge.done{ background:#e3f3df; color:#3f8a4c; }
+  .badge.pending{ background:#ffeede; color:#c17a3a; }
+  .digest-card{ white-space:pre-wrap; font-size:13px; line-height:1.6; }
+  .empty-hint{ color: var(--c-muted,#a89888); font-size:13px; text-align:center; padding:20px 0; }
+
+  /* 成本 */
+  .cost-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .cost-card{
+    background: var(--c-surface,#FFFBF5);
+    border:2px solid var(--c-border-light,#FFE3CC);
+    border-radius: var(--r-md,12px);
+    padding:12px 10px;
+    text-align:center;
+  }
+  .cost-card .num{ font-size:20px; font-weight:800; color: var(--c-primary,#FF8FA3); }
+  .cost-card .label{ font-size:11px; color: var(--c-text-soft,#8a7462); margin-top:4px; }
+  .cost-card .sub{ font-size:11px; color: var(--c-muted,#a89888); margin-top:6px; line-height:1.6; }
+  .cost-note{ font-size:11px; color: var(--c-muted-light,#b39a8b); text-align:center; margin-top:auto; }
+
+  /* ---------------- 設定畫面 ---------------- */
+  .settings-overlay{
+    position:fixed; inset:0; z-index:500;
+    background: rgba(74,59,50,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .settings-overlay.hidden{ display:none; }
+  .settings-box{
+    background: var(--c-surface,#FFFBF5);
+    border-radius: var(--r-modal,18px);
+    border:3px solid var(--c-border-light,#FFE3CC);
+    padding:24px 22px;
+    max-width:92%;
+    width:380px;
+    box-shadow: var(--sh-modal, 0 10px 30px rgba(0,0,0,.3));
+  }
+  .settings-box h2{ margin:0 0 6px; font-size:18px; color: var(--c-primary,#FF8FA3); }
+  .settings-box p{ font-size:12.5px; color: var(--c-text-soft,#8a7462); line-height:1.6; margin:0 0 16px; }
+  .settings-box label{ font-size:12px; font-weight:800; color: var(--c-brown,#b5755a); display:block; margin:10px 0 4px; }
+  .settings-box input{
+    width:100%; padding:10px 12px; border-radius: var(--r-sm,10px);
+    border:2px solid var(--c-border,#FFD3B6); font-size:13px; outline:none;
+  }
+  .settings-box input:focus{ border-color: var(--c-primary,#FF8FA3); }
+  .settings-error{ color: var(--c-danger,#e0654f); font-size:12px; margin-top:10px; min-height:16px; }
+  .settings-actions{ display:flex; gap:10px; margin-top:16px; }
+  .settings-actions button{
+    flex:1; border:none; border-radius: var(--r-pill,999px);
+    padding:11px 0; font-weight:800; font-size:13px; cursor:pointer;
+  }
+  #settingsSaveBtn{ background: var(--c-primary,#FF8FA3); color:#fff; }
+  #settingsSaveBtn:hover{ background: var(--c-primary-dark,#FF7391); }
+  #settingsSaveBtn:disabled{ opacity:.6; cursor:not-allowed; }
+  #settingsCancelBtn{ background:#fff; color: var(--c-brown,#b5755a); border:2px solid var(--c-border,#FFD3B6) !important; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-cat-icon">🐱</span>
+    <div class="topbar-titles">
+      <div class="topbar-title-zh">麻糬指揮中心</div>
+      <div class="topbar-title-en pixel-font">MOCHI COMMAND CENTER</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-pill">
+      <span class="status-dot offline" id="statusDot"></span>
+      <span id="statusLabel">OFFLINE</span>
+    </div>
+    <div class="pixel-clock">
+      <div class="pixel-clock-time pixel-font" id="clockTime">00:00:00</div>
+      <div class="pixel-clock-date" id="clockDate">2026/01/01</div>
+    </div>
+    <button class="gear-btn" id="gearBtn" title="設定">⚙️</button>
+  </div>
+</div>
+
+<div class="office-layout">
+  <div class="scene-col">
+    <div id="scene" class="scene-frame mood-resting">
+      <img class="scene-img img-resting" src="images/office/scene-resting.webp" alt="麻糬的辦公室：貓咪窩在沙發上">
+      <img class="scene-img img-working" src="images/office/scene-working.webp" alt="麻糬的辦公室：貓咪坐在書桌前打電腦">
+      <div class="speech-bubble" id="speechBubble">麻糬在沙發上曬太陽…</div>
+      <div class="mood-capsule" id="moodCapsule">麻糬 — 休息中</div>
+    </div>
+  </div>
+
+  <div class="panel-col">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="chat">💬 指揮台</button>
+      <button class="tab-btn" data-tab="tasks">📋 任務板</button>
+      <button class="tab-btn" data-tab="cost">💰 成本</button>
+    </div>
+    <div class="tab-panels">
+      <div class="tab-panel active" id="tab-chat">
+        <div id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="輸入指令給麻糬…" maxlength="2000">
+          <button class="chat-send-btn" id="chatSendBtn">送出</button>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-tasks">
+        <div class="section-label">今日排程</div>
+        <div id="scheduleList"><div class="empty-hint">尚無排程資料</div></div>
+        <div class="section-label" style="margin-top:18px;">昨日小記</div>
+        <div id="digestArea"><div class="empty-hint">還沒有小記 🌙</div></div>
+      </div>
+
+      <div class="tab-panel" id="tab-cost">
+        <div class="cost-grid">
+          <div class="cost-card">
+            <div class="num" id="costToday">$0.00</div>
+            <div class="label">今日花費</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="costTotal">$0.00</div>
+            <div class="label">累計花費</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="tokenToday">0</div>
+            <div class="label">今日 TOKEN</div>
+            <div class="sub" id="tokenBreakdown">input 0 / output 0</div>
+          </div>
+          <div class="cost-card">
+            <div class="num" id="callToday">0</div>
+            <div class="label">今日呼叫次數</div>
+          </div>
+        </div>
+        <div class="cost-note">金額為 API 估算值（USD）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-box">
+    <h2>設定麻糬連線</h2>
+    <p>請貼上 GAS 後端網址與通行碼。資料只存在這台裝置的瀏覽器中（localStorage），不會上傳到任何地方。</p>
+    <label for="settingsUrlInput">後端網址</label>
+    <input type="text" id="settingsUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec">
+    <label for="settingsTokenInput">通行碼</label>
+    <input type="password" id="settingsTokenInput" placeholder="通行碼">
+    <div class="settings-error" id="settingsError"></div>
+    <div class="settings-actions">
+      <button id="settingsCancelBtn" style="display:none;">取消</button>
+      <button id="settingsSaveBtn">儲存並連線</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var CFG_URL_KEY = 'mochiApiUrl';
+  var CFG_TOKEN_KEY = 'mochiToken';
+  var CHAT_HISTORY_KEY = 'mochiChatHistory';
+  var POLL_MS = 30000;
+
+  var state = {
+    agent: { name:'麻糬', mood:'resting', activity:'麻糬在沙發上曬太陽…', updatedAt:null },
+    schedules: [],
+    usage: { today:{ costUSD:0, inputTokens:0, outputTokens:0, calls:0 }, total:{ costUSD:0, tokens:0 } },
+    lastDigest: null,
+    online: false,
+    isThinking: false
+  };
+
+  var pollTimer = null;
+
+  // ---------- localStorage 設定 ----------
+  function getConfig(){
+    return {
+      url: localStorage.getItem(CFG_URL_KEY) || '',
+      token: localStorage.getItem(CFG_TOKEN_KEY) || ''
+    };
+  }
+  function saveConfig(url, token){
+    localStorage.setItem(CFG_URL_KEY, url);
+    localStorage.setItem(CFG_TOKEN_KEY, token);
+  }
+  function hasConfig(){
+    var c = getConfig();
+    return !!(c.url && c.token);
+  }
+
+  function buildUrl(base, params){
+    var sep = base.indexOf('?') >= 0 ? '&' : '?';
+    var qs = Object.keys(params).map(function(k){
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+    return base + sep + qs;
+  }
+
+  // ---------- 設定畫面 ----------
+  var settingsOverlay = document.getElementById('settingsOverlay');
+  var settingsUrlInput = document.getElementById('settingsUrlInput');
+  var settingsTokenInput = document.getElementById('settingsTokenInput');
+  var settingsError = document.getElementById('settingsError');
+  var settingsSaveBtn = document.getElementById('settingsSaveBtn');
+  var settingsCancelBtn = document.getElementById('settingsCancelBtn');
+  var gearBtn = document.getElementById('gearBtn');
+
+  function openSettings(allowCancel){
+    var c = getConfig();
+    settingsUrlInput.value = c.url;
+    settingsTokenInput.value = c.token;
+    settingsError.textContent = '';
+    settingsCancelBtn.style.display = allowCancel ? '' : 'none';
+    settingsOverlay.classList.remove('hidden');
+  }
+  function closeSettings(){
+    settingsOverlay.classList.add('hidden');
+  }
+
+  gearBtn.addEventListener('click', function(){ openSettings(hasConfig()); });
+  settingsCancelBtn.addEventListener('click', function(){
+    if (hasConfig()) closeSettings();
+  });
+
+  settingsSaveBtn.addEventListener('click', function(){
+    var url = (settingsUrlInput.value || '').trim();
+    var token = (settingsTokenInput.value || '').trim();
+    if (!url || !token){
+      settingsError.textContent = '請填寫網址與通行碼';
+      return;
+    }
+    settingsSaveBtn.disabled = true;
+    settingsError.textContent = '連線確認中…';
+    fetch(buildUrl(url, { token: token, scope: 'status' }))
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        settingsSaveBtn.disabled = false;
+        if (json && json.ok === true){
+          saveConfig(url, token);
+          closeSettings();
+          applyStatus(json);
+          startPolling();
+        } else if (json && json.ok === false && json.error === 'unauthorized'){
+          settingsError.textContent = '通行碼錯誤';
+        } else {
+          settingsError.textContent = '連線失敗，請確認網址是否正確';
+        }
+      })
+      .catch(function(){
+        settingsSaveBtn.disabled = false;
+        settingsError.textContent = '連不上麻糬，稍後再試';
+      });
+  });
+
+  // ---------- 時鐘 ----------
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function tickClock(){
+    var now = new Date();
+    document.getElementById('clockTime').textContent =
+      pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
+    document.getElementById('clockDate').textContent =
+      now.getFullYear() + '/' + pad2(now.getMonth()+1) + '/' + pad2(now.getDate());
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // ---------- 場景插畫等比例縮放（貼合 scene-col 可用空間，疊層座標才會對準） ----------
+  (function initSceneFit(){
+    var col = document.querySelector('.scene-col');
+    var frame = document.getElementById('scene');
+    if (!col || !frame) return;
+    var IMG_RATIO = 946 / 594;
+    function fit(){
+      var cw = col.clientWidth;
+      var ch = col.clientHeight;
+      if (!cw || !ch) return;
+      var w = cw, h = w / IMG_RATIO;
+      if (h > ch){ h = ch; w = h * IMG_RATIO; }
+      frame.style.width = w + 'px';
+      frame.style.height = h + 'px';
+    }
+    fit();
+    window.addEventListener('resize', fit);
+  })();
+
+  // ---------- 場景 / 角色狀態 ----------
+  var sceneEl = document.getElementById('scene');
+  var speechBubble = document.getElementById('speechBubble');
+  var moodCapsule = document.getElementById('moodCapsule');
+  var statusDot = document.getElementById('statusDot');
+  var statusLabel = document.getElementById('statusLabel');
+
+  function renderAgentDisplay(){
+    var effectiveMood = state.isThinking ? 'working' : (state.agent.mood === 'working' ? 'working' : 'resting');
+    sceneEl.classList.toggle('mood-working', effectiveMood === 'working');
+    sceneEl.classList.toggle('mood-resting', effectiveMood !== 'working');
+
+    if (state.isThinking){
+      speechBubble.textContent = '麻糬思考中…';
+      speechBubble.classList.add('thinking');
+    } else {
+      speechBubble.textContent = state.agent.activity || (effectiveMood === 'working' ? '工作中…' : '麻糬在沙發上曬太陽…');
+      speechBubble.classList.remove('thinking');
+    }
+    moodCapsule.textContent = '麻糬 — ' + (state.agent.mood === 'working' ? '工作中' : '休息中');
+  }
+
+  function setOnline(isOnline){
+    state.online = isOnline;
+    statusDot.classList.toggle('online', isOnline);
+    statusDot.classList.toggle('offline', !isOnline);
+    statusLabel.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+  }
+
+  // ---------- 任務板 ----------
+  function renderSchedules(list){
+    var wrap = document.getElementById('scheduleList');
+    wrap.innerHTML = '';
+    if (!list || !list.length){
+      wrap.innerHTML = '<div class="empty-hint">尚無排程資料</div>';
+      return;
+    }
+    list.forEach(function(item){
+      var card = document.createElement('div');
+      card.className = 'card schedule-card';
+      var done = item.status === 'done';
+      card.innerHTML =
+        '<div class="schedule-time">' + escapeHtml(item.time || '--:--') + '</div>' +
+        '<div class="schedule-label">' + escapeHtml(item.label || '') + '</div>' +
+        '<div class="badge ' + (done ? 'done' : 'pending') + '">' + (done ? '✅ 已完成' : '⏳ 待執行') + '</div>';
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderDigest(digest){
+    var wrap = document.getElementById('digestArea');
+    wrap.innerHTML = '';
+    if (!digest || !digest.text){
+      wrap.innerHTML = '<div class="empty-hint">還沒有小記 🌙</div>';
+      return;
+    }
+    var card = document.createElement('div');
+    card.className = 'card digest-card';
+    card.innerHTML = '<div class="section-label" style="margin:0 0 6px;">' + escapeHtml(digest.date || '') + '</div>' +
+      '<div>' + escapeHtml(digest.text) + '</div>';
+    wrap.appendChild(card);
+  }
+
+  // ---------- 成本 ----------
+  function renderUsage(usage){
+    if (!usage) return;
+    var today = usage.today || {};
+    var total = usage.total || {};
+    document.getElementById('costToday').textContent = '$' + Number(today.costUSD || 0).toFixed(2);
+    document.getElementById('costTotal').textContent = '$' + Number(total.costUSD || 0).toFixed(2);
+    var inTok = Number(today.inputTokens || 0);
+    var outTok = Number(today.outputTokens || 0);
+    document.getElementById('tokenToday').textContent = (inTok + outTok);
+    document.getElementById('tokenBreakdown').textContent = 'input ' + inTok + ' / output ' + outTok;
+    document.getElementById('callToday').textContent = Number(today.calls || 0);
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ---------- 套用 status 回應 ----------
+  function applyStatus(json){
+    if (json.agent) state.agent = json.agent;
+    if (json.schedules) state.schedules = json.schedules;
+    if (json.usage) state.usage = json.usage;
+    if ('lastDigest' in json) state.lastDigest = json.lastDigest;
+    renderAgentDisplay();
+    renderSchedules(state.schedules);
+    renderDigest(state.lastDigest);
+    renderUsage(state.usage);
+  }
+
+  function fetchStatus(){
+    var c = getConfig();
+    if (!c.url || !c.token) return;
+    fetch(buildUrl(c.url, { token: c.token, scope: 'status' }))
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        if (json && json.ok === true){
+          setOnline(true);
+          applyStatus(json);
+        } else if (json && json.ok === false && json.error === 'unauthorized'){
+          setOnline(false);
+          openSettings(false);
+          settingsError.textContent = '通行碼錯誤';
+        } else {
+          setOnline(false);
+        }
+      })
+      .catch(function(){
+        setOnline(false);
+      });
+  }
+
+  function startPolling(){
+    fetchStatus();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(fetchStatus, POLL_MS);
+  }
+
+  // ---------- 分頁切換 ----------
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('tab-' + btn.getAttribute('data-tab')).classList.add('active');
+    });
+  });
+
+  // ---------- 指揮台聊天 ----------
+  var chatMessages = document.getElementById('chatMessages');
+  var chatInput = document.getElementById('chatInput');
+  var chatSendBtn = document.getElementById('chatSendBtn');
+  var WELCOME_TEXT = '哈囉老闆！我是麻糬，有什麼指示嗎？';
+
+  function loadHistory(){
+    try{
+      var raw = sessionStorage.getItem(CHAT_HISTORY_KEY);
+      if (raw) return JSON.parse(raw);
+    }catch(e){}
+    var seeded = [{ role:'assistant', content: WELCOME_TEXT }];
+    sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(seeded));
+    return seeded;
+  }
+  function saveHistory(list){
+    try{ sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(list)); }catch(e){}
+  }
+
+  var chatHistory = loadHistory();
+
+  function renderMessage(msg){
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + (msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant'));
+    var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : '🐱');
+    row.innerHTML =
+      (msg.role !== 'user' ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
+      '<div class="msg-bubble">' + escapeHtml(msg.content) + '</div>';
+    chatMessages.appendChild(row);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function renderAllMessages(){
+    chatMessages.innerHTML = '';
+    chatHistory.forEach(renderMessage);
+  }
+  renderAllMessages();
+
+  var typingRow = null;
+  function showTyping(){
+    typingRow = document.createElement('div');
+    typingRow.className = 'msg-row assistant';
+    typingRow.innerHTML = '<div class="msg-avatar">🐱</div><div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
+    chatMessages.appendChild(typingRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  function hideTyping(){
+    if (typingRow && typingRow.parentNode){ typingRow.parentNode.removeChild(typingRow); }
+    typingRow = null;
+  }
+
+  function sendMessage(){
+    var text = (chatInput.value || '').trim();
+    if (!text) return;
+    var c = getConfig();
+    if (!c.url || !c.token){
+      openSettings(false);
+      return;
+    }
+
+    var historyForRequest = chatHistory.slice(-12);
+    chatHistory.push({ role:'user', content: text });
+    saveHistory(chatHistory);
+    renderMessage({ role:'user', content: text });
+    chatInput.value = '';
+    chatSendBtn.disabled = true;
+
+    state.isThinking = true;
+    renderAgentDisplay();
+    showTyping();
+
+    fetch(c.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ token: c.token, type: 'chat', message: text, history: historyForRequest })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(json){
+        hideTyping();
+        chatSendBtn.disabled = false;
+        state.isThinking = false;
+        if (json && json.ok === true){
+          setOnline(true);
+          var reply = json.reply || '';
+          chatHistory.push({ role:'assistant', content: reply });
+          saveHistory(chatHistory);
+          renderMessage({ role:'assistant', content: reply });
+          fetchStatus();
+        } else if (json && json.ok === false && json.error === 'unauthorized'){
+          setOnline(false);
+          renderAgentDisplay();
+          openSettings(false);
+          settingsError.textContent = '通行碼錯誤';
+        } else {
+          renderAgentDisplay();
+          chatHistory.push({ role:'system', content: '連不上麻糬，稍後再試' });
+          saveHistory(chatHistory);
+          renderMessage({ role:'system', content: '連不上麻糬，稍後再試' });
+        }
+      })
+      .catch(function(){
+        hideTyping();
+        chatSendBtn.disabled = false;
+        state.isThinking = false;
+        renderAgentDisplay();
+        chatHistory.push({ role:'system', content: '連不上麻糬，稍後再試' });
+        saveHistory(chatHistory);
+        renderMessage({ role:'system', content: '連不上麻糬，稍後再試' });
+      });
+  }
+
+  chatSendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ---------- 開機 ----------
+  renderAgentDisplay();
+  if (hasConfig()){
+    closeSettings();
+    startPolling();
+  } else {
+    openSettings(false);
+  }
+})();
+</script>
+</body>
+</html>
