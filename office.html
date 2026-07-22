@@ -163,7 +163,7 @@
     line-height:1.3;
     text-align:center;
     box-shadow: 0 0.2cqw 0.6cqw rgba(0,0,0,.12);
-    transition: left .4s ease, top .4s ease, width .4s ease, min-height .4s ease;
+    transition: left .4s ease, top .4s ease, width .4s ease, min-height .4s ease, transform .4s ease;
   }
   .speech-bubble.speech-bubble-a::before{ content:'🐱'; font-size:1.15em; flex-shrink:0; }
   .speech-bubble.thinking{ font-style:italic; color:#7a6a58; }
@@ -182,7 +182,8 @@
   }
   .speech-bubble.speech-bubble-b::before{ content:'🐈'; font-size:1.15em; flex-shrink:0; }
   /* B resting：沙發右半的 Amanda 頭上，與 A resting 泡泡錯開高度避免重疊 */
-  #scene.mood-b-resting #speechBubbleB{ left:78%; top:33%; max-width:26%; }
+  /* B resting：錨點設在 Amanda 頭頂（y34%），泡泡由此往上生長，多行文字也不會蓋到臉 */
+  #scene.mood-b-resting #speechBubbleB{ left:78%; top:34%; max-width:26%; transform:translate(-50%,-100%); }
   /* B working：前景第二張桌的右上方（沙發前緣空區），不遮 Amanda 的臉 */
   #scene.mood-b-working #speechBubbleB{ left:68%; top:52%; max-width:26%; }
 
