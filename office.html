@@ -1126,19 +1126,22 @@
           showSlotAuthError(idx);
         } else {
           renderAgentDisplay(idx);
-          a.chatHistory.push({ role:'system', content: '連不上' + name + '，稍後再試' });
+          var detail = (json && json.error) ? String(json.error) : '回應格式異常';
+          var msg = '⚠️ ' + name + '回報錯誤：' + detail;
+          a.chatHistory.push({ role:'system', content: msg });
           saveHistory(idx, a.chatHistory);
-          if (activeChatIndex === idx) renderMessage(idx, { role:'system', content: '連不上' + name + '，稍後再試' });
+          if (activeChatIndex === idx) renderMessage(idx, { role:'system', content: msg });
         }
       })
-      .catch(function(){
+      .catch(function(err){
         hideTyping();
         chatSendBtn.disabled = false;
         a.isThinking = false;
         renderAgentDisplay(idx);
-        a.chatHistory.push({ role:'system', content: '連不上' + name + '，稍後再試' });
+        var msg = '連不上' + name + '（網路層錯誤：' + ((err && err.message) ? err.message : '未知') + '），稍後再試';
+        a.chatHistory.push({ role:'system', content: msg });
         saveHistory(idx, a.chatHistory);
-        if (activeChatIndex === idx) renderMessage(idx, { role:'system', content: '連不上' + name + '，稍後再試' });
+        if (activeChatIndex === idx) renderMessage(idx, { role:'system', content: msg });
       });
   }
 
