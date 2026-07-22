@@ -39,7 +39,7 @@
     --px-chair-dark: #D9C7A7;
     --px-sofa: #D7CBB0;
     --px-sofa-dark: #BFAE8C;
-    --px-cushion: #E3A379;
+    --px-cushion: #EAD9BE;
     /* 燈具：暖白紙燈罩 */
     --px-lamp: #FBEFD3;
     --px-lamp-glow: #F7E4B8;
@@ -62,16 +62,19 @@
     --cat-blush: #F3A79C;
     --cat-eye: #4A3B32;
     --cat-nose: #D9917A;
-    --cat-apron: #B9C4AF;
-    --cat-apron-dark: #9AA891;
+    --cat-apron: #E4D9C4;
+    --cat-apron-dark: #C7B79A;
+    --px-cushion-2: #D9C7A7;
     --panel-radius: var(--r-lg, 12px);
   }
 
   * { box-sizing: border-box; }
-  html, body { width: 100%; overflow-x: hidden; }
+  html, body { width: 100%; height: 100%; overflow-x: hidden; }
   body {
     margin: 0;
-    min-height: 100vh;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
     background: var(--px-wall);
     color: var(--c-text, #5a4a3f);
     font-family: var(--font-body, 'Noto Sans TC', sans-serif);
@@ -91,6 +94,7 @@
     box-shadow: 0 4px 0 rgba(180,160,120,.18);
     position: relative;
     z-index: 20;
+    flex-shrink: 0;
   }
   .topbar-left{ display:flex; align-items:center; gap:10px; min-width:0; }
   .topbar-cat-icon{ font-size:26px; filter: drop-shadow(0 2px 0 rgba(160,140,100,.25)); }
@@ -104,7 +108,7 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .topbar-right{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
+  .topbar-right{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
   .status-pill{ display:flex; align-items:center; gap:6px; font-size:10px; color:#6b5a4a; }
   .status-dot{
     width:10px;height:10px;border-radius:50%;
@@ -121,10 +125,10 @@
   }
   .pixel-clock-date{ font-size:8px; color:#a8977e; margin-top:2px; }
   .gear-btn{
-    position:fixed; top:10px; right:10px; z-index:200;
-    width:36px; height:36px; border-radius:50%;
+    position:relative; flex-shrink:0;
+    width:32px; height:32px; border-radius:50%;
     background:#fff; border:2px solid var(--c-border, #FFD3B6);
-    font-size:16px; cursor:pointer;
+    font-size:15px; cursor:pointer;
     box-shadow: var(--sh-float, 0 3px 10px rgba(0,0,0,.25));
     display:flex; align-items:center; justify-content:center;
   }
@@ -134,7 +138,8 @@
   .office-layout{
     display:flex;
     align-items:stretch;
-    min-height: calc(100vh - 64px);
+    flex: 1 1 auto;
+    min-height: 0;
   }
   .scene-col{
     flex: 1.4 1 0;
@@ -154,8 +159,8 @@
 
   @media (max-width: 860px){
     .office-layout{ flex-direction:column; }
-    .scene-col{ min-height: 320px; height: 46vh; }
-    .panel-col{ max-width: none; border-left:none; border-top:4px solid var(--px-wall-dark); }
+    .scene-col{ min-height: 220px; flex: 1 1 46%; }
+    .panel-col{ max-width: none; border-left:none; border-top:4px solid var(--px-wall-dark); flex: 1 1 54%; }
   }
 
   /* ---------------- 場景美術 ---------------- */
@@ -163,25 +168,27 @@
 
   .wall{
     position:absolute; inset:0;
-    background: linear-gradient(180deg, var(--px-wall) 0%, var(--px-wall) 62%, var(--px-floor-2) 62%, var(--px-floor) 100%);
+    background: linear-gradient(180deg, var(--px-wall) 0%, var(--px-wall) 60%, var(--px-floor-2) 60%, var(--px-floor) 100%);
   }
   /* 木地板拼板紋理（淺深原木交錯的直向拼接） */
   .wall::after{
     content:'';
-    position:absolute; left:0; right:0; top:62%; bottom:0;
+    position:absolute; left:0; right:0; top:60%; bottom:0;
     background: repeating-linear-gradient(90deg,
       rgba(200,175,135,.35) 0, rgba(200,175,135,.35) 42px,
       rgba(160,132,90,.18) 42px, rgba(160,132,90,.18) 44px);
   }
   .baseboard{
-    position:absolute; left:0; right:0; top:62%; height:6px;
+    position:absolute; left:0; right:0; top:60%; height:6px;
     background: var(--px-wall-dark);
   }
   .rug{
-    position:absolute; left:8%; right:32%; bottom:6%; height:16%;
+    position:absolute; left:12%; width:36%; bottom:3%; height:13%;
     background: var(--px-rug);
+    background-image: repeating-linear-gradient(135deg, rgba(169,187,156,.3) 0 6px, transparent 6px 12px);
     border: 4px solid var(--px-rug-dark);
     border-radius: 6px;
+    z-index:1;
   }
 
   .window{
@@ -312,9 +319,9 @@
   }
 
   /* ---------------- 書桌／白色筆電 ---------------- */
-  .desk{ position:absolute; }
-  .desk .top{ width:170px; height:14px; background: var(--px-desk); border-bottom:4px solid var(--px-desk-dark); }
-  .desk .leg{ position:absolute; bottom:-46px; width:10px; height:46px; background: var(--px-desk-dark); }
+  .desk{ position:absolute; width:170px; height:58px; z-index:3; }
+  .desk .top{ position:absolute; top:0; left:0; width:170px; height:14px; background: var(--px-desk); border-bottom:4px solid var(--px-desk-dark); }
+  .desk .leg{ position:absolute; top:14px; width:10px; height:44px; background: var(--px-desk-dark); }
   .desk .leg.l{ left:8px; } .desk .leg.r{ right:8px; }
   .laptop{ position:absolute; }
   .laptop .keyboard{ width:66px; height:6px; background: var(--px-chair-dark); margin:0 auto; border-radius:0 0 3px 3px; }
@@ -333,28 +340,32 @@
   }
   #scene.mood-working .laptop .screen{ box-shadow: 0 2px 0 var(--px-desk-dark), 0 0 14px 2px rgba(247,228,184,.7); }
 
-  .chair{ position:absolute; }
-  .chair .back{ width:30px; height:40px; background: var(--px-chair); border-radius:6px 6px 0 0; }
-  .chair .seat{ width:36px; height:8px; background: var(--px-chair-dark); margin-top:-4px; }
-  .chair .stem{ width:6px; height:20px; background: var(--px-desk-dark); margin:0 auto; }
+  /* 小桌燈：沿用 .lamp 造型縮小放在桌面上 */
+  .desk-lamp{ position:absolute; transform-origin: bottom center; }
 
-  .sofa{ position:absolute; }
-  .sofa .base{ width:150px; height:40px; background: var(--px-sofa); border-radius:8px; }
-  .sofa .back{ width:150px; height:26px; background: var(--px-sofa-dark); border-radius:10px 10px 0 0; }
-  .sofa .arm{ position:absolute; top:-6px; width:18px; height:44px; background: var(--px-sofa-dark); border-radius:8px; }
-  .sofa .arm.left{ left:-10px; } .sofa .arm.right{ right:-10px; }
+  .chair{ position:absolute; width:36px; height:64px; z-index:2; }
+  .chair .back{ position:absolute; top:0; left:3px; width:30px; height:40px; background: var(--px-chair); border-radius:6px 6px 0 0; }
+  .chair .seat{ position:absolute; top:36px; left:0; width:36px; height:8px; background: var(--px-chair-dark); }
+  .chair .stem{ position:absolute; top:44px; left:15px; width:6px; height:20px; background: var(--px-desk-dark); }
+
+  .sofa{ position:absolute; width:170px; height:70px; z-index:3; }
+  .sofa .back{ position:absolute; top:0; left:10px; width:150px; height:26px; background: var(--px-sofa-dark); border-radius:10px 10px 0 0; }
+  .sofa .base{ position:absolute; top:22px; left:10px; width:150px; height:40px; background: var(--px-sofa); border-radius:8px; }
+  .sofa .arm{ position:absolute; top:10px; width:20px; height:54px; background: var(--px-sofa-dark); border-radius:8px; }
+  .sofa .arm.left{ left:0; } .sofa .arm.right{ right:0; }
   .sofa .cushion{
-    position:absolute; top:-14px; width:22px; height:22px; background: var(--px-cushion);
-    border-radius:4px; transform: rotate(-4deg);
+    position:absolute; top:16px; width:26px; height:24px; background: var(--px-cushion);
+    border-radius:6px; transform: rotate(-4deg);
   }
-  .sofa .cushion.left{ left:14px; }
-  .sofa .cushion.right{ left:44px; background: var(--px-plant-light); transform: rotate(3deg); }
+  .sofa .cushion.left{ left:34px; }
+  .sofa .cushion.right{ left:96px; background: var(--px-cushion-2); transform: rotate(3deg); }
 
   /* ---------------- 麻糬（擬人貓） ---------------- */
   .mochi-wrap{
     position:absolute;
     width: 96px; height: 84px;
-    transition: left .6s ease, top .6s ease;
+    z-index: 6;
+    transition: left .6s ease, bottom .6s ease;
   }
   .mochi{ position:relative; width:100%; height:100%; }
 
@@ -375,19 +386,19 @@
     z-index:2;
   }
   .mochi .apron{
-    position:absolute; left:26px; top:46px; width:44px; height:26px;
+    position:absolute; left:33px; top:56px; width:30px; height:16px;
     background: var(--cat-apron);
-    border-radius: 4px 4px 10px 10px;
-    box-shadow: inset 0 -6px 0 var(--cat-apron-dark);
+    border-radius: 3px 3px 8px 8px;
+    box-shadow: inset 0 -4px 0 var(--cat-apron-dark);
     z-index:3;
   }
   .mochi .apron::before{
-    content:''; position:absolute; left:6px; top:-8px; width:5px; height:10px;
+    content:''; position:absolute; left:4px; top:-6px; width:4px; height:8px;
     background: var(--cat-apron);
     transform: rotate(-14deg);
   }
   .mochi .apron::after{
-    content:''; position:absolute; right:6px; top:-8px; width:5px; height:10px;
+    content:''; position:absolute; right:4px; top:-6px; width:4px; height:8px;
     background: var(--cat-apron);
     transform: rotate(14deg);
   }
@@ -444,10 +455,16 @@
   .mochi .arm.left{ left:10px; }
   .mochi .arm.right{ left:73px; }
 
-  /* 位置與動畫：休息（沙發） vs 工作（書桌） */
-  #scene.mood-resting .mochi-wrap{ animation: mochi-idle 2.8s ease-in-out infinite; }
+  /* 位置與動畫：休息（窩在沙發座墊上） vs 工作（坐在書桌前的椅子上，面向筆電） */
+  #scene.mood-resting .mochi-wrap{
+    left: calc(19% + 37px); bottom: calc(3% + 47px);
+    animation: mochi-idle 2.8s ease-in-out infinite;
+  }
   #scene.mood-resting .mochi .tail{ animation: tail-sway 3.4s ease-in-out infinite; }
-  #scene.mood-working .mochi-wrap{ animation: mochi-work 0.7s ease-in-out infinite; }
+  #scene.mood-working .mochi-wrap{
+    left: calc(64% - 30px); bottom: calc(4% + 24px);
+    animation: mochi-work 0.7s ease-in-out infinite;
+  }
   #scene.mood-working .mochi .arm.left{ animation: paw-tap 0.5s ease-in-out infinite; }
   #scene.mood-working .mochi .arm.right{ animation: paw-tap 0.5s ease-in-out infinite reverse; }
   @keyframes mochi-idle{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-4px);} }
@@ -635,8 +652,6 @@
 </head>
 <body>
 
-<button class="gear-btn" id="gearBtn" title="設定">⚙️</button>
-
 <div class="topbar">
   <div class="topbar-left">
     <span class="topbar-cat-icon">🐱</span>
@@ -654,6 +669,7 @@
       <div class="pixel-clock-time pixel-font" id="clockTime">00:00:00</div>
       <div class="pixel-clock-date" id="clockDate">2026/01/01</div>
     </div>
+    <button class="gear-btn" id="gearBtn" title="設定">⚙️</button>
   </div>
 </div>
 
@@ -671,28 +687,18 @@
       <div class="light-beam"></div>
 
       <!-- 窗台垂掛藤蔓 -->
-      <div class="plant-hanging" style="left:9%; top:8%;">
+      <div class="plant-hanging" style="left:9%; top:6%;">
         <div class="vine v1"></div><div class="vine v2"></div><div class="vine v3"></div>
       </div>
 
-      <!-- 大盆龜背芋 -->
-      <div class="plant plant-monstera" style="left:2%; top:48%;">
-        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div><div class="leaf l4"></div>
-        <div class="pot"></div>
-      </div>
-      <!-- 落地虎尾蘭 -->
-      <div class="plant plant-sansevieria" style="right:4%; top:26%; transform:scale(.9);">
-        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
-        <div class="pot"></div>
-      </div>
       <!-- 窗台小盆栽 -->
-      <div class="plant plant-succulent" style="left:13%; top:20%; transform:scale(1.3);">
+      <div class="plant plant-succulent" style="left:13%; top:18%; transform:scale(1.3);">
         <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
         <div class="pot"></div>
       </div>
 
       <!-- 木層架＋小盆栽 -->
-      <div class="shelf" style="left:38%; top:14%;">
+      <div class="shelf" style="left:38%; top:12%;">
         <div class="board"></div>
         <div class="bracket l"></div><div class="bracket r"></div>
         <div class="item book"></div><div class="item box"></div>
@@ -702,40 +708,54 @@
         </div>
       </div>
 
-      <div class="lamp" style="left:6%; top:22%;">
-        <div class="glow"></div>
-        <div class="shade"></div>
-        <div class="pole"></div>
-      </div>
+      <!-- 地板：由左至右＝大盆龜背芋 → 沙發＋地毯 → 書桌＋椅子 → 虎尾蘭 -->
 
-      <div class="desk" style="left:12%; top:52%;">
-        <div class="laptop" style="position:absolute; left:53px; top:-46px;">
-          <div class="screen"></div>
-          <div class="keyboard"></div>
-        </div>
-        <div class="top"></div>
-        <div class="leg l"></div>
-        <div class="leg r"></div>
-      </div>
-      <div class="chair" style="left:18%; top:64%;">
-        <div class="back"></div>
-        <div class="seat"></div>
-        <div class="stem"></div>
-      </div>
-
-      <!-- 桌上小多肉 -->
-      <div class="plant plant-succulent" style="left:24%; top:47%; transform:scale(1.1);">
-        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+      <!-- 大盆龜背芋（落地） -->
+      <div class="plant plant-monstera" style="left:2%; bottom:3%; z-index:2;">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div><div class="leaf l4"></div>
         <div class="pot"></div>
       </div>
 
-      <div class="sofa" style="right:8%; top:58%;">
+      <div class="sofa" style="left:19%; bottom:3%;">
         <div class="arm left"></div>
         <div class="cushion left"></div>
         <div class="back"></div>
         <div class="base"></div>
         <div class="cushion right"></div>
         <div class="arm right"></div>
+      </div>
+
+      <div class="desk" style="left:55%; bottom:7%;">
+        <div class="laptop" style="position:absolute; left:53px; top:-46px;">
+          <div class="screen"></div>
+          <div class="keyboard"></div>
+        </div>
+        <div class="desk-lamp lamp" style="left:138px; top:-58px; transform:scale(.4);">
+          <div class="glow"></div>
+          <div class="shade"></div>
+          <div class="pole"></div>
+        </div>
+        <div class="top"></div>
+        <div class="leg l"></div>
+        <div class="leg r"></div>
+      </div>
+
+      <!-- 桌上小多肉 -->
+      <div class="plant plant-succulent" style="left:55%; bottom:calc(7% + 58px); z-index:3; transform:scale(1.1);">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+        <div class="pot"></div>
+      </div>
+
+      <div class="chair" style="left:64%; bottom:4%;">
+        <div class="back"></div>
+        <div class="seat"></div>
+        <div class="stem"></div>
+      </div>
+
+      <!-- 落地虎尾蘭 -->
+      <div class="plant plant-sansevieria" style="right:3%; bottom:3%; z-index:2; transform:scale(.9);">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+        <div class="pot"></div>
       </div>
 
       <div class="mochi-wrap" id="mochiWrap">
@@ -1220,6 +1240,7 @@
   // ---------- 開機 ----------
   renderAgentDisplay();
   if (hasConfig()){
+    closeSettings();
     startPolling();
   } else {
     openSettings(false);
