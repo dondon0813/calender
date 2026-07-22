@@ -66,8 +66,10 @@ Google 試算表（兩份！）
 - `doGet`（Code.gs:1877 附近）：scope=calendar → `getEventsAsGviz_()`；scope=public；帶 token → 全量。
 - `doPost`（Code.gs:1952 附近）：以 `if (type === '...')` 分支。找某動作直接 Grep：`type === 'event-update'`。
 - 動作家族（前綴）：`vendor-db-*`、`brand-db-*`、`pnote-*`（備忘錄）、`task-*`／`taskname-*`（任務）、`pr-*`（公關品）、`todo-*`、`event-*`、`block-*`（自訂區塊）、`image-*`（GitHub 圖片庫代理）、`perm-*`、`stat-*`、`login`、`change-password`、`social-link-set`。
+- **統計白名單鐵律**：`stat-view`/`stat-click` 的 key 有白名單（`STAT_KEY_WHITELIST_RE`，Grep 定位）——**前端新增任何統計項目時，必須同步擴充這個 regex**，否則新 key 會被安靜拒收、數字永遠是 0 且不報錯。另有單 key 80 字上限與統計分頁 2000 列上限。
 - 函式群定位（Grep `^function 名稱`）：Session/驗證 `getSessionUser_`／`hashPassword_`；品牌庫 `getBrandDbList_`／`updateBrandThumbs`；活動 `addEvent_`／`getEventsAsGviz_`；GitHub 圖片代理 `githubFetch_`／`listGithubFilesRecursive_`；一次性工具 `importBrandsFromCalendar`、`migrateStaffPasswordsToHash_ONETIME`。
-- 常數區在 Code.gs:1-54：分頁名稱、`DEFAULT_PASSWORD`、`PASSWORD_PEPPER`、`SESSION_DURATION_MS`(12h)、`EVENT_SHEET_ID`。
+- 常數區在 Code.gs:1-54：分頁名稱、`DEFAULT_PASSWORD`、`LEGACY_PASSWORD_PEPPER`（僅供驗證舊格式雜湊）、`HASH_ITERATIONS`、`SESSION_DURATION_MS`(12h)、`EVENT_SHEET_ID`。
+- 密碼機制（2026-07-22 起）：現行 pepper 存 **Script Properties 的 `PASSWORD_PEPPER`**（不在程式碼裡），雜湊為 v2 多輪格式（`v2$iter$fp$hash`），舊單輪雜湊登入時自動升級。相關函式：`getPepper_`／`hashPasswordV2_`／`verifyPassword_`／`needsRehash_`。
 
 ## 5. admin.js 功能區塊索引（以 `// =====` 分隔線切區）
 
