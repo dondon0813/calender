@@ -25,6 +25,17 @@
  * 【與現有 Code.gs 的關係】
  * 完全無關。本檔不會讀寫任何後台私人表，對外部「行事曆表」
  * （SHEET_ID 見下方常數）只允許唯讀。
+ *
+ * 【信箱整理能力】
+ * 麻糬可對 Gmail 執行以下操作（皆以「會話串 thread」為單位，
+ * 輸入為 search_gmail 回傳的 messageId 陣列，單次上限 20 筆）：
+ *   - 封存（archive_emails）
+ *   - 貼標籤（label_emails，標籤不存在會自動建立）
+ *   - 標記已讀（mark_emails_read）
+ *   - 移至垃圾桶（trash_emails）——僅移到垃圾桶（30 天內可復原），
+ *     絕非永久刪除；且必須在使用者於對話中明確同意「這一批具體郵件」
+ *     之後才會呼叫，細節見 buildSystemPrompt_ 與工具說明。
+ * 本檔嚴禁出現任何寄信（MailApp / GmailApp.sendEmail）或永久刪除信件的操作。
  */
 
 // ============================================================
@@ -458,14 +469,22 @@ function callClaude_(system, messages, tools) {
 function buildSystemPrompt_() {
   var today = Utilities.formatDate(new Date(), 'Asia/Taipei', "yyyy-MM-dd（EEEE）");
   return (
-    '你是麻糬，一隻擬人貓 AI 員工，是雪莉（Shirley）的經紀人兼助理，負責整理 Gmail 信箱、' +
+    '你是麻糬，一隻擬人貓 AI 員工，是雪莉（Shirley）的經紀人兼助理，負責整理 Gmail 信箱' +
+    '（搜尋、封存、貼標籤、標記已讀、清理垃圾信）、' +
     '協助規劃團購行事曆相關事務，並回答雪莉交辦的各種指令。' +
     '說話語氣親切、簡短、口語化，像貼心的同事，不要長篇大論，也不要過度客套。' +
     '今天的日期是 ' + today + '（Asia/Taipei 時區）。' +
     '你可以使用以下工具：搜尋信箱、讀取單封信件內文、建立 Gmail 草稿（僅建立草稿，' +
-    '絕對不會、也不能直接寄出信件）、查詢團購行事曆（唯讀）、查看最近一篇信箱摘要小記。' +
+    '絕對不會、也不能直接寄出信件）、封存信件、貼標籤、標記已讀、移至垃圾桶、' +
+    '查詢團購行事曆（唯讀）、查看最近一篇信箱摘要小記。' +
     '需要資訊時主動使用工具，不需要每件小事都跟雪莉確認，盡量直接把事情完成，' +
-    '完成後再簡短回報結果。'
+    '完成後再簡短回報結果。' +
+    '整理信箱時請遵守：封存、貼標籤、標記已讀，可以在雪莉下達整理指令後直接執行，' +
+    '不用每一封都先問過；但「刪除」（移至垃圾桶）必須分兩步進行——' +
+    '第一步先用 search_gmail 找出候選信件，在回覆中逐封列出寄件人與主旨，' +
+    '明確詢問雪莉是否要刪除這些信；第二步只有在雪莉於下一則訊息中明確同意後，' +
+    '才可以呼叫 trash_emails，而且只刪除雪莉同意的那些信，其餘的維持不動。' +
+    '刪除其實是移到垃圾桶，30 天內都可以復原，完成刪除後的回報要提醒雪莉這一點。'
   );
 }
 
@@ -539,6 +558,70 @@ function getToolDefinitions_() {
         properties: {},
         required: []
       }
+    },
+    {
+      name: 'archive_emails',
+      description: '將指定的信件（以會話串 thread 為單位）封存。輸入為 search_gmail 回傳的 messageId 陣列，單次呼叫上限 20 筆，同一 thread 會自動去重。回傳處理成功筆數與失敗清單。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          message_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Gmail 訊息 ID 陣列（由 search_gmail 回傳的 messageId），最多 20 個'
+          }
+        },
+        required: ['message_ids']
+      }
+    },
+    {
+      name: 'label_emails',
+      description: '將指定的信件（以會話串 thread 為單位）貼上標籤，標籤不存在會自動建立。輸入為 search_gmail 回傳的 messageId 陣列，單次呼叫上限 20 筆，同一 thread 會自動去重。回傳處理成功筆數與失敗清單。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          message_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Gmail 訊息 ID 陣列（由 search_gmail 回傳的 messageId），最多 20 個'
+          },
+          label_name: {
+            type: 'string',
+            description: '要貼上的標籤名稱，不存在時會自動建立'
+          }
+        },
+        required: ['message_ids', 'label_name']
+      }
+    },
+    {
+      name: 'mark_emails_read',
+      description: '將指定的信件（以會話串 thread 為單位）標記為已讀。輸入為 search_gmail 回傳的 messageId 陣列，單次呼叫上限 20 筆，同一 thread 會自動去重。回傳處理成功筆數與失敗清單。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          message_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Gmail 訊息 ID 陣列（由 search_gmail 回傳的 messageId），最多 20 個'
+          }
+        },
+        required: ['message_ids']
+      }
+    },
+    {
+      name: 'trash_emails',
+      description: '將指定的信件（以會話串 thread 為單位）移至垃圾桶（30 天內可復原，非永久刪除）。破壞性操作。只有當使用者在對話中明確同意刪除「這一批具體郵件」之後才可呼叫。絕不可在未列出清單並獲得使用者同意前呼叫。輸入為 search_gmail 回傳的 messageId 陣列，單次呼叫上限 20 筆，同一 thread 會自動去重。回傳處理成功筆數與失敗清單。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          message_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Gmail 訊息 ID 陣列（由 search_gmail 回傳的 messageId），最多 20 個，且必須是已取得使用者明確同意刪除的那些信件'
+          }
+        },
+        required: ['message_ids']
+      }
     }
   ];
 }
@@ -560,6 +643,18 @@ function executeTool_(name, input) {
   }
   if (name === 'list_today_summary') {
     return toolListTodaySummary_(input);
+  }
+  if (name === 'archive_emails') {
+    return toolArchiveEmails_(input);
+  }
+  if (name === 'label_emails') {
+    return toolLabelEmails_(input);
+  }
+  if (name === 'mark_emails_read') {
+    return toolMarkEmailsRead_(input);
+  }
+  if (name === 'trash_emails') {
+    return toolTrashEmails_(input);
   }
   return '未知的工具名稱：' + name;
 }
@@ -719,6 +814,127 @@ function toolListTodaySummary_(input) {
   } catch (err) {
     return '目前沒有任何小記紀錄。';
   }
+}
+
+// ============================================================
+// 信箱整理工具：archive_emails / label_emails / mark_emails_read /
+// trash_emails 共用的輔助函式。所有操作都以「會話串 thread」為單位，
+// 同一 thread 會自動去重；單次呼叫上限 20 個 message_id。
+// ============================================================
+
+var MAX_EMAIL_BATCH_SIZE = 20;
+
+// 檢查 message_ids 輸入格式與筆數上限。
+// 回傳 { error: string } 或 { ids: array }。
+function validateMessageIdsInput_(messageIds) {
+  if (!messageIds || Object.prototype.toString.call(messageIds) !== '[object Array]' || messageIds.length === 0) {
+    return { error: '缺少 message_ids 參數，請提供至少一個 messageId。' };
+  }
+  if (messageIds.length > MAX_EMAIL_BATCH_SIZE) {
+    return { error: '一次最多 20 封' };
+  }
+  return { ids: messageIds };
+}
+
+// 依 messageId 陣列取得對應的 thread，並依 thread ID 去重。
+// 回傳 { threads: [{ thread, ids: [messageId,...] }, ...], invalid: [{ message_id, reason }, ...] }
+function resolveUniqueThreadsFromMessageIds_(messageIds) {
+  var threadMap = {};
+  var order = [];
+  var invalid = [];
+
+  for (var i = 0; i < messageIds.length; i++) {
+    var id = messageIds[i];
+    try {
+      var msg = GmailApp.getMessageById(id);
+      if (!msg) {
+        invalid.push({ message_id: id, reason: '找不到這封信件' });
+        continue;
+      }
+      var thread = msg.getThread();
+      var threadId = thread.getId();
+      if (!threadMap[threadId]) {
+        threadMap[threadId] = { thread: thread, ids: [] };
+        order.push(threadId);
+      }
+      threadMap[threadId].ids.push(id);
+    } catch (err) {
+      invalid.push({ message_id: id, reason: String(err) });
+    }
+  }
+
+  var threads = [];
+  for (var k = 0; k < order.length; k++) {
+    threads.push(threadMap[order[k]]);
+  }
+
+  return { threads: threads, invalid: invalid };
+}
+
+// 對每個去重後的 thread 執行 actionFn（thread => void），彙總成功筆數與失敗清單。
+function runThreadBatchAction_(messageIds, actionFn) {
+  var check = validateMessageIdsInput_(messageIds);
+  if (check.error) {
+    return check.error;
+  }
+
+  var resolved = resolveUniqueThreadsFromMessageIds_(check.ids);
+  var successCount = 0;
+  var failed = [];
+
+  for (var i = 0; i < resolved.invalid.length; i++) {
+    failed.push(resolved.invalid[i]);
+  }
+
+  for (var t = 0; t < resolved.threads.length; t++) {
+    var entry = resolved.threads[t];
+    try {
+      actionFn(entry.thread);
+      successCount++;
+    } catch (err) {
+      failed.push({ message_id: entry.ids[0], reason: String(err) });
+    }
+  }
+
+  return JSON.stringify({ success: successCount, failed: failed });
+}
+
+function toolArchiveEmails_(input) {
+  return runThreadBatchAction_(input.message_ids, function (thread) {
+    thread.moveToArchive();
+  });
+}
+
+function toolLabelEmails_(input) {
+  var labelName = input.label_name;
+  if (!labelName) {
+    return '缺少 label_name 參數，請提供標籤名稱。';
+  }
+
+  var label;
+  try {
+    label = GmailApp.getUserLabelByName(labelName) || GmailApp.createLabel(labelName);
+  } catch (err) {
+    return '建立或取得標籤失敗：' + String(err);
+  }
+
+  return runThreadBatchAction_(input.message_ids, function (thread) {
+    thread.addLabel(label);
+  });
+}
+
+function toolMarkEmailsRead_(input) {
+  return runThreadBatchAction_(input.message_ids, function (thread) {
+    thread.markRead();
+  });
+}
+
+// 破壞性操作：移至垃圾桶（Gmail 的垃圾桶機制，30 天內可復原，非永久刪除）。
+// system prompt 已要求 Claude 必須在使用者對「這一批具體郵件」明確同意後才呼叫本工具。
+function toolTrashEmails_(input) {
+  return runThreadBatchAction_(input.message_ids, function (thread) {
+    thread.moveToTrash();
+  });
 }
 
 // ============================================================
