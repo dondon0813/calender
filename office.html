@@ -559,6 +559,24 @@
   var statusDot = document.getElementById('statusDot');
   var statusLabel = document.getElementById('statusLabel');
 
+  // 休息時的碎念（activity 是「休息中」等籠統字樣時輪播顯示）
+  var IDLE_THOUGHTS = [
+    '今天的陽光曬起來特別舒服…',
+    '在想晚餐要不要吃小魚乾 🐟',
+    '那盆龜背芋好像長新葉子了',
+    '等等再去巡一下信箱好了',
+    '老闆最近辛苦了，呼嚕嚕',
+    '咖啡機的聲音聽起來好療癒',
+    '尾巴收好，優雅是貓的本分',
+    '瞇一下下，五分鐘就好 zzZ',
+    '這首 lo-fi 不錯，加入歌單 🎵',
+    '在盤算下一波團購要提醒老闆什麼'
+  ];
+  var idleThoughtIdx = Math.floor(Math.random() * IDLE_THOUGHTS.length);
+  function isGenericActivity(a){
+    return !a || a === '休息中' || a === '麻糬在沙發上曬太陽…';
+  }
+
   function renderAgentDisplay(){
     var effectiveMood = state.isThinking ? 'working' : (state.agent.mood === 'working' ? 'working' : 'resting');
     sceneEl.classList.toggle('mood-working', effectiveMood === 'working');
@@ -567,12 +585,23 @@
     if (state.isThinking){
       speechBubble.textContent = '麻糬思考中…';
       speechBubble.classList.add('thinking');
+    } else if (effectiveMood === 'working'){
+      speechBubble.textContent = state.agent.activity || '工作中…';
+      speechBubble.classList.remove('thinking');
     } else {
-      speechBubble.textContent = state.agent.activity || (effectiveMood === 'working' ? '工作中…' : '麻糬在沙發上曬太陽…');
+      speechBubble.textContent = isGenericActivity(state.agent.activity) ? IDLE_THOUGHTS[idleThoughtIdx] : state.agent.activity;
       speechBubble.classList.remove('thinking');
     }
     moodCapsule.textContent = '麻糬 — ' + (state.agent.mood === 'working' ? '工作中' : '休息中');
   }
+
+  // 每 25 秒換一句碎念（僅在休息且無具體 activity 時）
+  setInterval(function(){
+    if (!state.isThinking && state.agent.mood !== 'working' && isGenericActivity(state.agent.activity)){
+      idleThoughtIdx = (idleThoughtIdx + 1) % IDLE_THOUGHTS.length;
+      renderAgentDisplay();
+    }
+  }, 25000);
 
   function setOnline(isOnline){
     state.online = isOnline;
