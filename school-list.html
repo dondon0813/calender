@@ -9,6 +9,17 @@
   /* school-list.html 專屬樣式。
      共用的 reset / 版面 / 回首頁鈕 / 返回鈕 / 動作按鈕 / modal / 頁尾在 shared.css。 */
 
+  :root {
+    /* 以下為本頁專用色碼（等價重構搬移自原硬寫值，非全站共用，不放 shared.css） */
+    --sl-card-bg: #FFEDE0; /* 開學用品卡片底色 */
+    --sl-card-border: #FFD9BB; /* 卡片／A4項目／姓名貼輸入框 邊框色 */
+    --sl-card-checked-bg: #EBF7E6; /* 卡片勾選後底色 */
+    --sl-ogb-bg: #FFF6F8; /* 現正開團中橫列底色 */
+    --sl-ogb-border: #FFD6E0; /* 現正開團中橫列邊框 */
+    --sl-ogb-price: #FFAFC2; /* 現正開團中價格文字色 */
+    --sl-ogb-end: #b9a99a; /* 現正開團中結束日文字色 */
+  }
+
   .empty-state {
     text-align: center;
     color: var(--c-muted-light);
@@ -37,7 +48,7 @@
   .recipe-card-modal {
     width: 380px;
     padding: 16px 18px 20px;
-    background: #FFFCF7;
+    background: var(--c-surface-3);
     border-radius: 26px;
     border: none;
     box-shadow: 0 16px 40px rgba(210,150,110,0.28);
@@ -102,14 +113,14 @@
     font-size: 13.5px;
     font-weight: 800;
     color: var(--c-text);
-    background: #FFE9CE;
+    background: var(--c-orange-bg-2);
     border-radius: var(--r-pill);
     padding: 5px 14px;
   }
   .rc-footer {
     text-align: center;
     font-size: 11.5px;
-    color: #FFB4C2;
+    color: var(--c-pink-text);
     font-weight: 700;
     margin-top: 14px;
   }
@@ -136,7 +147,7 @@
     gap: 8px;
     padding: 10px 12px;
     border-radius: var(--r-sm);
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     margin-bottom: 8px;
     font-size: 13px;
   }
@@ -195,8 +206,8 @@
   }
   .school-card {
     position: relative;
-    background: #FFEDE0;
-    border: 2px solid #FFD9BB;
+    background: var(--sl-card-bg);
+    border: 2px solid var(--sl-card-border);
     border-radius: var(--r-lg);
     padding: 16px 8px 10px;
     text-align: center;
@@ -206,7 +217,7 @@
   .school-card:hover { transform: translateY(-2px); }
   .school-card.checked {
     border-color: var(--c-cat-2);
-    background: #EBF7E6;
+    background: var(--sl-card-checked-bg);
   }
   .school-checkbox {
     position: absolute;
@@ -215,7 +226,7 @@
     width: 18px;
     height: 18px;
     border-radius: 6px;
-    border: 2px solid #E0C9B0;
+    border: 2px solid var(--c-tan-border);
     background: #fff;
     display: flex;
     align-items: center;
@@ -253,7 +264,7 @@
     font-weight: 800;
     color: var(--c-text-soft);
   }
-  .school-card.checked .school-card-name { color: #5C9147; }
+  .school-card.checked .school-card-name { color: var(--c-mint-text); }
   .school-reminder-box {
     padding: 10px 20px;
     margin-top: 22px;
@@ -272,7 +283,7 @@
     line-height: 1.6;
   }
   .school-reminder-text b {
-    color: #FF6F91;
+    color: var(--c-pink-deep);
   }
   .school-progress {
     text-align: center;
@@ -328,8 +339,8 @@
 
   /* ===== 現正開團中的開學用品品牌（最上方橫向捲動列）===== */
   .ogb-bar {
-    background: #FFF6F8;
-    border: 1.5px solid #FFD6E0;
+    background: var(--sl-ogb-bg);
+    border: 1.5px solid var(--sl-ogb-border);
     border-radius: 14px;
     padding: 10px 0 12px;
     margin-bottom: 14px;
@@ -337,7 +348,7 @@
   .ogb-title {
     font-size: 12.5px;
     font-weight: 900;
-    color: #FF6F91;
+    color: var(--c-pink-deep);
     text-align: center;
     margin-bottom: 8px;
   }
@@ -375,7 +386,7 @@
   .ogb-thumb-fallback {
     font-size: 24px;
     font-weight: 900;
-    color: #FFAFC2;
+    color: var(--sl-ogb-price);
   }
   .ogb-name {
     font-size: 11px;
@@ -386,7 +397,7 @@
   }
   .ogb-end {
     font-size: 10px;
-    color: #b9a99a;
+    color: var(--sl-ogb-end);
     margin-top: 1px;
   }
 
@@ -400,7 +411,7 @@
     border-radius: 50%;
     border: none;
     background: rgba(255,255,255,0.85);
-    color: #c99a3a;
+    color: var(--c-gold-text);
     font-size: 11px;
     font-weight: 800;
     display: flex;
@@ -424,7 +435,7 @@
   }
   .school-removed-box {
     margin-top: 10px;
-    border: 2px dashed #E0C9B0;
+    border: 2px dashed var(--c-tan-border);
     border-radius: var(--r-lg);
     padding: 12px 14px;
   }
@@ -434,7 +445,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 8px 4px;
-    border-bottom: 1px dotted #F0DFCB;
+    border-bottom: 1px dotted var(--c-line-2);
     font-size: 12.5px;
     color: var(--c-text-soft);
   }
@@ -475,7 +486,7 @@
     font-size: 11.5px;
     color: var(--c-text-soft);
     line-height: 1.6;
-    background: #FFF6EC;
+    background: var(--c-orange-bg);
     border-radius: 0 0 10px 10px;
     padding: 2px 12px 10px;
   }
@@ -572,14 +583,14 @@
   .a4-item {
     position: relative;
     background: var(--c-surface-2);
-    border: 2px solid #FFD9BB;
+    border: 2px solid var(--sl-card-border);
     border-radius: var(--r-lg);
     padding: 14px 8px 10px;
     text-align: center;
   }
   .a4-item.checked {
     border-color: var(--c-cat-2);
-    background: #EBF7E6;
+    background: var(--sl-card-checked-bg);
   }
   .a4-item-checkbox {
     position: absolute;
@@ -588,7 +599,7 @@
     width: 20px;
     height: 20px;
     border-radius: 6px;
-    border: 2px solid #E0C9B0;
+    border: 2px solid var(--c-tan-border);
     background: #fff;
     display: flex;
     align-items: center;
@@ -666,8 +677,8 @@
     box-sizing: border-box;
     padding: 12px 14px;
     border-radius: var(--r-md);
-    border: 2px solid #FFD9BB;
-    background: #FFF6EC;
+    border: 2px solid var(--sl-card-border);
+    background: var(--c-orange-bg);
     font-family: var(--font-body);
     font-size: 15px;
     font-weight: 700;
@@ -691,8 +702,8 @@
     color: var(--c-text-soft);
   }
   .sticker-size-btn {
-    border: 2px solid #FFD9BB;
-    background: #FFF6EC;
+    border: 2px solid var(--sl-card-border);
+    background: var(--c-orange-bg);
     color: var(--c-text-soft);
     font-family: var(--font-round);
     font-weight: 800;
