@@ -12,6 +12,13 @@
     --wrap-max:     640px;
     --title-size:   26px;
     --title-rule-w: 110px;
+
+    /* star-card 專屬色碼（與 shared.css 近似值不同，不可合併） */
+    --stc-cream-bg:   #FFFDF6; /* 新增小朋友按鈕背景 */
+    --stc-pink-badge: #FFD3E0; /* 星星集點徽章粉底 */
+    --stc-gold-star:  #F0A93C; /* 金色星星 */
+    --stc-coral:      #E0644A; /* 珊瑚色重點文字/邊框 */
+    --stc-coral-bg:   #FFCFC2; /* 珊瑚色淺底 */
   }
 
   .back-btn { margin-bottom: 10px; }
@@ -65,15 +72,15 @@
   }
   .profile-chip .emoji { font-size: 16px; }
   .profile-chip.active {
-    background: #FFF0F3;
+    background: var(--c-pink-bg);
     border-color: var(--c-primary);
-    color: #FF6F91;
+    color: var(--c-pink-deep);
   }
   .profile-chip-add {
     border-style: dashed;
-    color: #c99a3a;
-    border-color: #F0DBA0;
-    background: #FFFDF6;
+    color: var(--c-gold-text);
+    border-color: var(--c-gold-border);
+    background: var(--stc-cream-bg);
   }
 
   .empty-state {
@@ -81,7 +88,7 @@
     color: var(--c-muted-light);
     font-size: 13px;
     padding: 34px 10px;
-    border: 2px dashed #FFD3AC;
+    border: 2px dashed var(--c-orange-dash);
     border-radius: var(--r-modal);
   }
 
@@ -124,8 +131,8 @@
   }
 
   .star-card-box {
-    background: linear-gradient(135deg, #FFF0D9 0%, #FFE7ED 100%);
-    border: 3px dashed #FFC79A;
+    background: linear-gradient(135deg, var(--c-gold-gradient) 0%, var(--c-pink-bg-2) 100%);
+    border: 3px dashed var(--c-orange-dash-2);
     border-radius: 24px;
     padding: 22px 14px;
     margin-bottom: 16px;
@@ -144,13 +151,13 @@
     font-size: 26px;
     background: var(--c-surface);
     border: 2.5px dashed var(--c-title-rule);
-    color: #FFD3E0;
+    color: var(--stc-pink-badge);
     user-select: none;
   }
   .star-slot.filled {
-    background: #FFF6DD;
+    background: var(--c-gold-badge-bg);
     border: 2.5px solid var(--c-cat-6);
-    color: #F0A93C;
+    color: var(--stc-gold-star);
     animation: pop .35s ease;
   }
   .star-slot.clickable { cursor: pointer; }
@@ -253,7 +260,7 @@
     justify-content: center;
     cursor: pointer;
   }
-  .avatar-pick.active { border-color: var(--c-primary); background: #FFF0F3; }
+  .avatar-pick.active { border-color: var(--c-primary); background: var(--c-pink-bg); }
 
   .modal-hint {
     font-size: 11.5px;
@@ -263,7 +270,7 @@
   }
   .modal-error {
     font-size: 12px;
-    color: #e0644a;
+    color: var(--stc-coral);
     font-weight: 800;
     margin-top: 8px;
     min-height: 16px;
@@ -271,7 +278,7 @@
   .modal-divider {
     text-align: center;
     font-size: 11px;
-    color: #cbb8a8;
+    color: var(--c-placeholder);
     margin: 14px 0;
   }
 
@@ -315,8 +322,8 @@
 
   .danger-btn {
     background: #fff;
-    color: #e0644a;
-    border: 2px solid #FFCFC2;
+    color: var(--stc-coral);
+    border: 2px solid var(--stc-coral-bg);
   }
 </style>
 </head>
@@ -893,7 +900,7 @@ document.getElementById('saveNewPasswordBtn').addEventListener('click', async ()
   APP.parentAuth.passwordHash = hash;
   APP.parentAuth.salt = salt;
   saveApp();
-  errEl.style.color = '#5C9147';
+  errEl.style.color = 'var(--c-mint-text)';
   errEl.textContent = '密碼已更新！';
 });
 document.getElementById('deleteChildBtn').addEventListener('click', () => {
