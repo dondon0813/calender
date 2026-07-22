@@ -9,6 +9,45 @@
   /* index.html 專屬樣式。共用的 reset / 版面 / 按鈕 / modal / 頁尾在 shared.css。
      色碼、圓角、陰影一律用 shared.css 的 :root 變數，不要再硬寫。 */
 
+  /* index.html 專屬色彩變數（只在本頁使用，值須與原硬寫色碼完全一致，不與 shared.css 共用鍵合併） */
+  :root {
+    --ix-month-shadow: #FFE0E8;       /* 月份數字陰影 */
+    --ix-day-dim-bg: #FBF6EF;         /* 月曆格：非本月淡出背景 */
+    --ix-day-today-bg: #FFE9C2;       /* 月曆格：今天背景 */
+    --ix-day-today-ring: #FFB454;     /* 月曆格：今天外框 */
+    --ix-day-dim-text: #ddd0c2;       /* 月曆格：非本月淡出文字 */
+    --ix-day-today-text: #C97A1A;     /* 月曆格：今天日期文字 */
+    --ix-upcoming-border: #E8B93D;    /* 即將開團：外框／圖例外框 */
+    --ix-upcoming-text: #8A6D1F;      /* 即將開團：文字 */
+    --ix-active-border: #FF9F4A;      /* 開團中：外框／圖例外框 */
+    --ix-closing-bg: #FFE1E8;         /* 即將截止：背景／圖例背景 */
+    --ix-closing-text: #C1315A;       /* 即將截止：文字 */
+    --ix-ended-bg: #EFEBE5;           /* 已結束：背景／圖例背景 */
+    --ix-ended-border: #B8AC9C;       /* 已結束：外框／圖例外框 */
+    --ix-ended-text: #7A7166;         /* 已結束：文字（也用於清單標題） */
+    --ix-frozen-bg: #E6F1FC;          /* 已凍結：背景／圖例背景 */
+    --ix-frozen-border: #4F91D9;      /* 已凍結：外框／圖例外框／今日凍結徽章背景 */
+    --ix-frozen-text: #2F6FB0;        /* 已凍結：文字 */
+    --ix-closing-title: #E0405F;      /* 現正開團中清單：即將截止標題色 */
+    --ix-active-title: #C98A3E;       /* 現正開團中清單：開團中標題色 */
+    --ix-card-bg: #B98868;            /* 現正開團中卡片：預設背景 */
+    --ix-card-today-bg: #7A5A42;      /* 現正開團中卡片：今天特別背景 */
+    --ix-card-today-ring: #FFD3DC;    /* 現正開團中卡片：今天外環光暈 */
+    --ix-card-gray-bg: #C9C1B4;       /* 現正開團中卡片：已結束灰卡背景 */
+    --ix-card-gray-text: #6b6255;     /* 現正開團中卡片：已結束灰卡文字 */
+    --ix-today-badge-bg: #FF4D6D;     /* 今日徽章背景 */
+    --ix-social-icon-default: #3a2f28; /* 品牌社群圖示：預設底色（無自訂色時） */
+    --ix-btn-intro-hover: #5F97DB;    /* 頁首按鈕：品牌介紹 hover */
+    --ix-btn-recipe-hover: #F0A05F;   /* 頁首按鈕：食譜 hover */
+    --ix-code-hover-bg: #FFE7D6;      /* 折扣碼區塊 hover 背景 */
+    --ix-tag-bg: #FF5C8A;             /* 活動標籤背景 */
+    --ix-c0-badge-bg: #FFE6EC;        /* 分類0 徽章背景 */
+    --ix-c1-badge-bg: #FFEcD6;        /* 分類1 徽章背景 */
+    --ix-c3-badge-bg: #DEF5F4;        /* 分類3 徽章背景 */
+    --ix-c6-badge-bg: #FBEFD9;        /* 分類6 徽章背景 */
+    --ix-c6-text: #D9A441;            /* 分類6 文字色 */
+  }
+
   /* 圓體：字型本身與大部分標題／按鈕由 shared.css 統一處理，
      這裡只補這頁專屬、shared.css 沒有的三個。 */
   .gc-title,
@@ -43,7 +82,7 @@
     font-size: 46px;
     color: var(--c-primary);
     line-height: 1;
-    text-shadow: 2px 2px 0 #FFE0E8;
+    text-shadow: 2px 2px 0 var(--ix-month-shadow);
     flex: none;
   }
 
@@ -110,18 +149,18 @@
     padding: 5px 4px 4px;
     min-height: 30px;
   }
-  .daycell.dim { background: #FBF6EF; }
+  .daycell.dim { background: var(--ix-day-dim-bg); }
   .daycell.today {
-    background: #FFE9C2;
-    box-shadow: inset 0 0 0 2px #FFB454;
+    background: var(--ix-day-today-bg);
+    box-shadow: inset 0 0 0 2px var(--ix-day-today-ring);
   }
   .daynum {
     font-weight: 700;
     font-size: 13px;
     color: var(--c-muted);
   }
-  .daycell.dim .daynum { color: #ddd0c2; }
-  .daycell.today .daynum { color: #C97A1A; font-weight: 900; }
+  .daycell.dim .daynum { color: var(--ix-day-dim-text); }
+  .daycell.today .daynum { color: var(--ix-day-today-text); font-weight: 900; }
 
   .daycell-list {
     border-right: 2px solid var(--c-line);
@@ -129,12 +168,12 @@
     padding: 5px 4px 6px;
     min-height: 30px;
   }
-  .daycell-list.dim { background: #FBF6EF; }
+  .daycell-list.dim { background: var(--ix-day-dim-bg); }
   .daycell-list.today {
-    background: #FFE9C2;
-    box-shadow: inset 0 0 0 2px #FFB454;
+    background: var(--ix-day-today-bg);
+    box-shadow: inset 0 0 0 2px var(--ix-day-today-ring);
   }
-  .daycell-list.today .daynum { color: #C97A1A; font-weight: 900; }
+  .daycell-list.today .daynum { color: var(--ix-day-today-text); font-weight: 900; }
   .daycell-list .events-stack {
     display: flex;
     flex-direction: column;
@@ -183,33 +222,33 @@
   }
 
   .ebar-wrap.cat-upcoming {
-    background: #FFF6DD;
-    border: 1.5px solid #E8B93D;
-    color: #8A6D1F;
+    background: var(--c-gold-badge-bg);
+    border: 1.5px solid var(--ix-upcoming-border);
+    color: var(--ix-upcoming-text);
   }
   .ebar-wrap.cat-active {
-    background: #FFEcD9;
-    border: 1.5px solid #FF9F4A;
-    color: #B5601C;
+    background: var(--c-orange-badge-bg);
+    border: 1.5px solid var(--ix-active-border);
+    color: var(--c-orange-text);
   }
   .ebar-wrap.cat-closingSoon {
-    background: #FFE1E8;
-    border: 1.5px solid #FF6F91;
-    color: #C1315A;
+    background: var(--ix-closing-bg);
+    border: 1.5px solid var(--c-pink-deep);
+    color: var(--ix-closing-text);
   }
   .ebar-wrap.cat-ended {
-    background: #EFEBE5;
-    border: 1.5px solid #B8AC9C;
-    color: #7A7166;
+    background: var(--ix-ended-bg);
+    border: 1.5px solid var(--ix-ended-border);
+    color: var(--ix-ended-text);
   }
   .ebar-wrap.cat-frozen {
-    background-color: #E6F1FC;
+    background-color: var(--ix-frozen-bg);
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
     background-repeat: no-repeat;
     background-position: bottom right;
     background-size: 34px 34px;
-    border: 1.5px solid #4F91D9;
-    color: #2F6FB0;
+    border: 1.5px solid var(--ix-frozen-border);
+    color: var(--ix-frozen-text);
   }
 
   /* ===== 現正開團中：清單卡片 ===== */
@@ -224,13 +263,13 @@
     letter-spacing: 1px;
   }
   .gs-section-title:first-child { margin-top: 4px; }
-  .gs-title-closing { color: #E0405F; }
-  .gs-title-active { color: #C98A3E; }
-  .gs-title-ended { color: #7A7166; }
+  .gs-title-closing { color: var(--ix-closing-title); }
+  .gs-title-active { color: var(--ix-active-title); }
+  .gs-title-ended { color: var(--ix-ended-text); }
   .gs-card {
     display: block;
     position: relative;
-    background: #B98868;
+    background: var(--ix-card-bg);
     color: #fff;
     border-radius: var(--r-lg);
     padding: 14px 20px;
@@ -243,12 +282,12 @@
   .gs-card.clickable { cursor: pointer; }
   .gs-card.clickable:hover { transform: scale(1.015); }
   .gs-card.gs-today {
-    background: #7A5A42;
-    box-shadow: 0 0 0 3px #FFD3DC;
+    background: var(--ix-card-today-bg);
+    box-shadow: 0 0 0 3px var(--ix-card-today-ring);
   }
   .gs-card.gs-card-gray {
-    background: #C9C1B4;
-    color: #6b6255;
+    background: var(--ix-card-gray-bg);
+    color: var(--ix-card-gray-text);
   }
   .gs-card-name {
     font-size: 19px;
@@ -296,8 +335,8 @@
     border-radius: var(--r-pill);
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
-  .gs-today-badge { background: #FF4D6D; }
-  .gs-frozen-badge { background: #4F91D9; }
+  .gs-today-badge { background: var(--ix-today-badge-bg); }
+  .gs-frozen-badge { background: var(--ix-frozen-border); }
   .gs-empty {
     text-align: center;
     color: var(--c-muted);
@@ -318,7 +357,7 @@
     width: 44px;
     height: 44px;
     border-radius: 30%;
-    background: var(--social-icon-color, #3a2f28);
+    background: var(--social-icon-color, var(--ix-social-icon-default));
     border: none;
     display: flex;
     align-items: center;
@@ -363,9 +402,9 @@
     border: none;
   }
   .gc-btn-intro { background: var(--c-cat-4); }
-  .gc-btn-intro:hover { background: #5F97DB; }
+  .gc-btn-intro:hover { background: var(--ix-btn-intro-hover); }
   .gc-btn-recipe { background: var(--c-cat-1); }
-  .gc-btn-recipe:hover { background: #F0A05F; }
+  .gc-btn-recipe:hover { background: var(--ix-btn-recipe-hover); }
   .gc-btn-order { background: var(--c-primary); }
   .gc-btn-order:hover { background: var(--c-primary-dark); }
 
@@ -399,7 +438,7 @@
     font-family: inherit;
     transition: background 0.15s, border-color 0.15s;
   }
-  .gc-code:hover { background: #FFE7D6; border-color: var(--c-primary); }
+  .gc-code:hover { background: var(--ix-code-hover-bg); border-color: var(--c-primary); }
   .gc-code-text {
     font-size: 18px;
     font-weight: 800;
@@ -466,7 +505,7 @@
   }
   .ev-tag {
     flex: none;
-    background: #FF5C8A;
+    background: var(--ix-tag-bg);
     color: #fff;
     font-weight: 800;
     font-size: 9px;
@@ -475,13 +514,13 @@
     margin-left: auto;
   }
 
-  .c0 .badge { background: #FFE6EC; color: var(--c-cat-0); } .c0.ebar { background: var(--c-cat-0); }
-  .c1 .badge { background: #FFEcD6; color: var(--c-cat-1); } .c1.ebar { background: var(--c-cat-1); }
-  .c2 .badge { background: #E4F5DF; color: var(--c-cat-2); } .c2.ebar { background: var(--c-cat-2); }
-  .c3 .badge { background: #DEF5F4; color: var(--c-cat-3); } .c3.ebar { background: var(--c-cat-3); }
-  .c4 .badge { background: #E2EBFD; color: var(--c-cat-4); } .c4.ebar { background: var(--c-cat-4); }
-  .c5 .badge { background: #EFE4FB; color: var(--c-cat-5); } .c5.ebar { background: var(--c-cat-5); }
-  .c6 .badge { background: #FBEFD9; color: #D9A441; }        .c6.ebar { background: var(--c-cat-6); }
+  .c0 .badge { background: var(--ix-c0-badge-bg); color: var(--c-cat-0); } .c0.ebar { background: var(--c-cat-0); }
+  .c1 .badge { background: var(--ix-c1-badge-bg); color: var(--c-cat-1); } .c1.ebar { background: var(--c-cat-1); }
+  .c2 .badge { background: var(--c-mint-bg); color: var(--c-cat-2); } .c2.ebar { background: var(--c-cat-2); }
+  .c3 .badge { background: var(--ix-c3-badge-bg); color: var(--c-cat-3); } .c3.ebar { background: var(--c-cat-3); }
+  .c4 .badge { background: var(--c-blue-bg); color: var(--c-cat-4); } .c4.ebar { background: var(--c-cat-4); }
+  .c5 .badge { background: var(--c-purple-bg); color: var(--c-cat-5); } .c5.ebar { background: var(--c-cat-5); }
+  .c6 .badge { background: var(--ix-c6-badge-bg); color: var(--ix-c6-text); }        .c6.ebar { background: var(--c-cat-6); }
 
   /* ===== 圖例 ===== */
   .legend {
@@ -511,11 +550,11 @@
     display: inline-block;
     flex: none;
   }
-  .legend-upcoming { background: #FFF6DD; border: 1.5px solid #E8B93D; }
-  .legend-active { background: #FFEcD9; border: 1.5px solid #FF9F4A; }
-  .legend-closingSoon { background: #FFE1E8; border: 1.5px solid #FF6F91; }
-  .legend-ended { background: #EFEBE5; border: 1.5px solid #B8AC9C; }
-  .legend-frozen { background: #E6F1FC; border: 1.5px solid #4F91D9; }
+  .legend-upcoming { background: var(--c-gold-badge-bg); border: 1.5px solid var(--ix-upcoming-border); }
+  .legend-active { background: var(--c-orange-badge-bg); border: 1.5px solid var(--ix-active-border); }
+  .legend-closingSoon { background: var(--ix-closing-bg); border: 1.5px solid var(--c-pink-deep); }
+  .legend-ended { background: var(--ix-ended-bg); border: 1.5px solid var(--ix-ended-border); }
+  .legend-frozen { background: var(--ix-frozen-bg); border: 1.5px solid var(--ix-frozen-border); }
 
   @media (max-width: 480px) {
     .month-num { font-size: 36px; }
@@ -687,7 +726,7 @@ function buildSocialIconRow() {
   if (!items.length) return null;
   const row = document.createElement('div');
   row.className = 'site-social-row';
-  row.style.setProperty('--social-icon-color', SOCIAL_LINKS.iconColor || '#3a2f28');
+  row.style.setProperty('--social-icon-color', SOCIAL_LINKS.iconColor || 'var(--ix-social-icon-default)');
   items.forEach(d => {
     let href = SOCIAL_LINKS[d.key];
     if (d.key !== 'iconEmail' && !/^https?:\/\//i.test(href) && href.indexOf('mailto:') !== 0) href = 'https://' + href;
@@ -720,7 +759,7 @@ function buildCustomBlockEl(block) {
   a.className = 'cb-card clickable' + (CB_ANIM_CLASS[block.animation] ? ' ' + CB_ANIM_CLASS[block.animation] : '');
   a.href = block.url || 'javascript:void(0)';
   if (block.url) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
-  a.style.background = block.buttonColor || '#FF8FA3';
+  a.style.background = block.buttonColor || 'var(--c-primary)';
   a.style.color = block.textColor || '#FFFFFF';
   const borderCss = CB_BORDER_STYLE_CSS[block.borderStyle] || 'none';
   a.style.border = borderCss === 'none' ? 'none' : `${block.borderWidth || 2}px ${borderCss} ${block.borderColor || '#FFFFFF'}`;
