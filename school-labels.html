@@ -243,6 +243,9 @@ async function findOpenGroupUrl() {
 
   for (const r of rows) {
     const c = r.c || [];
+    const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
+    const published = publishedRaw === '' ? true : (publishedRaw === '是');
+    if (!published) continue;
     const title = c[4] && c[4].v ? String(c[4].v) : '';   // E欄：標題
     if (!title.toLowerCase().includes(BUY_KEYWORD)) continue;
     const url = c[7] && c[7].v ? String(c[7].v) : '';     // H欄：訂購網址

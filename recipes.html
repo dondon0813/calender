@@ -1590,6 +1590,9 @@ async function loadCalendar() {
     if (!start || !end || !title) return;
     const extend = parseExtendRaw(extendRaw);
     const displayEnd = computeDisplayEnd(end, extend);
+    const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
+    const published = publishedRaw === '' ? true : (publishedRaw === '是');
+    if (!published) return;
     events.push({ title, start, displayEnd, url });
   });
   CALENDAR_EVENTS = events;
