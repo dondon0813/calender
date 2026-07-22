@@ -55,6 +55,46 @@
   --c-cat-5: #B79AE8;  /* 紫 */
   --c-cat-6: #F0C36D;  /* 黃 */
 
+  /* ---------- 跨頁共用色（色碼變數化重構新增） ---------- */
+  --c-coral-text:   #FF6F55;  /* 珊瑚卡標題 */
+  --c-coral-bg:     #FFE3DC;  /* 珊瑚淡底 */
+  --c-coral-border: #FFB6A6;  /* 珊瑚邊框 */
+
+  --c-mint-text:    #5C9147;  /* 綠系標題文字 */
+  --c-mint-bg:      #E4F5DF;  /* 綠淡底 */
+  --c-mint-border:  #B9E3AC;  /* 綠邊框 */
+
+  --c-pink-deep:    #FF6F91;  /* 粉紅重點文字 */
+  --c-pink-text:    #FFB4C2;  /* 粉文字 */
+  --c-pink-bg:      #FFF0F3;  /* 粉淡底 */
+  --c-pink-bg-2:    #FFE7ED;  /* 粉淡底2 */
+
+  --c-purple-text:   #8E6BB5;  /* 紫卡標題 */
+  --c-purple-bg:     #EFE4FB;  /* 紫卡淡底 */
+  --c-purple-border: #D5BCF0;  /* 紫邊框 */
+
+  --c-blue-text:   #5F87C9;  /* 藍卡標題 */
+  --c-blue-bg:     #E2EBFD;  /* 藍淡底 */
+  --c-blue-border: #B9CDF5;  /* 藍邊框 */
+
+  --c-gold-text:      #C99A3A;  /* 黃金文字 */
+  --c-gold-badge-bg:  #FFF6DD;  /* 黃淡底徽章 */
+  --c-gold-border:    #F0DBA0;  /* 黃邊框 */
+  --c-gold-gradient:  #FFF0D9;  /* 漸層黃 */
+
+  --c-orange-bg:       #FFF6EC;  /* 淡橘卡片底 */
+  --c-orange-bg-2:     #FFE9CE;  /* 橘淡底2 */
+  --c-orange-badge-bg: #FFECD9;  /* 橘淡底徽章 */
+  --c-orange-dash:     #FFD3AC;  /* 虛線邊框橘 */
+  --c-orange-dash-2:   #FFC79A;  /* 虛線邊框橘2 */
+  --c-orange-text:     #B5601C;  /* 橘文字 */
+
+  --c-line-2:      #F0DFCB;  /* 表格虛線分隔 */
+  --c-surface-3:   #FFFCF7;  /* 卡片底白偏黃 */
+  --c-placeholder: #CBB8A8;  /* placeholder 灰棕 */
+  --c-tag-bg:      #C9A66B;  /* 標籤底按鈕 */
+  --c-tan-border:  #E0C9B0;  /* 淺棕邊框（checkbox／狀態框，跨 admin.html／school-list.html） */
+
   /* ---------- 圓角 ---------- */
   --r-sm:    10px;
   --r-md:    12px;
