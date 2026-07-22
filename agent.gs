@@ -11,8 +11,16 @@
  * 3. 左側「專案設定」→「指令碼屬性」，新增兩筆：
  *      ANTHROPIC_API_KEY = 你的 Claude API 金鑰
  *      AGENT_TOKEN       = 你自訂的一組通關密語（前端呼叫 API 都要帶這個）
+ *    另外還有兩筆「選填」的指令碼屬性，用來部署第二隻（或其他）助理時
+ *    客製化名字與角色，不設定就維持預設值「麻糬／私人助理」：
+ *      AGENT_NAME = 助理的名字，例如部署 Amanda 時設 Amanda
+ *      AGENT_ROLE = 助理的角色描述，例如部署 Amanda 時設 工作助理
+ *    這兩筆只影響 status 回應的名字、system prompt 的自稱與角色描述、
+ *    以及全新 setup() 時建立的資料庫試算表名稱；既有部署因為已經存有
+ *    AGENT_SHEET_ID，不會受影響。
  * 4. 在編輯器上方選取函式 setup，按「執行」一次（第一次會要求授權，
- *    同意即可）。這會自動建立一份叫「麻糬員工資料庫」的試算表。
+ *    同意即可）。這會自動建立一份叫「（名字）員工資料庫」的試算表
+ *    （預設是「麻糬員工資料庫」，設定 AGENT_NAME 後會跟著改）。
  * 5. 點「部署」→「新增部署作業」→類型選「網頁應用程式」：
  *      執行身分：我（你自己）
  *      誰可以存取：任何人
@@ -53,11 +61,13 @@ var CLAUDE_API_VERSION = '2023-06-01';
 var CALENDAR_SHEET_ID = '18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk';
 var CALENDAR_SHEET_TAB_NAME = '行事曆';
 
-// 麻糬自己的資料庫試算表名稱（由 setup() 自動建立）。
-var AGENT_SHEET_NAME = '麻糬員工資料庫';
-
 // Claude 工具呼叫迴圈的上限輪數，避免無限迴圈。
 var MAX_TOOL_ROUNDS = 6;
+
+// 助理身分（名字／角色）快取設定。可用 Script Properties 的
+// AGENT_NAME / AGENT_ROLE 覆蓋，未設定時預設「麻糬」／「私人助理」。
+var AGENT_IDENTITY_CACHE_KEY = 'mochi_agent_identity_v1';
+var AGENT_IDENTITY_CACHE_TTL_SECONDS = 300;
 
 // 計價表（USD / 1M tokens）。務必與 MODEL 常數挑選的模型對齊。
 var PRICING = {
@@ -71,7 +81,36 @@ var STATE_CACHE_KEY = 'mochi_agent_state_v1';
 var STATE_CACHE_TTL_SECONDS = 600;
 
 // ============================================================
-// setup()：初始化麻糬的資料庫試算表（可重複執行，冪等）
+// 助理身分（名字／角色）：可由 Script Properties 覆蓋，CacheService 快取。
+// ============================================================
+
+function getAgentIdentity_() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(AGENT_IDENTITY_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (err) {
+      // 快取內容壞掉就當作 cache miss，往下重新讀 Script Properties
+    }
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var identity = {
+    name: props.getProperty('AGENT_NAME') || '麻糬',
+    role: props.getProperty('AGENT_ROLE') || '私人助理'
+  };
+  cache.put(AGENT_IDENTITY_CACHE_KEY, JSON.stringify(identity), AGENT_IDENTITY_CACHE_TTL_SECONDS);
+  return identity;
+}
+
+// 助理自己的資料庫試算表名稱（僅供 setup() 建立全新試算表時使用）。
+function getAgentSheetName_() {
+  return getAgentIdentity_().name + '員工資料庫';
+}
+
+// ============================================================
+// setup()：初始化助理的資料庫試算表（可重複執行，冪等）
 // ============================================================
 
 function setup() {
@@ -88,7 +127,7 @@ function setup() {
   }
 
   if (!ss) {
-    ss = SpreadsheetApp.create(AGENT_SHEET_NAME);
+    ss = SpreadsheetApp.create(getAgentSheetName_());
     props.setProperty('AGENT_SHEET_ID', ss.getId());
   }
 
@@ -106,7 +145,7 @@ function setup() {
     schedSheet.appendRow(['08:00', '信件摘要', 'pending', '']);
   }
 
-  Logger.log('setup 完成。麻糬員工資料庫試算表 ID：' + ss.getId());
+  Logger.log('setup 完成。' + getAgentSheetName_() + '試算表 ID：' + ss.getId());
 }
 
 // 確保分頁存在且有表頭列；回傳該分頁物件。
@@ -377,7 +416,7 @@ function buildStatusResponse_() {
   return {
     ok: true,
     agent: {
-      name: '麻糬',
+      name: getAgentIdentity_().name,
       mood: state.mood,
       activity: state.activity,
       updatedAt: state.updatedAt
@@ -465,11 +504,13 @@ function callClaude_(system, messages, tools) {
   return json;
 }
 
-// 麻糬的角色設定（system prompt）。
+// 助理的角色設定（system prompt）。名字與角色可由 Script Properties 覆蓋
+// （AGENT_NAME / AGENT_ROLE），詳見檔頭註解與 getAgentIdentity_()。
 function buildSystemPrompt_() {
+  var identity = getAgentIdentity_();
   var today = Utilities.formatDate(new Date(), 'Asia/Taipei', "yyyy-MM-dd（EEEE）");
   return (
-    '你是麻糬，一隻擬人貓 AI 員工，是雪莉（Shirley）的經紀人兼助理，負責整理 Gmail 信箱' +
+    '你是' + identity.name + '，一隻擬人貓 AI 員工，是雪莉（Shirley）的' + identity.role + '，負責整理 Gmail 信箱' +
     '（搜尋、封存、貼標籤、標記已讀、清理垃圾信）、' +
     '協助規劃團購行事曆相關事務，並回答雪莉交辦的各種指令。' +
     '說話語氣親切、簡短、口語化，像貼心的同事，不要長篇大論，也不要過度客套。' +
@@ -1069,8 +1110,9 @@ function dailyDigest() {
     }
 
     var today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+    var identity = getAgentIdentity_();
     var system =
-      '你是麻糬，一隻擬人貓 AI 員工，是雪莉的經紀人兼助理。請根據以下今天的信件清單，' +
+      '你是' + identity.name + '，一隻擬人貓 AI 員工，是雪莉的' + identity.role + '。請根據以下今天的信件清單，' +
       '用繁體中文寫一份簡短的每日信箱摘要：重要的信、需要處理的待辦事項要特別點出來；' +
       '純廣告/行銷/電子報信件可以略過或用一句話帶過即可，不用逐封分析。' +
       '今天的日期是 ' + today + '（Asia/Taipei 時區）。';
