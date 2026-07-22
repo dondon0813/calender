@@ -3,45 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>小龍指揮中心 | XIAOLONG COMMAND CENTER</title>
+<title>麻糬指揮中心 | MOCHI COMMAND CENTER</title>
 <link rel="stylesheet" href="shared.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
-     office.html — 小龍指揮中心（虛擬辦公室）
+     office.html — 麻糬指揮中心（虛擬辦公室）
      只用本頁專屬 CSS 變數畫像素場景美術；UI 面板顏色沿用 shared.css :root 變數。
      ============================================================ */
   :root{
     --px-unit: 4px;
-    --px-wall: #241a3d;
-    --px-wall-2: #2c2050;
-    --px-wall-dark: #180f2b;
-    --px-floor: #150e26;
-    --px-floor-2: #1c1332;
-    --px-rug: #7c3f6b;
-    --px-rug-dark: #5c2c4e;
-    --px-sky: #140c2b;
-    --px-city: #0c0819;
-    --px-star: #ffe9a8;
-    --px-desk: #4b3a2f;
-    --px-desk-dark: #2f2318;
-    --px-screen: #8be9fd;
-    --px-screen-dark: #2b6f7d;
-    --px-chair: #3b2f4a;
-    --px-chair-dark: #251c30;
-    --px-sofa: #6a4fa0;
-    --px-sofa-dark: #4a3778;
-    --px-lamp: #e8b34a;
-    --px-lamp-pole: #4a3b52;
-    --px-plant: #4c8c5a;
-    --px-plant-dark: #316239;
-    --px-pot: #935e3e;
-    --lobster-body: #ff6b4a;
-    --lobster-dark: #d9502f;
-    --lobster-belly: #ffcf9e;
-    --lobster-eye: #1c1224;
+    /* 牆面／地板：米白牆＋淺原木地板拼板 */
+    --px-wall: #F5F1E8;
+    --px-wall-2: #EFE7D6;
+    --px-wall-dark: #DCCFB2;
+    --px-floor: #C8AF87;
+    --px-floor-2: #D9C7A7;
+    /* 地毯：亞麻米＋鼠尾草綠點綴 */
+    --px-rug: #DCD3BE;
+    --px-rug-dark: #A9BB9C;
+    /* 窗外：白天淡藍天空 */
+    --px-sky: #CFE7EE;
+    --px-sky-2: #EAF4F1;
+    --px-cloud: #FFFFFF;
+    --px-window-frame: #B9A784;
+    --px-window-frame-dark: #9C8A69;
+    /* 家具：淺橡木＋白色 */
+    --px-desk: #DFC9A0;
+    --px-desk-dark: #C1A275;
+    --px-screen: #FFFDF8;
+    --px-screen-glow: #F2E7CE;
+    --px-chair: #EFE7D6;
+    --px-chair-dark: #D9C7A7;
+    --px-sofa: #D7CBB0;
+    --px-sofa-dark: #BFAE8C;
+    --px-cushion: #E3A379;
+    /* 燈具：暖白紙燈罩 */
+    --px-lamp: #FBEFD3;
+    --px-lamp-glow: #F7E4B8;
+    --px-lamp-pole: #C9BA9C;
+    /* 植栽：深淺兩種綠交錯 */
+    --px-plant: #7C9473;
+    --px-plant-dark: #5B7452;
+    --px-plant-light: #9CB088;
+    --px-pot: #EDE3D0;
+    --px-pot-dark: #C9A876;
+    --px-pot-rattan: #C9A876;
+    --px-pot-rattan-dark: #A8834F;
+    --px-shelf: #DFC9A0;
+    --px-shelf-dark: #C1A275;
+    --px-accent-orange: #E3A379;
+    /* 麻糬（貓）配色 */
+    --cat-fur: #F3E9D8;
+    --cat-fur-shade: #E1D0B3;
+    --cat-ear: #F0B7AE;
+    --cat-blush: #F3A79C;
+    --cat-eye: #4A3B32;
+    --cat-nose: #D9917A;
+    --cat-apron: #B9C4AF;
+    --cat-apron-dark: #9AA891;
     --panel-radius: var(--r-lg, 12px);
   }
 
@@ -50,7 +72,7 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--px-wall-dark);
+    background: var(--px-wall);
     color: var(--c-text, #5a4a3f);
     font-family: var(--font-body, 'Noto Sans TC', sans-serif);
     padding: 0;
@@ -66,39 +88,38 @@
     padding:12px 16px;
     background: linear-gradient(180deg, var(--px-wall-2), var(--px-wall));
     border-bottom: 4px solid var(--px-wall-dark);
-    box-shadow: 0 4px 0 rgba(0,0,0,.25);
+    box-shadow: 0 4px 0 rgba(180,160,120,.18);
     position: relative;
     z-index: 20;
   }
   .topbar-left{ display:flex; align-items:center; gap:10px; min-width:0; }
-  .topbar-lobster-icon{ font-size:26px; filter: drop-shadow(0 2px 0 rgba(0,0,0,.4)); }
+  .topbar-cat-icon{ font-size:26px; filter: drop-shadow(0 2px 0 rgba(160,140,100,.25)); }
   .topbar-titles{ display:flex; flex-direction:column; gap:2px; min-width:0; }
-  .topbar-title-zh{ font-size:13px; font-weight:800; color:#fff5e8; letter-spacing:1px; }
+  .topbar-title-zh{ font-size:13px; font-weight:800; color:#4A3B32; letter-spacing:1px; }
   .topbar-title-en{
     font-size:9px;
-    color: var(--px-lamp);
+    color: #97A891;
     letter-spacing:1px;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
   .topbar-right{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
-  .status-pill{ display:flex; align-items:center; gap:6px; font-size:10px; color:#fff5e8; }
+  .status-pill{ display:flex; align-items:center; gap:6px; font-size:10px; color:#6b5a4a; }
   .status-dot{
     width:10px;height:10px;border-radius:50%;
-    background:#666; box-shadow: 0 0 0 2px rgba(0,0,0,.3);
+    background:#c9bfa8; box-shadow: 0 0 0 2px rgba(180,160,120,.2);
     transition: background .3s, box-shadow .3s;
   }
-  .status-dot.online{ background:#5fe07a; box-shadow: 0 0 8px 2px rgba(95,224,122,.8); }
-  .status-dot.offline{ background:#e0654f; box-shadow: 0 0 8px 2px rgba(224,101,79,.6); }
+  .status-dot.online{ background:#7ba86e; box-shadow: 0 0 8px 2px rgba(123,168,110,.5); }
+  .status-dot.offline{ background:#d98a6f; box-shadow: 0 0 8px 2px rgba(217,138,111,.45); }
   .pixel-clock{ text-align:right; }
   .pixel-clock-time{
     font-size:16px;
-    color: var(--px-screen);
-    text-shadow: 0 0 6px rgba(139,233,253,.7);
+    color: #6b8c62;
     letter-spacing:1px;
   }
-  .pixel-clock-date{ font-size:8px; color:#c9bfe0; margin-top:2px; }
+  .pixel-clock-date{ font-size:8px; color:#a8977e; margin-top:2px; }
   .gear-btn{
     position:fixed; top:10px; right:10px; z-index:200;
     width:36px; height:36px; border-radius:50%;
@@ -144,6 +165,14 @@
     position:absolute; inset:0;
     background: linear-gradient(180deg, var(--px-wall) 0%, var(--px-wall) 62%, var(--px-floor-2) 62%, var(--px-floor) 100%);
   }
+  /* 木地板拼板紋理（淺深原木交錯的直向拼接） */
+  .wall::after{
+    content:'';
+    position:absolute; left:0; right:0; top:62%; bottom:0;
+    background: repeating-linear-gradient(90deg,
+      rgba(200,175,135,.35) 0, rgba(200,175,135,.35) 42px,
+      rgba(160,132,90,.18) 42px, rgba(160,132,90,.18) 44px);
+  }
   .baseboard{
     position:absolute; left:0; right:0; top:62%; height:6px;
     background: var(--px-wall-dark);
@@ -157,31 +186,43 @@
 
   .window{
     position:absolute; top:8%; left:10%; width:26%; max-width:220px; height:34%;
-    background: linear-gradient(180deg, var(--px-sky), var(--px-city));
-    border: 6px solid #3a2c5c;
-    box-shadow: inset 0 0 0 3px #140c2b;
+    background: linear-gradient(180deg, var(--px-sky), var(--px-sky-2));
+    border: 6px solid var(--px-window-frame);
+    box-shadow: inset 0 0 0 3px var(--px-window-frame-dark);
   }
   .window::before, .window::after{
-    content:''; position:absolute; background:#3a2c5c;
+    content:''; position:absolute; background: var(--px-window-frame);
   }
   .window::before{ left:50%; top:0; bottom:0; width:6px; margin-left:-3px; }
   .window::after{ top:50%; left:0; right:0; height:6px; margin-top:-3px; }
-  .star{
-    position:absolute; width:4px; height:4px; background: var(--px-star);
-    animation: twinkle 2.2s ease-in-out infinite;
+  .sun-glow{
+    position:absolute; top:-10%; right:8%; width:46px; height:46px;
+    background: radial-gradient(circle, rgba(255,244,214,.95), rgba(255,244,214,0) 70%);
+    border-radius:50%;
   }
-  .city-block{
-    position:absolute; bottom:0; width:14px; background:#241a3d;
+  .cloud{
+    position:absolute; background: var(--px-cloud);
+    border-radius: 50%;
+    opacity:.9;
+    animation: drift 26s linear infinite;
   }
-  @keyframes twinkle{
-    0%,100%{ opacity:.25; }
-    50%{ opacity:1; }
+  .light-beam{
+    position:absolute; top:0; left:-10%; width:60%; height:150%;
+    background: linear-gradient(100deg, rgba(255,250,232,.55) 0%, rgba(255,250,232,0) 55%);
+    transform: rotate(8deg);
+    pointer-events:none;
+  }
+  @keyframes drift{
+    0%{ transform: translateX(0); }
+    100%{ transform: translateX(24px); }
   }
 
+  /* ---------------- 植物（多量、深淺綠交錯） ---------------- */
   .plant{ position:absolute; }
   .plant .pot{
     width:26px; height:20px; background: var(--px-pot);
-    border-top: 3px solid #6b3f26;
+    border-top: 3px solid var(--px-pot-dark);
+    border-radius: 0 0 4px 4px;
   }
   .plant .leaf{
     position:absolute; width:10px; height:22px; background: var(--px-plant);
@@ -192,112 +233,227 @@
   .plant .leaf.l2{ left:6px; transform: rotate(4deg); }
   .plant .leaf.l3{ left:16px; transform: rotate(20deg); background: var(--px-plant-dark); }
 
+  /* 大盆龜背芋：藤編盆＋多片寬葉 */
+  .plant.plant-monstera .pot{ width:40px; height:28px; background: var(--px-pot-rattan); border-top-color: var(--px-pot-rattan-dark); }
+  .plant.plant-monstera .leaf{
+    width:20px; height:34px; bottom:26px; border-radius: 55% 55% 15% 55%;
+  }
+  .plant.plant-monstera .leaf.l1{ left:-10px; top:auto; transform: rotate(-24deg); }
+  .plant.plant-monstera .leaf.l2{ left:10px; transform: rotate(2deg); }
+  .plant.plant-monstera .leaf.l3{ left:26px; transform: rotate(22deg); }
+  .plant.plant-monstera .leaf.l4{
+    position:absolute; left:2px; bottom:44px; width:16px; height:26px;
+    background: var(--px-plant-light); border-radius: 55% 55% 15% 55%; transform: rotate(-4deg);
+  }
+
+  /* 小多肉：矮圓葉叢，桌上白陶盆 */
+  .plant.plant-succulent .pot{ width:16px; height:12px; }
+  .plant.plant-succulent .leaf{
+    width:7px; height:9px; bottom:9px; border-radius:50%;
+  }
+  .plant.plant-succulent .leaf.l1{ left:-4px; transform:rotate(-10deg); }
+  .plant.plant-succulent .leaf.l2{ left:3px; transform:rotate(2deg); }
+  .plant.plant-succulent .leaf.l3{ left:9px; transform:rotate(14deg); }
+
+  /* 虎尾蘭：落地細長挺葉 */
+  .plant.plant-sansevieria .pot{ width:22px; height:18px; }
+  .plant.plant-sansevieria .leaf{ width:6px; height:44px; bottom:16px; border-radius: 40% 40% 6% 6%; }
+  .plant.plant-sansevieria .leaf.l1{ left:-3px; transform:rotate(-8deg); }
+  .plant.plant-sansevieria .leaf.l2{ left:6px; height:52px; transform:rotate(1deg); }
+  .plant.plant-sansevieria .leaf.l3{ left:15px; transform:rotate(9deg); }
+
+  /* 吊掛垂藤：從上方懸掛，緩緩擺動 */
+  .plant-hanging{ position:absolute; width:60px; height:70px; }
+  .plant-hanging .vine{
+    position:absolute; top:0; width:3px; background: var(--px-plant-dark);
+    transform-origin: top center;
+    animation: vine-sway 4.5s ease-in-out infinite;
+  }
+  .plant-hanging .vine.v1{ left:6px; height:44px; }
+  .plant-hanging .vine.v2{ left:26px; height:64px; animation-delay:.6s; }
+  .plant-hanging .vine.v3{ left:46px; height:36px; animation-delay:1.2s; }
+  .plant-hanging .vine::before, .plant-hanging .vine::after{
+    content:''; position:absolute; width:8px; height:8px; border-radius:50% 50% 50% 0;
+    background: var(--px-plant-light);
+  }
+  .plant-hanging .vine::before{ bottom:8px; left:-6px; transform: rotate(-30deg); }
+  .plant-hanging .vine::after{ bottom:0; left:2px; transform: rotate(20deg); background: var(--px-plant); }
+  @keyframes vine-sway{
+    0%,100%{ transform: rotate(-3deg); } 50%{ transform: rotate(3deg); }
+  }
+
+  /* ---------------- 木層架 ---------------- */
+  .shelf{ position:absolute; }
+  .shelf .board{ width:96px; height:8px; background: var(--px-shelf); border-bottom:3px solid var(--px-shelf-dark); }
+  .shelf .bracket{ position:absolute; bottom:-10px; width:6px; height:10px; background: var(--px-shelf-dark); }
+  .shelf .bracket.l{ left:6px; } .shelf .bracket.r{ right:6px; }
+  .shelf .item{ position:absolute; bottom:8px; background: var(--px-accent-orange); border-radius:2px; }
+  .shelf .item.book{ width:8px; height:16px; left:14px; }
+  .shelf .item.box{ width:14px; height:10px; left:26px; background: var(--px-pot-rattan); }
+
+  /* ---------------- 暖白紙燈罩 ---------------- */
   .lamp{ position:absolute; }
   .lamp .pole{ width:6px; height:70px; background: var(--px-lamp-pole); margin:0 auto; }
   .lamp .shade{
-    width:44px; height:20px; background: var(--px-lamp);
-    clip-path: polygon(20% 0, 80% 0, 100% 100%, 0% 100%);
+    width:44px; height:22px; background: var(--px-lamp);
+    border: 2px solid var(--px-lamp-glow);
+    border-radius: 40% 40% 46% 46%;
     margin:0 auto;
   }
   .lamp .glow{
     position:absolute; top:14px; left:50%; width:120px; height:120px;
     transform: translateX(-50%);
-    background: radial-gradient(circle, rgba(232,179,74,.35), rgba(232,179,74,0) 70%);
-    animation: lamp-pulse 3.2s ease-in-out infinite;
+    background: radial-gradient(circle, rgba(247,228,184,.4), rgba(247,228,184,0) 70%);
+    animation: lamp-pulse 3.6s ease-in-out infinite;
     pointer-events:none;
   }
   @keyframes lamp-pulse{
-    0%,100%{ opacity:.7; } 50%{ opacity:1; }
+    0%,100%{ opacity:.75; } 50%{ opacity:1; }
   }
 
+  /* ---------------- 書桌／白色筆電 ---------------- */
   .desk{ position:absolute; }
   .desk .top{ width:170px; height:14px; background: var(--px-desk); border-bottom:4px solid var(--px-desk-dark); }
   .desk .leg{ position:absolute; bottom:-46px; width:10px; height:46px; background: var(--px-desk-dark); }
   .desk .leg.l{ left:8px; } .desk .leg.r{ right:8px; }
-  .monitor{ position:absolute; }
-  .monitor .stand{ width:10px; height:12px; background:#20242c; margin:0 auto; }
-  .monitor .base{ width:34px; height:4px; background:#20242c; margin:0 auto; }
-  .monitor .screen{
-    width:64px; height:44px; background: #10161d;
-    border: 4px solid #2a2f38;
-    box-shadow: 0 0 18px 3px var(--px-screen);
+  .laptop{ position:absolute; }
+  .laptop .keyboard{ width:66px; height:6px; background: var(--px-chair-dark); margin:0 auto; border-radius:0 0 3px 3px; }
+  .laptop .screen{
+    width:64px; height:42px; background: var(--px-screen);
+    border: 4px solid #fff;
+    box-shadow: 0 2px 0 var(--px-desk-dark), 0 0 0 1px rgba(180,160,120,.3);
     position:relative; overflow:hidden;
+    margin:0 auto;
   }
-  .monitor .screen::after{
-    content:''; position:absolute; inset:0;
-    background: repeating-linear-gradient(180deg, rgba(139,233,253,.18) 0 2px, transparent 2px 5px);
-    animation: scan 2.4s linear infinite;
+  .laptop .screen::after{
+    content:''; position:absolute; inset:6px;
+    background: var(--px-screen-glow);
+    opacity:.6;
+    border-radius:2px;
   }
-  @keyframes scan{ 0%{ transform:translateY(0);} 100%{ transform:translateY(6px);} }
+  #scene.mood-working .laptop .screen{ box-shadow: 0 2px 0 var(--px-desk-dark), 0 0 14px 2px rgba(247,228,184,.7); }
 
   .chair{ position:absolute; }
   .chair .back{ width:30px; height:40px; background: var(--px-chair); border-radius:6px 6px 0 0; }
   .chair .seat{ width:36px; height:8px; background: var(--px-chair-dark); margin-top:-4px; }
-  .chair .stem{ width:6px; height:20px; background:#2a2130; margin:0 auto; }
+  .chair .stem{ width:6px; height:20px; background: var(--px-desk-dark); margin:0 auto; }
 
   .sofa{ position:absolute; }
   .sofa .base{ width:150px; height:40px; background: var(--px-sofa); border-radius:8px; }
   .sofa .back{ width:150px; height:26px; background: var(--px-sofa-dark); border-radius:10px 10px 0 0; }
   .sofa .arm{ position:absolute; top:-6px; width:18px; height:44px; background: var(--px-sofa-dark); border-radius:8px; }
   .sofa .arm.left{ left:-10px; } .sofa .arm.right{ right:-10px; }
+  .sofa .cushion{
+    position:absolute; top:-14px; width:22px; height:22px; background: var(--px-cushion);
+    border-radius:4px; transform: rotate(-4deg);
+  }
+  .sofa .cushion.left{ left:14px; }
+  .sofa .cushion.right{ left:44px; background: var(--px-plant-light); transform: rotate(3deg); }
 
-  /* ---------------- 小龍（像素龍蝦） ---------------- */
-  .lobster-wrap{
+  /* ---------------- 麻糬（擬人貓） ---------------- */
+  .mochi-wrap{
     position:absolute;
     width: 96px; height: 84px;
     transition: left .6s ease, top .6s ease;
   }
-  .lobster{ position:relative; width:100%; height:100%; }
-  .lobster .body{
-    position:absolute; left:22px; top:30px; width:52px; height:32px;
-    background: var(--lobster-body); border-radius:14px;
-    box-shadow: inset 0 -8px 0 var(--lobster-dark);
+  .mochi{ position:relative; width:100%; height:100%; }
+
+  /* 尾巴：先畫在身體後面 */
+  .mochi .tail{
+    position:absolute; right:6px; top:38px; width:12px; height:32px;
+    background: var(--cat-fur-shade);
+    border-radius: 2px 16px 16px 2px;
+    transform-origin: top left;
+    z-index:1;
   }
-  .lobster .belly{
-    position:absolute; left:30px; top:44px; width:36px; height:14px;
-    background: var(--lobster-belly); border-radius:0 0 10px 10px;
+
+  /* 身體＋圍裙 */
+  .mochi .body{
+    position:absolute; left:20px; top:40px; width:56px; height:34px;
+    background: var(--cat-fur); border-radius:16px 16px 14px 14px;
+    box-shadow: inset 0 -8px 0 var(--cat-fur-shade);
+    z-index:2;
   }
-  .lobster .tail-seg{ position:absolute; background: var(--lobster-dark); border-radius:6px; }
-  .lobster .tail-seg.t1{ left:32px; top:58px; width:32px; height:8px; }
-  .lobster .tail-seg.t2{ left:36px; top:64px; width:24px; height:7px; }
-  .lobster .tail-seg.t3{ left:40px; top:69px; width:16px; height:6px; }
-  .lobster .eye-stalk{ position:absolute; width:4px; height:14px; background: var(--lobster-dark); }
-  .lobster .eye-stalk.left{ left:34px; top:18px; }
-  .lobster .eye-stalk.right{ left:56px; top:18px; }
-  .lobster .eye{ position:absolute; width:8px; height:8px; background: var(--lobster-eye); border-radius:50%; }
-  .lobster .eye.left{ left:31px; top:12px; }
-  .lobster .eye.right{ left:53px; top:12px; }
-  .lobster .eye::after{ content:''; position:absolute; top:1px; left:1px; width:2px; height:2px; background:#fff; }
-  .lobster .antenna{
-    position:absolute; width:3px; height:26px; background: var(--lobster-dark);
-    transform-origin: bottom center;
+  .mochi .apron{
+    position:absolute; left:26px; top:46px; width:44px; height:26px;
+    background: var(--cat-apron);
+    border-radius: 4px 4px 10px 10px;
+    box-shadow: inset 0 -6px 0 var(--cat-apron-dark);
+    z-index:3;
   }
-  .lobster .antenna.left{ left:24px; top:0; transform: rotate(-24deg); }
-  .lobster .antenna.right{ left:69px; top:0; transform: rotate(24deg); }
-  .lobster .claw{
-    position:absolute; width:24px; height:20px; background: var(--lobster-body);
-    border-radius: 10px;
-    box-shadow: inset 0 -5px 0 var(--lobster-dark);
+  .mochi .apron::before{
+    content:''; position:absolute; left:6px; top:-8px; width:5px; height:10px;
+    background: var(--cat-apron);
+    transform: rotate(-14deg);
   }
-  .lobster .claw::before{
-    content:''; position:absolute; top:6px; left:-4px; width:12px; height:8px;
-    background: var(--lobster-body); border-radius:6px;
-    box-shadow: inset 0 -3px 0 var(--lobster-dark);
+  .mochi .apron::after{
+    content:''; position:absolute; right:6px; top:-8px; width:5px; height:10px;
+    background: var(--cat-apron);
+    transform: rotate(14deg);
   }
-  .lobster .claw.left{ left:2px; top:34px; transform-origin: right center; }
-  .lobster .claw.right{ left:70px; top:34px; transform: scaleX(-1); transform-origin: left center; }
-  .lobster .leg{ position:absolute; width:3px; height:12px; background: var(--lobster-dark); }
-  .lobster .leg.l1{ left:26px; top:56px; transform: rotate(18deg); }
-  .lobster .leg.l2{ left:66px; top:56px; transform: rotate(-18deg); }
+
+  /* 腳掌 */
+  .mochi .foot{ position:absolute; bottom:-4px; width:14px; height:9px; background: var(--cat-fur-shade); border-radius:8px; z-index:2; }
+  .mochi .foot.left{ left:26px; }
+  .mochi .foot.right{ left:56px; }
+
+  /* 頭部 */
+  .mochi .head{
+    position:absolute; left:24px; top:2px; width:48px; height:40px;
+    background: var(--cat-fur); border-radius:50% 50% 46% 46%;
+    z-index:4;
+  }
+  .mochi .ear{
+    position:absolute; top:-9px; width:0; height:0;
+    border-left:10px solid transparent; border-right:10px solid transparent;
+    border-bottom:16px solid var(--cat-fur);
+    z-index:3;
+  }
+  .mochi .ear.left{ left:22px; transform: rotate(-14deg); }
+  .mochi .ear.right{ left:56px; transform: rotate(14deg); }
+  .mochi .ear-inner{
+    position:absolute; top:-4px; width:0; height:0;
+    border-left:5px solid transparent; border-right:5px solid transparent;
+    border-bottom:9px solid var(--cat-ear);
+    z-index:4;
+  }
+  .mochi .ear-inner.left{ left:26px; transform: rotate(-14deg); }
+  .mochi .ear-inner.right{ left:60px; transform: rotate(14deg); }
+
+  .mochi .eye{ position:absolute; width:5px; height:6px; background: var(--cat-eye); border-radius:50%; z-index:5; }
+  .mochi .eye.left{ left:36px; top:20px; }
+  .mochi .eye.right{ left:54px; top:20px; }
+  .mochi .blush{ position:absolute; width:7px; height:5px; background: var(--cat-blush); border-radius:50%; opacity:.8; z-index:5; }
+  .mochi .blush.left{ left:29px; top:26px; }
+  .mochi .blush.right{ left:59px; top:26px; }
+  .mochi .nose{ position:absolute; left:46px; top:25px; width:4px; height:3px; background: var(--cat-nose); border-radius:50%; z-index:5; }
+  .mochi .whisker{ position:absolute; width:12px; height:1px; background: var(--cat-fur-shade); z-index:5; }
+  .mochi .whisker.l1{ left:16px; top:24px; transform: rotate(-4deg); }
+  .mochi .whisker.l2{ left:16px; top:28px; transform: rotate(4deg); }
+  .mochi .whisker.r1{ left:66px; top:24px; transform: rotate(4deg); }
+  .mochi .whisker.r2{ left:66px; top:28px; transform: rotate(-4deg); }
+
+  /* 手臂／前掌 */
+  .mochi .arm{
+    position:absolute; top:50px; width:13px; height:16px;
+    background: var(--cat-fur); border-radius:8px;
+    box-shadow: inset 0 -4px 0 var(--cat-fur-shade);
+    transform-origin: top center;
+    z-index:5;
+  }
+  .mochi .arm.left{ left:10px; }
+  .mochi .arm.right{ left:73px; }
 
   /* 位置與動畫：休息（沙發） vs 工作（書桌） */
-  #scene.mood-resting .lobster-wrap{ animation: lobster-idle 2.6s ease-in-out infinite; }
-  #scene.mood-working .lobster-wrap{ animation: lobster-work 0.7s ease-in-out infinite; }
-  #scene.mood-working .lobster .claw.left{ animation: claw-tap 0.7s ease-in-out infinite; }
-  #scene.mood-working .lobster .claw.right{ animation: claw-tap 0.7s ease-in-out infinite reverse; }
-  @keyframes lobster-idle{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-5px);} }
-  @keyframes lobster-work{ 0%,100%{ transform: translateY(0) rotate(0deg);} 50%{ transform: translateY(-2px) rotate(-1deg);} }
-  @keyframes claw-tap{ 0%,100%{ transform: rotate(0deg);} 50%{ transform: rotate(-14deg);} }
+  #scene.mood-resting .mochi-wrap{ animation: mochi-idle 2.8s ease-in-out infinite; }
+  #scene.mood-resting .mochi .tail{ animation: tail-sway 3.4s ease-in-out infinite; }
+  #scene.mood-working .mochi-wrap{ animation: mochi-work 0.7s ease-in-out infinite; }
+  #scene.mood-working .mochi .arm.left{ animation: paw-tap 0.5s ease-in-out infinite; }
+  #scene.mood-working .mochi .arm.right{ animation: paw-tap 0.5s ease-in-out infinite reverse; }
+  @keyframes mochi-idle{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-4px);} }
+  @keyframes mochi-work{ 0%,100%{ transform: translateY(0) rotate(0deg);} 50%{ transform: translateY(-2px) rotate(-1deg);} }
+  @keyframes tail-sway{ 0%,100%{ transform: rotate(-8deg);} 50%{ transform: rotate(10deg);} }
+  @keyframes paw-tap{ 0%,100%{ transform: rotate(0deg);} 50%{ transform: rotate(-16deg);} }
 
   /* 對話泡泡 */
   .speech-bubble{
@@ -320,13 +476,14 @@
 
   .mood-capsule{
     position:absolute; left:50%; bottom:4%; transform:translateX(-50%);
-    background: rgba(20,12,30,.72);
-    color:#ffe9a8;
-    border:2px solid var(--px-lamp);
+    background: rgba(255,255,255,.88);
+    color:#6b5a4a;
+    border:2px solid var(--px-window-frame);
     border-radius: 999px;
     padding:5px 16px;
     font-size:11px;
     white-space:nowrap;
+    box-shadow: 0 2px 6px rgba(180,160,120,.2);
     z-index: 10;
   }
 
@@ -442,7 +599,7 @@
   /* ---------------- 設定畫面 ---------------- */
   .settings-overlay{
     position:fixed; inset:0; z-index:500;
-    background: rgba(20,12,30,.86);
+    background: rgba(74,59,50,.55);
     display:flex; align-items:center; justify-content:center;
     padding:20px;
   }
@@ -482,10 +639,10 @@
 
 <div class="topbar">
   <div class="topbar-left">
-    <span class="topbar-lobster-icon">🦞</span>
+    <span class="topbar-cat-icon">🐱</span>
     <div class="topbar-titles">
-      <div class="topbar-title-zh">小龍指揮中心</div>
-      <div class="topbar-title-en pixel-font">XIAOLONG COMMAND CENTER</div>
+      <div class="topbar-title-zh">麻糬指揮中心</div>
+      <div class="topbar-title-en pixel-font">MOCHI COMMAND CENTER</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -508,16 +665,41 @@
       <div class="rug"></div>
 
       <div class="window" id="window">
-        <!-- stars & city blocks injected by JS -->
+        <div class="sun-glow"></div>
+        <!-- clouds injected by JS -->
+      </div>
+      <div class="light-beam"></div>
+
+      <!-- 窗台垂掛藤蔓 -->
+      <div class="plant-hanging" style="left:9%; top:8%;">
+        <div class="vine v1"></div><div class="vine v2"></div><div class="vine v3"></div>
       </div>
 
-      <div class="plant" style="left:4%; top:56%;">
+      <!-- 大盆龜背芋 -->
+      <div class="plant plant-monstera" style="left:2%; top:48%;">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div><div class="leaf l4"></div>
+        <div class="pot"></div>
+      </div>
+      <!-- 落地虎尾蘭 -->
+      <div class="plant plant-sansevieria" style="right:4%; top:26%; transform:scale(.9);">
         <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
         <div class="pot"></div>
       </div>
-      <div class="plant" style="right:6%; top:30%; transform:scale(.85);">
+      <!-- 窗台小盆栽 -->
+      <div class="plant plant-succulent" style="left:13%; top:20%; transform:scale(1.3);">
         <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
         <div class="pot"></div>
+      </div>
+
+      <!-- 木層架＋小盆栽 -->
+      <div class="shelf" style="left:38%; top:14%;">
+        <div class="board"></div>
+        <div class="bracket l"></div><div class="bracket r"></div>
+        <div class="item book"></div><div class="item box"></div>
+        <div class="plant plant-succulent" style="left:70px; top:-22px; transform:scale(.9);">
+          <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+          <div class="pot"></div>
+        </div>
       </div>
 
       <div class="lamp" style="left:6%; top:22%;">
@@ -527,10 +709,9 @@
       </div>
 
       <div class="desk" style="left:12%; top:52%;">
-        <div class="monitor" style="position:absolute; left:52px; top:-58px;">
+        <div class="laptop" style="position:absolute; left:53px; top:-46px;">
           <div class="screen"></div>
-          <div class="stand"></div>
-          <div class="base"></div>
+          <div class="keyboard"></div>
         </div>
         <div class="top"></div>
         <div class="leg l"></div>
@@ -542,35 +723,49 @@
         <div class="stem"></div>
       </div>
 
+      <!-- 桌上小多肉 -->
+      <div class="plant plant-succulent" style="left:24%; top:47%; transform:scale(1.1);">
+        <div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div>
+        <div class="pot"></div>
+      </div>
+
       <div class="sofa" style="right:8%; top:58%;">
         <div class="arm left"></div>
+        <div class="cushion left"></div>
         <div class="back"></div>
         <div class="base"></div>
+        <div class="cushion right"></div>
         <div class="arm right"></div>
       </div>
 
-      <div class="lobster-wrap" id="lobsterWrap">
+      <div class="mochi-wrap" id="mochiWrap">
         <div class="speech-bubble" id="speechBubble">休息中…</div>
-        <div class="lobster">
-          <div class="antenna left"></div>
-          <div class="antenna right"></div>
-          <div class="eye-stalk left"></div>
-          <div class="eye-stalk right"></div>
+        <div class="mochi">
+          <div class="tail"></div>
+          <div class="body"></div>
+          <div class="apron"></div>
+          <div class="foot left"></div>
+          <div class="foot right"></div>
+          <div class="arm left"></div>
+          <div class="arm right"></div>
+          <div class="head"></div>
+          <div class="ear left"></div>
+          <div class="ear right"></div>
+          <div class="ear-inner left"></div>
+          <div class="ear-inner right"></div>
+          <div class="whisker l1"></div>
+          <div class="whisker l2"></div>
+          <div class="whisker r1"></div>
+          <div class="whisker r2"></div>
+          <div class="blush left"></div>
+          <div class="blush right"></div>
           <div class="eye left"></div>
           <div class="eye right"></div>
-          <div class="claw left"></div>
-          <div class="claw right"></div>
-          <div class="body"></div>
-          <div class="belly"></div>
-          <div class="leg l1"></div>
-          <div class="leg l2"></div>
-          <div class="tail-seg t1"></div>
-          <div class="tail-seg t2"></div>
-          <div class="tail-seg t3"></div>
+          <div class="nose"></div>
         </div>
       </div>
 
-      <div class="mood-capsule" id="moodCapsule">小龍 — 休息中</div>
+      <div class="mood-capsule" id="moodCapsule">麻糬 — 休息中</div>
     </div>
   </div>
 
@@ -584,7 +779,7 @@
       <div class="tab-panel active" id="tab-chat">
         <div id="chatMessages"></div>
         <div class="chat-input-row">
-          <input type="text" id="chatInput" placeholder="輸入指令給小龍…" maxlength="2000">
+          <input type="text" id="chatInput" placeholder="輸入指令給麻糬…" maxlength="2000">
           <button class="chat-send-btn" id="chatSendBtn">送出</button>
         </div>
       </div>
@@ -624,7 +819,7 @@
 
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-box">
-    <h2>設定小龍連線</h2>
+    <h2>設定麻糬連線</h2>
     <p>請貼上 GAS 後端網址與通行碼。資料只存在這台裝置的瀏覽器中（localStorage），不會上傳到任何地方。</p>
     <label for="settingsUrlInput">後端網址</label>
     <input type="text" id="settingsUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec">
@@ -642,13 +837,13 @@
 (function(){
   'use strict';
 
-  var CFG_URL_KEY = 'xiaolongApiUrl';
-  var CFG_TOKEN_KEY = 'xiaolongToken';
-  var CHAT_HISTORY_KEY = 'xiaolongChatHistory';
+  var CFG_URL_KEY = 'mochiApiUrl';
+  var CFG_TOKEN_KEY = 'mochiToken';
+  var CHAT_HISTORY_KEY = 'mochiChatHistory';
   var POLL_MS = 30000;
 
   var state = {
-    agent: { name:'小龍', mood:'resting', activity:'休息中…', updatedAt:null },
+    agent: { name:'麻糬', mood:'resting', activity:'休息中…', updatedAt:null },
     schedules: [],
     usage: { today:{ costUSD:0, inputTokens:0, outputTokens:0, calls:0 }, total:{ costUSD:0, tokens:0 } },
     lastDigest: null,
@@ -734,7 +929,7 @@
       })
       .catch(function(){
         settingsSaveBtn.disabled = false;
-        settingsError.textContent = '連不上小龍，稍後再試';
+        settingsError.textContent = '連不上麻糬，稍後再試';
       });
   });
 
@@ -750,26 +945,22 @@
   tickClock();
   setInterval(tickClock, 1000);
 
-  // ---------- 場景星星 ----------
-  (function initStars(){
+  // ---------- 場景雲朵 ----------
+  (function initSky(){
     var win = document.getElementById('window');
-    for (var i = 0; i < 14; i++){
-      var s = document.createElement('div');
-      s.className = 'star';
-      s.style.left = (5 + Math.random() * 90) + '%';
-      s.style.top = (5 + Math.random() * 55) + '%';
-      s.style.animationDelay = (Math.random() * 2) + 's';
-      win.appendChild(s);
-    }
-    var heights = [18, 26, 14, 30, 20, 24];
-    var left = 4;
-    for (var j = 0; j < heights.length; j++){
-      var b = document.createElement('div');
-      b.className = 'city-block';
-      b.style.left = left + 'px';
-      b.style.height = heights[j] + 'px';
-      win.appendChild(b);
-      left += 16;
+    var sizes = [26, 18, 22, 14, 20];
+    var left = 2;
+    for (var i = 0; i < sizes.length; i++){
+      var c = document.createElement('div');
+      c.className = 'cloud';
+      c.style.width = sizes[i] + 'px';
+      c.style.height = (sizes[i] * 0.5) + 'px';
+      c.style.left = left + '%';
+      c.style.top = (10 + Math.random() * 40) + '%';
+      c.style.animationDelay = (Math.random() * 4) + 's';
+      c.style.animationDuration = (20 + Math.random() * 12) + 's';
+      win.appendChild(c);
+      left += 20;
     }
   })();
 
@@ -786,13 +977,13 @@
     sceneEl.classList.toggle('mood-resting', effectiveMood !== 'working');
 
     if (state.isThinking){
-      speechBubble.textContent = '小龍思考中…';
+      speechBubble.textContent = '麻糬思考中…';
       speechBubble.classList.add('thinking');
     } else {
       speechBubble.textContent = state.agent.activity || (effectiveMood === 'working' ? '工作中…' : '休息中…');
       speechBubble.classList.remove('thinking');
     }
-    moodCapsule.textContent = '小龍 — ' + (state.agent.mood === 'working' ? '工作中' : '休息中');
+    moodCapsule.textContent = '麻糬 — ' + (state.agent.mood === 'working' ? '工作中' : '休息中');
   }
 
   function setOnline(isOnline){
@@ -911,7 +1102,7 @@
   var chatMessages = document.getElementById('chatMessages');
   var chatInput = document.getElementById('chatInput');
   var chatSendBtn = document.getElementById('chatSendBtn');
-  var WELCOME_TEXT = '哈囉老闆！我是小龍，有什麼指示嗎？';
+  var WELCOME_TEXT = '哈囉老闆！我是麻糬，有什麼指示嗎？';
 
   function loadHistory(){
     try{
@@ -931,7 +1122,7 @@
   function renderMessage(msg){
     var row = document.createElement('div');
     row.className = 'msg-row ' + (msg.role === 'user' ? 'user' : (msg.role === 'system' ? 'system' : 'assistant'));
-    var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : '🦞');
+    var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : '🐱');
     row.innerHTML =
       (msg.role !== 'user' ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
       '<div class="msg-bubble">' + escapeHtml(msg.content) + '</div>';
@@ -949,7 +1140,7 @@
   function showTyping(){
     typingRow = document.createElement('div');
     typingRow.className = 'msg-row assistant';
-    typingRow.innerHTML = '<div class="msg-avatar">🦞</div><div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
+    typingRow.innerHTML = '<div class="msg-avatar">🐱</div><div class="msg-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
     chatMessages.appendChild(typingRow);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -1002,9 +1193,9 @@
           settingsError.textContent = '通行碼錯誤';
         } else {
           renderAgentDisplay();
-          chatHistory.push({ role:'system', content: '連不上小龍，稍後再試' });
+          chatHistory.push({ role:'system', content: '連不上麻糬，稍後再試' });
           saveHistory(chatHistory);
-          renderMessage({ role:'system', content: '連不上小龍，稍後再試' });
+          renderMessage({ role:'system', content: '連不上麻糬，稍後再試' });
         }
       })
       .catch(function(){
@@ -1012,9 +1203,9 @@
         chatSendBtn.disabled = false;
         state.isThinking = false;
         renderAgentDisplay();
-        chatHistory.push({ role:'system', content: '連不上小龍，稍後再試' });
+        chatHistory.push({ role:'system', content: '連不上麻糬，稍後再試' });
         saveHistory(chatHistory);
-        renderMessage({ role:'system', content: '連不上小龍，稍後再試' });
+        renderMessage({ role:'system', content: '連不上麻糬，稍後再試' });
       });
   }
 

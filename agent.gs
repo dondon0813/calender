@@ -1,5 +1,5 @@
 /**
- * agent.gs — 「小龍」AI 員工後端（Google Apps Script）
+ * agent.gs — 「麻糬」AI 員工後端（Google Apps Script）
  * ============================================================
  * 這是一個全新、獨立的 GAS 專案用檔案，與 dondon-calendar 現有的
  * Code.gs 完全分離、互不引用。不要把本檔貼進 Code.gs 所在的專案。
@@ -12,7 +12,7 @@
  *      ANTHROPIC_API_KEY = 你的 Claude API 金鑰
  *      AGENT_TOKEN       = 你自訂的一組通關密語（前端呼叫 API 都要帶這個）
  * 4. 在編輯器上方選取函式 setup，按「執行」一次（第一次會要求授權，
- *    同意即可）。這會自動建立一份叫「小龍員工資料庫」的試算表。
+ *    同意即可）。這會自動建立一份叫「麻糬員工資料庫」的試算表。
  * 5. 點「部署」→「新增部署作業」→類型選「網頁應用程式」：
  *      執行身分：我（你自己）
  *      誰可以存取：任何人
@@ -42,8 +42,8 @@ var CLAUDE_API_VERSION = '2023-06-01';
 var CALENDAR_SHEET_ID = '18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk';
 var CALENDAR_SHEET_TAB_NAME = '行事曆';
 
-// 小龍自己的資料庫試算表名稱（由 setup() 自動建立）。
-var AGENT_SHEET_NAME = '小龍員工資料庫';
+// 麻糬自己的資料庫試算表名稱（由 setup() 自動建立）。
+var AGENT_SHEET_NAME = '麻糬員工資料庫';
 
 // Claude 工具呼叫迴圈的上限輪數，避免無限迴圈。
 var MAX_TOOL_ROUNDS = 6;
@@ -56,11 +56,11 @@ var PRICING = {
 };
 
 // 狀態快取（CacheService）設定。
-var STATE_CACHE_KEY = 'xiaolong_agent_state_v1';
+var STATE_CACHE_KEY = 'mochi_agent_state_v1';
 var STATE_CACHE_TTL_SECONDS = 600;
 
 // ============================================================
-// setup()：初始化小龍的資料庫試算表（可重複執行，冪等）
+// setup()：初始化麻糬的資料庫試算表（可重複執行，冪等）
 // ============================================================
 
 function setup() {
@@ -95,7 +95,7 @@ function setup() {
     schedSheet.appendRow(['08:00', '信件摘要', 'pending', '']);
   }
 
-  Logger.log('setup 完成。小龍員工資料庫試算表 ID：' + ss.getId());
+  Logger.log('setup 完成。麻糬員工資料庫試算表 ID：' + ss.getId());
 }
 
 // 確保分頁存在且有表頭列；回傳該分頁物件。
@@ -122,7 +122,7 @@ function ensureStateRowExists_(stateSheet, key, defaultValue) {
 }
 
 // ============================================================
-// 取得小龍的資料庫試算表（setup() 執行過後才會有）
+// 取得麻糬的資料庫試算表（setup() 執行過後才會有）
 // ============================================================
 
 function getAgentSpreadsheet_() {
@@ -366,7 +366,7 @@ function buildStatusResponse_() {
   return {
     ok: true,
     agent: {
-      name: '小龍',
+      name: '麻糬',
       mood: state.mood,
       activity: state.activity,
       updatedAt: state.updatedAt
@@ -454,11 +454,11 @@ function callClaude_(system, messages, tools) {
   return json;
 }
 
-// 小龍的角色設定（system prompt）。
+// 麻糬的角色設定（system prompt）。
 function buildSystemPrompt_() {
   var today = Utilities.formatDate(new Date(), 'Asia/Taipei', "yyyy-MM-dd（EEEE）");
   return (
-    '你是小龍，雪莉（Shirley）的 AI 經紀人兼員工，負責整理 Gmail 信箱、' +
+    '你是麻糬，一隻擬人貓 AI 員工，是雪莉（Shirley）的經紀人兼助理，負責整理 Gmail 信箱、' +
     '協助規劃團購行事曆相關事務，並回答雪莉交辦的各種指令。' +
     '說話語氣親切、簡短、口語化，像貼心的同事，不要長篇大論，也不要過度客套。' +
     '今天的日期是 ' + today + '（Asia/Taipei 時區）。' +
@@ -854,7 +854,7 @@ function dailyDigest() {
 
     var today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
     var system =
-      '你是小龍，雪莉的 AI 經紀人兼員工。請根據以下今天的信件清單，' +
+      '你是麻糬，一隻擬人貓 AI 員工，是雪莉的經紀人兼助理。請根據以下今天的信件清單，' +
       '用繁體中文寫一份簡短的每日信箱摘要：重要的信、需要處理的待辦事項要特別點出來；' +
       '純廣告/行銷/電子報信件可以略過或用一句話帶過即可，不用逐封分析。' +
       '今天的日期是 ' + today + '（Asia/Taipei 時區）。';
