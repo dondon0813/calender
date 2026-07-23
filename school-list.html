@@ -491,6 +491,33 @@
     padding: 2px 12px 10px;
   }
 
+  /* ===== 折扣碼小視窗（沿用行事曆首頁的樣式） ===== */
+  .dc-discount-label {
+    font-size: 12px; font-weight: 800; color: var(--c-text-soft);
+    letter-spacing: 1px; margin: 6px 0 8px;
+  }
+  .dc-code {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 12px; width: 100%; padding: 11px 14px;
+    border: 2px dashed var(--c-border); border-radius: var(--r-md);
+    background: var(--c-bg-bottom); cursor: pointer; font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .dc-code:hover { background: #FFE7D6; border-color: var(--c-primary); }
+  .dc-code-text {
+    font-size: 18px; font-weight: 800; letter-spacing: 2px;
+    color: var(--c-text); line-height: 1.2; word-break: break-all;
+  }
+  .dc-code-hint {
+    font-size: 14px; font-weight: 700; color: #fff; background: var(--c-primary);
+    border-radius: var(--r-pill); padding: 9px 18px; white-space: nowrap;
+  }
+  .dc-code.copied .dc-code-hint { background: var(--c-cat-2); }
+  .dc-discount-desc {
+    font-size: 13px; line-height: 1.6; color: var(--c-text-soft);
+    margin-top: 10px; white-space: pre-line;
+  }
+
   /* ===== 產生清單海報 ===== */
   .school-generate-box {
     text-align: center;
@@ -855,6 +882,21 @@
   </div>
 </div>
 
+<!-- 折扣碼小視窗：開團中且該團有折扣碼時，點「前往下單」會先跳這個（點折扣碼可複製） -->
+<div class="modal-backdrop" id="discountModal" onclick="if(event.target===this) closeModal('discountModal')">
+  <div class="modal-box" style="width:340px; text-align:center;">
+    <button class="modal-close" onclick="closeModal('discountModal')">✕</button>
+    <h2 class="rc-title" id="discountModalTitle" style="margin-top:4px;"></h2>
+    <div class="dc-discount-label">專屬折扣碼</div>
+    <button type="button" class="dc-code" id="dcCodeBtn">
+      <span class="dc-code-text" id="dcCodeText"></span>
+      <span class="dc-code-hint" id="dcCodeHint">點擊複製</span>
+    </button>
+    <div class="dc-discount-desc" id="dcDiscountDesc"></div>
+    <a class="action-btn" id="dcOrderBtn" target="_blank" rel="noopener noreferrer" style="margin-top:14px;">🛒 前往下單</a>
+  </div>
+</div>
+
 <!-- 產生 A4 清單圖片：離畫面外的樣板，只用來截圖，使用者看不到 -->
 <div id="a4PosterRoot">
   <div class="a4-poster" id="a4Poster">
@@ -1043,6 +1085,9 @@ async function loadCalendar() {
     const items = String(itemsRaw || '').split(/[|｜、,，]/).map(s => s.trim()).filter(Boolean);
     // W欄(idx22)「去背小圖」：這檔專用；空白就 fallback 到品牌資料庫的品牌預設小圖
     const thumb = c[22] ? String(c[22].v || '').trim() : '';
+    // X欄(idx23)「折扣碼」、Y欄(idx24)「折扣說明」：有填，開團中點下單會先跳折扣碼小視窗
+    const discountCode = c[23] ? String(c[23].v || '').trim() : '';
+    const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
     const start = parseDateStr(startRaw);
     const end = parseDateStr(endRaw);
     if (!start || !end || !title) return;
@@ -1051,7 +1096,7 @@ async function loadCalendar() {
     const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
     const published = publishedRaw === '' ? true : (publishedRaw === '是');
     if (!published) return;
-    events.push({ title, start, displayEnd, url, items, thumb });
+    events.push({ title, start, displayEnd, url, items, thumb, discountCode, discountDesc });
   });
   CALENDAR_EVENTS = events;
 }
@@ -1073,7 +1118,7 @@ function getBrandStatus(brandName, itemName) {
     return ev.items.includes(itemName);
   });
   const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
-  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url, thumb: openEvent.thumb, end: openEvent.displayEnd };
+  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url, thumb: openEvent.thumb, end: openEvent.displayEnd, discountCode: openEvent.discountCode, discountDesc: openEvent.discountDesc };
   const future = matches
     .filter(ev => startOfDay(ev.start) > today)
     .sort((a, b) => a.start - b.start);
@@ -1157,7 +1202,9 @@ function getOpenSchoolBrands() {
         brand: brand,
         url: status.url,
         thumb: status.thumb || BRAND_THUMBS[normalizeBrandKey(brand)] || '',
-        end: status.end
+        end: status.end,
+        discountCode: status.discountCode || '',
+        discountDesc: status.discountDesc || ''
       });
     });
   });
@@ -1188,6 +1235,13 @@ function renderOpenGroupBuyBar() {
       cell.href = o.url;
       cell.target = '_blank';
       cell.rel = 'noopener noreferrer';
+      // 有折扣碼：先攔下來跳折扣碼小視窗（小視窗裡再放前往下單按鈕）；保留 href 讓右鍵/新分頁仍可用
+      if (o.discountCode) {
+        cell.addEventListener('click', (e) => {
+          e.preventDefault();
+          openDiscountModal(o.brand, o.url, o.discountCode, o.discountDesc);
+        });
+      }
     }
 
     const thumbBox = document.createElement('div');
@@ -1462,7 +1516,7 @@ function openSchoolItemModal(item) {
       let rightHtml = '';
       if (status.status === 'open') {
         // 開團中一定有真實的團購連結，不受蝦皮連結有沒有填影響，一定顯示按鈕
-        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><a class="bsi-btn" href="${status.url}" target="_blank" rel="noopener noreferrer">🟢 現正開團中・前往下單</a></div>`;
+        rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><a class="bsi-btn sbi-open-order" href="${status.url}" target="_blank" rel="noopener noreferrer">🟢 現正開團中・前往下單</a></div>`;
       } else if (status.status === 'upcoming') {
         rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(status.nextDate)} 開團</span>${hasOwnShopeeLink ? `<a class="bsi-btn" href="${shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>` : ''}</div>`;
       } else {
@@ -1470,6 +1524,17 @@ function openSchoolItemModal(item) {
       }
       row.innerHTML = `<span class="bsi-brand">${brand}</span>` + rightHtml;
       block.appendChild(row);
+
+      // 開團中且有折扣碼：點「前往下單」先跳折扣碼小視窗，而不是直接開網頁
+      if (status.status === 'open' && status.discountCode) {
+        const openBtn = row.querySelector('.sbi-open-order');
+        if (openBtn) {
+          openBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openDiscountModal(brand, status.url, status.discountCode, status.discountDesc);
+          });
+        }
+      }
 
       // 品牌介紹/心得：有填才顯示，沒填就不會多出空白區塊
       if (note) {
@@ -1780,6 +1845,67 @@ async function generateA4Image() {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
+}
+
+// 折扣碼小視窗：開團中且該團有折扣碼時，點「前往下單」先跳這個
+function openDiscountModal(brand, url, code, desc) {
+  document.getElementById('discountModalTitle').textContent = brand || '';
+  document.getElementById('dcCodeText').textContent = code || '';
+
+  const descEl = document.getElementById('dcDiscountDesc');
+  const d = String(desc || '').trim();
+  descEl.textContent = d;
+  descEl.style.display = d ? '' : 'none';
+
+  const orderBtn = document.getElementById('dcOrderBtn');
+  if (isValidUrl(url)) {
+    orderBtn.href = url;
+    orderBtn.style.display = '';
+  } else {
+    orderBtn.style.display = 'none';
+  }
+
+  const codeBtn = document.getElementById('dcCodeBtn');
+  const hint = document.getElementById('dcCodeHint');
+  codeBtn.classList.remove('copied');
+  hint.textContent = '點擊複製';
+  codeBtn.onclick = () => {
+    copyDiscountCode(code).then(ok => {
+      hint.textContent = ok ? '已複製 ✓' : '請手動複製';
+      codeBtn.classList.toggle('copied', ok);
+      setTimeout(() => {
+        hint.textContent = '點擊複製';
+        codeBtn.classList.remove('copied');
+      }, 2000);
+    });
+  };
+
+  document.getElementById('discountModal').classList.add('show');
+}
+
+// Apps Script 前台不一定是安全內容（或舊瀏覽器），navigator.clipboard 不一定存在，退回 execCommand
+function copyDiscountCode(code) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(code).then(() => true).catch(() => legacyCopy(code));
+  }
+  return Promise.resolve(legacyCopy(code));
+}
+
+function legacyCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 // ===== 姓名貼（4x6 明信片，白底；小＝橫4x直6=24格；大＝橫3x直5=15格，每格約3x3公分，不足就輪迴填滿） =====
