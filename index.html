@@ -464,6 +464,16 @@
     margin-top: 10px;
     white-space: pre-line;
   }
+  .gc-remind {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--c-primary-dark);
+    background: var(--c-bg-bottom);
+    border-radius: var(--r-md);
+    padding: 8px 12px;
+    margin-top: 12px;
+  }
 
   /* ===== 活動內容元件 ===== */
   .badge {
@@ -672,6 +682,7 @@
         <span class="gc-code-hint" id="gcCodeHint">點擊複製</span>
       </button>
       <div class="gc-discount-desc" id="gcDiscountDesc"></div>
+      <div class="gc-remind">💡 記得輸入折扣碼才能享有折扣</div>
     </div>
   </div>
 </div>
@@ -1564,11 +1575,27 @@ function openGroupChoiceModal(ev) {
   }
 
   orderBtn.href = ev.url;
-  orderBtn.onclick = () => sendStat(baseKey + '_order', 'click');
+  orderBtn.onclick = () => {
+    sendStat(baseKey + '_order', 'click');
+    // 有折扣碼時，點「前往下單」順手幫使用者複製，貼到下單頁就能用（不擋跳轉）
+    if (code) copyDiscountCode(code).then(flashGcCopied);
+  };
 
   setupDiscountBlock(ev, code, baseKey);
 
   modal.classList.add('show');
+}
+
+// 折扣碼複製後的提示回饋（點折扣碼本身、或點前往下單都會用到）
+function flashGcCopied(ok) {
+  const codeBtn = document.getElementById('gcCodeBtn');
+  const hint = document.getElementById('gcCodeHint');
+  hint.textContent = ok ? '已複製 ✓' : '請手動複製';
+  codeBtn.classList.toggle('copied', ok);
+  setTimeout(() => {
+    hint.textContent = '點擊複製';
+    codeBtn.classList.remove('copied');
+  }, 2000);
 }
 
 function setupDiscountBlock(ev, code, baseKey) {
@@ -1591,13 +1618,8 @@ function setupDiscountBlock(ev, code, baseKey) {
   hint.textContent = '點擊複製';
   codeBtn.onclick = () => {
     copyDiscountCode(code).then(ok => {
-      hint.textContent = ok ? '已複製 ✓' : '請手動複製';
-      codeBtn.classList.toggle('copied', ok);
       if (ok) sendStat(baseKey + '_code', 'click');
-      setTimeout(() => {
-        hint.textContent = '點擊複製';
-        codeBtn.classList.remove('copied');
-      }, 2000);
+      flashGcCopied(ok);
     });
   };
 
