@@ -865,6 +865,14 @@ let allEvents = [];
 let currentYear, currentMonth;
 let currentMode = 'list';
 
+// 支援網址帶入預設顯示模式，例如 index.html?mode=start（開團日）；
+// 沒帶或帶到不認識的值就維持預設「現正開團中」
+const urlMode = new URLSearchParams(location.search).get('mode');
+if (['all', 'start', 'end', 'list'].includes(urlMode)) {
+  currentMode = urlMode;
+  document.getElementById('modeSelect').value = urlMode;
+}
+
 const MODE_VISIBLE_DAYS = {
   all:   [0,1,2,3,4,5,6],
   start: [1,2,3,4,5],

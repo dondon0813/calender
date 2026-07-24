@@ -868,18 +868,41 @@
     margin-bottom: 20px;
   }
   .home-calendar-btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--font-round);
     font-weight: 800;
-    font-size: 17px;
+    font-size: 18px;
     color: #fff;
-    background: var(--c-primary);
+    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark));
     border-radius: var(--r-pill);
-    padding: 16px 36px;
+    padding: 17px 38px;
     text-decoration: none;
     box-shadow: 0 6px 16px rgba(255,143,163,0.45);
+    animation: homeCalendarPulse 2.2s ease-in-out infinite;
   }
   .home-calendar-btn:hover { background: var(--c-primary-dark); }
+  .home-calendar-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #fff;
+    animation: homeCalendarDotPing 1.8s ease-in-out infinite;
+  }
+  @keyframes homeCalendarPulse {
+    0%, 100% { box-shadow: 0 6px 16px rgba(255,143,163,0.45); }
+    50% { box-shadow: 0 6px 22px rgba(255,143,163,0.75), 0 0 0 7px rgba(255,143,163,0.16); }
+  }
+  @keyframes homeCalendarDotPing {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.65); }
+    70% { box-shadow: 0 0 0 7px rgba(255,255,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .home-calendar-btn, .home-calendar-dot { animation: none; }
+  }
   .home-explore-title {
     text-align: center;
     font-family: var(--font-round);
@@ -1185,13 +1208,13 @@
     </div>
 
     <div style="text-align:center; margin: 4px 0 20px;">
-      <a class="home-calendar-btn" href="index.html">📅 現正開團中</a>
+      <a class="home-calendar-btn" href="index.html"><span class="home-calendar-dot"></span>📅 現正開團中</a>
     </div>
 
     <div class="home-subtitle">🌸 選擇食材，發現美味食譜 🌸</div>
 
     <div class="home-cards">
-      <a class="home-card home-card-gift" href="index.html" style="text-decoration:none; display:block;">
+      <a class="home-card home-card-gift" href="index.html?mode=start" style="text-decoration:none; display:block;">
         <div class="home-card-icon">📅</div>
         <div class="home-card-title">團購行事曆</div>
         <div class="home-card-title-divider"></div>
