@@ -108,7 +108,7 @@
     font-size: 14px;
   }
 
-  /* ===== 離畫面外的姓名貼樣板（4x6 明信片尺寸，白底，只用來截圖） ===== */
+  /* ===== 離畫面外的姓名貼樣板（6x4 明信片尺寸・橫式，白底，只用來截圖） ===== */
   #nsPosterRoot {
     position: fixed;
     left: -99999px;
@@ -116,10 +116,10 @@
     background: #ffffff;
   }
   .ns-poster {
-    width: 384px;
-    height: 576px;
+    width: 576px;
+    height: 384px;
     background: #ffffff;
-    padding: 16px 14px 10px;
+    padding: 14px 16px 10px;
     box-sizing: border-box;
     font-family: var(--font-body);
     display: flex;
@@ -129,9 +129,9 @@
     flex: 1 1 auto;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(8, 1fr);
-    gap: 4px 6px;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px 14px;
     width: 100%;
   }
   .ns-cell {
@@ -139,32 +139,32 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 4px;
+    gap: 10px;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    padding: 0 3px;
+    padding: 0 6px;
   }
   .ns-cell-icon {
     flex: none;
-    width: 48px;
-    height: 48px;
+    width: 78px;
+    height: 78px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
   .ns-cell-icon img { display: block; margin: 0 auto; }
-  .ns-cell-icon.emoji { font-size: 32px; }
+  .ns-cell-icon.emoji { font-size: 52px; }
   .ns-cell-name {
     flex: 1 1 auto;
     min-width: 0;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 14px;
+    font-size: 60px;
     color: var(--c-text);
     text-align: left;
-    line-height: 1.25;
+    line-height: 1.1;
     word-break: break-word;
   }
 </style>
@@ -213,7 +213,7 @@
   <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
 </div>
 
-<!-- 產生姓名貼圖片：離畫面外的樣板（4x6 明信片尺寸，白底），只用來截圖，使用者看不到 -->
+<!-- 產生姓名貼圖片：離畫面外的樣板（6x4 明信片尺寸・橫式，白底），只用來截圖，使用者看不到 -->
 <div id="nsPosterRoot">
   <div class="ns-poster" id="nsPoster">
     <div class="ns-grid" id="nsGrid"></div>
@@ -265,8 +265,8 @@ const STICKER_STYLES = {
   }
 };
 
-const NS_GRID_COLS = 3;
-const NS_GRID_ROWS = 8;
+const NS_GRID_COLS = 2;
+const NS_GRID_ROWS = 3;
 
 let nsSelectedStyle = null;
 
@@ -280,9 +280,15 @@ document.querySelectorAll('#nsStyleSelect .ns-style-card').forEach(card => {
 });
 
 function buildStickerImageSlots(images, slotCount) {
+  // 洗牌後再輪迴填滿：格數少於圖案總數時，每次產生都能看到不同的組合
+  const shuffled = images.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   const slots = [];
   for (let i = 0; i < slotCount; i++) {
-    slots.push(images[i % images.length]);
+    slots.push(shuffled[i % shuffled.length]);
   }
   return slots;
 }
@@ -335,7 +341,30 @@ async function buildNameStickerPoster(styleKey, name) {
     gridEl.appendChild(cell);
   });
 
+  fitStickerNameFontSize(gridEl);
+
   await Promise.all(imgChecks);
+}
+
+// 姓名字級自動縮放：長度不同的姓名都從「盡量接近圖示高度」開始試，
+// 塞不下單行就一路縮小，直到剛好塞得進格子寬度，避免長姓名把版面撐爆
+const NS_NAME_MAX_FONT = 72;
+const NS_NAME_MIN_FONT = 22;
+function fitStickerNameFontSize(gridEl) {
+  const sample = gridEl.querySelector('.ns-cell-name');
+  if (!sample) return;
+  sample.style.whiteSpace = 'nowrap';
+  let fontSize = NS_NAME_MAX_FONT;
+  sample.style.fontSize = fontSize + 'px';
+  const available = sample.clientWidth;
+  while (fontSize > NS_NAME_MIN_FONT && sample.scrollWidth > available) {
+    fontSize -= 2;
+    sample.style.fontSize = fontSize + 'px';
+  }
+  sample.style.whiteSpace = '';
+  gridEl.querySelectorAll('.ns-cell-name').forEach(el => {
+    el.style.fontSize = fontSize + 'px';
+  });
 }
 
 function canvasToBlobAsync(canvas) {
@@ -428,17 +457,17 @@ async function generateNameStickerImage() {
       const posterEl = document.getElementById('nsPoster');
       const outputScale = 3;
       const capturedCanvas = await captureInIsolatedFrame(posterEl, {
-        width: 384,
-        height: 576,
+        width: 576,
+        height: 384,
         scale: outputScale,
         backgroundColor: '#ffffff',
         useCORS: true,
         imageTimeout: 8000
       });
 
-      // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底
-      const targetW = 384 * outputScale;
-      const targetH = 576 * outputScale;
+      // 6x4 明信片尺寸・橫式（576 x 384，跟樣板寬度一致）＊輸出倍率，白底
+      const targetW = 576 * outputScale;
+      const targetH = 384 * outputScale;
       const finalCanvas = document.createElement('canvas');
       finalCanvas.width = targetW;
       finalCanvas.height = targetH;
