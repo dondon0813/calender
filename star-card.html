@@ -509,6 +509,9 @@ function ensureViewIndex(profile) {
 }
 
 async function sha256Hex(str) {
+  if (!window.isSecureContext || !window.crypto || !window.crypto.subtle) {
+    throw new Error('此網址目前不是安全連線（https），瀏覽器不允許設定密碼。請確認網址列有🔒鎖頭符號後再試一次。');
+  }
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -784,12 +787,17 @@ document.getElementById('confirmSetPasswordBtn').addEventListener('click', async
   const errEl = document.getElementById('setPasswordError');
   if (pw.length < 4) { errEl.textContent = '密碼至少需要 4 位數'; return; }
   if (pw !== pw2) { errEl.textContent = '兩次輸入的密碼不一致'; return; }
-  const salt = randomSalt();
-  const hash = await sha256Hex(salt + ':' + pw);
-  APP.parentAuth = { passwordHash: hash, salt, webauthnCredentialId: null };
-  saveApp();
-  closeModal('setPasswordModal');
-  unlockParentMode();
+  try {
+    const salt = randomSalt();
+    const hash = await sha256Hex(salt + ':' + pw);
+    APP.parentAuth = { passwordHash: hash, salt, webauthnCredentialId: null };
+    saveApp();
+    closeModal('setPasswordModal');
+    unlockParentMode();
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = e.message || '儲存失敗，請重新整理頁面後再試一次。';
+  }
 });
 document.getElementById('registerBiometricBtn').addEventListener('click', async () => {
   const errEl = document.getElementById('setPasswordError');
@@ -843,12 +851,17 @@ async function openParentAuthModal() {
 document.getElementById('confirmParentAuthBtn').addEventListener('click', async () => {
   const pw = document.getElementById('parentPasswordInput').value;
   const errEl = document.getElementById('parentAuthError');
-  const hash = await sha256Hex(APP.parentAuth.salt + ':' + pw);
-  if (hash === APP.parentAuth.passwordHash) {
-    closeModal('parentAuthModal');
-    unlockParentMode();
-  } else {
-    errEl.textContent = '密碼不正確，請再試一次';
+  try {
+    const hash = await sha256Hex(APP.parentAuth.salt + ':' + pw);
+    if (hash === APP.parentAuth.passwordHash) {
+      closeModal('parentAuthModal');
+      unlockParentMode();
+    } else {
+      errEl.textContent = '密碼不正確，請再試一次';
+    }
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = e.message || '驗證失敗，請重新整理頁面後再試一次。';
   }
 });
 document.getElementById('useBiometricBtn').addEventListener('click', async () => {
@@ -895,13 +908,19 @@ document.getElementById('saveNewPasswordBtn').addEventListener('click', async ()
   const errEl = document.getElementById('settingsError');
   if (pw.length < 4) { errEl.textContent = '密碼至少需要 4 位數'; return; }
   if (pw !== pw2) { errEl.textContent = '兩次輸入的密碼不一致'; return; }
-  const salt = randomSalt();
-  const hash = await sha256Hex(salt + ':' + pw);
-  APP.parentAuth.passwordHash = hash;
-  APP.parentAuth.salt = salt;
-  saveApp();
-  errEl.style.color = 'var(--c-mint-text)';
-  errEl.textContent = '密碼已更新！';
+  try {
+    const salt = randomSalt();
+    const hash = await sha256Hex(salt + ':' + pw);
+    APP.parentAuth.passwordHash = hash;
+    APP.parentAuth.salt = salt;
+    saveApp();
+    errEl.style.color = 'var(--c-mint-text)';
+    errEl.textContent = '密碼已更新！';
+  } catch (e) {
+    console.error(e);
+    errEl.style.color = '';
+    errEl.textContent = e.message || '更新失敗，請重新整理頁面後再試一次。';
+  }
 });
 document.getElementById('deleteChildBtn').addEventListener('click', () => {
   const profile = getActiveProfile();
