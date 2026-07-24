@@ -300,7 +300,7 @@ function preloadImage(src) {
     // img 的 onload/onerror 極少數情況不會觸發，加上 timeout 保底，避免 Promise.all 卡死
     const timer = setTimeout(() => finish({ ok: false }), 8000);
     const img = new Image();
-    img.onload = () => { clearTimeout(timer); finish({ ok: true }); };
+    img.onload = () => { clearTimeout(timer); finish({ ok: true, w: img.naturalWidth, h: img.naturalHeight }); };
     img.onerror = () => { clearTimeout(timer); finish({ ok: false }); };
     img.src = src;
   });
@@ -330,6 +330,17 @@ async function buildNameStickerPoster(styleKey, name) {
       if (!res.ok) {
         iconWrap.className = 'ns-cell-icon emoji';
         iconWrap.textContent = style.emoji;
+        return;
+      }
+      // 明確依格子實際尺寸＋圖片原始長寬比算出縮放後的寬高，不要依賴瀏覽器的
+      // flex 自動縮放替代元素這個隱性行為——html2canvas 對這個行為支援不穩定，
+      // 圖片來源如果是 base64 dataURI 更容易整個抓錯尺寸，變成放大裁切一小角
+      const boxW = iconWrap.getBoundingClientRect().width || iconWrap.offsetWidth || 0;
+      const boxH = iconWrap.getBoundingClientRect().height || iconWrap.offsetHeight || 0;
+      if (boxW && boxH && res.w && res.h) {
+        const fitScale = Math.min(boxW / res.w, boxH / res.h);
+        img.style.width = (res.w * fitScale) + 'px';
+        img.style.height = (res.h * fitScale) + 'px';
       }
     }));
 
