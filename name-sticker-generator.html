@@ -163,13 +163,32 @@
   }
   .ns-cell-icon img { display: block; margin: 0 auto; }
   .ns-cell-icon.emoji { font-size: 32px; }
-  .ns-cell-name {
+  .ns-cell-textstack {
     flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .ns-cell-name {
     min-width: 0;
     font-family: var(--font-display);
     font-weight: 800;
     font-size: 30px;
     color: var(--c-text);
+    text-align: left;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ns-cell-name-en {
+    min-width: 0;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 20px;
+    color: var(--c-text-soft);
     text-align: left;
     line-height: 1;
     white-space: nowrap;
@@ -215,6 +234,7 @@
   </div>
 
   <div class="ns-section-title" style="text-align:center;">Step 2・輸入姓名</div>
+  <input type="text" id="nsEnglishNameInput" class="ns-name-input" maxlength="20" placeholder="英文姓名，如不需要可留白" style="margin-bottom:10px;">
   <input type="text" id="nsNameInput" class="ns-name-input" maxlength="12" placeholder="例如：林咚咚">
 
   <button type="button" class="action-btn ns-generate-btn" id="nsGenerateBtn">🖼️ 產生姓名貼圖片</button>
@@ -324,10 +344,12 @@ function preloadImage(src) {
   });
 }
 
-async function buildNameStickerPoster(styleKey, name) {
+async function buildNameStickerPoster(styleKey, name, englishName) {
   const style = STICKER_STYLES[styleKey];
   const gridEl = document.getElementById('nsGrid');
   gridEl.innerHTML = '';
+
+  const hasEnglish = !!(englishName && englishName.trim());
 
   const slotCount = NS_GRID_COLS * NS_GRID_ROWS;
   const slots = buildStickerImageSlots(style.images, slotCount);
@@ -362,15 +384,30 @@ async function buildNameStickerPoster(styleKey, name) {
       }
     }));
 
+    const textStack = document.createElement('div');
+    textStack.className = 'ns-cell-textstack';
+
     const nameEl = document.createElement('div');
     nameEl.className = 'ns-cell-name';
     nameEl.textContent = name;
-    cell.appendChild(nameEl);
+    textStack.appendChild(nameEl);
 
+    if (hasEnglish) {
+      const engEl = document.createElement('div');
+      engEl.className = 'ns-cell-name-en';
+      engEl.textContent = englishName.trim();
+      textStack.appendChild(engEl);
+    }
+
+    cell.appendChild(textStack);
     gridEl.appendChild(cell);
   });
 
-  fitStickerNameFontSize(gridEl);
+  if (hasEnglish) {
+    fitStickerNameFontSizeDual(gridEl);
+  } else {
+    fitStickerNameFontSize(gridEl);
+  }
 
   await Promise.all(imgChecks);
 }
@@ -411,6 +448,46 @@ function fitStickerNameFontSize(gridEl) {
   gridEl.querySelectorAll('.ns-cell-name').forEach(el => {
     el.style.fontSize = fontSize + 'px';
   });
+}
+
+// 有填英文姓名時：中文姓名／英文姓名疊成兩行，字級維持 6:4 比例一起縮放，
+// 兩行分別檢查寬度塞不塞得下（原理跟單行版一樣，用獨立量測元素避免
+// scrollWidth 卡住的陷阱）
+const NS_NAME2_UNIT_MAX = 12; // 中文 3 單位、英文 2 單位
+const NS_NAME2_UNIT_MIN = 5;
+function fitStickerNameFontSizeDual(gridEl) {
+  const sampleZh = gridEl.querySelector('.ns-cell-name');
+  const sampleEn = gridEl.querySelector('.ns-cell-name-en');
+  if (!sampleZh || !sampleEn) return;
+  const available = sampleZh.clientWidth;
+
+  const probeZh = document.createElement('div');
+  probeZh.style.cssText = 'position:absolute; visibility:hidden; left:-99999px; top:0; white-space:nowrap; font-family:' + getComputedStyle(sampleZh).fontFamily + '; font-weight:800;';
+  probeZh.textContent = sampleZh.textContent;
+  document.body.appendChild(probeZh);
+
+  const probeEn = document.createElement('div');
+  probeEn.style.cssText = 'position:absolute; visibility:hidden; left:-99999px; top:0; white-space:nowrap; font-family:' + getComputedStyle(sampleEn).fontFamily + '; font-weight:800;';
+  probeEn.textContent = sampleEn.textContent;
+  document.body.appendChild(probeEn);
+
+  let unit = NS_NAME2_UNIT_MAX;
+  const applyProbeSizes = (u) => {
+    probeZh.style.fontSize = Math.round(u * 3) + 'px';
+    probeEn.style.fontSize = Math.round(u * 2) + 'px';
+  };
+  applyProbeSizes(unit);
+  while (unit > NS_NAME2_UNIT_MIN && (probeZh.getBoundingClientRect().width > available || probeEn.getBoundingClientRect().width > available)) {
+    unit -= 0.5;
+    applyProbeSizes(unit);
+  }
+  const finalZh = Math.round(unit * 3);
+  const finalEn = Math.round(unit * 2);
+  document.body.removeChild(probeZh);
+  document.body.removeChild(probeEn);
+
+  gridEl.querySelectorAll('.ns-cell-name').forEach(el => { el.style.fontSize = finalZh + 'px'; });
+  gridEl.querySelectorAll('.ns-cell-name-en').forEach(el => { el.style.fontSize = finalEn + 'px'; });
 }
 
 function canvasToBlobAsync(canvas) {
@@ -486,6 +563,7 @@ async function generateNameStickerImage() {
     nameInput.focus();
     return;
   }
+  const englishName = document.getElementById('nsEnglishNameInput').value.trim();
 
   const btn = document.getElementById('nsGenerateBtn');
   const originalBtnText = btn.textContent;
@@ -495,7 +573,7 @@ async function generateNameStickerImage() {
   try {
     await withWatchdog((async () => {
       await ensureHtml2Canvas();
-      await buildNameStickerPoster(nsSelectedStyle, name);
+      await buildNameStickerPoster(nsSelectedStyle, name, englishName);
 
       // 等字體 / 版面穩定
       await new Promise(r => setTimeout(r, 150));
@@ -557,6 +635,9 @@ async function generateNameStickerImage() {
 
 document.getElementById('nsGenerateBtn').addEventListener('click', generateNameStickerImage);
 document.getElementById('nsNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') generateNameStickerImage();
+});
+document.getElementById('nsEnglishNameInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') generateNameStickerImage();
 });
 </script>
