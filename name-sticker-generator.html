@@ -136,9 +136,9 @@
     flex: 1 1 auto;
     min-height: 0;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 8px 14px;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 3px 10px;
     width: 100%;
   }
   .ns-cell {
@@ -146,33 +146,43 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 10px;
+    gap: 5px;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    padding: 0 6px;
+    padding: 0 4px;
   }
   .ns-cell-icon {
     flex: none;
-    width: 78px;
-    height: 78px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
   .ns-cell-icon img { display: block; margin: 0 auto; }
-  .ns-cell-icon.emoji { font-size: 52px; }
+  .ns-cell-icon.emoji { font-size: 20px; }
   .ns-cell-name {
     flex: 1 1 auto;
     min-width: 0;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 60px;
+    font-size: 26px;
     color: var(--c-text);
     text-align: left;
     line-height: 1.1;
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ns-footer {
+    flex: none;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--c-brown);
+    padding-top: 3px;
   }
 </style>
 </head>
@@ -224,6 +234,7 @@
 <div id="nsPosterRoot">
   <div class="ns-poster" id="nsPoster">
     <div class="ns-grid" id="nsGrid"></div>
+    <div class="ns-footer">🩷 雪莉與朵栗・IG @dondon0813 製作</div>
   </div>
 </div>
 
@@ -272,8 +283,8 @@ const STICKER_STYLES = {
   }
 };
 
-const NS_GRID_COLS = 2;
-const NS_GRID_ROWS = 3;
+const NS_GRID_COLS = 4;
+const NS_GRID_ROWS = 9;
 
 let nsSelectedStyle = null;
 
@@ -366,20 +377,19 @@ async function buildNameStickerPoster(styleKey, name) {
 
 // 姓名字級自動縮放：長度不同的姓名都從「盡量接近圖示高度」開始試，
 // 塞不下單行就一路縮小，直到剛好塞得進格子寬度，避免長姓名把版面撐爆
-const NS_NAME_MAX_FONT = 72;
-const NS_NAME_MIN_FONT = 22;
+const NS_NAME_MAX_FONT = 26;
+const NS_NAME_MIN_FONT = 11;
 function fitStickerNameFontSize(gridEl) {
   const sample = gridEl.querySelector('.ns-cell-name');
   if (!sample) return;
-  sample.style.whiteSpace = 'nowrap';
   let fontSize = NS_NAME_MAX_FONT;
   sample.style.fontSize = fontSize + 'px';
   const available = sample.clientWidth;
-  while (fontSize > NS_NAME_MIN_FONT && sample.scrollWidth > available) {
+  // 留 2px 安全邊界，避免測量跟最終顯示之間的次像素誤差讓文字剛好卡在邊界換行
+  while (fontSize > NS_NAME_MIN_FONT && sample.scrollWidth > available - 2) {
     fontSize -= 2;
     sample.style.fontSize = fontSize + 'px';
   }
-  sample.style.whiteSpace = '';
   gridEl.querySelectorAll('.ns-cell-name').forEach(el => {
     el.style.fontSize = fontSize + 'px';
   });
