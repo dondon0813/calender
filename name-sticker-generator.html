@@ -234,8 +234,8 @@
   </div>
 
   <div class="ns-section-title" style="text-align:center;">Step 2・輸入姓名</div>
-  <input type="text" id="nsEnglishNameInput" class="ns-name-input" maxlength="20" placeholder="英文姓名，如不需要可留白" style="margin-bottom:10px;">
-  <input type="text" id="nsNameInput" class="ns-name-input" maxlength="12" placeholder="例如：林咚咚">
+  <input type="text" id="nsNameInput" class="ns-name-input" maxlength="12" placeholder="例如：林咚咚" style="margin-bottom:10px;">
+  <input type="text" id="nsEnglishNameInput" class="ns-name-input" maxlength="20" placeholder="英文姓名，如不需要可留白">
 
   <button type="button" class="action-btn ns-generate-btn" id="nsGenerateBtn">🖼️ 產生姓名貼圖片</button>
 
@@ -552,25 +552,29 @@ async function captureInIsolatedFrame(sourceEl, options) {
 }
 
 async function generateNameStickerImage() {
-  if (!nsSelectedStyle) {
-    alert('請先選擇姓名貼款式喔');
-    return;
-  }
-  const nameInput = document.getElementById('nsNameInput');
-  const name = nameInput.value.trim();
-  if (!name) {
-    alert('請先輸入姓名喔');
-    nameInput.focus();
-    return;
-  }
-  const englishName = document.getElementById('nsEnglishNameInput').value.trim();
-
   const btn = document.getElementById('nsGenerateBtn');
   const originalBtnText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '圖片產生中…';
 
   try {
+    if (!nsSelectedStyle) {
+      alert('請先選擇姓名貼款式喔');
+      return;
+    }
+    const nameInput = document.getElementById('nsNameInput');
+    const name = nameInput.value.trim();
+    if (!name) {
+      alert('請先輸入姓名喔');
+      nameInput.focus();
+      return;
+    }
+    // 用 ?. 保底：就算這個欄位因為某種原因抓不到，也不會讓整個產生流程
+    // 在還沒進 try 之前就整個掛掉、按鈕完全沒反應
+    const englishNameInput = document.getElementById('nsEnglishNameInput');
+    const englishName = englishNameInput ? englishNameInput.value.trim() : '';
+
+    btn.disabled = true;
+    btn.textContent = '圖片產生中…';
+
     await withWatchdog((async () => {
       await ensureHtml2Canvas();
       await buildNameStickerPoster(nsSelectedStyle, name, englishName);
