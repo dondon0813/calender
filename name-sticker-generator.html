@@ -171,6 +171,13 @@
     justify-content: center;
     overflow: hidden;
   }
+  /* 有英文姓名時：中英文兩行彼此置中對齊，不再各自靠左。
+     刻意不改 align-items（維持預設 stretch），這兩行才會保持撐滿格子寬度，
+     量測可用寬度時才準——只用 text-align:center 讓文字在滿版寬度裡置中 */
+  .ns-cell-textstack.dual .ns-cell-name,
+  .ns-cell-textstack.dual .ns-cell-name-en {
+    text-align: center;
+  }
   .ns-cell-name {
     min-width: 0;
     font-family: var(--font-display);
@@ -254,7 +261,7 @@
 <div id="nsPosterRoot">
   <div class="ns-poster" id="nsPoster">
     <div class="ns-grid" id="nsGrid"></div>
-    <div class="ns-footer">🩷 雪莉與朵栗・IG @dondon0813 製作</div>
+    <div class="ns-footer">雪莉與朵栗免費分享製作 IG @dondon0813</div>
   </div>
 </div>
 
@@ -385,7 +392,7 @@ async function buildNameStickerPoster(styleKey, name, englishName) {
     }));
 
     const textStack = document.createElement('div');
-    textStack.className = 'ns-cell-textstack';
+    textStack.className = hasEnglish ? 'ns-cell-textstack dual' : 'ns-cell-textstack';
 
     const nameEl = document.createElement('div');
     nameEl.className = 'ns-cell-name';
@@ -453,7 +460,7 @@ function fitStickerNameFontSize(gridEl) {
 // 有填英文姓名時：中文姓名／英文姓名疊成兩行，字級維持 6:4 比例一起縮放，
 // 兩行分別檢查寬度塞不塞得下（原理跟單行版一樣，用獨立量測元素避免
 // scrollWidth 卡住的陷阱）
-const NS_NAME2_UNIT_MAX = 12; // 中文 3 單位、英文 2 單位
+const NS_NAME2_UNIT_MAX = 9; // 中文 3 單位、英文 2 單位
 const NS_NAME2_UNIT_MIN = 5;
 function fitStickerNameFontSizeDual(gridEl) {
   const sampleZh = gridEl.querySelector('.ns-cell-name');
