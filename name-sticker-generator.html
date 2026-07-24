@@ -146,11 +146,11 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
+    gap: 2px;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    padding: 0 4px;
+    padding: 0 1px;
   }
   .ns-cell-icon {
     flex: none;
@@ -401,8 +401,9 @@ function fitStickerNameFontSize(gridEl) {
 
   let fontSize = NS_NAME_MAX_FONT;
   probe.style.fontSize = fontSize + 'px';
+  // 用 1px 為單位縮，才不會跳過剛好塞得下的那個字級
   while (fontSize > NS_NAME_MIN_FONT && probe.getBoundingClientRect().width > available) {
-    fontSize -= 2;
+    fontSize -= 1;
     probe.style.fontSize = fontSize + 'px';
   }
   document.body.removeChild(probe);
