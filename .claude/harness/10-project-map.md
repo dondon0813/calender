@@ -47,9 +47,8 @@ Google 試算表（兩份！）
 | memo.js | 420 | 備忘錄樹狀模組（依賴 admin.js 的 postTask/currentUser） | 🟢 |
 | shared.css | 382 | 全站設計 tokens（:root 變數）＋共用元件 | 🟢 |
 | school-labels.html | 311 | 標籤機導購頁（獨立 LABELS_API_URL） | 🟢 |
-| kids.html | 153 | 兒童專區 hub（純連結頁） | 🟢 |
-| name-sticker-generator.html | ~430 | 免費資源／姓名貼產生器：選喵星人(8款)或可愛動物(4款)＋輸入姓名，html2canvas 產 4x6 明信片圖（圖左名右） | 🟢 |
-| free-resources.html | ~100 | 免費資源 hub（純連結頁，目前只有姓名貼產生器一張卡） | 🟢 |
+| kids.html | ~160 | 免費資源 hub（純連結頁；原「兒童專區」改名並併入姓名貼產生器，檔名沿用 kids.html 未改） | 🟢 |
+| name-sticker-generator.html | ~650 | 免費資源／姓名貼產生器：選喵星人(8款)或可愛動物(4款)＋輸入中文姓名（必填）＋英文姓名（選填，會疊第二行），html2canvas 產 6x4 明信片圖（圖左名右） | 🟢 |
 | apps-script-*.md ×3 | - | **歷史部署說明**（已完成的部署步驟紀錄，非現況文件） | 🟢 |
 
 引用關係：admin.html → `prItems.js` → `brandVendor.js` → `imageLibrary.js` → `calculator.js` → `todoList.js` → `customBlocks.js` → `tools.js` → `admin.js` → `memo.js`（各帶 `?v=N`）＋html2canvas(本地 vendor/)；school-list.html → html2canvas；全部頁面 → shared.css。改 admin.js/memo.js/prItems.js 時**記得把 admin.html 裡對應的 `?v=` 版本號 +1**（快取破解）。
