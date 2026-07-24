@@ -1571,6 +1571,21 @@ function openSchoolItemModal(item) {
   document.getElementById('schoolItemModal').classList.add('show');
 }
 
+// 產生圖片（A4 清單／姓名貼）時要把圖示畫進 canvas，這條路徑需要 CORS。
+// 頁面搬到自訂網域(sheridondon.com.tw)後，試算表裡存的圖示還是舊的
+// dondon0813.github.io/calender 絕對網址 → 變成「跨網域」。螢幕上用一般 <img>
+// 顯示沒問題，但 CORS 載入會因跨網域＋瀏覽器快取污染（螢幕上先用非 CORS 模式
+// 載過同一張圖）而失敗，圖片就被換成 🎒 背包 emoji。
+// 解法：自家網址一律改成「同網域相對路徑」，徹底避開 CORS；外部網址則補一個固定
+// 的 ?cors 當乾淨的快取鍵，避免讀到被污染的非 CORS 快取。
+function resolveIconSrc(url) {
+  const rel = String(url || '')
+    .replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, '')
+    .replace(/^https?:\/\/sheridondon\.com\.tw\//i, '');
+  if (rel !== url) return rel; // 自家網址 → 相對路徑（同網域）
+  return url + (url.indexOf('?') === -1 ? '?' : '&') + 'cors=1';
+}
+
 function preloadImage(src) {
   return new Promise((resolve) => {
     if (!src) { resolve({ ok: false }); return; }
@@ -1633,9 +1648,11 @@ async function buildA4Poster() {
       if (isValidUrl(iconRaw)) {
         iconWrap.className = 'a4-item-icon-wrap';
         const img = document.createElement('img');
-        img.src = iconRaw;
+        const iconSrc = resolveIconSrc(iconRaw);
+        img.crossOrigin = 'anonymous';
+        img.src = iconSrc;
         iconWrap.appendChild(img);
-        imgChecks.push(preloadImage(iconRaw).then(res => {
+        imgChecks.push(preloadImage(iconSrc).then(res => {
           if (!res.ok) {
             iconWrap.className = 'a4-item-icon-wrap emoji';
             iconWrap.textContent = '🎒';
@@ -1965,9 +1982,11 @@ async function buildStickerPoster(name) {
     if (isValidUrl(iconRaw)) {
       iconWrap.className = 'sticker-icon-wrap';
       const img = document.createElement('img');
-      img.src = iconRaw;
+      const iconSrc = resolveIconSrc(iconRaw);
+      img.crossOrigin = 'anonymous';
+      img.src = iconSrc;
       iconWrap.appendChild(img);
-      imgChecks.push(preloadImage(iconRaw).then(res => {
+      imgChecks.push(preloadImage(iconSrc).then(res => {
         if (!res.ok) {
           iconWrap.className = 'sticker-icon-wrap emoji';
           iconWrap.textContent = '🎒';
