@@ -18,6 +18,9 @@
     --rcp-oil-bg: #FFF6E4;          /* 油切切換按鈕底色 */
     --rcp-oil-hover-bg: #FFEcC4;    /* 油切切換按鈕 hover 底色 */
     --rcp-badge-pink: #EB99AC;      /* 小圓形數字徽章底色 */
+    --rcp-gift-text: #2F9E8F;       /* 免費資源卡：標題文字／分隔線 */
+    --rcp-gift-bg: #DFF6F1;         /* 免費資源卡：底色 */
+    --rcp-gift-border: #A9E6DA;     /* 免費資源卡：邊框 */
   }
 
   /* ===== 對 shared.css 的覆寫 ===== */
@@ -816,6 +819,12 @@
   }
   .home-card-coral .home-card-title { color: var(--c-coral-text); }
   .home-card-coral .home-card-title-divider { border-color: var(--c-coral-text); }
+  .home-card-gift {
+    background: var(--rcp-gift-bg);
+    border-color: var(--rcp-gift-border);
+  }
+  .home-card-gift .home-card-title { color: var(--rcp-gift-text); }
+  .home-card-gift .home-card-title-divider { border-color: var(--rcp-gift-text); }
   .soon-card {
     position: relative;
     opacity: 0.92;
@@ -1226,6 +1235,12 @@
         <div class="home-card-title">兒童專區</div>
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">集點卡、闖關小遊戲通通有 💗</div>
+      </a>
+      <a class="home-card home-card-gift" href="free-resources.html" style="text-decoration:none; display:block;">
+        <div class="home-card-icon">🎁</div>
+        <div class="home-card-title">免費資源</div>
+        <div class="home-card-title-divider"></div>
+        <div class="home-card-desc">實用小工具通通免費玩 💗</div>
       </a>
     </div>
 

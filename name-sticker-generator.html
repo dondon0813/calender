@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 姓名貼產生器</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* name-sticker-generator.html 專屬樣式。共用的 reset / 版面 / 返回鈕 / 標題 / 頁尾 / modal 在 shared.css。 */
+
+  .ns-subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: var(--c-brown);
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  .ns-section-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--c-text);
+    margin: 0 0 10px;
+  }
+
+  /* ===== 款式選擇 ===== */
+  .ns-style-select {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .ns-style-card {
+    width: 150px;
+    border-radius: var(--r-xl);
+    border: 3px solid var(--c-border-light);
+    background: var(--c-surface-3);
+    padding: 18px 10px 14px;
+    text-align: center;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .ns-style-card:hover { transform: translateY(-2px); }
+  .ns-style-card.active {
+    border-color: var(--c-primary);
+    background: var(--c-pink-bg);
+    box-shadow: var(--sh-float);
+  }
+  .ns-style-icon { font-size: 32px; margin-bottom: 6px; }
+  .ns-style-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--c-text);
+    margin-bottom: 4px;
+  }
+  .ns-style-desc { font-size: 11px; color: var(--c-text-soft); }
+
+  /* ===== 姓名輸入 ===== */
+  .ns-name-input {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    border: 2px solid var(--c-border);
+    background: var(--c-orange-bg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--c-text);
+    text-align: center;
+    outline: none;
+  }
+  .ns-name-input:focus { border-color: var(--c-cat-4); }
+
+  .ns-generate-btn {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    margin: 16px auto 0;
+    padding: 13px 0;
+    font-size: 15px;
+  }
+
+  /* ===== 產生結果預覽 ===== */
+  .ns-preview-wrap {
+    display: none;
+    margin-top: 26px;
+    text-align: center;
+  }
+  .ns-preview-img {
+    max-width: 100%;
+    width: 260px;
+    border-radius: var(--r-lg);
+    border: 3px solid var(--c-border-light);
+    box-shadow: var(--sh-card);
+  }
+  .ns-download-btn {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 11px 26px;
+    font-size: 14px;
+  }
+
+  /* ===== 離畫面外的姓名貼樣板（4x6 明信片尺寸，白底，只用來截圖） ===== */
+  #nsPosterRoot {
+    position: fixed;
+    left: -99999px;
+    top: 0;
+    background: #ffffff;
+  }
+  .ns-poster {
+    width: 384px;
+    height: 576px;
+    background: #ffffff;
+    padding: 16px 14px 10px;
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    display: flex;
+    flex-direction: column;
+  }
+  .ns-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    gap: 4px 6px;
+    width: 100%;
+  }
+  .ns-cell {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 3px;
+  }
+  .ns-cell-icon {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .ns-cell-icon img { display: block; margin: 0 auto; }
+  .ns-cell-icon.emoji { font-size: 32px; }
+  .ns-cell-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--c-text);
+    text-align: left;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+
+<a class="site-home-btn" href="recipes.html" title="回首頁" aria-label="回首頁">🏠</a>
+
+<div class="wrap">
+  <button class="back-btn" onclick="location.href='free-resources.html'">← 返回免費資源</button>
+
+  <div class="page-title-wrap">
+    <div class="page-title-badge">💗 雪莉與朵栗</div>
+    <div class="page-title">🏷️ 姓名貼產生器</div>
+  </div>
+
+  <div class="ns-subtitle">🌟 選款式、輸入姓名，馬上產生專屬姓名貼 🌟</div>
+
+  <div class="ns-section-title" style="text-align:center;">Step 1・選擇款式</div>
+  <div class="ns-style-select" id="nsStyleSelect">
+    <button type="button" class="ns-style-card" data-style="cat">
+      <div class="ns-style-icon">🐱</div>
+      <div class="ns-style-title">喵星人</div>
+      <div class="ns-style-desc">8款不同貓咪圖案</div>
+    </button>
+    <button type="button" class="ns-style-card" data-style="animal">
+      <div class="ns-style-icon">🐾</div>
+      <div class="ns-style-title">可愛動物</div>
+      <div class="ns-style-desc">4款不同動物圖案</div>
+    </button>
+  </div>
+
+  <div class="ns-section-title" style="text-align:center;">Step 2・輸入姓名</div>
+  <input type="text" id="nsNameInput" class="ns-name-input" maxlength="12" placeholder="例如：林咚咚">
+
+  <button type="button" class="action-btn ns-generate-btn" id="nsGenerateBtn">🖼️ 產生姓名貼圖片</button>
+
+  <div class="ns-preview-wrap" id="nsPreviewWrap">
+    <div class="ns-section-title" style="text-align:center;">完成囉！</div>
+    <img class="ns-preview-img" id="nsPreviewImg" alt="姓名貼預覽">
+    <div>
+      <a class="action-btn ns-download-btn" id="nsDownloadBtn" download>⬇️ 下載圖片</a>
+    </div>
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<!-- 產生姓名貼圖片：離畫面外的樣板（4x6 明信片尺寸，白底），只用來截圖，使用者看不到 -->
+<div id="nsPosterRoot">
+  <div class="ns-poster" id="nsPoster">
+    <div class="ns-grid" id="nsGrid"></div>
+  </div>
+</div>
+
+<script>
+// html2canvas（約 200KB）延後到使用者真的點「產生圖片」才載入，其他人不用白白多下載這包函式庫
+let html2canvasLoadPromise = null;
+function ensureHtml2Canvas() {
+  if (typeof html2canvas === 'function') return Promise.resolve();
+  if (!html2canvasLoadPromise) {
+    html2canvasLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'vendor/html2canvas.min.js';
+      s.onload = resolve;
+      s.onerror = () => { html2canvasLoadPromise = null; reject(new Error('html2canvas 載入失敗')); };
+      document.head.appendChild(s);
+    });
+  }
+  return html2canvasLoadPromise;
+}
+
+// ===== 姓名貼款式資料：喵星人 8 款、可愛動物 4 款；圖片數不足網格格數時輪迴重複 =====
+const STICKER_STYLES = {
+  cat: {
+    label: '喵星人',
+    emoji: '🐱',
+    images: [
+      'images/name-stickers/cat-01.webp',
+      'images/name-stickers/cat-02.webp',
+      'images/name-stickers/cat-03.webp',
+      'images/name-stickers/cat-04.webp',
+      'images/name-stickers/cat-05.webp',
+      'images/name-stickers/cat-06.webp',
+      'images/name-stickers/cat-07.webp',
+      'images/name-stickers/cat-08.webp'
+    ]
+  },
+  animal: {
+    label: '可愛動物',
+    emoji: '🐾',
+    images: [
+      'images/name-stickers/animal-01.webp',
+      'images/name-stickers/animal-02.webp',
+      'images/name-stickers/animal-03.webp',
+      'images/name-stickers/animal-04.webp'
+    ]
+  }
+};
+
+const NS_GRID_COLS = 3;
+const NS_GRID_ROWS = 8;
+
+let nsSelectedStyle = null;
+
+document.querySelectorAll('#nsStyleSelect .ns-style-card').forEach(card => {
+  card.addEventListener('click', () => {
+    nsSelectedStyle = card.dataset.style;
+    document.querySelectorAll('#nsStyleSelect .ns-style-card').forEach(c => {
+      c.classList.toggle('active', c === card);
+    });
+  });
+});
+
+function buildStickerImageSlots(images, slotCount) {
+  const slots = [];
+  for (let i = 0; i < slotCount; i++) {
+    slots.push(images[i % images.length]);
+  }
+  return slots;
+}
+
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (result) => { if (done) return; done = true; resolve(result); };
+    // img 的 onload/onerror 極少數情況不會觸發，加上 timeout 保底，避免 Promise.all 卡死
+    const timer = setTimeout(() => finish({ ok: false }), 8000);
+    const img = new Image();
+    img.onload = () => { clearTimeout(timer); finish({ ok: true }); };
+    img.onerror = () => { clearTimeout(timer); finish({ ok: false }); };
+    img.src = src;
+  });
+}
+
+async function buildNameStickerPoster(styleKey, name) {
+  const style = STICKER_STYLES[styleKey];
+  const gridEl = document.getElementById('nsGrid');
+  gridEl.innerHTML = '';
+
+  const slotCount = NS_GRID_COLS * NS_GRID_ROWS;
+  const slots = buildStickerImageSlots(style.images, slotCount);
+  const imgChecks = [];
+
+  slots.forEach(src => {
+    const cell = document.createElement('div');
+    cell.className = 'ns-cell';
+
+    const iconWrap = document.createElement('div');
+    iconWrap.className = 'ns-cell-icon';
+    const img = document.createElement('img');
+    img.src = src;
+    iconWrap.appendChild(img);
+    cell.appendChild(iconWrap);
+
+    imgChecks.push(preloadImage(src).then(res => {
+      if (!res.ok) {
+        iconWrap.className = 'ns-cell-icon emoji';
+        iconWrap.textContent = style.emoji;
+      }
+    }));
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ns-cell-name';
+    nameEl.textContent = name;
+    cell.appendChild(nameEl);
+
+    gridEl.appendChild(cell);
+  });
+
+  await Promise.all(imgChecks);
+}
+
+function canvasToBlobAsync(canvas) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
+
+// 整個流程的看門狗：不管卡在哪一步，超過時間都強制結束並跳出錯誤訊息，避免按鈕永遠停在「產生中」
+function withWatchdog(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('WATCHDOG_TIMEOUT')), ms))
+  ]);
+}
+
+// html2canvas 截圖會把整個頁面複製一份，改成把樣板複製進乾淨的獨立 iframe 再截圖，
+// 跟 school-list.html 的姓名貼產生器同一招，已驗證能避免手機上卡住的狀況
+async function captureInIsolatedFrame(sourceEl, options) {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed; left:-99999px; top:0; border:0;';
+  iframe.width = String(options.width || sourceEl.offsetWidth || 400);
+  iframe.height = String(options.height || sourceEl.offsetHeight || 400);
+  document.body.appendChild(iframe);
+
+  try {
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><base href="${location.href}"></head><body style="margin:0;"></body></html>`);
+    doc.close();
+
+    document.querySelectorAll('head style').forEach(styleEl => {
+      const s = doc.createElement('style');
+      s.textContent = styleEl.textContent;
+      doc.head.appendChild(s);
+    });
+    document.querySelectorAll('head link[rel="stylesheet"]').forEach(linkEl => {
+      const l = doc.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = linkEl.href;
+      doc.head.appendChild(l);
+    });
+
+    const clone = sourceEl.cloneNode(true);
+    doc.body.appendChild(clone);
+
+    const fontsReady = doc.fonts && doc.fonts.ready ? doc.fonts.ready : Promise.resolve();
+    const imgs = Array.from(clone.querySelectorAll('img'));
+    const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+      img.addEventListener('load', resolve);
+      img.addEventListener('error', resolve);
+    })));
+    await Promise.race([
+      Promise.all([fontsReady, imgsReady]),
+      new Promise(resolve => setTimeout(resolve, 3000))
+    ]);
+
+    return await html2canvas(clone, options);
+  } finally {
+    document.body.removeChild(iframe);
+  }
+}
+
+async function generateNameStickerImage() {
+  if (!nsSelectedStyle) {
+    alert('請先選擇姓名貼款式喔');
+    return;
+  }
+  const nameInput = document.getElementById('nsNameInput');
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert('請先輸入姓名喔');
+    nameInput.focus();
+    return;
+  }
+
+  const btn = document.getElementById('nsGenerateBtn');
+  const originalBtnText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '圖片產生中…';
+
+  try {
+    await withWatchdog((async () => {
+      await ensureHtml2Canvas();
+      await buildNameStickerPoster(nsSelectedStyle, name);
+
+      // 等字體 / 版面穩定
+      await new Promise(r => setTimeout(r, 150));
+
+      const posterEl = document.getElementById('nsPoster');
+      const outputScale = 3;
+      const capturedCanvas = await captureInIsolatedFrame(posterEl, {
+        width: 384,
+        height: 576,
+        scale: outputScale,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        imageTimeout: 8000
+      });
+
+      // 4x6 明信片尺寸（384 x 576，跟樣板寬度一致）＊輸出倍率，白底
+      const targetW = 384 * outputScale;
+      const targetH = 576 * outputScale;
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = targetW;
+      finalCanvas.height = targetH;
+      const ctx = finalCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetW, targetH);
+      ctx.drawImage(capturedCanvas, 0, 0, targetW, targetH);
+
+      const blob = await canvasToBlobAsync(finalCanvas);
+      if (!blob) {
+        alert('圖片產生失敗，請再試一次');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      const styleLabel = STICKER_STYLES[nsSelectedStyle].label;
+
+      const previewImg = document.getElementById('nsPreviewImg');
+      previewImg.src = url;
+
+      const downloadBtn = document.getElementById('nsDownloadBtn');
+      downloadBtn.href = url;
+      downloadBtn.download = `姓名貼_${styleLabel}_${name}_${stamp}.png`;
+
+      document.getElementById('nsPreviewWrap').style.display = 'block';
+      document.getElementById('nsPreviewWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    })(), 40000);
+  } catch (err) {
+    console.error(err);
+    if (err && err.message === 'WATCHDOG_TIMEOUT') {
+      alert('圖片產生逾時了，可能是網路不穩或裝置暫時卡住，請再試一次；如果一直發生，麻煩截圖回報給我們 🙏');
+    } else {
+      alert('圖片產生失敗，請再試一次');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalBtnText;
+  }
+}
+
+document.getElementById('nsGenerateBtn').addEventListener('click', generateNameStickerImage);
+document.getElementById('nsNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') generateNameStickerImage();
+});
+</script>
+
+</body>
+</html>
