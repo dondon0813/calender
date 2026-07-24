@@ -460,7 +460,7 @@ function fitStickerNameFontSize(gridEl) {
 // 有填英文姓名時：中文姓名／英文姓名疊成兩行，字級維持 6:4 比例一起縮放，
 // 兩行分別檢查寬度塞不塞得下（原理跟單行版一樣，用獨立量測元素避免
 // scrollWidth 卡住的陷阱）
-const NS_NAME2_UNIT_MAX = 9; // 中文 3 單位、英文 2 單位
+const NS_NAME2_UNIT_MAX = 7; // 中文 3 單位、英文 2 單位
 const NS_NAME2_UNIT_MIN = 5;
 function fitStickerNameFontSizeDual(gridEl) {
   const sampleZh = gridEl.querySelector('.ns-cell-name');
