@@ -150,19 +150,19 @@
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    padding: 0 5px;
+    padding: 0 4px;
   }
   .ns-cell-icon {
     flex: none;
-    width: 30px;
-    height: 30px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
   .ns-cell-icon img { display: block; margin: 0 auto; }
-  .ns-cell-icon.emoji { font-size: 22px; }
+  .ns-cell-icon.emoji { font-size: 32px; }
   .ns-cell-name {
     flex: 1 1 auto;
     min-width: 0;
@@ -377,19 +377,36 @@ async function buildNameStickerPoster(styleKey, name) {
 
 // 姓名字級自動縮放：長度不同的姓名都從「盡量接近圖示高度」開始試，
 // 塞不下單行就一路縮小，直到剛好塞得進格子寬度，避免長姓名把版面撐爆
-const NS_NAME_MAX_FONT = 30;
-const NS_NAME_MIN_FONT = 14;
+//
+// 陷阱：量測用的 .ns-cell-name 本身是 flex:1 1 auto 撐滿格子的元素，
+// scrollWidth 一旦文字寬度縮小到低於容器寬度就會「卡住」＝直接回報成
+// clientWidth（容器本身的寬度），不會再繼續下降反映文字真正需要的寬度
+// （這是 scrollWidth 的標準定義：scrollWidth 不會小於 clientWidth）。
+// 之前拿這個「卡住」的值去跟 available 比較，會誤判成「還是塞不下」，
+// 導致字級一路縮到 NS_NAME_MIN_FONT 的下限，跟 NS_NAME_MAX_FONT 設多大
+// 完全無關。改成另外做一個不受 flex 版面限制的量測用元素，量出文字
+// 真正的自然寬度，才能正確判斷剛好塞得下的字級。
+const NS_NAME_MAX_FONT = 56;
+const NS_NAME_MIN_FONT = 16;
 function fitStickerNameFontSize(gridEl) {
   const sample = gridEl.querySelector('.ns-cell-name');
   if (!sample) return;
-  let fontSize = NS_NAME_MAX_FONT;
-  sample.style.fontSize = fontSize + 'px';
+  const name = sample.textContent;
   const available = sample.clientWidth;
-  // 留 2px 安全邊界，避免測量跟最終顯示之間的次像素誤差讓文字剛好卡在邊界換行
-  while (fontSize > NS_NAME_MIN_FONT && sample.scrollWidth > available - 2) {
+
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute; visibility:hidden; left:-99999px; top:0; white-space:nowrap; font-family:' + getComputedStyle(sample).fontFamily + '; font-weight:800;';
+  probe.textContent = name;
+  document.body.appendChild(probe);
+
+  let fontSize = NS_NAME_MAX_FONT;
+  probe.style.fontSize = fontSize + 'px';
+  while (fontSize > NS_NAME_MIN_FONT && probe.getBoundingClientRect().width > available) {
     fontSize -= 2;
-    sample.style.fontSize = fontSize + 'px';
+    probe.style.fontSize = fontSize + 'px';
   }
+  document.body.removeChild(probe);
+
   gridEl.querySelectorAll('.ns-cell-name').forEach(el => {
     el.style.fontSize = fontSize + 'px';
   });
