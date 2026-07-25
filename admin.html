@@ -2373,13 +2373,26 @@
   .pgp-step-card { position: relative; flex: 1 1 0; min-width: 0; text-align: center; }
   .pgp-step-arrow {
     position: absolute;
-    top: 112px;
+    top: 152px;
     width: 34px;
     height: 16px;
-    background: #F5A25D;
+    box-sizing: border-box;
+    background: #C43D14;
+    border: 2px solid #fff;
     border-radius: 4px;
     transform: translate(-50%, -50%);
     z-index: 3;
+  }
+  .pgp-step-arrow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+    border-left: 20px solid #fff;
   }
   .pgp-step-arrow::after {
     content: '';
@@ -2390,7 +2403,7 @@
     width: 0; height: 0;
     border-top: 13px solid transparent;
     border-bottom: 13px solid transparent;
-    border-left: 18px solid #F5A25D;
+    border-left: 18px solid #C43D14;
   }
   .pgp-step-caption {
     height: 62px;
