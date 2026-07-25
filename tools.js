@@ -545,8 +545,12 @@ function pgBuildPosterHtml(r) {
         </div>
       </div>`;
   });
-  // 步驟卡片之間插入箭頭，串成「做法（超簡單！）」那種橫向流程
-  const stepHtml = stepCards.map((c, idx) => idx < stepCards.length - 1 ? c + '<span class="pgp-step-arrow">→</span>' : c).join('');
+  // 箭頭改用 position:absolute 疊在卡片交界處（見 admin.html 對應 CSS 註解），
+  // 不再穿插進 flex 排版裡佔位，用百分比 left 對齊每個交界點。
+  const n = stepCards.length;
+  const arrowsHtml = Array.from({ length: Math.max(n - 1, 0) }, (_, i) =>
+    `<span class="pgp-step-arrow" style="left:${(100 / n * (i + 1)).toFixed(2)}%"></span>`).join('');
+  const stepHtml = stepCards.join('') + arrowsHtml;
 
   const tipsHtml = tips.length ? `
     <div class="pgp-tip-bar">

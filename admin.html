@@ -2359,28 +2359,42 @@
     font-size: 27px;
     color: #fff;
   }
+  /* 箭頭改成純 CSS 畫的粗箭頭（矩形+三角形），不是文字符號，用 position:absolute
+     疊在兩張步驟圖片的交界處，可以左右稍微蓋住兩邊的圖片；因為不再佔用 flex 版位，
+     4 張步驟圖可以分到更多寬度（等於「放大一點點」），卡片間距也縮小了。 */
   .pgp-step-grid {
+    position: relative;
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 6px;
     height: 100%;
     overflow: hidden;
   }
   .pgp-step-card { position: relative; flex: 1 1 0; min-width: 0; text-align: center; }
   .pgp-step-arrow {
-    flex: none;
-    width: 26px;
-    font-size: 26px;
-    font-weight: 800;
-    color: #F5A25D;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    align-self: center;
+    position: absolute;
+    top: 112px;
+    width: 34px;
+    height: 16px;
+    background: #F5A25D;
+    border-radius: 4px;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+  }
+  .pgp-step-arrow::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 13px solid transparent;
+    border-bottom: 13px solid transparent;
+    border-left: 18px solid #F5A25D;
   }
   .pgp-step-caption {
     height: 62px;
-    font-size: 22px;
+    font-size: 24px;
     color: var(--c-text-soft);
     line-height: 1.4;
     margin-bottom: 8px;
@@ -2392,10 +2406,10 @@
   /* 裁切（不是完整顯示）：直式照片切上下、太寬的照片切左右，只切掉超出框外的部分，
      用 background-size:cover（原因見上面主圖照片的說明註解，img+min-width 那招
      遇到原始尺寸比框大的照片會失效，變成整張放大只顯示正中央一小塊）。
-     框高 150px，比正方形更偏長方形一點（上方多切一些）。 */
+     框高 165px，比正方形更偏長方形一點（上方多切一些）。 */
   .pgp-step-photo-wrap {
     width: 100%;
-    height: 150px;
+    height: 165px;
     overflow: hidden;
     border-radius: 20px;
     border: 3px solid var(--c-border-light);
@@ -2417,7 +2431,7 @@
     background: #FC916F;
     color: #fff;
     font-weight: 800;
-    font-size: 19px;
+    font-size: 22px;
     display: flex; align-items: center; justify-content: center;
   }
 
@@ -2455,7 +2469,7 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    font-size: 27px;
+    font-size: 30px;
     color: var(--c-text-soft);
     line-height: 1.5;
   }
@@ -2475,7 +2489,7 @@
     position: absolute;
     right: 4px;
     bottom: 0;
-    width: 320px;
+    width: 380px;
     height: auto;
     z-index: 5;
     pointer-events: none;
@@ -4504,7 +4518,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=3"></script>
+<script src="tools.js?v=4"></script>
 <script src="admin.js?v=61"></script>
 <script src="memo.js?v=5"></script>
 
