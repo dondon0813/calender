@@ -505,24 +505,12 @@ async function pgCopyText() {
 }
 
 // ---- 4:5 貼文圖（沿用現有食譜海報樣式，固定版型：所有食譜都套同一套結構） ----
-function pgBuildBenefitTags(r, ingCount) {
-  const tags = [];
-  if (r['烹調時間']) tags.push(`⏱ ${r['烹調時間']}`);
-  if (r['適合月齡']) tags.push(`👶 ${r['適合月齡']}`);
-  const diff = parseInt(r['難易度'], 10);
-  if (diff >= 1 && diff <= 5) tags.push(`⭐ ${'★'.repeat(diff)}${'☆'.repeat(5 - diff)}`);
-  if (ingCount) tags.push(`🥕 ${ingCount}種食材`);
-  while (tags.length < 4) tags.push('💗 手作安心');
-  return tags.slice(0, 4);
-}
-
 function pgBuildPosterHtml(r) {
   const title = escHtml(r['食譜名稱'] || '');
   const heroImg = pgIsValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PG_PLACEHOLDER_IMG;
 
   const fullIngList = pgGetRecipeIngredients(r);
   const ingList = fullIngList.slice(0, 6); // 固定版型上限：右側直式清單，最多6項才能完整顯示不被裁切
-  const benefitTags = pgBuildBenefitTags(r, fullIngList.length);
 
   const steps = pgGetStepLines(r).slice(0, 4); // 固定版型上限：橫向一排最多4格
   const manualStepImgsRaw = String(r['步驟圖片'] || '').trim();
@@ -559,8 +547,6 @@ function pgBuildPosterHtml(r) {
   // 步驟卡片之間插入箭頭，串成「做法（超簡單！）」那種橫向流程
   const stepHtml = stepCards.map((c, idx) => idx < stepCards.length - 1 ? c + '<span class="pgp-step-arrow">→</span>' : c).join('');
 
-  const benefitHtml = benefitTags.map(t => `<span class="pgp-benefit-tag">✅ ${escHtml(t)}</span>`).join('');
-
   const tipsHtml = tips.length ? `
     <div class="pgp-tip-bar">
       <img class="pgp-tip-badge" crossorigin="anonymous" src="images/recipes/reminder.png" alt="小提醒">
@@ -571,11 +557,6 @@ function pgBuildPosterHtml(r) {
 
   return `
     <div class="pgp-poster">
-      <span class="pgp-doodle" style="top:20px;left:20px;font-size:30px;">🌿</span>
-      <span class="pgp-doodle" style="bottom:120px;left:24px;font-size:26px;">🐟</span>
-      <span class="pgp-doodle" style="bottom:40px;right:340px;font-size:20px;">⭐</span>
-      <span class="pgp-doodle" style="top:280px;right:24px;font-size:20px;">💗</span>
-
       <div class="pgp-main-row">
         <div class="pgp-hero-wrap">
           <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
@@ -586,8 +567,6 @@ function pgBuildPosterHtml(r) {
           <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
         </div>
       </div>
-
-      <div class="pgp-benefit-row">${benefitHtml}</div>
 
       <div class="pgp-step-section">
         <div class="pgp-step-badge-outer">

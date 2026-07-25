@@ -2184,9 +2184,9 @@
 
   /* ===== 食譜貼文產生器：4:5 貼文圖（離畫面外繪製，html2canvas 截圖用，給 IG 貼文用，走滿版風格） =====
      設計原則：每個區塊都有固定高度預算，總和控制在 1350px 以內，絕對不會超版。
-     版面：主視覺（大頭照滿版鋪底＋標題疊在照片上緣＋右側食材清單，食材清單延伸到跟照片同高，
-     食材標籤圖橫跨並壓在食材卡的上邊框）→ 特色標籤 → 步驟橫排（箭頭串接，標題圖含步驟數字）
-     → 底部小提醒（往下撐滿剩餘空間）。
+     版面：主視覺（大頭照滿版鋪底＋標題置中疊在照片上＋右側食材清單，食材清單延伸到跟照片同高，
+     食材標籤圖橫跨並壓在食材卡的上邊框）→ 步驟橫排（箭頭串接，標題圖含步驟數字）
+     → 底部小提醒（往下撐滿剩餘空間）。背景底色維持漸層，裝飾底圖之後使用者會另外提供。
      食材上限 6 個（直式清單，去背圖直接放不加圓框）、步驟上限 4 個（橫向一排）、小提醒最多 3 行。 */
   #pgPosterStage {
     position: fixed;
@@ -2210,14 +2210,8 @@
     display: flex;
     flex-direction: column;
   }
-  .pgp-doodle {
-    position: absolute;
-    opacity: 0.28;
-    line-height: 1;
-    pointer-events: none;
-  }
 
-  /* -- 主視覺：大頭照滿版鋪底（無圓框/貼紙），標題疊在照片上緣，右邊食材清單延伸到跟照片同高 -- */
+  /* -- 主視覺：大頭照滿版鋪底（無圓框/貼紙），標題置中疊在照片上，右邊食材清單延伸到跟照片同高 -- */
   .pgp-main-row {
     display: flex;
     align-items: stretch;
@@ -2245,12 +2239,16 @@
   }
   .pgp-title {
     position: absolute;
-    left: 28px; right: 28px; top: 26px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 86%;
+    text-align: center;
     font-family: 'Tsuhsianti', var(--font-round);
     font-weight: 800;
-    font-size: 46px;
-    color: #fff;
-    -webkit-text-stroke: 6px #B5601C;
+    font-size: 62px;
+    color: #E0954A;
+    -webkit-text-stroke: 8px #fff;
     paint-order: stroke fill;
     line-height: 1.25;
     display: -webkit-box;
@@ -2269,17 +2267,17 @@
     background: rgba(255,255,255,0.72);
     border: 2px solid rgba(224,149,74,0.16);
     border-radius: 28px;
-    padding: 56px 22px 18px;
+    padding: 48px 22px 18px;
     display: flex;
     flex-direction: column;
     overflow: visible;
   }
   .pgp-ing-badge-img {
     position: absolute;
-    top: -46px;
+    top: -38px;
     left: 50%;
     transform: translateX(-50%);
-    width: 100%;
+    width: 82%;
     height: auto;
     display: block;
   }
@@ -2311,31 +2309,6 @@
     color: var(--c-text);
   }
   .pgp-ing-qty { margin-left: 6px; }
-
-  /* -- 4 個特色標籤，固定高度 56px -- */
-  .pgp-benefit-row {
-    display: flex;
-    gap: 12px;
-    height: 56px;
-    flex: none;
-    margin-top: 20px;
-  }
-  .pgp-benefit-tag {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: #EAF6E3;
-    color: #4f7a3a;
-    font-weight: 800;
-    font-size: 17px;
-    border-radius: var(--r-pill);
-    padding: 0 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 
   /* -- 簡單步驟：固定高度 300px，橫向一排最多4格，箭頭串接；標題圖跟食譜頁面同一張 ricipesteps.png，
      圖裡的空白圓圈疊上步驟數字（做法邏輯跟食譜頁面一致） -- */
