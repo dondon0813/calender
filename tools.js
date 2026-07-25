@@ -539,9 +539,9 @@ function pgBuildPosterHtml(r) {
     return `
       <div class="pgp-step-card">
         <div class="pgp-step-caption">${caption}</div>
+        <span class="pgp-step-badge">${n}</span>
         <div class="pgp-step-photo-wrap" style="background-image:url('${escHtml(stepImgSrc)}')">
           <img class="pgp-step-photo" crossorigin="anonymous" src="${stepImgSrc}">
-          <span class="pgp-step-badge">${n}</span>
         </div>
       </div>`;
   });
