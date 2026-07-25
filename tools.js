@@ -523,7 +523,7 @@ function pgBuildPosterHtml(r) {
     const img = pgIsValidUrl(i['圖片網址']) ? i['圖片網址'] : PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-ing-row">
-        <img class="pgp-ing-photo" crossorigin="anonymous" src="${img}">
+        <div class="pgp-ing-photo-wrap"><img class="pgp-ing-photo" crossorigin="anonymous" src="${img}"></div>
         <div class="pgp-ing-text"><span class="pgp-ing-name">${name}</span>${qty ? `<span class="pgp-ing-qty">${qty}</span>` : ''}</div>
       </div>`;
   }).join('');
