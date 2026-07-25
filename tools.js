@@ -576,18 +576,11 @@ function pgBuildPosterHtml(r) {
       <span class="pgp-doodle" style="bottom:40px;right:340px;font-size:20px;">⭐</span>
       <span class="pgp-doodle" style="top:280px;right:24px;font-size:20px;">💗</span>
 
-      <div class="pgp-header-row">
-        <div class="pgp-title">${title}</div>
-      </div>
-
       <div class="pgp-main-row">
         <div class="pgp-hero-wrap">
-          <div class="pgp-hero-frame">
-            <span class="pgp-hero-tape">手作食譜</span>
-            <div class="pgp-hero-circle">
-              <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
-            </div>
-          </div>
+          <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+          <div class="pgp-hero-scrim"></div>
+          <div class="pgp-title">${title}</div>
         </div>
         <div class="pgp-side-card">
           <div class="pgp-section-label pgp-label-pink">準備食材</div>
