@@ -2240,8 +2240,8 @@
   .pgp-title {
     position: absolute;
     left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    top: 28px;
+    transform: translateX(-50%);
     width: 86%;
     text-align: center;
     font-family: 'Tsuhsianti', var(--font-round);
@@ -2304,21 +2304,38 @@
   .pgp-ing-text { min-width: 0; overflow: hidden; }
   .pgp-ing-name,
   .pgp-ing-qty {
-    font-size: 17px;
+    font-size: 21px;
     font-weight: 800;
     color: var(--c-text);
   }
   .pgp-ing-qty { margin-left: 6px; }
 
-  /* -- 簡單步驟：固定高度 300px，橫向一排最多4格，箭頭串接；標題圖跟食譜頁面同一張 ricipesteps.png，
+  /* -- 簡單步驟：固定高度 320px，底框跟小提醒用同一套樣式（米色底+虛線框），
+     標題圖（ricipesteps.png）壓在底框上邊框，橫向一排最多4格，箭頭串接；
      圖裡的空白圓圈疊上步驟數字（做法邏輯跟食譜頁面一致） -- */
-  .pgp-step-section { height: 300px; flex: none; margin-top: 20px; overflow: hidden; }
-  .pgp-step-badge-outer { text-align: center; margin-bottom: 14px; }
+  .pgp-step-section {
+    position: relative;
+    height: 320px;
+    flex: none;
+    margin-top: 20px;
+    background: #FFF6EC;
+    border: 2px dashed #FFC79A;
+    border-radius: 20px;
+    padding: 40px 24px 20px;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+  .pgp-step-badge-outer {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
   .pgp-step-badge-wrap { position: relative; display: inline-block; }
   .pgp-step-badge-img { height: 56px; display: block; }
   .pgp-step-badge-count {
     position: absolute;
-    left: 51%;
+    left: 53%;
     top: 47%;
     transform: translate(-50%, -50%);
     font-family: 'Baloo 2', var(--font-round);
@@ -2330,6 +2347,8 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
+    height: 100%;
+    overflow: hidden;
   }
   .pgp-step-card { flex: 1 1 0; min-width: 0; text-align: center; }
   .pgp-step-arrow {
@@ -2344,7 +2363,7 @@
     align-self: center;
   }
   .pgp-step-caption {
-    font-size: 15px;
+    font-size: 19px;
     color: var(--c-text-soft);
     line-height: 1.4;
     margin-bottom: 8px;
@@ -2409,11 +2428,11 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    font-size: 19px;
+    font-size: 23px;
     color: var(--c-text-soft);
     line-height: 1.5;
   }
-  .pgp-tip-item img { width: 20px; height: 20px; margin-top: 6px; flex: none; }
+  .pgp-tip-item img { width: 24px; height: 24px; margin-top: 6px; flex: none; }
   .pgp-tip-item span {
     display: -webkit-box;
     -webkit-line-clamp: 1;
