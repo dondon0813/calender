@@ -2211,20 +2211,17 @@
     flex-direction: column;
   }
 
-  /* -- 主視覺：大頭照滿版鋪底（無圓框/貼紙），標題置中疊在照片上，右邊食材清單延伸到跟照片同高 -- */
+  /* -- 主視覺：大頭照滿版鋪底，寬度整排都是照片（含右邊食材欄位後方），
+     食材欄位改成浮在照片上面的半透明卡片，不再左右分割版面 -- */
   .pgp-main-row {
-    display: flex;
-    align-items: stretch;
-    gap: 24px;
+    position: relative;
     height: 660px;
     flex: none;
     overflow: visible;
   }
   .pgp-hero-wrap {
-    position: relative;
-    flex: 1 1 auto;
-    min-width: 0;
-    height: 100%;
+    position: absolute;
+    inset: 0;
     border-radius: 28px;
     overflow: hidden;
     background: var(--c-bg-bottom);
@@ -2243,12 +2240,12 @@
     transform: translate(-50%, -50%);
     display: block;
   }
+  /* 標題只在照片沒被食材卡蓋住的左側區塊置中，避免疊到浮在右邊的食材卡 */
   .pgp-title {
     position: absolute;
-    left: 50%;
+    left: 28px;
+    right: 312px;
     top: 28px;
-    transform: translateX(-50%);
-    width: 86%;
     text-align: center;
     font-family: 'Tsuhsianti', var(--font-round);
     font-weight: 800;
@@ -2263,14 +2260,16 @@
     overflow: hidden;
   }
 
-  /* -- 食材側欄：跟主視覺同高的直式清單卡片，標籤圖壓在卡片上邊框（跟卡片同寬） -- */
+  /* -- 食材側欄：浮在主圖照片上面的半透明卡片，貼右邊、跟主視覺同高 -- */
   .pgp-side-card {
-    position: relative;
-    flex: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
     width: 288px;
     height: 100%;
     box-sizing: border-box;
-    background: rgba(255,255,255,0.72);
+    background: rgba(255,255,255,0.82);
     border: 2px solid rgba(224,149,74,0.16);
     border-radius: 28px;
     padding: 48px 22px 18px;
@@ -2387,26 +2386,28 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  /* 手機拍的步驟照片大多是直式（portrait），硬裁成 6:5 橫式框會切掉一大塊看不到主體，
-     這是幾何上必然發生的事，不是 html2canvas 的問題。改成「完整顯示不裁切」：
-     圖片整張縮到剛好放進框內，四邊留白用背景色補滿，保證看得到完整內容。 */
+  /* 裁切（不是完整顯示）：直式照片切上下、太寬的照片切左右，只切掉超出框外的部分，
+     跟食譜頁面的邏輯一樣，用「放大置中＋overflow:hidden」確保 html2canvas 不會拉伸變形。
+     框高 190px = 這個區塊扣掉文字跟間距後剩下的全部空間，不會多留空白。 */
   .pgp-step-photo-wrap {
     position: relative;
     width: 100%;
-    height: 166px;
+    height: 190px;
     overflow: hidden;
     border-radius: 20px;
     border: 3px solid var(--c-border-light);
     background: var(--c-bg-bottom);
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
   .pgp-step-photo {
-    max-width: 100%;
-    max-height: 100%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
     width: auto;
     height: auto;
+    max-width: none;
+    transform: translate(-50%, -50%);
     display: block;
   }
   /* 這顆圓圈不能加 box-shadow：html2canvas 會把陰影疊在圓圈本身上面，
