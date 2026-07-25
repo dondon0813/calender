@@ -2205,23 +2205,27 @@
     font-family: var(--font-round);
     color: var(--c-text);
     box-sizing: border-box;
-    padding: 56px 48px 24px;
+    padding: 40px 34px 24px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
 
-  /* -- 主視覺：大頭照滿版鋪底，寬度整排都是照片（含右邊食材欄位後方），
-     食材欄位改成浮在照片上面的半透明卡片，不再左右分割版面 -- */
+  /* -- 主視覺：大頭照＋右邊食材欄位左右並排（不重疊），食材欄位比照片矮一截，
+     上面留空間給自己的標題按鈕壓在邊框上 -- */
   .pgp-main-row {
-    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
     height: 660px;
     flex: none;
     overflow: visible;
   }
   .pgp-hero-wrap {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: stretch;
     border-radius: 28px;
     overflow: hidden;
     background: var(--c-bg-bottom);
@@ -2240,12 +2244,12 @@
     transform: translate(-50%, -50%);
     display: block;
   }
-  /* 標題只在照片沒被食材卡蓋住的左側區塊置中，避免疊到浮在右邊的食材卡 */
   .pgp-title {
     position: absolute;
-    left: 28px;
-    right: 312px;
+    left: 50%;
     top: 28px;
+    transform: translateX(-50%);
+    width: 86%;
     text-align: center;
     font-family: 'Tsuhsianti', var(--font-round);
     font-weight: 800;
@@ -2260,16 +2264,15 @@
     overflow: hidden;
   }
 
-  /* -- 食材側欄：浮在主圖照片上面的半透明卡片，貼右邊、跟主視覺同高 -- */
+  /* -- 食材側欄：貼右邊，往下讓一點空間給自己的標題按鈕壓在邊框上，不跟主圖重疊 -- */
   .pgp-side-card {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 2;
+    position: relative;
+    flex: none;
     width: 288px;
-    height: 100%;
+    margin-top: 40px;
+    height: calc(100% - 40px);
     box-sizing: border-box;
-    background: rgba(255,255,255,0.82);
+    background: rgba(255,255,255,0.72);
     border: 2px solid rgba(224,149,74,0.16);
     border-radius: 28px;
     padding: 48px 22px 18px;
