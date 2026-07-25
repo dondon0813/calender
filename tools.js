@@ -577,7 +577,6 @@ function pgBuildPosterHtml(r) {
       <span class="pgp-doodle" style="top:280px;right:24px;font-size:20px;">💗</span>
 
       <div class="pgp-header-row">
-        <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
         <div class="pgp-title">${title}</div>
       </div>
 

@@ -2216,24 +2216,14 @@
     pointer-events: none;
   }
 
-  /* -- 標頭：標語 + 標題，固定高度 150px -- */
+  /* -- 標頭：標題，固定高度 130px（短標題垂直置中，不留死空間） -- */
   .pgp-header-row {
     display: flex;
     flex-direction: column;
-    height: 150px;
+    justify-content: center;
+    height: 130px;
     flex: none;
     overflow: hidden;
-  }
-  .pgp-tagline {
-    display: inline-block;
-    align-self: flex-start;
-    background: #FFE3EB;
-    color: #FF6F91;
-    font-weight: 800;
-    font-size: 20px;
-    border-radius: var(--r-pill);
-    padding: 7px 20px;
-    margin-bottom: 16px;
   }
   .pgp-title {
     font-family: var(--font-round);
