@@ -646,25 +646,25 @@ async function pgGeneratePoster() {
       useCORS: true,
       backgroundColor: '#FFF7EE'
     });
-    const dataUrl = canvas.toDataURL('image/png');
+    // 改用 toBlob+objectURL（不是 toDataURL），跟姓名貼產生器同一招：手機瀏覽器對
+    // <a download> 配 data: 網址常常沒反應，配 blob: 網址才能正常跳出檢視/下載。
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('圖片轉檔失敗');
+    const url = URL.createObjectURL(blob);
 
     const imgEl = document.getElementById('pgOutputImg');
-    imgEl.src = dataUrl;
+    imgEl.src = url;
     document.getElementById('pgOutputArea').style.display = 'block';
     document.getElementById('pgOutputImgWrap').style.display = 'block';
     document.getElementById('pgOutputTextWrap').style.display = 'none';
 
+    // 下載按鈕改成固定存在的 <a download>（不是每次點擊才動態建立/點擊/移除），
+    // 直接設定 href/download，同樣跟姓名貼產生器一致的做法。
     const downloadBtn = document.getElementById('pgDownloadImgBtn');
-    downloadBtn.onclick = () => {
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = (r['食譜名稱'] || '食譜貼文') + '.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    };
+    downloadBtn.href = url;
+    downloadBtn.download = (r['食譜名稱'] || '食譜貼文') + '.png';
 
-    setFormStatus('pgStatus', '貼文圖已產生，可以下載囉 ✓（若食材圖片是外部網址，遇到跨網域限制可能會顯示空白，之後可以再調整）', 'ok');
+    setFormStatus('pgStatus', '貼文圖已產生，可以下載囉 ✓', 'ok');
   } catch (err) {
     setFormStatus('pgStatus', '圖片產生失敗：' + err.message, 'error');
   } finally {
