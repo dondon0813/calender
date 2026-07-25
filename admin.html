@@ -2387,27 +2387,26 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  /* html2canvas 不會正確裁切 object-fit:cover（會整張拉伸變形成橢圓/長條），
-     改成外層固定比例+overflow:hidden，圖片本身放大置中裁切，維持原始比例不變形 */
+  /* 手機拍的步驟照片大多是直式（portrait），硬裁成 6:5 橫式框會切掉一大塊看不到主體，
+     這是幾何上必然發生的事，不是 html2canvas 的問題。改成「完整顯示不裁切」：
+     圖片整張縮到剛好放進框內，四邊留白用背景色補滿，保證看得到完整內容。 */
   .pgp-step-photo-wrap {
     position: relative;
     width: 100%;
-    aspect-ratio: 6/5;
+    height: 166px;
     overflow: hidden;
     border-radius: 20px;
     border: 3px solid var(--c-border-light);
     background: var(--c-bg-bottom);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .pgp-step-photo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     width: auto;
     height: auto;
-    max-width: none;
-    transform: translate(-50%, -50%);
     display: block;
   }
   /* 這顆圓圈不能加 box-shadow：html2canvas 會把陰影疊在圓圈本身上面，
