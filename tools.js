@@ -550,7 +550,7 @@ function pgBuildPosterHtml(r) {
     return `
       <div class="pgp-step-card">
         <div class="pgp-step-photo-wrap">
-          ${imgUrl ? `<img class="pgp-step-photo" crossorigin="anonymous" src="${imgUrl}">` : `<div class="pgp-step-photo pgp-step-photo-empty">🍳</div>`}
+          <img class="pgp-step-photo" crossorigin="anonymous" src="${imgUrl || PG_PLACEHOLDER_IMG}">
           <span class="pgp-step-badge">${n}</span>
         </div>
         <div class="pgp-step-caption">${caption}</div>
@@ -563,9 +563,9 @@ function pgBuildPosterHtml(r) {
 
   const tipsHtml = tips.length ? `
     <div class="pgp-tip-bar">
-      <div class="pgp-tip-head">💡 小提醒</div>
+      <img class="pgp-tip-badge" crossorigin="anonymous" src="images/recipes/reminder.png" alt="小提醒">
       <div class="pgp-tip-grid">
-        ${tips.map(t => `<div class="pgp-tip-item">✅ ${escHtml(t)}</div>`).join('')}
+        ${tips.map(t => `<div class="pgp-tip-item"><img crossorigin="anonymous" src="images/recipes/heart.png" alt=""><span>${escHtml(t)}</span></div>`).join('')}
       </div>
     </div>` : '';
 
