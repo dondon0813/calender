@@ -288,6 +288,21 @@ function pgIsValidUrl(s) {
   return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
 }
 
+// 食譜圖片網址如果是舊的 dondon0813.github.io（換自訂網域前存進試算表的舊連結），
+// 改寫成目前網站實際的網域，避免變成跨網域讀取被瀏覽器擋下（html2canvas 需要同源
+// 才能把圖片畫進畫布，不然截圖那塊會是空白，但頁面上直接顯示圖片不受影響，
+// 所以只有「產生貼文圖」這個功能會出問題）。
+function pgToSameOriginUrl(s) {
+  if (typeof s !== 'string' || !s.trim()) return s;
+  try {
+    const u = new URL(s.trim(), location.href);
+    if (u.hostname === 'dondon0813.github.io' && u.origin !== location.origin) {
+      return location.origin + u.pathname + u.search + u.hash;
+    }
+  } catch (err) { /* 網址格式怪異就原樣返回，交給 pgIsValidUrl 判斷 */ }
+  return s;
+}
+
 // 食材顯示用的簡短名稱：優先用「簡稱」（可能用 / 分隔多個，取第一個），沒填才用「食材名稱」
 function pgIngredientFilterKey(ing) {
   const raw = String(ing['簡稱'] || '').trim();
@@ -507,7 +522,8 @@ async function pgCopyText() {
 // ---- 4:5 貼文圖（沿用現有食譜海報樣式，固定版型：所有食譜都套同一套結構） ----
 function pgBuildPosterHtml(r) {
   const title = escHtml(r['食譜名稱'] || '');
-  const heroImg = pgIsValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PG_PLACEHOLDER_IMG;
+  const heroRaw = pgToSameOriginUrl(r['成品圖片網址']);
+  const heroImg = pgIsValidUrl(heroRaw) ? heroRaw : PG_PLACEHOLDER_IMG;
 
   const fullIngList = pgGetRecipeIngredients(r);
   const ingList = fullIngList.slice(0, 6); // 固定版型上限：右側直式清單，最多6項才能完整顯示不被裁切
@@ -520,7 +536,8 @@ function pgBuildPosterHtml(r) {
   const ingHtml = ingList.map(i => {
     const name = escHtml(pgIngredientFilterKey(i) || i['食材名稱'] || '');
     const qty = escHtml(i._quantity || '');
-    const img = pgIsValidUrl(i['圖片網址']) ? i['圖片網址'] : PG_PLACEHOLDER_IMG;
+    const imgRaw = pgToSameOriginUrl(i['圖片網址']);
+    const img = pgIsValidUrl(imgRaw) ? imgRaw : PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-ing-row">
         <div class="pgp-ing-photo-wrap"><img class="pgp-ing-photo" crossorigin="anonymous" src="${img}"></div>
@@ -530,8 +547,8 @@ function pgBuildPosterHtml(r) {
 
   const stepCards = steps.map((s, idx) => {
     const n = idx + 1;
-    const manualUrl = manualStepImgs[idx];
-    const autoUrl = pgBuildAutoStepImageUrl(r['成品圖片網址'], n);
+    const manualUrl = pgToSameOriginUrl(manualStepImgs[idx]);
+    const autoUrl = pgToSameOriginUrl(pgBuildAutoStepImageUrl(heroRaw, n));
     const imgUrl = pgIsValidUrl(manualUrl) ? manualUrl : (pgIsValidUrl(autoUrl) ? autoUrl : '');
     const captionRaw = s.length > 22 ? s.slice(0, 22) + '…' : s;
     const caption = escHtml(captionRaw);
