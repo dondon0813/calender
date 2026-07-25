@@ -580,7 +580,7 @@ function pgBuildPosterHtml(r) {
 
       ${tipsHtml}
 
-      <img class="pgp-mascot" crossorigin="anonymous" src="images/recipes/mascot-cat.png" alt="">
+      <img class="pgp-mascot" crossorigin="anonymous" src="images/recipes/mascot-cat.webp" alt="">
 
       <div class="pgp-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
     </div>

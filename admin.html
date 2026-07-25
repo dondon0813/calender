@@ -2261,7 +2261,7 @@
   .pgp-side-card {
     position: relative;
     flex: none;
-    width: 320px;
+    width: 288px;
     height: 100%;
     box-sizing: border-box;
     background: rgba(255,255,255,0.72);
@@ -2389,7 +2389,7 @@
     top: -12px; left: -12px;
     width: 40px; height: 40px;
     border-radius: 50%;
-    background: #FDC3B2;
+    background: #FC916F;
     color: #fff;
     font-weight: 800;
     font-size: 19px;
@@ -2444,13 +2444,14 @@
     min-width: 0;
   }
 
-  /* -- 貓咪吉祥物：疊在最右下角，蓋住小提醒框的右上角，圖層在小提醒之上；
-     多出來的下半身直接被 .pgp-poster 的 overflow:hidden 裁掉，只露上半身 -- */
+  /* -- 貓咪吉祥物：疊在最右下角，蓋住小提醒框的右上角，圖層在小提醒之上。
+     素材本身已經裁到只剩上半身（頭、手、蝴蝶結，裙擺以下都裁掉了），
+     不用再靠畫布邊界裁切下半身。 -- */
   .pgp-mascot {
     position: absolute;
-    right: 8px;
-    bottom: -30px;
-    width: 258px;
+    right: 4px;
+    bottom: 0;
+    width: 320px;
     height: auto;
     z-index: 5;
     pointer-events: none;
