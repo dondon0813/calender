@@ -549,11 +549,11 @@ function pgBuildPosterHtml(r) {
     const caption = escHtml(captionRaw);
     return `
       <div class="pgp-step-card">
+        <div class="pgp-step-caption">${caption}</div>
         <div class="pgp-step-photo-wrap">
           <img class="pgp-step-photo" crossorigin="anonymous" src="${imgUrl || PG_PLACEHOLDER_IMG}">
           <span class="pgp-step-badge">${n}</span>
         </div>
-        <div class="pgp-step-caption">${caption}</div>
       </div>`;
   });
   // 步驟卡片之間插入箭頭，串成「做法（超簡單！）」那種橫向流程
@@ -579,11 +579,10 @@ function pgBuildPosterHtml(r) {
       <div class="pgp-main-row">
         <div class="pgp-hero-wrap">
           <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
-          <div class="pgp-hero-scrim"></div>
           <div class="pgp-title">${title}</div>
         </div>
         <div class="pgp-side-card">
-          <div class="pgp-section-label pgp-label-pink">準備食材</div>
+          <img class="pgp-ing-badge-img" crossorigin="anonymous" src="images/recipes/ingredients.png" alt="準備食材">
           <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
         </div>
       </div>
@@ -591,7 +590,12 @@ function pgBuildPosterHtml(r) {
       <div class="pgp-benefit-row">${benefitHtml}</div>
 
       <div class="pgp-step-section">
-        <div class="pgp-section-label pgp-label-orange">簡單${steps.length || ''}步驟</div>
+        <div class="pgp-step-badge-outer">
+          <div class="pgp-step-badge-wrap">
+            <img class="pgp-step-badge-img" crossorigin="anonymous" src="images/recipes/ricipesteps.png" alt="簡單步驟">
+            <span class="pgp-step-badge-count">${steps.length || ''}</span>
+          </div>
+        </div>
         <div class="pgp-step-grid">${stepHtml || '<div class="pgp-empty">（尚未提供做法）</div>'}</div>
       </div>
 
