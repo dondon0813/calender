@@ -505,24 +505,12 @@ async function pgCopyText() {
 }
 
 // ---- 4:5 貼文圖（沿用現有食譜海報樣式，固定版型：所有食譜都套同一套結構） ----
-function pgBuildBenefitTags(r, ingCount) {
-  const tags = [];
-  if (r['烹調時間']) tags.push(`⏱ ${r['烹調時間']}`);
-  if (r['適合月齡']) tags.push(`👶 ${r['適合月齡']}`);
-  const diff = parseInt(r['難易度'], 10);
-  if (diff >= 1 && diff <= 5) tags.push(`⭐ ${'★'.repeat(diff)}${'☆'.repeat(5 - diff)}`);
-  if (ingCount) tags.push(`🥕 ${ingCount}種食材`);
-  while (tags.length < 4) tags.push('💗 手作安心');
-  return tags.slice(0, 4);
-}
-
 function pgBuildPosterHtml(r) {
   const title = escHtml(r['食譜名稱'] || '');
   const heroImg = pgIsValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PG_PLACEHOLDER_IMG;
 
   const fullIngList = pgGetRecipeIngredients(r);
-  const ingList = fullIngList.slice(0, 8); // 固定版型上限：4欄 x 2排
-  const benefitTags = pgBuildBenefitTags(r, fullIngList.length);
+  const ingList = fullIngList.slice(0, 6); // 固定版型上限：右側直式清單，最多6項才能完整顯示不被裁切
 
   const steps = pgGetStepLines(r).slice(0, 4); // 固定版型上限：橫向一排最多4格
   const manualStepImgsRaw = String(r['步驟圖片'] || '').trim();
@@ -534,75 +522,70 @@ function pgBuildPosterHtml(r) {
     const qty = escHtml(i._quantity || '');
     const img = pgIsValidUrl(i['圖片網址']) ? i['圖片網址'] : PG_PLACEHOLDER_IMG;
     return `
-      <div class="pgp-ing-tile">
-        <img class="pgp-ing-photo" crossorigin="anonymous" src="${img}">
-        <div class="pgp-ing-label">${name}${qty ? ' ' + qty : ''}</div>
+      <div class="pgp-ing-row">
+        <div class="pgp-ing-photo-wrap"><img class="pgp-ing-photo" crossorigin="anonymous" src="${img}"></div>
+        <div class="pgp-ing-text"><span class="pgp-ing-name">${name}</span>${qty ? `<span class="pgp-ing-qty">${qty}</span>` : ''}</div>
       </div>`;
   }).join('');
 
-  const stepHtml = steps.map((s, idx) => {
+  const stepCards = steps.map((s, idx) => {
     const n = idx + 1;
     const manualUrl = manualStepImgs[idx];
     const autoUrl = pgBuildAutoStepImageUrl(r['成品圖片網址'], n);
     const imgUrl = pgIsValidUrl(manualUrl) ? manualUrl : (pgIsValidUrl(autoUrl) ? autoUrl : '');
     const captionRaw = s.length > 22 ? s.slice(0, 22) + '…' : s;
     const caption = escHtml(captionRaw);
+    const stepImgSrc = imgUrl || PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-step-card">
-        <div class="pgp-step-photo-wrap">
-          ${imgUrl ? `<img class="pgp-step-photo" crossorigin="anonymous" src="${imgUrl}">` : `<div class="pgp-step-photo pgp-step-photo-empty">🍳</div>`}
-          <span class="pgp-step-badge">${n}</span>
-        </div>
         <div class="pgp-step-caption">${caption}</div>
+        <span class="pgp-step-badge">${n}</span>
+        <div class="pgp-step-photo-wrap" style="background-image:url('${escHtml(stepImgSrc)}')">
+          <img class="pgp-step-photo" crossorigin="anonymous" src="${stepImgSrc}">
+        </div>
       </div>`;
-  }).join('');
-
-  const benefitHtml = benefitTags.map(t => `<span class="pgp-benefit-tag">✅ ${escHtml(t)}</span>`).join('');
+  });
+  // 箭頭改用 position:absolute 疊在卡片交界處（見 admin.html 對應 CSS 註解），
+  // 不再穿插進 flex 排版裡佔位，用百分比 left 對齊每個交界點。
+  const n = stepCards.length;
+  const arrowsHtml = Array.from({ length: Math.max(n - 1, 0) }, (_, i) =>
+    `<span class="pgp-step-arrow" style="left:${(100 / n * (i + 1)).toFixed(2)}%"></span>`).join('');
+  const stepHtml = stepCards.join('') + arrowsHtml;
 
   const tipsHtml = tips.length ? `
     <div class="pgp-tip-bar">
-      <span class="pgp-tip-icon">💡</span>
-      <div>
-        <div class="pgp-tip-head">小提醒</div>
-        <ul class="pgp-tip-list">
-          ${tips.map(t => `<li>${escHtml(t)}</li>`).join('')}
-        </ul>
+      <img class="pgp-tip-badge" crossorigin="anonymous" src="images/recipes/reminder.png" alt="小提醒">
+      <div class="pgp-tip-grid">
+        ${tips.map(t => `<div class="pgp-tip-item"><img crossorigin="anonymous" src="images/recipes/heart.png" alt=""><span>${escHtml(t)}</span></div>`).join('')}
       </div>
     </div>` : '';
 
   return `
     <div class="pgp-poster">
-      <span class="pgp-doodle" style="top:20px;left:20px;font-size:30px;">🌿</span>
-      <span class="pgp-doodle" style="bottom:120px;left:24px;font-size:26px;">🐟</span>
-      <span class="pgp-doodle" style="bottom:40px;right:340px;font-size:20px;">⭐</span>
-      <span class="pgp-doodle" style="top:280px;right:24px;font-size:20px;">💗</span>
-
-      <div class="pgp-header-row">
-        <div class="pgp-header-text">
-          <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
+      <div class="pgp-main-row">
+        <div class="pgp-hero-wrap" style="background-image:url('${escHtml(heroImg)}')">
+          <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
           <div class="pgp-title">${title}</div>
         </div>
-        <div class="pgp-hero-frame">
-          <span class="pgp-hero-tape">手作食譜</span>
-          <div class="pgp-hero-circle">
-            <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
-          </div>
+        <div class="pgp-side-card">
+          <img class="pgp-ing-badge-img" crossorigin="anonymous" src="images/recipes/ingredients.png" alt="準備食材">
+          <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
         </div>
-      </div>
-
-      <div class="pgp-benefit-row">${benefitHtml}</div>
-
-      <div class="pgp-ing-section">
-        <div class="pgp-section-label pgp-label-pink">準備食材</div>
-        <div class="pgp-ing-grid">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
       </div>
 
       <div class="pgp-step-section">
-        <div class="pgp-section-label pgp-label-orange">簡單${steps.length || ''}步驟</div>
+        <div class="pgp-step-badge-outer">
+          <div class="pgp-step-badge-wrap">
+            <img class="pgp-step-badge-img" crossorigin="anonymous" src="images/recipes/ricipesteps.png" alt="簡單步驟">
+            <span class="pgp-step-badge-count">${steps.length || ''}</span>
+          </div>
+        </div>
         <div class="pgp-step-grid">${stepHtml || '<div class="pgp-empty">（尚未提供做法）</div>'}</div>
       </div>
 
       ${tipsHtml}
+
+      <img class="pgp-mascot" crossorigin="anonymous" src="images/recipes/mascot-cat.webp" alt="">
 
       <div class="pgp-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
     </div>
@@ -628,6 +611,12 @@ async function pgGeneratePoster() {
     img.addEventListener('load', resolve);
     img.addEventListener('error', resolve);
   })));
+
+  // 標題用的自訂字體檔案較大，沒等載入完成就截圖會先拍到系統預設字體
+  try {
+    await document.fonts.load("800 50px 'Tsuhsianti'");
+    await document.fonts.ready;
+  } catch (err) { /* 字體載入失敗就用退回字體截圖，不擋流程 */ }
 
   try {
     const canvas = await html2canvas(stage.firstElementChild, {
