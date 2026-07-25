@@ -2221,6 +2221,16 @@
     flex: none;
     overflow: visible;
   }
+  /* 裁切用 background-image + background-size:cover（不是 <img> + object-fit）：
+     html2canvas 對 object-fit:cover 的支援不可靠（會整張拉伸變形成橢圓）；
+     另外試過「img 放大置中 + overflow:hidden」(min-width/min-height:100%) 這招，
+     結果發現只要圖片原始尺寸本來就比框大（幾乎所有手機照片都是），
+     min-width:100% 這個「下限」根本不會生效、圖片直接用原始尺寸置中，
+     等於整張放大裁到只剩正中央一小塊——這正是背景圖片被過度裁切的真正原因。
+     background-size:cover 是瀏覽器原生實作，不管圖片原始尺寸多大都會先等比例
+     縮放到剛好蓋滿框、才裁掉多餘部分，兩種情況都測過，行為正確。
+     img 標籤保留但用來偵測圖片是否載入完成（產生海報前要等全部圖片載完），
+     本身不會顯示。 */
   .pgp-hero-wrap {
     position: relative;
     flex: 1 1 auto;
@@ -2228,22 +2238,12 @@
     align-self: stretch;
     border-radius: 28px;
     overflow: hidden;
-    background: var(--c-bg-bottom);
+    background-color: var(--c-bg-bottom);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
-  /* html2canvas 不會正確裁切 object-fit:cover（會整張拉伸變形），
-     改用「放大置中＋overflow:hidden」手動裁切，維持圖片原始比例不變形 */
-  .pgp-hero-img {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    max-width: none;
-    transform: translate(-50%, -50%);
-    display: block;
-  }
+  .pgp-hero-img { display: none; }
   .pgp-title {
     position: absolute;
     left: 50%;
@@ -2390,7 +2390,8 @@
     overflow: hidden;
   }
   /* 裁切（不是完整顯示）：直式照片切上下、太寬的照片切左右，只切掉超出框外的部分，
-     跟食譜頁面的邏輯一樣，用「放大置中＋overflow:hidden」確保 html2canvas 不會拉伸變形。
+     用 background-size:cover（原因見上面主圖照片的說明註解，img+min-width 那招
+     遇到原始尺寸比框大的照片會失效，變成整張放大只顯示正中央一小塊）。
      框高 190px = 這個區塊扣掉文字跟間距後剩下的全部空間，不會多留空白。 */
   .pgp-step-photo-wrap {
     position: relative;
@@ -2399,20 +2400,12 @@
     overflow: hidden;
     border-radius: 20px;
     border: 3px solid var(--c-border-light);
-    background: var(--c-bg-bottom);
+    background-color: var(--c-bg-bottom);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
-  .pgp-step-photo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-    max-width: none;
-    transform: translate(-50%, -50%);
-    display: block;
-  }
+  .pgp-step-photo { display: none; }
   /* 這顆圓圈不能加 box-shadow：html2canvas 會把陰影疊在圓圈本身上面，
      把底色蓋成一層髒灰色，不是背後有陰影的正常效果，所以拿掉 */
   .pgp-step-badge {
@@ -4510,7 +4503,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=2"></script>
+<script src="tools.js?v=3"></script>
 <script src="admin.js?v=61"></script>
 <script src="memo.js?v=5"></script>
 
