@@ -297,7 +297,10 @@ function pgToSameOriginUrl(s) {
   try {
     const u = new URL(s.trim(), location.href);
     if (u.hostname === 'dondon0813.github.io' && u.origin !== location.origin) {
-      return location.origin + u.pathname + u.search + u.hash;
+      // GitHub Pages 專案頁換成自訂網域後，網址會變成網域根目錄，
+      // 不會再有 /calender/ 這層路徑，要先把它去掉才能接上目前的網域。
+      const path = u.pathname.replace(/^\/calender(?=\/|$)/, '') || '/';
+      return location.origin + path + u.search + u.hash;
     }
   } catch (err) { /* 網址格式怪異就原樣返回，交給 pgIsValidUrl 判斷 */ }
   return s;
