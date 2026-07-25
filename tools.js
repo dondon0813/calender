@@ -521,7 +521,7 @@ function pgBuildPosterHtml(r) {
   const heroImg = pgIsValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PG_PLACEHOLDER_IMG;
 
   const fullIngList = pgGetRecipeIngredients(r);
-  const ingList = fullIngList.slice(0, 8); // 固定版型上限：4欄 x 2排
+  const ingList = fullIngList.slice(0, 6); // 固定版型上限：右側直式清單，最多6項才能完整顯示不被裁切
   const benefitTags = pgBuildBenefitTags(r, fullIngList.length);
 
   const steps = pgGetStepLines(r).slice(0, 4); // 固定版型上限：橫向一排最多4格
@@ -534,13 +534,13 @@ function pgBuildPosterHtml(r) {
     const qty = escHtml(i._quantity || '');
     const img = pgIsValidUrl(i['圖片網址']) ? i['圖片網址'] : PG_PLACEHOLDER_IMG;
     return `
-      <div class="pgp-ing-tile">
+      <div class="pgp-ing-row">
         <img class="pgp-ing-photo" crossorigin="anonymous" src="${img}">
-        <div class="pgp-ing-label">${name}${qty ? ' ' + qty : ''}</div>
+        <div class="pgp-ing-text"><span class="pgp-ing-name">${name}</span>${qty ? `<span class="pgp-ing-qty">${qty}</span>` : ''}</div>
       </div>`;
   }).join('');
 
-  const stepHtml = steps.map((s, idx) => {
+  const stepCards = steps.map((s, idx) => {
     const n = idx + 1;
     const manualUrl = manualStepImgs[idx];
     const autoUrl = pgBuildAutoStepImageUrl(r['成品圖片網址'], n);
@@ -555,18 +555,17 @@ function pgBuildPosterHtml(r) {
         </div>
         <div class="pgp-step-caption">${caption}</div>
       </div>`;
-  }).join('');
+  });
+  // 步驟卡片之間插入箭頭，串成「做法（超簡單！）」那種橫向流程
+  const stepHtml = stepCards.map((c, idx) => idx < stepCards.length - 1 ? c + '<span class="pgp-step-arrow">→</span>' : c).join('');
 
   const benefitHtml = benefitTags.map(t => `<span class="pgp-benefit-tag">✅ ${escHtml(t)}</span>`).join('');
 
   const tipsHtml = tips.length ? `
     <div class="pgp-tip-bar">
-      <span class="pgp-tip-icon">💡</span>
-      <div>
-        <div class="pgp-tip-head">小提醒</div>
-        <ul class="pgp-tip-list">
-          ${tips.map(t => `<li>${escHtml(t)}</li>`).join('')}
-        </ul>
+      <div class="pgp-tip-head">💡 小提醒</div>
+      <div class="pgp-tip-grid">
+        ${tips.map(t => `<div class="pgp-tip-item">✅ ${escHtml(t)}</div>`).join('')}
       </div>
     </div>` : '';
 
@@ -578,24 +577,26 @@ function pgBuildPosterHtml(r) {
       <span class="pgp-doodle" style="top:280px;right:24px;font-size:20px;">💗</span>
 
       <div class="pgp-header-row">
-        <div class="pgp-header-text">
-          <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
-          <div class="pgp-title">${title}</div>
-        </div>
-        <div class="pgp-hero-frame">
-          <span class="pgp-hero-tape">手作食譜</span>
-          <div class="pgp-hero-circle">
-            <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+        <div class="pgp-tagline">🍼 寶寶副食品食譜分享</div>
+        <div class="pgp-title">${title}</div>
+      </div>
+
+      <div class="pgp-main-row">
+        <div class="pgp-hero-wrap">
+          <div class="pgp-hero-frame">
+            <span class="pgp-hero-tape">手作食譜</span>
+            <div class="pgp-hero-circle">
+              <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+            </div>
           </div>
+        </div>
+        <div class="pgp-side-card">
+          <div class="pgp-section-label pgp-label-pink">準備食材</div>
+          <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
         </div>
       </div>
 
       <div class="pgp-benefit-row">${benefitHtml}</div>
-
-      <div class="pgp-ing-section">
-        <div class="pgp-section-label pgp-label-pink">準備食材</div>
-        <div class="pgp-ing-grid">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
-      </div>
 
       <div class="pgp-step-section">
         <div class="pgp-section-label pgp-label-orange">簡單${steps.length || ''}步驟</div>
