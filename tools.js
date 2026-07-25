@@ -629,6 +629,12 @@ async function pgGeneratePoster() {
     img.addEventListener('error', resolve);
   })));
 
+  // 標題用的自訂字體檔案較大，沒等載入完成就截圖會先拍到系統預設字體
+  try {
+    await document.fonts.load("800 50px 'Tsuhsianti'");
+    await document.fonts.ready;
+  } catch (err) { /* 字體載入失敗就用退回字體截圖，不擋流程 */ }
+
   try {
     const canvas = await html2canvas(stage.firstElementChild, {
       width: 1080,
