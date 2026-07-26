@@ -337,10 +337,39 @@ document.getElementById('vendorDetailEditBtn').addEventListener('click', () => {
   openVendorEditModal(vendor);
 });
 
+// ===== 品牌比對共用工具 =====
+// 行事曆標題多半是「品牌＋產品名」（例：林貝兒米餅、Jolly 推車），
+// 所以比對一律用「正規化後標題包含品牌名」的模糊比對，跟前台 school-list 同一套規則。
+function bvNormBrandKey_(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '');
+}
+
+// 找出標題裡包含的所有品牌（一團可對到多品牌，例：聯名團標題同時含兩個品牌名）。
+// 若比對到的某品牌名是另一個比對到品牌名的一部分（例：B21 vs B21pro），只留長的那個，避免誤配。
+function bvBrandsInTitle_(title) {
+  const key = bvNormBrandKey_(title);
+  if (!key) return [];
+  const matched = brandDb.filter(b => {
+    const bk = bvNormBrandKey_(b.name);
+    return bk && key.indexOf(bk) !== -1;
+  });
+  return matched.filter(b => {
+    const bk = bvNormBrandKey_(b.name);
+    return !matched.some(o => {
+      const ok = bvNormBrandKey_(o.name);
+      return ok.length > bk.length && ok.indexOf(bk) !== -1;
+    });
+  });
+}
+
+function bvEventMatchesBrand_(ev, brand) {
+  return bvBrandsInTitle_(ev.title).some(b => b.id === brand.id);
+}
+
 // ===== 【新】品牌資料檢視（唯讀）：非編輯模式點品牌，顯示資料＋所屬廠商＋未來／過去的開團 =====
-function getBrandGroupBuys_(brandName) {
+function getBrandGroupBuys_(brand) {
   const todayStart = startOfDay(new Date());
-  const matched = allEvents.filter(ev => ev.title === brandName);
+  const matched = allEvents.filter(ev => bvEventMatchesBrand_(ev, brand));
   const upcoming = matched.filter(ev => startOfDay(ev.displayEnd) >= todayStart).sort((a, b) => a.start - b.start);
   const past = matched.filter(ev => startOfDay(ev.displayEnd) < todayStart).sort((a, b) => b.start - a.start);
   return { upcoming, past };
@@ -350,7 +379,7 @@ function renderBrandGroupBuyRow_(ev) {
   row.className = 'cal-edit-day-row';
   row.innerHTML =
     `<span class="cal-edit-day-swatch" style="background:${ev.color || '#7AAEEB'};"></span>` +
-    `<span class="cal-edit-day-row-name">${fmtSingleDate(ev.start)}－${fmtSingleDate(ev.displayEnd)}</span>`;
+    `<span class="cal-edit-day-row-name">${fmtSingleDate(ev.start)}－${fmtSingleDate(ev.displayEnd)}　${escHtml(ev.title)}</span>`;
   row.addEventListener('click', () => {
     closeBrandDetailModal();
     if (brandVendorEditMode) openEventEditModal(ev);
@@ -374,7 +403,7 @@ function openBrandDetailModal(brand) {
   if (brand.note) lines.push(`<div><b>備註：</b>${escHtml(brand.note)}</div>`);
   document.getElementById('brandDetailBody').innerHTML = lines.join('');
 
-  const { upcoming, past } = getBrandGroupBuys_(brand.name);
+  const { upcoming, past } = getBrandGroupBuys_(brand);
 
   const upcomingEl = document.getElementById('brandDetailUpcomingList');
   upcomingEl.innerHTML = '';
@@ -415,10 +444,10 @@ document.getElementById('brandDetailPastToggle').addEventListener('click', () =>
   document.getElementById('brandDetailPastBody').style.display = open ? '' : 'none';
 });
 
-// ===== 【新】排行事曆時：團名跟品牌資料庫完全比對，自動帶出參考資訊 =====
-function findGroupBuyDatesForBrand_(brandName, excludeEventId) {
+// ===== 【新】排行事曆時：團名跟品牌資料庫模糊比對（標題包含品牌名），自動帶出參考資訊 =====
+function findGroupBuyDatesForBrand_(brand, excludeEventId) {
   return allEvents
-    .filter(ev => ev.title === brandName && ev.id !== excludeEventId)
+    .filter(ev => ev.id !== excludeEventId && bvEventMatchesBrand_(ev, brand))
     .sort((a, b) => b.start - a.start)
     .slice(0, 8);
 }
@@ -430,32 +459,37 @@ function renderEvBrandMatchInfo() {
   const excludeId = eventEditCtx && !eventEditCtx.isNew ? eventEditCtx.ev.id : null;
 
   if (!title) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  const brand = brandDb.find(b => b.name.trim() === title);
-  if (!brand) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  // 一團可比對到多個品牌（聯名團），每個品牌各出一個資訊區塊
+  const matchedBrands = bvBrandsInTitle_(title);
+  if (!matchedBrands.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
 
-  const vendors = (brand.vendorIds || []).map(vid => vendorDb.find(v => v.id === vid)).filter(Boolean);
-  const pastDates = findGroupBuyDatesForBrand_(title, excludeId);
+  const blocks = matchedBrands.map(brand => {
+    const vendors = (brand.vendorIds || []).map(vid => vendorDb.find(v => v.id === vid)).filter(Boolean);
+    const pastDates = findGroupBuyDatesForBrand_(brand, excludeId);
 
-  let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
-  const lines = [];
-  if (brand.lineContact) lines.push('LINE窗口：' + brand.lineContact);
-  if (brand.emailContact) lines.push('Email窗口：' + brand.emailContact);
-  if (brand.igContact) lines.push('IG窗口：' + brand.igContact);
-  vendors.forEach(vendor => {
-    const prefix = vendors.length > 1 ? '［' + vendor.name + '］' : '';
-    lines.push('所屬廠商：' + vendor.name + (vendor.type ? '（' + vendor.type + '）' : ''));
-    if (vendor.remittanceMethod) lines.push(prefix + '匯款方式：' + vendor.remittanceMethod);
-    if (vendor.remittanceRule) lines.push(prefix + '請款規則：' + vendor.remittanceRule);
-    if (vendor.contact) lines.push(prefix + '廠商窗口：' + vendor.contact);
+    let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
+    const lines = [];
+    if (brand.lineContact) lines.push('LINE窗口：' + brand.lineContact);
+    if (brand.emailContact) lines.push('Email窗口：' + brand.emailContact);
+    if (brand.igContact) lines.push('IG窗口：' + brand.igContact);
+    vendors.forEach(vendor => {
+      const prefix = vendors.length > 1 ? '［' + vendor.name + '］' : '';
+      lines.push('所屬廠商：' + vendor.name + (vendor.type ? '（' + vendor.type + '）' : ''));
+      if (vendor.remittanceMethod) lines.push(prefix + '匯款方式：' + vendor.remittanceMethod);
+      if (vendor.remittanceRule) lines.push(prefix + '請款規則：' + vendor.remittanceRule);
+      if (vendor.contact) lines.push(prefix + '廠商窗口：' + vendor.contact);
+    });
+    if (brand.note) lines.push('品牌備註：' + brand.note);
+    if (lines.length) html += lines.map(l => escHtml(l)).join('<br>');
+    if (pastDates.length) {
+      // 同品牌不同產品會分團開，所以日期後面帶團名才分得出是哪一團
+      html += '<div style="margin-top:6px;">🗓 過去開團：' +
+        pastDates.map(ev => fmtSingleDate(ev.start) + '–' + fmtSingleDate(ev.displayEnd) + '（' + escHtml(ev.title) + '）').join('、') + '</div>';
+    }
+    return html;
   });
-  if (brand.note) lines.push('品牌備註：' + brand.note);
-  if (lines.length) html += lines.map(l => escHtml(l)).join('<br>');
-  if (pastDates.length) {
-    html += '<div style="margin-top:6px;">🗓 過去開團日期：' +
-      pastDates.map(ev => fmtSingleDate(ev.start) + '–' + fmtSingleDate(ev.displayEnd)).join('、') + '</div>';
-  }
 
-  box.innerHTML = html;
+  box.innerHTML = blocks.join('<div style="border-top:1px dashed rgba(0,0,0,.25); margin:8px 0;"></div>');
   box.style.display = 'block';
 }
 
