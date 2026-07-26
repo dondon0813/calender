@@ -1451,6 +1451,25 @@ const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx
 // 請把 Apps Script 部署後的網址貼在這裡（跟 admin.html 用同一組網址）
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
 
+// ===== 瀏覽/點擊統計（照抄 index.html 的 sendStat 寫法，key 白名單見 Code.gs STAT_KEY_WHITELIST_RE） =====
+function sendStat(key, field) {
+  if (!key || !APPS_SCRIPT_URL) return;
+  const type = field === 'click' ? 'stat-click' : 'stat-view';
+  const payload = JSON.stringify({ type, key });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(APPS_SCRIPT_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
+}
+
 const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>🍽</text></svg>";
 
 // 食材/成品「分類」欄位 -> 對應表情符號，圖片網址還沒填或載入失敗時，
@@ -1618,6 +1637,7 @@ async function loadCalendar() {
   rows.forEach(row => {
     const c = row.c;
     if (!c || !c[0] || c[0].v === null || c[0].v === '') return;
+    const id = c[0].v;
     const startRaw = c[1] ? c[1].v : null;
     const endRaw = c[2] ? c[2].v : null;
     const extendRaw = c[3] ? c[3].v : null;
@@ -1631,7 +1651,7 @@ async function loadCalendar() {
     const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
     const published = publishedRaw === '' ? true : (publishedRaw === '是');
     if (!published) return;
-    events.push({ title, start, displayEnd, url });
+    events.push({ id, title, start, displayEnd, url });
   });
   CALENDAR_EVENTS = events;
 }
@@ -1641,7 +1661,12 @@ function getBrandStatus(brandName) {
   const today = startOfDay(new Date());
   const matches = CALENDAR_EVENTS.filter(ev => ev.title.includes(brandName));
   const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
-  if (openEvent) return { brand: brandName, status: 'open', url: openEvent.url };
+  if (openEvent) {
+    // evKey 格式須與 index.html 的 getStatKey 完全一致：${id}_${YYYY-M-D}（月/日不補零、本地時區）
+    const s = openEvent.start;
+    const evKey = `${openEvent.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
+    return { brand: brandName, status: 'open', url: openEvent.url, evKey };
+  }
   const future = matches
     .filter(ev => startOfDay(ev.start) > today)
     .sort((a, b) => a.start - b.start);
@@ -2322,6 +2347,7 @@ function openIngredientModal(item) {
     }
     const status = getBrandStatus(brand);
     if (status.status === 'open') {
+      if (status.evKey) sendStat(status.evKey + '_src_recipes', 'click');
       window.open(status.url, '_blank', 'noopener,noreferrer');
       ingBuyStatusEl.style.display = 'none';
     } else {
@@ -2610,6 +2636,7 @@ function handleBuyClick(recipe, statusListEl) {
   const openOnes = statuses.filter(s => s.status === 'open');
 
   if (openOnes.length === 1) {
+    if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_src_recipes', 'click');
     window.open(openOnes[0].url, '_blank', 'noopener,noreferrer');
     statusListEl.style.display = 'none';
     return;
@@ -2632,6 +2659,10 @@ function renderBuyStatusList(statuses, statusListEl) {
       rightHtml = `<span class="bsi-text">目前已結單</span>`;
     }
     row.innerHTML = `<span class="bsi-brand">${s.brand}</span>` + rightHtml;
+    if (s.status === 'open' && s.evKey) {
+      const btn = row.querySelector('.bsi-btn');
+      if (btn) btn.addEventListener('click', () => sendStat(s.evKey + '_src_recipes', 'click'));
+    }
     statusListEl.appendChild(row);
   });
   statusListEl.style.display = 'block';
@@ -2685,6 +2716,12 @@ function applyPresetBrandFilter() {
 // 避免資料讀取完成後又把使用者已經手動點開的畫面切回首頁
 applyInitialRoute();
 loadAll();
+
+// 頁面瀏覽量統計：每次載入送一次，key 格式與 index.html 的 getStatKey 同款日期組法（本地時區、月/日不補零）
+(function sendRecipesPageview() {
+  const d = new Date();
+  sendStat(`page_recipes_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, 'view');
+})();
 </script>
 
 </body>

@@ -849,14 +849,14 @@ function getStatObserver() {
 
 // 【修改】點擊時除了送出整體點擊次數，還多送一筆「依目前顯示模式（開團日／結團日／全部顯示／現正開團中）」
 // 分開計算的點擊次數，key 格式固定是 團購key + '_src_' + mode，後台可以分開看是哪個表單點的人最多
-function attachStatTracking(el, ev, clickable) {
+function attachStatTracking(el, ev, clickable, srcOverride) {
   const key = getStatKey(ev);
   el.dataset.statKey = key;
   getStatObserver().observe(el);
   if (clickable) {
     el.addEventListener('click', () => {
       sendStat(key, 'click');
-      sendStat(key + '_src_' + currentMode, 'click');
+      sendStat(key + '_src_' + (srcOverride || currentMode), 'click');
     });
   }
 }
@@ -1209,7 +1209,7 @@ function renderGroupList() {
     } else if (advanced) {
       card.addEventListener('click', () => openGroupChoiceModal(ev));
     }
-    attachStatTracking(card, ev, clickable);
+    attachStatTracking(card, ev, clickable, 'now');
     card.title = ev.title + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
     const nameEl = document.createElement('div');
@@ -1675,6 +1675,12 @@ loadCustomBlocks().then(() => { if (currentMode === 'list') render(); });
 loadData();
 setInterval(loadData, 60000);
 setInterval(loadCustomBlocks, 60000);
+
+// 頁面瀏覽量統計：每次載入送一次，key 格式與 getStatKey 同款日期組法（本地時區、月/日不補零）
+(function sendIndexPageview() {
+  const d = new Date();
+  sendStat(`page_index_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, 'view');
+})();
 </script>
 
 </body>

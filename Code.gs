@@ -1552,8 +1552,8 @@ function getStatsMap_() {
 //   12_2026-7-22_recipe         食譜入口點擊（見 index.html:1563）
 //   12_2026-7-22_order          下單按鈕點擊（見 index.html:1567）
 //   12_2026-7-22_code           折扣碼複製點擊（見 index.html:1596）
-const STAT_KEY_WHITELIST_RE = /^(block_[A-Za-z0-9]+|\d+_\d{4}-\d{1,2}-\d{1,2}(_(src_[a-z0-9]+|intro|recipe|order|code))?)$/;
-const STAT_KEY_ROW_CAP = 2000;
+const STAT_KEY_WHITELIST_RE = /^(block_[A-Za-z0-9]+|\d+_\d{4}-\d{1,2}-\d{1,2}(_(src_[a-z0-9]+|intro|recipe|order|code))?|page_[a-z0-9]+_\d{4}-\d{1,2}-\d{1,2})$/;
+const STAT_KEY_ROW_CAP = 5000;
 
 function isValidStatKey_(key) {
   if (typeof key !== 'string') return false;
@@ -2121,6 +2121,10 @@ function doPost(e) {
     const currentUser = getSessionUser_(token);
     if (!currentUser) {
       return jsonResult_({ success: false, error: '未登入或登入逾時，請重新登入', needLogin: true });
+    }
+
+    if (type === 'stat-report') {
+      return jsonResult_({ success: true, ok: true, stats: getStatsMap_() });
     }
 
     if (type === 'change-password') {

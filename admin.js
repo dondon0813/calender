@@ -56,7 +56,7 @@ let splitPersistReady = false;
 // 必須宣告在這裡（檔案最前段）：已登入時 admin.js:1442 附近會在**最外層**直接呼叫
 // switchView('home')，若這個 const 宣告在它後面，會踩到 TDZ 而拋 ReferenceError，
 // 導致那行之後的最外層程式（initAppUI、漢堡選單監聽…）全部不執行，整頁變磚。
-const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor' };
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport' };
 
 // ===== 開機期就會被讀到的模組層狀態，一律宣告在這裡 =====
 // 理由同上面 VIEW_ID_MAP：initAppUI() 會還原上次停留的分頁，於**最外層**同步呼叫
@@ -2057,6 +2057,7 @@ function switchView(name, target) {
   if (name === 'lotteryTool') renderLotteryWinnerList();
   if (name === 'imageLibrary') { ilLoadFolderOptions().then(() => ilLoad()); }
   if (name === 'brandVendor') renderBrandVendorView();
+  if (name === 'report') renderReportView();
 }
 
 // ===== 寬螢幕雙欄工作區：側邊欄 / 右欄 / 拖曳分隔線 =====
