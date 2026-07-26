@@ -2244,6 +2244,20 @@
     background-repeat: no-repeat;
   }
   .pgp-hero-img { display: none; }
+  /* 月齡小標籤：直接用試算表「適合月齡」欄位的值（本站規則已經是 8m+／1y+
+     這種格式，不用再額外解析或轉換），貼在主圖左下角。 */
+  .pgp-age-badge {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    background: #9FA85C;
+    color: #fff;
+    font-weight: 800;
+    font-size: 22px;
+    padding: 6px 18px;
+    border-radius: 999px;
+    z-index: 2;
+  }
   /* 標題疊兩層：底下 .pgp-title-outline 只畫較粗的 #B27C70 描邊（填色透明），
      上面 .pgp-title 蓋上原本的白色描邊+橘色文字，露出來的部分就是外層那圈細細的
      咖啡色框——兩層文字位置/字級要完全一致才會對齊，共用同一組定位規則。 */
@@ -2286,7 +2300,7 @@
     margin-top: 40px;
     height: calc(100% - 40px);
     box-sizing: border-box;
-    background: #CCFBBF;
+    background: #E4E8C6;
     border: 2px solid rgba(224,149,74,0.16);
     border-radius: 28px;
     padding: 48px 14px 18px;
@@ -2529,7 +2543,7 @@
     margin-top: 18px;
     text-align: center;
     font-size: 16px;
-    color: #A65F49;
+    color: #A67354;
     font-weight: 700;
   }
 
@@ -4545,7 +4559,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=9"></script>
+<script src="tools.js?v=10"></script>
 <script src="admin.js?v=61"></script>
 <script src="memo.js?v=5"></script>
 

@@ -527,6 +527,7 @@ function pgBuildPosterHtml(r) {
   const title = escHtml(r['食譜名稱'] || '');
   const heroRaw = pgToSameOriginUrl(r['成品圖片網址']);
   const heroImg = pgIsValidUrl(heroRaw) ? heroRaw : PG_PLACEHOLDER_IMG;
+  const ageLabel = escHtml(String(r['適合月齡'] || '').trim());
 
   const fullIngList = pgGetRecipeIngredients(r);
   const ingList = fullIngList.slice(0, 6); // 固定版型上限：右側直式清單，最多6項才能完整顯示不被裁切
@@ -587,6 +588,7 @@ function pgBuildPosterHtml(r) {
           <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
           <div class="pgp-title-outline">${title}</div>
           <div class="pgp-title">${title}</div>
+          ${ageLabel ? `<div class="pgp-age-badge">${ageLabel}</div>` : ''}
         </div>
         <div class="pgp-side-card">
           <img class="pgp-ing-badge-img" crossorigin="anonymous" src="images/recipes/ingredients.png" alt="準備食材">
@@ -608,7 +610,7 @@ function pgBuildPosterHtml(r) {
 
       <img class="pgp-mascot" crossorigin="anonymous" src="images/recipes/mascot-cat.webp" alt="">
 
-      <div class="pgp-footer">🩷 雪莉與朵栗・@dondon0813 🩷</div>
+      <div class="pgp-footer">雪莉與朵栗・@dondon0813</div>
     </div>
   `;
 }
