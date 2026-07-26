@@ -44,6 +44,7 @@ Google 試算表（兩份！）
 | todoList.js | 429 | 待辦事項：分組清單/編輯彈窗/加入行事曆（todos/todoCategories 資料層在 admin.js，本檔只讀；同樣排在 admin.js 之前） | 🟢 |
 | customBlocks.js | 307 | 開團狀態清單的自訂區塊＋編輯視窗（customBlocks 資料層在 admin.js；renderGroupStatusList 本體留在 admin.js；同樣排在 admin.js 之前） | 🟢 |
 | tools.js | 665 | 工具箱三件套：開團文案/抽獎/食譜貼文產生器＋轉檔佔位（按鈕多為 admin.html inline onclick；同樣排在 admin.js 之前） | 🟢 |
+| report.js | ~330 | 報表統計頁：statsMap 前端聚合（rptCompute*/rptRender*/renderReportView；重新整理走 postTask stat-report；同樣排在 admin.js 之前） | 🟢 |
 | memo.js | 420 | 備忘錄樹狀模組（依賴 admin.js 的 postTask/currentUser） | 🟢 |
 | shared.css | 382 | 全站設計 tokens（:root 變數）＋共用元件 | 🟢 |
 | school-labels.html | 311 | 標籤機導購頁（獨立 LABELS_API_URL） | 🟢 |
@@ -67,7 +68,7 @@ Google 試算表（兩份！）
 - `doGet`（Code.gs:1877 附近）：scope=calendar → `getEventsAsGviz_()`；scope=public；帶 token → 全量。
 - `doPost`（Code.gs:1952 附近）：以 `if (type === '...')` 分支。找某動作直接 Grep：`type === 'event-update'`。
 - 動作家族（前綴）：`vendor-db-*`、`brand-db-*`、`pnote-*`（備忘錄）、`task-*`／`taskname-*`（任務）、`pr-*`（公關品）、`todo-*`、`event-*`、`block-*`（自訂區塊）、`image-*`（GitHub 圖片庫代理）、`perm-*`、`stat-*`、`login`、`change-password`、`social-link-set`。
-- **統計白名單鐵律**：`stat-view`/`stat-click` 的 key 有白名單（`STAT_KEY_WHITELIST_RE`，Grep 定位）——**前端新增任何統計項目時，必須同步擴充這個 regex**，否則新 key 會被安靜拒收、數字永遠是 0 且不報錯。另有單 key 80 字上限與統計分頁 2000 列上限。
+- **統計白名單鐵律**：`stat-view`/`stat-click` 的 key 有白名單（`STAT_KEY_WHITELIST_RE`，Grep 定位）——**前端新增任何統計項目時，必須同步擴充這個 regex**，否則新 key 會被安靜拒收、數字永遠是 0 且不報錯。另有單 key 80 字上限與統計分頁 5000 列上限（2026-07-27 由 2000 提高）。key 型態：`<事件id>_<Y-M-D>`（±`_src_<來源>`/`_intro`/`_recipe`/`_order`/`_code`）、`page_<頁名>_<Y-M-D>`（每日 pageview：index/recipes/school）、`block_<id>`；來源值 start/end/all/list/now(現正開團中)/recipes/school。另有需 token 的 `stat-report` POST（回 `{success,ok,stats}`，供後台報表頁輕量刷新）。
 - 函式群定位（Grep `^function 名稱`）：Session/驗證 `getSessionUser_`／`hashPassword_`；品牌庫 `getBrandDbList_`／`updateBrandThumbs`；活動 `addEvent_`／`getEventsAsGviz_`；GitHub 圖片代理 `githubFetch_`／`listGithubFilesRecursive_`；一次性工具 `importBrandsFromCalendar`、`migrateStaffPasswordsToHash_ONETIME`。
 - 常數區在 Code.gs:1-54：分頁名稱、`DEFAULT_PASSWORD`、`LEGACY_PASSWORD_PEPPER`（僅供驗證舊格式雜湊）、`HASH_ITERATIONS`、`SESSION_DURATION_MS`(12h)、`EVENT_SHEET_ID`。
 - 密碼機制（2026-07-22 起）：現行 pepper 存 **Script Properties 的 `PASSWORD_PEPPER`**（不在程式碼裡），雜湊為 v2 多輪格式（`v2$iter$fp$hash`），舊單輪雜湊登入時自動升級。相關函式：`getPepper_`／`hashPasswordV2_`／`verifyPassword_`／`needsRehash_`。
