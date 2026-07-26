@@ -610,7 +610,7 @@ function pgBuildPosterHtml(r) {
 
       <img class="pgp-mascot" crossorigin="anonymous" src="images/recipes/mascot-cat.webp" alt="">
 
-      <div class="pgp-footer">雪莉與朵栗・@dondon0813</div>
+      <div class="pgp-footer">雪莉與朵栗・IG@dondon0813</div>
     </div>
   `;
 }
