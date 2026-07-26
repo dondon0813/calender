@@ -201,10 +201,13 @@
     font-size: 20px;
     color: var(--c-text-soft);
     text-align: left;
-    line-height: 1;
+    line-height: 1.2;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* 刻意不設 overflow:hidden／text-overflow:ellipsis：y、g、p 這類有尾巴的
+       字母，就算 line-height 加大也還是會被自己的框裁到（試過 1.2、1.4 都一樣，
+       是 overflow:hidden 本身在裁，跟 line-height 無關）。改靠外層 .ns-cell
+       的 overflow:hidden 當安全網——那裡高度餘裕很大，不會真的裁到任何東西，
+       只是放棄了姓名超長時的 ellipsis 省略號效果（改成硬截斷，機率極低）*/
   }
   .ns-footer {
     flex: none;
