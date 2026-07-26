@@ -2256,7 +2256,11 @@
     width: 86%;
     text-align: center;
     font-family: 'Tsuhsianti', var(--font-round);
-    font-weight: 800;
+    /* Tsuhsianti 這個自訂字體只有一個字重（normal），本身筆畫就很粗；
+       如果再要求 font-weight:800，瀏覽器會用「合成粗體」硬把筆畫描粗，
+       這個字體沒有真的粗體字檔可以套，合成出來的結果就是把細節都糊掉。
+       所以這裡固定用 normal，不要加粗。 */
+    font-weight: normal;
     font-size: 88px;
     line-height: 1.25;
     display: -webkit-box;
@@ -4541,7 +4545,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=8"></script>
+<script src="tools.js?v=9"></script>
 <script src="admin.js?v=61"></script>
 <script src="memo.js?v=5"></script>
 
