@@ -1271,11 +1271,11 @@ function renderOpenGroupBuyBar() {
       if (o.discountCode) {
         cell.addEventListener('click', (e) => {
           e.preventDefault();
-          openDiscountModal(o.brand, o.url, o.discountCode, o.discountDesc, o.evKey);
+          openDiscountModal(o.brand, o.url, o.discountCode, o.discountDesc, o.evKey, 'schooltop');
         });
       } else if (o.evKey) {
         // 沒有折扣碼：這裡點下去就是直接進團購網址，是真正的下單出口，統計點擊送在這裡
-        cell.addEventListener('click', () => { sendStat(o.evKey + '_src_school', 'click'); });
+        cell.addEventListener('click', () => { sendStat(o.evKey + '_src_schooltop', 'click'); });
       }
     }
 
@@ -1566,13 +1566,13 @@ function openSchoolItemModal(item) {
         if (openBtn) {
           openBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            openDiscountModal(brand, status.url, status.discountCode, status.discountDesc, status.evKey);
+            openDiscountModal(brand, status.url, status.discountCode, status.discountDesc, status.evKey, 'schoolcard');
           });
         }
       } else if (status.status === 'open' && status.evKey) {
         // 沒有折扣碼：點下去就是直接進團購網址，是真正的下單出口，統計點擊送在這裡
         const openBtn = row.querySelector('.sbi-open-order');
-        if (openBtn) openBtn.addEventListener('click', () => { sendStat(status.evKey + '_src_school', 'click'); });
+        if (openBtn) openBtn.addEventListener('click', () => { sendStat(status.evKey + '_src_schoolcard', 'click'); });
       }
 
       // 品牌介紹/心得：有填才顯示，沒填就不會多出空白區塊
@@ -1904,7 +1904,8 @@ function closeModal(id) {
 }
 
 // 折扣碼小視窗：開團中且該團有折扣碼時，點「前往下單」先跳這個
-function openDiscountModal(brand, url, code, desc, evKey) {
+// srcCode：呼叫端傳入 'schooltop'（置頂橫列）或 'schoolcard'（品項彈窗），區分統計來源用
+function openDiscountModal(brand, url, code, desc, evKey, srcCode) {
   document.getElementById('discountModalTitle').textContent = brand || '';
   document.getElementById('dcCodeText').textContent = code || '';
 
@@ -1936,7 +1937,7 @@ function openDiscountModal(brand, url, code, desc, evKey) {
     // 這裡才是真正的下單出口（攔截開小視窗那步不算下單），所以統計點擊在這裡送
     orderBtn.onclick = () => {
       copyDiscountCode(code).then(markCopied);
-      if (evKey) sendStat(evKey + '_src_school', 'click');
+      if (evKey) sendStat(evKey + '_src_' + (srcCode || 'school'), 'click');
     };
   } else {
     orderBtn.style.display = 'none';

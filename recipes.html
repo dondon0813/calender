@@ -2347,7 +2347,7 @@ function openIngredientModal(item) {
     }
     const status = getBrandStatus(brand);
     if (status.status === 'open') {
-      if (status.evKey) sendStat(status.evKey + '_src_recipes', 'click');
+      if (status.evKey) sendStat(status.evKey + '_src_recipesing', 'click');
       window.open(status.url, '_blank', 'noopener,noreferrer');
       ingBuyStatusEl.style.display = 'none';
     } else {
@@ -2636,7 +2636,7 @@ function handleBuyClick(recipe, statusListEl) {
   const openOnes = statuses.filter(s => s.status === 'open');
 
   if (openOnes.length === 1) {
-    if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_src_recipes', 'click');
+    if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_src_recipesbrand', 'click');
     window.open(openOnes[0].url, '_blank', 'noopener,noreferrer');
     statusListEl.style.display = 'none';
     return;
@@ -2661,7 +2661,7 @@ function renderBuyStatusList(statuses, statusListEl) {
     row.innerHTML = `<span class="bsi-brand">${s.brand}</span>` + rightHtml;
     if (s.status === 'open' && s.evKey) {
       const btn = row.querySelector('.bsi-btn');
-      if (btn) btn.addEventListener('click', () => sendStat(s.evKey + '_src_recipes', 'click'));
+      if (btn) btn.addEventListener('click', () => sendStat(s.evKey + '_src_recipeslist', 'click'));
     }
     statusListEl.appendChild(row);
   });

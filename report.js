@@ -21,14 +21,25 @@ const RPT_PAGE_DEFS = [
   { key: 'school', label: '開學清單' }
 ];
 // 對應 index.html 的 attachStatTracking()：來源 key 固定是 evKey + '_src_' + mode
+// 行事曆各模式維持單層；食譜頁／開學清單頁 2026-07-27 拆成頁內細項（items），
+// 每個 items 陣列最後一個固定是舊碼（未細分歷史資料），標籤統一顯示「（未細分）」
 const RPT_SOURCE_DEFS = [
   { key: 'start', label: '開團日模式' },
   { key: 'end', label: '結團日模式' },
   { key: 'all', label: '全部顯示' },
   { key: 'list', label: '現正開團中' },
   { key: 'now', label: '現正開團中卡片' },
-  { key: 'recipes', label: '食譜頁' },
-  { key: 'school', label: '開學清單頁' }
+  { key: 'recipes', label: '食譜頁', items: [
+    { key: 'recipesing', label: '食材彈窗購買' },
+    { key: 'recipesbrand', label: '品牌直接開團' },
+    { key: 'recipeslist', label: '品牌清單下單' },
+    { key: 'recipes', label: '（未細分）' }
+  ] },
+  { key: 'school', label: '開學清單頁', items: [
+    { key: 'schooltop', label: '置頂開團中縮圖' },
+    { key: 'schoolcard', label: '品項卡片彈窗' },
+    { key: 'school', label: '（未細分）' }
+  ] }
 ];
 // 純 evKey（無 page_/block_ 前綴、無 _src_/_intro/_recipe/_order/_code 後綴）：<id>_<YYYY-M-D>
 const RPT_BASE_EVKEY_RE = /^(.+)_(\d{4}-\d{1,2}-\d{1,2})$/;
@@ -115,11 +126,23 @@ function rptComputeGroupRanking(stats, events) {
     });
     const title = ev ? (ev.title || idPart) : idPart;
     const st = stats[evKey] || {};
-    const sources = RPT_SOURCE_DEFS.map(s => ({
-      key: s.key,
-      label: s.label,
-      count: ((stats[evKey + '_src_' + s.key] || {}).clicks) || 0
-    }));
+    const sources = RPT_SOURCE_DEFS.map(s => {
+      if (s.items) {
+        const items = s.items.map(i => ({
+          key: i.key,
+          label: i.label,
+          count: ((stats[evKey + '_src_' + i.key] || {}).clicks) || 0
+        }));
+        const total = items.reduce((sum, i) => sum + i.count, 0);
+        return { key: s.key, label: s.label, count: total, items };
+      }
+      return {
+        key: s.key,
+        label: s.label,
+        count: ((stats[evKey + '_src_' + s.key] || {}).clicks) || 0,
+        items: null
+      };
+    });
     rows.push({
       evKey,
       idPart,
@@ -139,19 +162,33 @@ function rptComputeGroupRanking(stats, events) {
   return rows;
 }
 
-// 點擊來源總覽：七種來源各自的全站總點擊（跨所有 evKey 加總）
+// 點擊來源總覽：各來源（頁面層）在全站的總點擊（跨所有 evKey 加總）；
+// 食譜頁／開學清單頁再往下展開 items 細項
+function rptSumClicksBySuffix(stats, code) {
+  const suffix = '_src_' + code;
+  let total = 0;
+  Object.keys(stats).forEach(k => {
+    if (k.indexOf('page_') === 0 || k.indexOf('block_') === 0) return;
+    if (k.length > suffix.length && k.slice(-suffix.length) === suffix) {
+      total += ((stats[k] || {}).clicks) || 0;
+    }
+  });
+  return total;
+}
+
 function rptComputeSourceOverview(stats) {
   stats = stats || {};
   return RPT_SOURCE_DEFS.map(s => {
-    const suffix = '_src_' + s.key;
-    let total = 0;
-    Object.keys(stats).forEach(k => {
-      if (k.indexOf('page_') === 0 || k.indexOf('block_') === 0) return;
-      if (k.length > suffix.length && k.slice(-suffix.length) === suffix) {
-        total += ((stats[k] || {}).clicks) || 0;
-      }
-    });
-    return { key: s.key, label: s.label, total };
+    if (s.items) {
+      const items = s.items.map(i => ({
+        key: i.key,
+        label: i.label,
+        count: rptSumClicksBySuffix(stats, i.key)
+      }));
+      const total = items.reduce((sum, i) => sum + i.count, 0);
+      return { key: s.key, label: s.label, total, items };
+    }
+    return { key: s.key, label: s.label, total: rptSumClicksBySuffix(stats, s.key), items: null };
   });
 }
 
@@ -205,6 +242,12 @@ function rptRenderPageViewsTable(stats) {
   el.innerHTML = html;
 }
 
+function rptSourceItemsTagsHtml(items) {
+  const shown = (items || []).filter(i => i.count > 0);
+  if (!shown.length) return '';
+  return shown.map(i => '<span style="opacity:.7;font-size:10.5px;">' + escHtml(i.label) + ' ' + i.count + '</span>').join('');
+}
+
 function rptRenderSourceTable(stats) {
   const el = document.getElementById('rptSourceTable');
   if (!el) return;
@@ -212,7 +255,13 @@ function rptRenderSourceTable(stats) {
   const hasAny = rows.some(r => r.total > 0);
   if (!hasAny) { el.innerHTML = '<div class="rpt-empty">尚無資料</div>'; return; }
   let html = '<table class="rpt-table"><thead><tr><th>來源</th><th>總點擊</th></tr></thead><tbody>';
-  rows.forEach(r => { html += '<tr><td>' + escHtml(r.label) + '</td><td>' + r.total + '</td></tr>'; });
+  rows.forEach(r => {
+    html += '<tr><td>' + escHtml(r.label) + '</td><td>' + r.total + '</td></tr>';
+    const subTags = rptSourceItemsTagsHtml(r.items);
+    if (subTags) {
+      html += '<tr class="rpt-detail-row"><td colspan="2"><div class="rpt-detail-tags">' + subTags + '</div></td></tr>';
+    }
+  });
   html += '</tbody></table>';
   el.innerHTML = html;
 }
@@ -265,8 +314,11 @@ function rptRenderGroupRankTable() {
       '</tr>';
     if (rptExpandedKeys.has(r.evKey)) {
       const tagsHtml = r.sources.map(s => '<span>' + escHtml(s.label) + ' ' + s.count + '</span>').join('');
+      const subTagsHtml = r.sources.map(s => rptSourceItemsTagsHtml(s.items)).join('');
       html += '<tr class="rpt-detail-row"><td colspan="8"><div class="rpt-detail-tags">' +
-        (tagsHtml || '（無來源拆解資料）') + '</div></td></tr>';
+        (tagsHtml || '（無來源拆解資料）') + '</div>' +
+        (subTagsHtml ? '<div class="rpt-detail-tags" style="margin-top:2px;">' + subTagsHtml + '</div>' : '') +
+        '</td></tr>';
     }
   });
   html += '</tbody></table>';
