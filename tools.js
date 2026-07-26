@@ -585,6 +585,7 @@ function pgBuildPosterHtml(r) {
       <div class="pgp-main-row">
         <div class="pgp-hero-wrap" style="background-image:url('${escHtml(heroImg)}')">
           <img class="pgp-hero-img" crossorigin="anonymous" src="${heroImg}">
+          <div class="pgp-title-outline">${title}</div>
           <div class="pgp-title">${title}</div>
         </div>
         <div class="pgp-side-card">
