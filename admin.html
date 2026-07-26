@@ -2253,8 +2253,8 @@
     background: #9FA85C;
     color: #fff;
     font-weight: 800;
-    font-size: 27px;
-    padding: 8px 22px;
+    font-size: 32px;
+    padding: 9px 26px;
     border-radius: 999px;
     z-index: 2;
   }
@@ -2300,7 +2300,7 @@
     margin-top: 40px;
     height: calc(100% - 40px);
     box-sizing: border-box;
-    background: #FED5C0;
+    background: #FEE6D5;
     border: 2px solid rgba(224,149,74,0.16);
     border-radius: 28px;
     padding: 48px 14px 18px;
@@ -2384,7 +2384,7 @@
     transform: translate(-50%, -50%);
     font-family: 'Baloo 2', var(--font-round);
     font-weight: 800;
-    font-size: 29px;
+    font-size: 32px;
     color: #fff;
   }
   /* 箭頭改成純 CSS 畫的粗箭頭（矩形+三角形），不是文字符號，用 position:absolute
@@ -2444,6 +2444,10 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* 每個步驟文字中間加一條細直線做區隔（最後一格不用加，右邊沒有下一步了） */
+  .pgp-step-card:not(:last-child) .pgp-step-caption {
+    border-right: 2px solid #F0CBA0;
+  }
   /* 裁切（不是完整顯示）：直式照片切上下、太寬的照片切左右，只切掉超出框外的部分，
      用 background-size:cover（原因見上面主圖照片的說明註解，img+min-width 那招
      遇到原始尺寸比框大的照片會失效，變成整張放大只顯示正中央一小塊）。
@@ -2472,7 +2476,7 @@
     background: #FC916F;
     color: #fff;
     font-weight: 800;
-    font-size: 26px;
+    font-size: 29px;
     display: flex; align-items: center; justify-content: center;
   }
 

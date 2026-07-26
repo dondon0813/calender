@@ -169,7 +169,13 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    overflow: hidden;
+    /* 刻意不設 overflow:hidden：這個容器的高度是「自動」依內容算出來的
+       （nameEl／engEl 的版面框高度加總），不是固定值——如果設 overflow:hidden，
+       它自己的框就會剛好卡在最後一行版面框的下緣，跟那一行自己設
+       overflow:hidden 是一樣的裁法，等於裁切只是往上移了一層，換湯不換藥。
+       真正安全的裁切邊界是外層 .ns-cell——它是 CSS Grid 格子，高度是固定的
+       54px（不是依內容算的），版面框加總遠小於這個高度，裁在那一層才不會
+       真的切到任何東西 */
   }
   /* 有英文姓名時：中英文兩行彼此置中對齊，不再各自靠左。
      刻意不改 align-items（維持預設 stretch），這兩行才會保持撐滿格子寬度，
@@ -201,10 +207,13 @@
     font-size: 20px;
     color: var(--c-text-soft);
     text-align: left;
-    line-height: 1;
+    line-height: 1.2;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* 刻意不設 overflow:hidden／text-overflow:ellipsis：y、g、p 這類有尾巴的
+       字母，就算 line-height 加大也還是會被自己的框裁到（試過 1.2、1.4 都一樣，
+       是 overflow:hidden 本身在裁，跟 line-height 無關）。改靠外層 .ns-cell
+       的 overflow:hidden 當安全網——那裡高度餘裕很大，不會真的裁到任何東西，
+       只是放棄了姓名超長時的 ellipsis 省略號效果（改成硬截斷，機率極低）*/
   }
   .ns-footer {
     flex: none;
