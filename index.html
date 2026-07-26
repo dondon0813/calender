@@ -1477,7 +1477,9 @@ function renderSingleDayMode(mode) {
           const advanced = clickable && needsGroupModal(ev);
           const hasEarlyBird = !clickable && status === 'upcoming' && ev.earlyBird.length > 0;
           const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
-          const catClass = frozen ? 'cat-frozen' : `cat-${status}`;
+          // 已結團的灰色優先於冷凍團藍色：冷凍標示只在團還沒結束時才有意義，
+          // 不然冷凍團結團後會永遠掛著藍色，看起來像還在開團
+          const catClass = (frozen && status !== 'ended') ? 'cat-frozen' : `cat-${status}`;
           bar.className = `ebar ebar-wrap ${catClass}` + (clickable || hasEarlyBird ? ' clickable' : '');
           if (clickable && !advanced) {
             bar.href = ev.url;
