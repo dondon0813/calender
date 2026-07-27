@@ -29,3 +29,10 @@
 根因：(1) GitHub Pages 吃 main，改動停在工作分支時 github.io 圖片 404；(2) Apps Script 編輯器那份 Code.gs 永遠不會自動同步 GitHub，必須人手貼。兩者都不是「push 完就生效」。
 之後怎麼做：凡交付含 images/ 或 Code.gs 的改動，回報時先講清楚生效鏈——先合併進 main → 圖片上線、GitHub Code.gs 變新 → 再手動貼回 Apps Script、跑函式；**前置步驟（合併 main）沒完成前，不得叫使用者部署或跑函式**。
 波及：50 號檔 §1 已補「工作分支未合併＝尚未上線」註記。
+
+## L5 2026-07-27 遠端 session 的網路政策會擋掉線上驗證
+情境：品牌蝦皮連結改動，使用者已部署 Code.gs，要照 50 號檔 §2/§3 做版本確認。
+錯誤：無（有及時發現並如實回報，沒有假裝驗證過）。
+根因：Claude Code 遠端環境的 outbound 走 agent proxy，網路政策把 `script.google.com` 與 `dondon0813.github.io` 都擋在 CONNECT 403，curl 一律 `http=000`。這不是程式問題，也不是部署問題。
+之後怎麼做：curl 回 000／連不上時，先跑 `curl -sS "$HTTPS_PROXY/__agentproxy/status"` 看 `recentRelayFailures`；確認是政策擋掉就**停止嘗試**（不要改自己的程式碼、不要換網址重試），改為：(1) 用 `git show origin/main:檔名 | grep` 確認 main 上的內容正確，(2) 如實回報「本 session 無法做線上驗證」，(3) 給使用者可自己照做的實測步驟＋失敗時的三個可能原因。禁止把「程式碼已在 main」講成「線上已驗證通過」。
+波及：50 號檔 §3 已補上這個 fallback。
