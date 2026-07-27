@@ -775,7 +775,7 @@ function getBrandDbSheet_() {
   if (!sheet) {
     sheet = ss.insertSheet(BRAND_DB_SHEET_NAME);
     // 所屬廠商ID 可填多個，用逗號分隔（例：V001,V004）——同品牌跟不同廠商開不同聯名款
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片']);
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -890,7 +890,8 @@ function getBrandDbList_() {
       updated: row[9] instanceof Date ? fmtDateTime_(row[9]) : String(row[9] || ''),
       showInRecipe: String(row[10] || '').trim() === '是',
       intro: String(row[11] || ''),
-      brandImageUrl: String(row[12] || '')  // 品牌圖片（大合照／介紹頁用）
+      brandImageUrl: String(row[12] || ''),  // 品牌圖片（大合照／介紹頁用）
+      shopeeUrl: String(row[13] || '')  // 蝦皮連結（沒開團時前台食材/食譜頁導流用；空白＝不顯示按鈕）
     });
   }
   return list;
@@ -912,7 +913,8 @@ function addBrandDb_(fields) {
     now, now,
     fields.showInRecipe || '',
     fields.intro || '',
-    fields.brandImageUrl || ''
+    fields.brandImageUrl || '',
+    fields.shopeeUrl || ''
   ]);
   return id;
 }
@@ -932,6 +934,7 @@ function updateBrandDb_(id, fields) {
   setIf(11, fields.showInRecipe);
   setIf(12, fields.intro);
   setIf(13, fields.brandImageUrl);
+  setIf(14, fields.shopeeUrl);
   sheet.getRange(row, 10).setValue(new Date());
   return true;
 }
@@ -1982,10 +1985,12 @@ function doGet(e) {
   }
 
   // 前台食材/食譜頁的品牌篩選＋品牌介紹：改由「團購品牌資料庫」勾選「顯示於食材食譜=是」的品牌提供。
-  // ⚠️ 這是免登入公開範圍，只輸出「品牌名稱／品牌介紹」兩欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
+  // ⚠️ 這是免登入公開範圍，只輸出「品牌名稱／品牌介紹／蝦皮連結」三欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
+  // 「蝦皮連結」是刻意公開的欄位：它本來就是要給客人點的導購網址（沒開團時前台食材/食譜頁用它導流），
+  // 與聯絡窗口那種內部資料性質不同；除了這三欄以外，任何新欄位一律不准加進來。
   const publicBrands = getBrandDbList_()
     .filter(b => b.showInRecipe && b.name)
-    .map(b => ({ '品牌名稱': b.name, '品牌介紹': b.intro }));
+    .map(b => ({ '品牌名稱': b.name, '品牌介紹': b.intro, '蝦皮連結': b.shopeeUrl }));
 
   // 前台開學清單「現正開團中」要用的品牌去背小圖：品牌名稱 → 去背小圖。
   // ⚠️ 同樣是免登入公開範圍，只輸出「品牌名稱／去背小圖」，不可帶出聯絡窗口等內部欄位。
@@ -2239,7 +2244,8 @@ function doPost(e) {
         note: String(body.note || ''),
         showInRecipe: body.showInRecipe ? '是' : '',
         intro: String(body.intro || ''),
-        brandImageUrl: String(body.brandImageUrl || '')
+        brandImageUrl: String(body.brandImageUrl || ''),
+        shopeeUrl: String(body.shopeeUrl || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -2259,6 +2265,7 @@ function doPost(e) {
       if (body.showInRecipe !== undefined) fields.showInRecipe = body.showInRecipe ? '是' : '';
       if (body.intro !== undefined) fields.intro = String(body.intro);
       if (body.brandImageUrl !== undefined) fields.brandImageUrl = String(body.brandImageUrl);
+      if (body.shopeeUrl !== undefined) fields.shopeeUrl = String(body.shopeeUrl);
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }

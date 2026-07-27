@@ -4629,6 +4629,8 @@
       </label>
       <label for="brandIntroInput">品牌介紹（顯示在前台食材頁的品牌介紹卡，可留空）</label>
       <textarea id="brandIntroInput" rows="3" placeholder="這個品牌的介紹文字…"></textarea>
+      <label for="brandShopeeInput">蝦皮連結（沒開團的時候，前台食材／食譜頁的「前往購買」會用這個導去蝦皮；留空就不顯示蝦皮按鈕）</label>
+      <input type="text" id="brandShopeeInput" placeholder="貼上這個品牌的蝦皮賣場／商品網址">
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="brandSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="brandDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -4698,7 +4700,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=2"></script>
+<script src="brandVendor.js?v=3"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
