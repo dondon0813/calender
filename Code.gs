@@ -775,7 +775,7 @@ function getBrandDbSheet_() {
   if (!sheet) {
     sheet = ss.insertSheet(BRAND_DB_SHEET_NAME);
     // 所屬廠商ID 可填多個，用逗號分隔（例：V001,V004）——同品牌跟不同廠商開不同聯名款
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片']);
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結']);
     sheet.setFrozenRows(1);
   }
   return sheet;
