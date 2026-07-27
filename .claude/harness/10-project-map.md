@@ -59,7 +59,7 @@ Google 試算表（兩份！）
 
 - GET `?scope=calendar` → gviz 格式活動資料。呼叫處：index.html、admin.js（loadData 附近）、recipes.html、school-list.html、school-labels.html。
 - GET `?scope=public` → 品牌（僅名稱/介紹/蝦皮連結）、brandThumbs、ingredients、recipes、schoolList、blocks、socialLinks。
-- 品牌蝦皮連結：存在後台「團購品牌資料庫」第 **N 欄（第14欄）蝦皮連結**（`getBrandDbList_()` 的 `shopeeUrl`）。用途＝食材/食譜頁該品牌沒開團時的導流按鈕（recipes.html 的 `BRAND_SHOPEE` / `renderBuyStatusList`）。開學清單走的是另一套：`開學清單` 分頁每列自己的「蝦皮連結」欄，與品牌層級這欄無關。
+- 蝦皮導流連結有**兩層**（慣例：空白=預設、有填=覆寫）：①品牌層級＝後台「團購品牌資料庫」第 **N 欄（第14欄）蝦皮連結**（`getBrandDbList_()` 的 `shopeeUrl`，經 scope=public 給 recipes.html 的 `BRAND_SHOPEE`）；②食材層級＝「食材資料庫」／「成品資料庫」的「蝦皮連結」欄（`getMergedIngredientsAndProducts_()` 輸出，欄位依表頭名稱讀取，加在最後一欄即可）。食材彈窗有填就用食材的、空白退回品牌的；食譜彈窗的彙總清單是品牌粒度，只吃品牌層級。開團中一律導團購連結，兩層都不生效。開學清單走的是第三套：`開學清單` 分頁每列自己的「蝦皮連結」欄，與上述無關。
 - GET 帶 `token` → 完整後台資料（未登入回 public＋`unauthorized`）。
 - POST `{type: "..."}` → 見 §4；admin.js 統一經 `postTask()` 發送；`login`/`stat-view`/`stat-click` 免登入，其餘需 token。
 - 行事曆欄位語意——**注意兩套索引**：Code.gs 的 `EVENT_COL`（定義在 Code.gs:1213 附近）是 **1-based**（MATCH_ITEMS=22、THUMB=23）；前端 gviz 回來的 row 陣列是 **0-based**（V 欄對應品項=`c[21]`、W 欄去背小圖=`c[22]`、X 欄折扣碼=`c[23]`）。搞混一格就會把折扣碼當小圖輸出。「空白=預設、有填=覆寫」是本專案通用慣例（V、W 欄皆然）。
