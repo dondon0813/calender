@@ -2345,12 +2345,21 @@ function openIngredientModal(item) {
   ingBuyStatusEl.innerHTML = '';
   ingBuyBtn.onclick = () => {
     const brand = item['品牌'];
+    // 這個食材/成品自己填的蝦皮連結（食材資料庫、成品資料庫的「蝦皮連結」欄）。
+    // 有些團品項不多但品項之間差很多，適合各自導到自己的商品頁，所以食材填了就蓋掉品牌那條。
+    const ownShopee = String(item['蝦皮連結'] || '').trim();
     if (!brand) {
+      // 沒設品牌就沒有開團狀態可查；但如果這個食材自己填了蝦皮連結，還是要讓客人買得到
+      if (isValidUrl(ownShopee)) {
+        renderBuyStatusList([{ brand: item['食材名稱'] || '', status: 'nobrand', shopeeUrl: ownShopee }], ingBuyStatusEl);
+        return;
+      }
       ingBuyStatusEl.innerHTML = `<div class="buy-status-item"><span class="bsi-text">尚未設定這個食材的品牌資訊</span></div>`;
       ingBuyStatusEl.style.display = 'block';
       return;
     }
     const status = getBrandStatus(brand);
+    if (isValidUrl(ownShopee)) status.shopeeUrl = ownShopee; // 食材自己的優先，空白才用品牌預設
     if (status.status === 'open') {
       if (status.evKey) sendStat(status.evKey + '_src_recipesing', 'click');
       window.open(status.url, '_blank', 'noopener,noreferrer');
@@ -2630,15 +2639,51 @@ function openRecipeModal(recipe) {
   document.getElementById('recipeModal').classList.add('show');
 }
 
+// 食譜的購買清單要列哪幾行：預設一個品牌一行，但「這道食譜用到、而且自己填了蝦皮連結」的食材要各自獨立一行，
+// 因為有些團品項之間差異很大（例如同一個品牌的吐司跟鬆餅是不同商品頁），合併成一行就會導到錯的地方。
+// 規則：
+//   ・該品牌正在開團 → 只出一行走團購連結（團購價優先，食材各自的蝦皮連結一律忽略）
+//   ・沒開團 → 有填自己連結的食材各自一行（顯示「品牌・食材名」）；剩下沒填的食材合併成品牌那一行
+function getRecipeBuyStatuses(recipe) {
+  const byBrand = new Map(); // 品牌 -> { own: [{name, url}], hasPlain: 有沒有「沒填自己連結」的食材 }
+  getRecipeIngredients(recipe).forEach(ing => {
+    const brand = ing['品牌'];
+    if (!brand) return;
+    if (!byBrand.has(brand)) byBrand.set(brand, { own: [], hasPlain: false });
+    const group = byBrand.get(brand);
+    const url = String(ing['蝦皮連結'] || '').trim();
+    if (isValidUrl(url)) {
+      // 同一個網址只列一次（例如同品牌兩個食材填同一個賣場連結）
+      if (!group.own.some(o => o.url === url)) group.own.push({ name: ing['食材名稱'] || '', url });
+    } else {
+      group.hasPlain = true;
+    }
+  });
+
+  const rows = [];
+  byBrand.forEach((group, brand) => {
+    const base = getBrandStatus(brand);
+    if (base.status === 'open') { rows.push(base); return; }
+    group.own.forEach(o => {
+      const st = getBrandStatus(brand);
+      st.shopeeUrl = o.url;
+      st.label = o.name ? `${brand}・${o.name}` : brand;
+      rows.push(st);
+    });
+    if (group.hasPlain || !group.own.length) rows.push(base);
+  });
+  return rows;
+}
+
 function handleBuyClick(recipe, statusListEl) {
-  const brands = getRecipeBrands(recipe);
-  if (!brands.length) {
+  const rows = getRecipeBuyStatuses(recipe);
+  if (!rows.length) {
     statusListEl.innerHTML = `<div class="buy-status-item"><span class="bsi-text">尚未設定這道食譜的品牌資訊</span></div>`;
     statusListEl.style.display = 'block';
     return;
   }
-  const statuses = brands.map(getBrandStatus);
-  const openOnes = statuses.filter(s => s.status === 'open');
+  // 開團中的品牌一定只佔一行（上面已保證），所以這裡的「只有一個開團中」語意跟以前一樣
+  const openOnes = rows.filter(s => s.status === 'open');
 
   if (openOnes.length === 1) {
     if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_src_recipesbrand', 'click');
@@ -2647,7 +2692,7 @@ function handleBuyClick(recipe, statusListEl) {
     return;
   }
 
-  renderBuyStatusList(statuses, statusListEl);
+  renderBuyStatusList(rows, statusListEl);
 }
 
 function renderBuyStatusList(statuses, statusListEl) {
@@ -2665,10 +2710,13 @@ function renderBuyStatusList(statuses, statusListEl) {
       rightHtml = `<a class="bsi-btn" href="${s.url}" target="_blank" rel="noopener noreferrer">前往下單</a>`;
     } else if (s.status === 'upcoming') {
       rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(s.nextDate)} 開團</span>${shopeeBtn}</div>`;
+    } else if (s.status === 'nobrand') {
+      rightHtml = shopeeBtn; // 沒設品牌＝查不到開團狀態，只給這個食材自己的蝦皮連結
     } else {
       rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前已結單</span>${shopeeBtn}</div>`;
     }
-    row.innerHTML = `<span class="bsi-brand">${s.brand}</span>` + rightHtml;
+    // label 是食譜清單裡「品牌・食材名」那種列（該食材有自己的蝦皮連結）；沒有 label 就照舊顯示品牌名
+    row.innerHTML = `<span class="bsi-brand">${s.label || s.brand}</span>` + rightHtml;
     if (s.status === 'open' && s.evKey) {
       const btn = row.querySelector('.bsi-btn');
       if (btn) btn.addEventListener('click', () => sendStat(s.evKey + '_src_recipeslist', 'click'));

@@ -32,6 +32,7 @@
 2. `curl -sL "【APPS_SCRIPT_URL】?scope=【scope】&t=$(date +%s)"`（`t=` 時戳防快取；`-L` 必帶，GAS 會 302）。
 3. 回傳中找得到差異 → 版本確認通過。找不到 → 回報「線上仍是舊版或改動未達預期」，請使用者確認部署的是最新程式碼；**不要**開始改自己的程式碼（見 30 號檔 S4 反例）。
 - 若這次改動不影響任何免登入端點的輸出（純後台邏輯），標注「無法從外部驗證，需使用者在後台實測」，並附使用者可照做的實測步驟。
+- **curl 回 `http=000`／連不上時**：先跑 `curl -sS "$HTTPS_PROXY/__agentproxy/status"` 看 `recentRelayFailures`。若是 `connect_rejected`（gateway 403），代表這個 session 的網路政策擋掉外連（遠端環境常見，`script.google.com` 與 `dondon0813.github.io` 都可能被擋）——**這不是程式問題，立刻停止重試**，改走 L5 的 fallback：用 `git show origin/main:檔名 | grep` 確認 main 內容 → 如實回報「本 session 無法做線上驗證」→ 給使用者可照做的實測步驟。**禁止**把「程式碼已在 main」講成「線上已驗證通過」。
 
 ## 4. 試算表結構變更
 
