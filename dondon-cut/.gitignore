@@ -1,0 +1,18 @@
+# 影片和產出的素材都不進 git（會爆掉，而且是你的私人內容）
+media/*
+!media/.gitkeep
+
+exports/*
+!exports/.gitkeep
+
+projects/*/frames/
+projects/*/audio.wav
+projects/*/whisper-out.*
+projects/*/*.tmp-*
+
+# project.json / transcript.json 刻意「不」忽略：
+# 那是剪輯決策和逐字稿，體積小，留著才能版本控管、才能還原你剪過什麼。
+
+node_modules/
+.DS_Store
+Thumbs.db

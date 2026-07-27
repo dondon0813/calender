@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>dondon cut</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">dondon<span>cut</span></div>
+  <select id="projectPicker" title="選擇專案"></select>
+  <span id="saveState" class="save-state">—</span>
+  <div class="spacer"></div>
+  <label class="check"><input type="checkbox" id="burnSubs" /> 燒字幕</label>
+  <button id="exportBtn" class="primary">匯出影片</button>
+</header>
+
+<main id="workspace" class="workspace">
+
+  <section class="stage">
+    <div class="video-wrap">
+      <video id="video" preload="metadata" playsinline></video>
+      <div id="videoHint" class="video-hint">先選一個專案</div>
+    </div>
+
+    <div class="transport">
+      <button id="playBtn" title="播放 / 暫停（空白鍵）">▶</button>
+      <button data-nudge="-1" title="往回 1 秒">−1s</button>
+      <button data-nudge="1" title="往前 1 秒">+1s</button>
+      <span class="time"><b id="curTime">00:00.0</b> / <span id="totalTime">00:00.0</span></span>
+      <span class="hint" id="clipHint"></span>
+      <div class="spacer"></div>
+      <button id="splitBtn" title="在游標處切一刀（S）">切一刀</button>
+      <button id="deleteBtn" title="刪掉選取的片段（Delete）">刪除片段</button>
+      <button id="undoBtn" title="復原（Ctrl/Cmd+Z）">復原</button>
+    </div>
+
+    <div class="tracks">
+      <div class="track-row">
+        <div class="track-label">原片<small>拖曳可框選並加回</small></div>
+        <div id="sourceTrack" class="track source-track">
+          <div id="sourceKept" class="kept-layer"></div>
+          <div id="sourceSel" class="source-sel hidden"></div>
+          <div id="sourceHead" class="playhead"></div>
+        </div>
+        <button id="addSelBtn" class="add-sel" disabled>加回這段</button>
+      </div>
+
+      <div class="track-row">
+        <div class="track-label">成品<small>拖兩端修剪／拖中間換順序</small></div>
+        <div id="timeline" class="track timeline">
+          <div id="clipLayer" class="clip-layer"></div>
+          <div id="playhead" class="playhead"></div>
+        </div>
+        <div class="zoom">
+          <button data-zoom="out">−</button><button data-zoom="in">＋</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="side-head">
+      <strong>逐字稿</strong>
+      <span id="transcriptCount" class="muted"></span>
+    </div>
+    <div class="side-tools">
+      <button id="keepSelBtn" disabled>只留選取</button>
+      <button id="dropSelBtn" disabled>移除選取</button>
+      <button id="clearSelBtn">取消選取</button>
+    </div>
+    <div id="transcript" class="transcript">
+      <p class="muted pad">還沒有逐字稿。安裝 whisper 後重新 ingest 就會出現。</p>
+    </div>
+  </aside>
+
+</main>
+
+<div id="log" class="log hidden"><div class="log-head"><strong id="logTitle">工作紀錄</strong><button id="logClose">×</button></div><pre id="logBody"></pre></div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>

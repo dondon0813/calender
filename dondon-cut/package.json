@@ -1,0 +1,17 @@
+{
+  "name": "dondon-cut",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "與 Claude 協作的本機剪片工具",
+  "scripts": {
+    "start": "node server.js",
+    "ingest": "node scripts/ingest.mjs",
+    "export": "node scripts/export.mjs",
+    "check": "node scripts/check.mjs",
+    "doctor": "node scripts/doctor.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
