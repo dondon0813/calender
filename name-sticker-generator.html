@@ -453,11 +453,17 @@ async function buildNameStickerPoster(styleKey, name, englishName) {
 // 真正的自然寬度，才能正確判斷剛好塞得下的字級。
 const NS_NAME_MAX_FONT = 56;
 const NS_NAME_MIN_FONT = 16;
+// 安全係數：手機端有使用者反映中文姓名會被截斷（例如「陳星宇」只顯示「陳星」），
+// 但同一個姓名在這裡（桌機 Chromium）怎麼測都正常，判斷是不同瀏覽器/裝置
+// 對這段文字的實際渲染寬度跟這裡量到的有落差（推測跟 iOS Safari 相關，但
+// 沒有 Safari 可以實測驗證）。抓寬度時先打個折，留出緩衝，才不會在測量
+// 準確但實際渲染稍寬的裝置上被裁字
+const NS_WIDTH_SAFETY_FACTOR = 0.85;
 function fitStickerNameFontSize(gridEl) {
   const sample = gridEl.querySelector('.ns-cell-name');
   if (!sample) return;
   const name = sample.textContent;
-  const available = sample.clientWidth;
+  const available = sample.clientWidth * NS_WIDTH_SAFETY_FACTOR;
 
   const probe = document.createElement('div');
   probe.style.cssText = 'position:absolute; visibility:hidden; left:-99999px; top:0; white-space:nowrap; font-family:' + getComputedStyle(sample).fontFamily + '; font-weight:800;';
@@ -487,7 +493,7 @@ function fitStickerNameFontSizeDual(gridEl) {
   const sampleZh = gridEl.querySelector('.ns-cell-name');
   const sampleEn = gridEl.querySelector('.ns-cell-name-en');
   if (!sampleZh || !sampleEn) return;
-  const available = sampleZh.clientWidth;
+  const available = sampleZh.clientWidth * NS_WIDTH_SAFETY_FACTOR;
 
   const probeZh = document.createElement('div');
   probeZh.style.cssText = 'position:absolute; visibility:hidden; left:-99999px; top:0; white-space:nowrap; font-family:' + getComputedStyle(sampleZh).fontFamily + '; font-weight:800;';
