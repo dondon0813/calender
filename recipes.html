@@ -2345,12 +2345,21 @@ function openIngredientModal(item) {
   ingBuyStatusEl.innerHTML = '';
   ingBuyBtn.onclick = () => {
     const brand = item['品牌'];
+    // 這個食材/成品自己填的蝦皮連結（食材資料庫、成品資料庫的「蝦皮連結」欄）。
+    // 有些團品項不多但品項之間差很多，適合各自導到自己的商品頁，所以食材填了就蓋掉品牌那條。
+    const ownShopee = String(item['蝦皮連結'] || '').trim();
     if (!brand) {
+      // 沒設品牌就沒有開團狀態可查；但如果這個食材自己填了蝦皮連結，還是要讓客人買得到
+      if (isValidUrl(ownShopee)) {
+        renderBuyStatusList([{ brand: item['食材名稱'] || '', status: 'nobrand', shopeeUrl: ownShopee }], ingBuyStatusEl);
+        return;
+      }
       ingBuyStatusEl.innerHTML = `<div class="buy-status-item"><span class="bsi-text">尚未設定這個食材的品牌資訊</span></div>`;
       ingBuyStatusEl.style.display = 'block';
       return;
     }
     const status = getBrandStatus(brand);
+    if (isValidUrl(ownShopee)) status.shopeeUrl = ownShopee; // 食材自己的優先，空白才用品牌預設
     if (status.status === 'open') {
       if (status.evKey) sendStat(status.evKey + '_src_recipesing', 'click');
       window.open(status.url, '_blank', 'noopener,noreferrer');
@@ -2665,6 +2674,8 @@ function renderBuyStatusList(statuses, statusListEl) {
       rightHtml = `<a class="bsi-btn" href="${s.url}" target="_blank" rel="noopener noreferrer">前往下單</a>`;
     } else if (s.status === 'upcoming') {
       rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(s.nextDate)} 開團</span>${shopeeBtn}</div>`;
+    } else if (s.status === 'nobrand') {
+      rightHtml = shopeeBtn; // 沒設品牌＝查不到開團狀態，只給這個食材自己的蝦皮連結
     } else {
       rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前已結單</span>${shopeeBtn}</div>`;
     }
