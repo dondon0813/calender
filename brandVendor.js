@@ -234,6 +234,7 @@ function openBrandEditModal(brand) {
   document.getElementById('brandNoteInput').value = brand ? brand.note : '';
   document.getElementById('brandShowInRecipeInput').checked = brand ? !!brand.showInRecipe : false;
   document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
+  document.getElementById('brandShopeeInput').value = brand ? (brand.shopeeUrl || '') : '';
   document.getElementById('brandEditModal').classList.add('show');
 }
 function closeBrandEditModal() {
@@ -253,7 +254,8 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     igContact: document.getElementById('brandIgInput').value.trim(),
     note: document.getElementById('brandNoteInput').value.trim(),
     showInRecipe: document.getElementById('brandShowInRecipeInput').checked,
-    intro: document.getElementById('brandIntroInput').value.trim()
+    intro: document.getElementById('brandIntroInput').value.trim(),
+    shopeeUrl: document.getElementById('brandShopeeInput').value.trim()
   };
   const btn = document.getElementById('brandSaveBtn');
   btn.disabled = true;
@@ -400,6 +402,7 @@ function openBrandDetailModal(brand) {
   if (brand.emailContact) lines.push(`<div><b>Email窗口：</b>${escHtml(brand.emailContact)}</div>`);
   if (brand.igContact) lines.push(`<div><b>IG窗口：</b>${escHtml(brand.igContact)}</div>`);
   if (brand.intro) lines.push(`<div><b>品牌介紹：</b>${escHtml(brand.intro)}</div>`);
+  if (brand.shopeeUrl) lines.push(`<div><b>蝦皮連結：</b><a href="${escHtml(brand.shopeeUrl)}" target="_blank" rel="noopener noreferrer">${escHtml(brand.shopeeUrl)}</a></div>`);
   if (brand.note) lines.push(`<div><b>備註：</b>${escHtml(brand.note)}</div>`);
   document.getElementById('brandDetailBody').innerHTML = lines.join('');
 

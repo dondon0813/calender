@@ -1523,13 +1523,13 @@ function ingredientPlaceholderImg(item) {
   return emojiPlaceholderImg(categoryEmojiFor(item));
 }
 
-// 開學清單品項彈窗的蝦皮連結：如果該品項/品牌沒有填自己的「蝦皮連結」，就不會顯示前往購買按鈕
-// （之前會自動用下面這個預設連結頂替，現在改成沒填就不顯示，避免導去還沒設定好的連結）
-// 這個常數先保留著，如果之後想恢復「沒填就用預設連結」的行為，可以再改回來
-const SHOPEE_AFFILIATE_URL = "https://shopee.tw/PASTE_YOUR_AFFILIATE_LINK_HERE";
+// 蝦皮導流連結：一律填在後台「團購品牌資料庫」每個品牌的「蝦皮連結」欄，由 scope=public 帶下來存進 BRAND_SHOPEE。
+// 沒填的品牌就不會出現蝦皮按鈕（避免導去還沒設定好的連結）。
+// （原本這裡放過一個全站共用的預設連結常數，但從沒被使用，已移除，免得誤以為要填在程式碼裡。）
 
 let BRANDS = [];
 let BRAND_INTRO = {}; // 品牌名稱 -> 品牌介紹文字
+let BRAND_SHOPEE = {}; // 品牌名稱 -> 蝦皮連結（後台「團購品牌資料庫」的蝦皮連結欄；沒開團時導流用，沒填就不顯示按鈕）
 let INGREDIENTS = [];
 let RECIPES = [];
 let CALENDAR_EVENTS = [];
@@ -1617,10 +1617,13 @@ async function loadRecipeDb() {
   const brandRows = data.brands || [];
   BRANDS = brandRows.map(b => String(b['品牌名稱'] || '').trim()).filter(Boolean);
   BRAND_INTRO = {};
+  BRAND_SHOPEE = {};
   brandRows.forEach(b => {
     const name = String(b['品牌名稱'] || '').trim();
     const intro = String(b['品牌介紹'] || '').trim();
     if (name && intro) BRAND_INTRO[name] = intro;
+    const shopee = String(b['蝦皮連結'] || '').trim();
+    if (name && isValidUrl(shopee)) BRAND_SHOPEE[name] = shopee;
   });
   INGREDIENTS = (data.ingredients || []).filter(i => i['食材ID']);
   RECIPES = (data.recipes || []).filter(r => r['食譜ID']);
@@ -1659,19 +1662,21 @@ async function loadCalendar() {
 // ===== 品牌開團狀態 =====
 function getBrandStatus(brandName) {
   const today = startOfDay(new Date());
+  // 沒開團時要導去的蝦皮連結（後台品牌資料庫填的；沒填就是空字串＝不顯示蝦皮按鈕）
+  const shopeeUrl = BRAND_SHOPEE[brandName] || '';
   const matches = CALENDAR_EVENTS.filter(ev => ev.title.includes(brandName));
   const openEvent = matches.find(ev => startOfDay(ev.start) <= today && today <= startOfDay(ev.displayEnd));
   if (openEvent) {
     // evKey 格式須與 index.html 的 getStatKey 完全一致：${id}_${YYYY-M-D}（月/日不補零、本地時區）
     const s = openEvent.start;
     const evKey = `${openEvent.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
-    return { brand: brandName, status: 'open', url: openEvent.url, evKey };
+    return { brand: brandName, status: 'open', url: openEvent.url, evKey, shopeeUrl };
   }
   const future = matches
     .filter(ev => startOfDay(ev.start) > today)
     .sort((a, b) => a.start - b.start);
-  if (future.length) return { brand: brandName, status: 'upcoming', nextDate: future[0].start };
-  return { brand: brandName, status: 'ended' };
+  if (future.length) return { brand: brandName, status: 'upcoming', nextDate: future[0].start, shopeeUrl };
+  return { brand: brandName, status: 'ended', shopeeUrl };
 }
 
 // ===== 資料整理 =====
@@ -2651,12 +2656,17 @@ function renderBuyStatusList(statuses, statusListEl) {
     const row = document.createElement('div');
     row.className = 'buy-status-item';
     let rightHtml = '';
+    // 沒開團的時候（還沒開團／已結單）就用品牌資料庫填的蝦皮連結導流；沒填就只顯示狀態文字
+    // （做法跟開學清單的品項小卡一致：左邊寫下一團日期／已結單，右邊擺蝦皮下單按鈕）
+    const shopeeBtn = isValidUrl(s.shopeeUrl)
+      ? `<a class="bsi-btn" href="${s.shopeeUrl}" target="_blank" rel="noopener noreferrer">🛒 蝦皮下單</a>`
+      : '';
     if (s.status === 'open') {
       rightHtml = `<a class="bsi-btn" href="${s.url}" target="_blank" rel="noopener noreferrer">前往下單</a>`;
     } else if (s.status === 'upcoming') {
-      rightHtml = `<span class="bsi-text">下一團 ${fmtSingleDate(s.nextDate)} 開團</span>`;
+      rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">下一團 ${fmtSingleDate(s.nextDate)} 開團</span>${shopeeBtn}</div>`;
     } else {
-      rightHtml = `<span class="bsi-text">目前已結單</span>`;
+      rightHtml = `<div style="display:flex; align-items:center; gap:6px;"><span class="bsi-text">目前已結單</span>${shopeeBtn}</div>`;
     }
     row.innerHTML = `<span class="bsi-brand">${s.brand}</span>` + rightHtml;
     if (s.status === 'open' && s.evKey) {
