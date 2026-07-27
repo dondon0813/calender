@@ -423,6 +423,14 @@ async function buildNameStickerPoster(styleKey, name, englishName) {
     gridEl.appendChild(cell);
   });
 
+  // 自訂字體（Baloo 2／Huninn）第一次造訪時可能還沒下載完成，這時候量測寬度
+  // 會用瀏覽器暫時的替代字體去算，字級就會算錯；等字體真的載入完成之後
+  // 換成正確字體重繪，文字可能變寬而超出格子，被 overflow 裁掉（中文只顯示
+  // 兩個字的成因）。這裡先等字體真的就緒，才用「量出來的」字體去決定字級
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (e) { /* 忽略，仍照現況量測 */ }
+  }
+
   if (hasEnglish) {
     fitStickerNameFontSizeDual(gridEl);
   } else {
