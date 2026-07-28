@@ -544,7 +544,7 @@ function pgBuildPosterHtml(r) {
     const img = pgIsValidUrl(imgRaw) ? imgRaw : PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-ing-row">
-        <div class="pgp-ing-photo-wrap"><img class="pgp-ing-photo" crossorigin="anonymous" src="${img}"></div>
+        <div class="pgp-ing-photo-wrap" style="background-image:url('${escHtml(img)}')"><img class="pgp-ing-photo" crossorigin="anonymous" src="${img}"></div>
         <div class="pgp-ing-text"><span class="pgp-ing-name">${name}</span>${qty ? `<span class="pgp-ing-qty">${qty}</span>` : ''}</div>
       </div>`;
   }).join('');
