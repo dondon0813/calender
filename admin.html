@@ -4621,6 +4621,10 @@
       <input type="text" id="brandEmailInput" placeholder="email 地址">
       <label for="brandIgInput">IG窗口</label>
       <input type="text" id="brandIgInput" placeholder="IG 帳號或連結">
+      <label for="brandCommissionRateInput">分潤 %（只填數字，10 就是 10%；還沒談定就留空）</label>
+      <input type="number" id="brandCommissionRateInput" min="0" max="100" step="0.1" placeholder="例如：10">
+      <label for="brandCommissionNoteInput">分潤說明（特殊條件寫這裡，例如「滿萬 12%」「首團不抽」）</label>
+      <textarea id="brandCommissionNoteInput" rows="2" placeholder="沒有特殊條件就留空…"></textarea>
       <label for="brandNoteInput">品牌備註</label>
       <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
       <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
@@ -4700,7 +4704,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=3"></script>
+<script src="brandVendor.js?v=4"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

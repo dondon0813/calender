@@ -28,6 +28,16 @@ function vendorNamesOf_(brand) {
   return (brand.vendorIds || []).map(vendorNameById_).filter(Boolean).join('、');
 }
 
+// 分潤顯示用：數字欄＋說明欄合成一句（例：10%（滿萬 12%））。兩欄都空就回 ''＝還沒登記分潤
+function bvCommissionText_(brand) {
+  const rate = brand.commissionRate;
+  const hasRate = rate !== '' && rate !== null && rate !== undefined;
+  const note = String(brand.commissionNote || '').trim();
+  if (hasRate && note) return rate + '%（' + note + '）';
+  if (hasRate) return rate + '%';
+  return note;
+}
+
 // 品牌廠商頁搜尋：scope 決定搜尋對象，有關鍵字時只顯示該區塊
 // bvSearchScope 宣告在檔案最前段（避免開機期 TDZ），見 VIEW_ID_MAP 附近
 
@@ -92,7 +102,7 @@ function renderBrandDbList() {
     return;
   }
   const kw = bvSearchScope === 'brand' ? bvSearchText_() : '';
-  const list = brandDb.filter(b => bvMatch_(kw, [b.id, b.name, vendorNamesOf_(b), b.intro, b.note]));
+  const list = brandDb.filter(b => bvMatch_(kw, [b.id, b.name, vendorNamesOf_(b), b.intro, b.note, b.commissionNote, b.commissionRate]));
   if (!list.length) {
     el.innerHTML = '<div class="bv-search-empty">找不到符合「' + escHtml(kw) + '」的品牌</div>';
     return;
@@ -101,9 +111,12 @@ function renderBrandDbList() {
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
     const vendorName = vendorNamesOf_(b);
+    // 右側標籤直接秀分潤，才能一眼掃出哪些品牌還沒登記
+    const commission = bvCommissionText_(b);
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
-      `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>`;
+      `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>` +
+      `<span class="cal-edit-day-row-tag"${commission ? '' : ' style="opacity:.45;"'}>${commission ? '💰 ' + escHtml(commission) : '分潤未填'}</span>`;
     row.addEventListener('click', () => {
       if (brandVendorEditMode) openBrandEditModal(b);
       else openBrandDetailModal(b);
@@ -231,6 +244,8 @@ function openBrandEditModal(brand) {
   document.getElementById('brandLineInput').value = brand ? brand.lineContact : '';
   document.getElementById('brandEmailInput').value = brand ? brand.emailContact : '';
   document.getElementById('brandIgInput').value = brand ? brand.igContact : '';
+  document.getElementById('brandCommissionRateInput').value = brand && brand.commissionRate !== '' && brand.commissionRate !== undefined ? brand.commissionRate : '';
+  document.getElementById('brandCommissionNoteInput').value = brand ? (brand.commissionNote || '') : '';
   document.getElementById('brandNoteInput').value = brand ? brand.note : '';
   document.getElementById('brandShowInRecipeInput').checked = brand ? !!brand.showInRecipe : false;
   document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
@@ -252,6 +267,9 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     lineContact: document.getElementById('brandLineInput').value.trim(),
     emailContact: document.getElementById('brandEmailInput').value.trim(),
     igContact: document.getElementById('brandIgInput').value.trim(),
+    // 分潤% 留空就送空字串（等於「還沒談定」），後端不會硬塞 0
+    commissionRate: document.getElementById('brandCommissionRateInput').value.trim(),
+    commissionNote: document.getElementById('brandCommissionNoteInput').value.trim(),
     note: document.getElementById('brandNoteInput').value.trim(),
     showInRecipe: document.getElementById('brandShowInRecipeInput').checked,
     intro: document.getElementById('brandIntroInput').value.trim(),
@@ -398,6 +416,9 @@ function openBrandDetailModal(brand) {
   const lines = [];
   const vendorName = vendorNamesOf_(brand);
   lines.push(`<div><b>所屬廠商：</b>${vendorName ? escHtml(vendorName) : '－'}</div>`);
+  // 分潤沒填也要顯示「尚未登記」，不然會分不出「沒填」和「這個彈窗不顯示分潤」
+  const commission = bvCommissionText_(brand);
+  lines.push(`<div><b>分潤：</b>${commission ? escHtml(commission) : '尚未登記'}</div>`);
   if (brand.lineContact) lines.push(`<div><b>LINE窗口：</b>${escHtml(brand.lineContact)}</div>`);
   if (brand.emailContact) lines.push(`<div><b>Email窗口：</b>${escHtml(brand.emailContact)}</div>`);
   if (brand.igContact) lines.push(`<div><b>IG窗口：</b>${escHtml(brand.igContact)}</div>`);
@@ -472,6 +493,8 @@ function renderEvBrandMatchInfo() {
 
     let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
     const lines = [];
+    const commission = bvCommissionText_(brand);
+    if (commission) lines.push('分潤：' + commission);
     if (brand.lineContact) lines.push('LINE窗口：' + brand.lineContact);
     if (brand.emailContact) lines.push('Email窗口：' + brand.emailContact);
     if (brand.igContact) lines.push('IG窗口：' + brand.igContact);

@@ -22,7 +22,7 @@ Google 試算表（兩份！）
 
 - 主 Apps Script 部署 ID：`AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R`（admin.js / recipes / school-list / school-labels 頂部常數 `APPS_SCRIPT_URL`；**index.html 例外**：常數名是 `STATS_BACKEND_URL` 且不在頂部，Grep 它才找得到）。
 - **例外**：school-labels.html 另有第二個部署常數 `LABELS_API_URL`（school-labels.html:135 附近）。
-- 資安鐵律：`scope=public` 與 `brands`/`brandThumbs` 是免登入端點，**只准輸出 品牌名稱／品牌介紹／去背小圖／蝦皮連結**，聯絡窗口、LINE、Email、備註等內部欄位絕不可外洩。（蝦皮連結 2026-07-27 加入白名單：那是導購網址，本來就是要給客人點的。）
+- 資安鐵律：`scope=public` 與 `brands`/`brandThumbs` 是免登入端點，**只准輸出 品牌名稱／品牌介紹／去背小圖／蝦皮連結**，聯絡窗口、LINE、Email、備註、**分潤%／分潤說明**等內部欄位絕不可外洩。（蝦皮連結 2026-07-27 加入白名單：那是導購網址，本來就是要給客人點的。分潤是商業機密，永遠不進白名單。）
 
 ## 2. 檔案清單與大小警示
 

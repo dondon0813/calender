@@ -779,7 +779,8 @@ function getBrandDbSheet_() {
   if (!sheet) {
     sheet = ss.insertSheet(BRAND_DB_SHEET_NAME);
     // 所屬廠商ID 可填多個，用逗號分隔（例：V001,V004）——同品牌跟不同廠商開不同聯名款
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結']);
+    // O「分潤%」存純數字（10 = 10%）供排序／統計；P「分潤說明」存自由文字（例：滿萬 12%、首團不抽）
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結', '分潤%', '分潤說明']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -874,6 +875,14 @@ function splitIds_(val) {
   return String(val || '').split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; });
 }
 
+// 分潤% 一律收斂成純數字（10 = 10%）。使用者可能打成「10%」或「 10 」，這裡先洗乾淨；
+// 洗不出數字（空白、「另議」之類的文字）就回 ''，那種內容應該寫在「分潤說明」欄。
+function normCommissionRate_(val) {
+  if (val === '' || val === null || val === undefined) return '';
+  const n = parseFloat(String(val).replace(/[%％\s,]/g, ''));
+  return isNaN(n) ? '' : n;
+}
+
 function getBrandDbList_() {
   const sheet = getBrandDbSheet_();
   const data = sheet.getDataRange().getValues();
@@ -895,7 +904,10 @@ function getBrandDbList_() {
       showInRecipe: String(row[10] || '').trim() === '是',
       intro: String(row[11] || ''),
       brandImageUrl: String(row[12] || ''),  // 品牌圖片（大合照／介紹頁用）
-      shopeeUrl: String(row[13] || '')  // 蝦皮連結（沒開團時前台食材/食譜頁導流用；空白＝不顯示按鈕）
+      shopeeUrl: String(row[13] || ''),  // 蝦皮連結（沒開團時前台食材/食譜頁導流用；空白＝不顯示按鈕）
+      // 分潤：數字欄拿來排序／統計，說明欄放特殊條件；兩者都可留空。⚠️ 內部欄位，禁止進 scope=public
+      commissionRate: normCommissionRate_(row[14]),
+      commissionNote: String(row[15] || '')
     });
   }
   return list;
@@ -918,7 +930,9 @@ function addBrandDb_(fields) {
     fields.showInRecipe || '',
     fields.intro || '',
     fields.brandImageUrl || '',
-    fields.shopeeUrl || ''
+    fields.shopeeUrl || '',
+    normCommissionRate_(fields.commissionRate),
+    fields.commissionNote || ''
   ]);
   return id;
 }
@@ -939,6 +953,8 @@ function updateBrandDb_(id, fields) {
   setIf(12, fields.intro);
   setIf(13, fields.brandImageUrl);
   setIf(14, fields.shopeeUrl);
+  if (fields.commissionRate !== undefined) sheet.getRange(row, 15).setValue(normCommissionRate_(fields.commissionRate));
+  setIf(16, fields.commissionNote);
   sheet.getRange(row, 10).setValue(new Date());
   return true;
 }
@@ -2249,7 +2265,9 @@ function doPost(e) {
         showInRecipe: body.showInRecipe ? '是' : '',
         intro: String(body.intro || ''),
         brandImageUrl: String(body.brandImageUrl || ''),
-        shopeeUrl: String(body.shopeeUrl || '')
+        shopeeUrl: String(body.shopeeUrl || ''),
+        commissionRate: body.commissionRate,
+        commissionNote: String(body.commissionNote || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -2270,6 +2288,8 @@ function doPost(e) {
       if (body.intro !== undefined) fields.intro = String(body.intro);
       if (body.brandImageUrl !== undefined) fields.brandImageUrl = String(body.brandImageUrl);
       if (body.shopeeUrl !== undefined) fields.shopeeUrl = String(body.shopeeUrl);
+      if (body.commissionRate !== undefined) fields.commissionRate = body.commissionRate;
+      if (body.commissionNote !== undefined) fields.commissionNote = String(body.commissionNote);
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }
