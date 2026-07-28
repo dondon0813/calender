@@ -336,10 +336,12 @@ function pgGetRecipeIngredients(recipe) {
   tokens.forEach(token => {
     const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
     let ing = pgIngredients.find(i => i['食材ID'] === idOrName);
+    let matchedByAlias = false; // 是不是靠「簡稱」比對到的（不是完整食材名稱、也不是ID）
     if (!ing && idOrName) {
       let nameMatches = pgIngredients.filter(i => i['食材名稱'] === idOrName);
       if (!nameMatches.length) {
         nameMatches = pgIngredients.filter(i => pgIngredientFilterKeys(i).includes(idOrName));
+        matchedByAlias = nameMatches.length > 0;
       }
       if (nameMatches.length === 1) {
         ing = nameMatches[0];
@@ -348,7 +350,11 @@ function pgGetRecipeIngredients(recipe) {
       }
     }
     if (ing) {
-      result.push(Object.assign({}, ing, { _quantity: qty || '' }));
+      // 靠簡稱比對到的話，顯示名稱要用食譜實際打的那個詞（例如「優格」），不要
+      // 自動換成資料庫裡那個品項自己的簡稱清單第一個別名（可能更長，例如
+      // 「低脂優格/優格」的話會變成顯示「低脂優格」），跟 recipes.html 同一套規則。
+      const displayKey = matchedByAlias ? idOrName : '';
+      result.push(Object.assign({}, ing, { _quantity: qty || '', _displayKey: displayKey }));
     } else if (idOrName) {
       result.push({ 食材名稱: idOrName, _quantity: qty || '', _generic: true });
     }
@@ -561,7 +567,7 @@ function pgBuildPosterHtml(r) {
   const tips = pgGetTipLines(r).slice(0, 3); // 固定版型上限：最多3行
 
   const ingHtml = ingList.map(i => {
-    const name = escHtml(pgIngredientFilterKey(i) || i['食材名稱'] || '');
+    const name = escHtml(i._displayKey || pgIngredientFilterKey(i) || i['食材名稱'] || '');
     const qty = escHtml(i._quantity || '');
     const imgRaw = pgToSameOriginUrl(i['圖片網址']);
     const img = pgIsValidUrl(imgRaw) ? imgRaw : PG_PLACEHOLDER_IMG;
@@ -583,7 +589,9 @@ function pgBuildPosterHtml(r) {
     const autoUrl = pgToSameOriginUrl(pgBuildAutoStepImageUrl(heroRaw, n));
     const imgUrl = pgIsValidUrl(manualUrl) ? manualUrl : (pgIsValidUrl(autoUrl) ? autoUrl : '');
     const captionRaw = s.length > 22 ? s.slice(0, 22) + '…' : s;
-    const caption = escHtml(captionRaw);
+    // 步驟文字有逗號的話，做成圖片時把逗號刪掉、改成換行（例如「雞蛋南瓜蒸15分，
+    // 花椰菜3分鐘」變成兩行），比逗號直接印出來更好讀
+    const caption = captionRaw.split(/[,，]/).map(part => escHtml(part.trim())).filter(Boolean).join('<br>');
     const stepImgSrc = imgUrl || PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-step-card">
