@@ -595,7 +595,7 @@ function pgBuildPosterHtml(r) {
     const stepImgSrc = imgUrl || PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-step-card">
-        <div class="pgp-step-caption">${caption}</div>
+        <div class="pgp-step-caption-wrap"><div class="pgp-step-caption">${caption}</div></div>
         <span class="pgp-step-badge">${n}</span>
         <div class="pgp-step-photo-wrap" style="background-image:url('${escHtml(stepImgSrc)}')">
           <img class="pgp-step-photo" crossorigin="anonymous" src="${stepImgSrc}">

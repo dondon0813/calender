@@ -2378,7 +2378,7 @@
     background: #FFFAF3;
     border: 2px dashed #FFC79A;
     border-radius: 20px;
-    padding: 40px 18px 18px;
+    padding: 40px 18px 10px;
     box-sizing: border-box;
     overflow: visible;
   }
@@ -2406,15 +2406,29 @@
   .pgp-step-grid {
     position: relative;
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 6px;
     height: 100%;
     overflow: hidden;
   }
-  .pgp-step-card { position: relative; flex: 1 1 0; min-width: 0; text-align: center; }
+  /* 卡片本身也是直向 flex：文字區塊 flex-grow 吃掉步驟框變高時多出來的彈性
+     空間，圖片維持固定高度貼齊卡片下緣，這樣不管步驟框多高，圖片離下面
+     虛線框的距離都固定（見 .pgp-step-section 的 padding-bottom）。 */
+  .pgp-step-card {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+  }
+  /* 數字圓圈跟箭頭原本用 top 從卡片頂部算距離，但文字區塊改彈性高度後，
+     頂部到圖片的距離會變動；改成用 bottom 從卡片底部算，因為圖片是固定
+     高度、貼齊卡片下緣，這樣不管文字區塊多高，圓圈跟箭頭都能穩穩貼在
+     圖片的同一個相對位置上。 */
   .pgp-step-arrow {
     position: absolute;
-    top: 190px;
+    bottom: 73px;
     width: 38px;
     height: 20px;
     box-sizing: border-box;
@@ -2446,19 +2460,29 @@
     border-bottom: 15px solid transparent;
     border-left: 21px solid #FD631C;
   }
+  /* 文字外層負責「吃掉彈性空間」+ 把文字垂直置中；line-clamp 一定要用
+     display:-webkit-box，沒辦法跟 flex 同時用在同一個元素上，所以拆成
+     外層(wrap，flex-grow+置中) 跟內層(caption，line-clamp) 兩層。 */
+  .pgp-step-caption-wrap {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
   .pgp-step-caption {
-    height: 90px;
+    width: 100%;
     font-size: 32px;
     color: var(--c-text-soft);
     line-height: 1.4;
-    margin-bottom: 8px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   /* 每個步驟文字中間加一條細直線做區隔（最後一格不用加，右邊沒有下一步了） */
-  .pgp-step-card:not(:last-child) .pgp-step-caption {
+  .pgp-step-card:not(:last-child) .pgp-step-caption-wrap {
     border-right: 2px solid #F0CBA0;
   }
   /* 裁切（不是完整顯示）：直式照片切上下、太寬的照片切左右，只切掉超出框外的部分，
@@ -2466,6 +2490,7 @@
      遇到原始尺寸比框大的照片會失效，變成整張放大只顯示正中央一小塊）。
      框高 165px，比正方形更偏長方形一點（上方多切一些）。 */
   .pgp-step-photo-wrap {
+    flex: none;
     width: 100%;
     height: 185px;
     overflow: hidden;
@@ -2483,7 +2508,7 @@
      html2canvas 會把陰影疊在圓圈本身上面，把底色蓋成一層髒灰色，所以拿掉了 */
   .pgp-step-badge {
     position: absolute;
-    top: 78px; left: 0px;
+    bottom: 165px; left: 0px;
     width: 40px; height: 40px;
     border-radius: 50%;
     background: #FC916F;
@@ -4724,7 +4749,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=15"></script>
+<script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
 <script src="admin.js?v=62"></script>
 <script src="memo.js?v=5"></script>
