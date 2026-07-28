@@ -2341,21 +2341,21 @@
     align-items: center;
     gap: 8px;
   }
+  /* 跟主圖/步驟圖同一招：用 background-image（不是 <img> 直接顯示）+ 隱藏的
+     <img crossorigin="anonymous"> 只負責偵測有沒有載入完成。食材圖片如果來自
+     不支援跨網域讀取的圖床，用 <img crossorigin> 直接顯示會整張讀取失敗變
+     破圖（連載都不肯載），改成 background-image 至少畫面上一定看得到圖片，
+     只有截圖匯出時，那張圖片才可能因為跨網域限制而缺席（www跟主圖/步驟圖
+     一樣的已知限制，不是新問題）。 */
   .pgp-ing-photo-wrap {
     flex: none;
     width: 64px;
     height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
   }
-  .pgp-ing-photo {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    display: block;
-  }
+  .pgp-ing-photo { display: none; }
   .pgp-ing-text { min-width: 0; overflow: hidden; }
   .pgp-ing-name,
   .pgp-ing-qty {
@@ -4720,7 +4720,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=12"></script>
+<script src="tools.js?v=13"></script>
 <script src="report.js?v=2"></script>
 <script src="admin.js?v=62"></script>
 <script src="memo.js?v=5"></script>
