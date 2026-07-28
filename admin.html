@@ -2325,11 +2325,14 @@
     justify-content: space-between;
     overflow: hidden;
   }
-  /* 食材數量少時補的小插圖，跟其他食材列一起吃 space-between 的間距，
-     不需要額外定位 */
+  /* 食材數量少時補的小插圖：margin-top:auto 讓它把上面所有食材列跟自己之間
+     的剩餘空間吃光，貼齊清單最下緣，不受 .pgp-ing-list 的 space-between 影響
+     （auto margin 在 flex 版面裡優先權比 justify-content 高，其他食材列還是
+     照常用 space-between 平均分配剩下的空間）。 */
   .pgp-ing-filler {
     display: flex;
     justify-content: center;
+    margin-top: auto;
   }
   .pgp-ing-filler img {
     width: 240px;
@@ -2349,8 +2352,8 @@
      一樣的已知限制，不是新問題）。 */
   .pgp-ing-photo-wrap {
     flex: none;
-    width: 64px;
-    height: 64px;
+    width: 76px;
+    height: 76px;
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
@@ -2507,9 +2510,10 @@
   }
   .pgp-tip-badge {
     position: absolute;
-    top: -22px;
-    left: 24px;
-    height: 58px;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 64px;
     width: auto;
     display: block;
   }
@@ -4720,7 +4724,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=14"></script>
+<script src="tools.js?v=15"></script>
 <script src="report.js?v=2"></script>
 <script src="admin.js?v=62"></script>
 <script src="memo.js?v=5"></script>
