@@ -205,14 +205,22 @@ function step2_組出紀錄_(data, blocks) {
 function step3_補結算列_(sheet, data, blocks, recs) {
   say_('');
   say_('【步驟3】月結算列');
+  // 月結算把「當月所有紀錄」都算進去（含還沒入帳的），這樣才看得到當月大概的收入。
+  // 但未結算的部分另外累計，寫進備註欄註記，避免把「已經收到」和「還沒收到」混為一談。
+  var DONE = { '已入帳': 1, '已請款': 1 };
   var sum = {};
   for (var i = 0; i < recs.length; i++) {
     var ym = recs[i][1].substring(0, 7);
-    if (!sum[ym]) sum[ym] = { s: 0, c: 0, f: 0, n: 0 };
+    if (!sum[ym]) sum[ym] = { s: 0, c: 0, f: 0, n: 0, pend: 0, pendN: 0 };
+    var comm = Number(recs[i][10]) || 0;
     sum[ym].s += Number(recs[i][8]) || 0;
-    sum[ym].c += Number(recs[i][10]) || 0;
+    sum[ym].c += comm;
     sum[ym].f += Number(recs[i][13]) || 0;
     sum[ym].n++;
+    if (!DONE[recs[i][14]] && comm > 0) { sum[ym].pend += comm; sum[ym].pendN++; }
+  }
+  function pendNote_(a) {
+    return a.pendN ? '含未結算 ' + a.pendN + ' 團 ' + fmt_(a.pend) + ' 元' : '';
   }
   // 現有結算列：檢查金額對不對
   var todo = [];
@@ -221,15 +229,29 @@ function step3_補結算列_(sheet, data, blocks, recs) {
     var ym = blocks[b].ym[0] + '-' + ('0' + blocks[b].ym[1]).slice(-2);
     if (!sum[ym]) continue;
     var cur = n_(data[blocks[b].row - 1][5]);
-    if (cur !== null && Math.round(cur) !== Math.round(sum[ym].c)) {
-      todo.push({ row: blocks[b].row, label: blocks[b].label, from: cur, to: Math.round(sum[ym].c) });
+    var note = pendNote_(sum[ym]);
+    if ((cur !== null && Math.round(cur) !== Math.round(sum[ym].c)) || note) {
+      todo.push({ row: blocks[b].row, label: blocks[b].label, from: cur,
+                  to: Math.round(sum[ym].c), note: note,
+                  changed: cur !== null && Math.round(cur) !== Math.round(sum[ym].c) });
     }
   }
-  if (todo.length) {
-    say_('  結算金額需要更正 ' + todo.length + ' 列：');
+  var changed = 0;
+  for (var t0 = 0; t0 < todo.length; t0++) if (todo[t0].changed) changed++;
+  if (changed) {
+    say_('  結算金額需要更正 ' + changed + ' 列：');
     for (var t = 0; t < todo.length; t++)
-      say_('    第' + todo[t].row + '列 ' + todo[t].label + '：' + fmt_(todo[t].from) + ' → ' + fmt_(todo[t].to));
+      if (todo[t].changed)
+        say_('    第' + todo[t].row + '列 ' + todo[t].label + '：' + fmt_(todo[t].from) + ' → ' + fmt_(todo[t].to) +
+             (todo[t].note ? '（' + todo[t].note + '）' : ''));
   } else say_('  現有結算列金額都正確');
+  var noted = 0;
+  for (var t1 = 0; t1 < todo.length; t1++) if (todo[t1].note) noted++;
+  if (noted) {
+    say_('  有未結算團的月份 ' + noted + ' 個，會在該結算列備註欄註記：');
+    for (var t2 = 0; t2 < todo.length; t2++)
+      if (todo[t2].note) say_('    ' + todo[t2].label + '：' + todo[t2].note);
+  }
 
   // 缺的月份
   var have = {};
@@ -249,12 +271,21 @@ function step3_補結算列_(sheet, data, blocks, recs) {
     say_('  缺少結算列的月份 ' + missing.length + ' 個（會補在該月最後一筆之後）：');
     for (var mi = 0; mi < missing.length; mi++) {
       var s = sum[missing[mi]];
-      say_('    ' + missing[mi] + '  ' + s.n + '筆  銷售 ' + fmt_(s.s) + '  分潤 ' + fmt_(s.c) + '  稿酬 ' + fmt_(s.f));
+      say_('    ' + missing[mi] + '  ' + s.n + '筆  銷售 ' + fmt_(s.s) + '  分潤 ' + fmt_(s.c) +
+           '  稿酬 ' + fmt_(s.f) + (pendNote_(s) ? '  ← ' + pendNote_(s) : ''));
     }
   } else say_('  沒有缺少的月份');
 
   if (DRY_RUN) { say_('  （試算模式，未寫入）'); return; }
-  for (var t2 = 0; t2 < todo.length; t2++) sheet.getRange(todo[t2].row, 6).setValue(todo[t2].to);
+  for (var t3 = 0; t3 < todo.length; t3++) {
+    if (todo[t3].changed) sheet.getRange(todo[t3].row, 6).setValue(todo[t3].to);
+    // 未結算註記寫進備註欄（第15欄）；原本有內容就接在後面，不覆蓋
+    if (todo[t3].note) {
+      var cell = sheet.getRange(todo[t3].row, 15);
+      var old = String(cell.getValue() || '').trim();
+      if (old.indexOf('含未結算') < 0) cell.setValue(old ? old + ' / ' + todo[t3].note : todo[t3].note);
+    }
+  }
   // 由下往上插入，避免列號位移
   var ins = [];
   for (var mi2 = 0; mi2 < missing.length; mi2++) {
@@ -275,8 +306,9 @@ function step3_補結算列_(sheet, data, blocks, recs) {
     sheet.getRange(rr, 4).setValue(Math.round(s2.s));
     sheet.getRange(rr, 6).setValue(Math.round(s2.c));
     if (s2.f) sheet.getRange(rr, 7).setValue(Math.round(s2.f));
+    if (pendNote_(s2)) sheet.getRange(rr, 15).setValue(pendNote_(s2));
   }
-  say_('  ✅ 更正 ' + todo.length + ' 列、新增 ' + ins.length + ' 列結算');
+  say_('  ✅ 更正 ' + changed + ' 列金額、加註記 ' + noted + ' 列、新增 ' + ins.length + ' 列結算');
 }
 
 function fmt_(x) { return Utilities.formatString('%s', Math.round(Number(x) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
