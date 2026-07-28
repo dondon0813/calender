@@ -355,9 +355,30 @@ function getStaff_() {
 // ===== 【新】管理員與員工權限 =====
 const ADMIN_NAME = '雪莉';
 const STAFF_PERM_SHEET_NAME = '員工權限';
+const STAFF_ROLE_LABEL = '角色';
+
+// 權限項目定義。**新增項目只要加在這裡**：試算表表頭、權限設定頁的開關都會自動長出來
+// （getStaffPermSheet_ 會補欄、perm-list 會把 defs 一起吐給前端渲染）。
 const PERM_DEFS = [
-  { key: 'imageLibrary', label: '圖片庫權限' }
+  { key: 'system',          label: '系統設定',     desc: '權限設定、社群連結等會動到系統的地方' },
+  // label 沿用舊表既有的「圖片庫權限」欄名，改名會讓補欄邏輯多長一個孤兒欄位
+  { key: 'imageLibrary',    label: '圖片庫權限',   desc: '會直接寫入 GitHub，改錯會影響前台' },
+  { key: 'report',          label: '報表統計',     desc: '瀏覽量、點擊來源等統計報表' },
+  { key: 'commission',      label: '分潤',         desc: '品牌資料庫的分潤%與分潤說明' },
+  { key: 'revenue',         label: '業績',         desc: '開團紀錄的營業額／實收金額' },
+  { key: 'brandVendorEdit', label: '品牌廠商編輯', desc: '關閉＝只能查看，不能新增或修改' },
+  { key: 'calendarEdit',    label: '行事曆編輯',   desc: '關閉＝只能查看檔期，不能排團或改內容' }
 ];
+
+// 角色預設值。選角色＝一次套上這組勾選，之後仍可針對個人單獨微調（微調結果存在該員工那一列）。
+// ⚠️ 這裡只是「預設模板」，真正生效的是試算表每個人自己那一列的勾選值。
+const ROLE_PRESETS = {
+  '副管理員':    { system: false, imageLibrary: false, report: true,  commission: true,  revenue: true,  brandVendorEdit: true,  calendarEdit: true },
+  '經紀人/助理': { system: false, imageLibrary: false, report: false, commission: true,  revenue: false, brandVendorEdit: true,  calendarEdit: true },
+  '行銷人員':    { system: false, imageLibrary: false, report: true,  commission: false, revenue: false, brandVendorEdit: false, calendarEdit: true },
+  '美編/小編':   { system: false, imageLibrary: false, report: false, commission: false, revenue: false, brandVendorEdit: false, calendarEdit: false }
+};
+const ROLE_NAMES = Object.keys(ROLE_PRESETS);
 
 function isAdmin_(name) {
   return String(name || '').trim() === ADMIN_NAME;
@@ -368,18 +389,28 @@ function getStaffPermSheet_() {
   let sheet = ss.getSheetByName(STAFF_PERM_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(STAFF_PERM_SHEET_NAME);
-    sheet.appendRow(['姓名'].concat(PERM_DEFS.map(p => p.label)));
+    sheet.appendRow(['姓名', STAFF_ROLE_LABEL].concat(PERM_DEFS.map(p => p.label)));
     sheet.setFrozenRows(1);
     return sheet;
   }
+  // 舊表只有「姓名｜圖片庫權限」，這裡把缺的欄補上去（含角色欄），不動既有欄位順序
   const header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(h => String(h).trim());
-  PERM_DEFS.forEach(p => {
-    if (header.indexOf(p.label) === -1) {
-      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(p.label);
-      header.push(p.label);
+  [STAFF_ROLE_LABEL].concat(PERM_DEFS.map(p => p.label)).forEach(label => {
+    if (header.indexOf(label) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(label);
+      header.push(label);
     }
   });
   return sheet;
+}
+
+function getStaffRole_(name) {
+  const sheet = getStaffPermSheet_();
+  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
+  const row = findStaffPermRow_(sheet, name);
+  const colIdx = header.indexOf(STAFF_ROLE_LABEL);
+  if (row === -1 || colIdx === -1) return '';
+  return String(sheet.getRange(row, colIdx + 1).getValue() || '').trim();
 }
 
 function findStaffPermRow_(sheet, name) {
@@ -415,6 +446,39 @@ function getAllPermissions_() {
     map[s.name] = getPermissionsFor_(s.name);
   });
   return map;
+}
+
+function getAllRoles_() {
+  const map = {};
+  getStaff_().forEach(s => {
+    if (isAdmin_(s.name)) return;
+    map[s.name] = getStaffRole_(s.name);
+  });
+  return map;
+}
+
+// 套用角色＝把該角色的預設值「寫進」該員工那一列的每一格。
+// 刻意不做「空白＝繼承角色」的隱含邏輯：試算表上看到什麼就是什麼，之後單獨微調也只是改那一格。
+function setStaffRole_(name, role) {
+  const preset = ROLE_PRESETS[role];
+  if (!preset) throw new Error('未知的角色：' + role);
+  const sheet = getStaffPermSheet_();
+  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
+  let row = findStaffPermRow_(sheet, name);
+  if (row === -1) {
+    const newRow = new Array(header.length).fill('');
+    newRow[0] = name;
+    sheet.appendRow(newRow);
+    row = sheet.getLastRow();
+  }
+  const roleIdx = header.indexOf(STAFF_ROLE_LABEL);
+  if (roleIdx !== -1) sheet.getRange(row, roleIdx + 1).setValue(role);
+  PERM_DEFS.forEach(p => {
+    const colIdx = header.indexOf(p.label);
+    if (colIdx === -1) return;
+    sheet.getRange(row, colIdx + 1).setValue(preset[p.key] ? '是' : '否');
+  });
+  return true;
 }
 
 function setPermission_(name, key, value) {
@@ -916,6 +980,25 @@ function getBrandDbList_() {
     });
   }
   return list;
+}
+
+// ⚠️ 分潤是商業機密：沒有 commission 權限的人，後端**直接不回傳這兩個欄位**，
+// 而不是靠前端隱藏（前端藏起來按 F12 就看得到，等於沒鎖）。
+function stripCommission_(list) {
+  return list.map(b => {
+    const copy = {};
+    Object.keys(b).forEach(k => {
+      if (k === 'commissionRate' || k === 'commissionNote') return;
+      copy[k] = b[k];
+    });
+    return copy;
+  });
+}
+
+function getBrandDbListFor_(user) {
+  const list = getBrandDbList_();
+  if (isAdmin_(user)) return list;
+  return getPermissionsFor_(user).commission ? list : stripCommission_(list);
 }
 
 function addBrandDb_(fields) {
@@ -2066,12 +2149,13 @@ function doGet(e) {
     todos: getTodos_(),
     stats: getStatsMap_(),
     isAdmin: isAdmin_(user),
+    myRole: isAdmin_(user) ? '主管理員' : getStaffRole_(user),
     permissions: getPermissionsFor_(user),
     allPermissions: isAdmin_(user) ? getAllPermissions_() : {},
     customBlocks: getAllCustomBlocks_(),
     socialLinks: publicResult.socialLinks,
     vendorDb: getVendorDbList_(),
-    brandDb: getBrandDbList_()
+    brandDb: getBrandDbListFor_(user)   // 沒有分潤權限的人，這裡就不會有 commission* 欄位
   };
 
   return jsonResult_(result);
@@ -2177,6 +2261,24 @@ function doPost(e) {
       return jsonResult_({ success: false, error: '未登入或登入逾時，請重新登入', needLogin: true });
     }
 
+    // ===== 【新】權限閘門 =====
+    // 集中在這裡擋，避免每個 if 分支各自漏擋。前端也會依權限藏入口，
+    // 但那只是體驗；**真正的防線是這一段**——直接打 API 一樣過不去。
+    const myPerms = getPermissionsFor_(currentUser);
+    const allows_ = function (key) { return isAdmin_(currentUser) || !!myPerms[key]; };
+    const PERM_RULES = [
+      { re: /^stat-report$/,                          key: 'report',          msg: '你沒有報表統計的權限' },
+      { re: /^(brand-db|vendor-db)-(add|update|delete)$/, key: 'brandVendorEdit', msg: '你只能查看品牌廠商資料，不能修改' },
+      { re: /^event-(add|update|delete)$/,            key: 'calendarEdit',    msg: '你沒有行事曆的編輯權限' },
+      { re: /^social-link-set$/,                      key: 'system',          msg: '你沒有系統設定的權限' }
+    ];
+    for (let ri = 0; ri < PERM_RULES.length; ri++) {
+      const rule = PERM_RULES[ri];
+      if (rule.re.test(type) && !allows_(rule.key)) {
+        return jsonResult_({ success: false, error: rule.msg + '，如果需要請跟雪莉申請開通。' });
+      }
+    }
+
     if (type === 'stat-report') {
       return jsonResult_({ success: true, ok: true, stats: getStatsMap_() });
     }
@@ -2207,7 +2309,13 @@ function doPost(e) {
       return jsonResult_({
         success: true,
         staff: getStaff_().map(s => s.name).filter(n => !isAdmin_(n)),
-        permissions: getAllPermissions_()
+        permissions: getAllPermissions_(),
+        // defs / roles 一起吐給前端，權限設定頁完全照這份渲染
+        // ——以後要加權限項目只改 PERM_DEFS，前端不用動
+        defs: PERM_DEFS,
+        roleNames: ROLE_NAMES,
+        rolePresets: ROLE_PRESETS,
+        roles: getAllRoles_()
       });
     }
 
@@ -2220,6 +2328,21 @@ function doPost(e) {
       try {
         setPermission_(name, key, !!body.value);
         return jsonResult_({ success: true });
+      } catch (err) {
+        return jsonResult_({ success: false, error: String(err) });
+      }
+    }
+
+    // 套用角色：把該角色的預設值一次寫進那位員工的每一格，之後仍可單獨微調某一項
+    if (type === 'perm-set-role') {
+      if (!isAdmin_(currentUser)) return jsonResult_({ success: false, error: '只有管理員能修改權限設定' });
+      const name = String(body.name || '').trim();
+      const role = String(body.role || '').trim();
+      if (!name || !role) return jsonResult_({ success: false, error: '缺少姓名或角色' });
+      if (isAdmin_(name)) return jsonResult_({ success: false, error: '管理員本身不需要另外設定權限' });
+      try {
+        setStaffRole_(name, role);
+        return jsonResult_({ success: true, permissions: getPermissionsFor_(name) });
       } catch (err) {
         return jsonResult_({ success: false, error: String(err) });
       }
@@ -2278,7 +2401,7 @@ function doPost(e) {
 
     // 【新】團購品牌資料庫
     if (type === 'brand-db-list') {
-      return jsonResult_({ success: true, items: getBrandDbList_() });
+      return jsonResult_({ success: true, items: getBrandDbListFor_(currentUser) });
     }
     if (type === 'brand-db-add') {
       const name = String(body.name || '').trim();
@@ -2295,8 +2418,9 @@ function doPost(e) {
         intro: String(body.intro || ''),
         brandImageUrl: String(body.brandImageUrl || ''),
         shopeeUrl: String(body.shopeeUrl || ''),
-        commissionRate: body.commissionRate,
-        commissionNote: String(body.commissionNote || '')
+        // 沒有分潤權限的人就算硬送這兩個欄位也寫不進去
+        commissionRate: allows_('commission') ? body.commissionRate : '',
+        commissionNote: allows_('commission') ? String(body.commissionNote || '') : ''
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -2317,8 +2441,11 @@ function doPost(e) {
       if (body.intro !== undefined) fields.intro = String(body.intro);
       if (body.brandImageUrl !== undefined) fields.brandImageUrl = String(body.brandImageUrl);
       if (body.shopeeUrl !== undefined) fields.shopeeUrl = String(body.shopeeUrl);
-      if (body.commissionRate !== undefined) fields.commissionRate = body.commissionRate;
-      if (body.commissionNote !== undefined) fields.commissionNote = String(body.commissionNote);
+      // 同上：沒權限就當作沒送，既有的分潤資料不會被覆寫掉
+      if (allows_('commission')) {
+        if (body.commissionRate !== undefined) fields.commissionRate = body.commissionRate;
+        if (body.commissionNote !== undefined) fields.commissionNote = String(body.commissionNote);
+      }
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }

@@ -28,6 +28,12 @@ function vendorNamesOf_(brand) {
   return (brand.vendorIds || []).map(vendorNameById_).filter(Boolean).join('、');
 }
 
+// 有沒有分潤權限。沒權限的人後端根本不會回傳 commission* 欄位，
+// 這裡再把 UI 收掉，避免出現空欄位讓人以為是「還沒填」。
+function bvCanSeeCommission_() {
+  return typeof hasPerm === 'function' ? hasPerm('commission') : true;
+}
+
 // 分潤顯示用：數字欄＋說明欄合成一句（例：10%（滿萬 12%））。兩欄都空就回 ''＝還沒登記分潤
 function bvCommissionText_(brand) {
   const rate = brand.commissionRate;
@@ -111,12 +117,14 @@ function renderBrandDbList() {
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
     const vendorName = vendorNamesOf_(b);
-    // 右側標籤直接秀分潤，才能一眼掃出哪些品牌還沒登記
-    const commission = bvCommissionText_(b);
+    // 右側標籤直接秀分潤，才能一眼掃出哪些品牌還沒登記（沒權限的人不顯示這個標籤）
+    const commission = bvCanSeeCommission_() ? bvCommissionText_(b) : null;
+    const tagHtml = !bvCanSeeCommission_() ? '' :
+      `<span class="cal-edit-day-row-tag"${commission ? '' : ' style="opacity:.45;"'}>${commission ? '💰 ' + escHtml(commission) : '分潤未填'}</span>`;
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
       `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>` +
-      `<span class="cal-edit-day-row-tag"${commission ? '' : ' style="opacity:.45;"'}>${commission ? '💰 ' + escHtml(commission) : '分潤未填'}</span>`;
+      tagHtml;
     row.addEventListener('click', () => {
       if (brandVendorEditMode) openBrandEditModal(b);
       else openBrandDetailModal(b);
@@ -128,6 +136,8 @@ function renderBrandDbList() {
 // 品牌廠商頁的編輯模式開關：關閉時點列表只看資料，開啟才會跳出編輯視窗
 let brandVendorEditMode = false;
 document.getElementById('bvEditToggleWrap').addEventListener('click', () => {
+  // 沒有品牌廠商編輯權限的人，開關已經藏起來了，這裡再擋一次（保險）
+  if (typeof hasPerm === 'function' && !hasPerm('brandVendorEdit')) return;
   brandVendorEditMode = !brandVendorEditMode;
   document.getElementById('bvEditSwitch').classList.toggle('on', brandVendorEditMode);
 });
@@ -417,8 +427,10 @@ function openBrandDetailModal(brand) {
   const vendorName = vendorNamesOf_(brand);
   lines.push(`<div><b>所屬廠商：</b>${vendorName ? escHtml(vendorName) : '－'}</div>`);
   // 分潤沒填也要顯示「尚未登記」，不然會分不出「沒填」和「這個彈窗不顯示分潤」
-  const commission = bvCommissionText_(brand);
-  lines.push(`<div><b>分潤：</b>${commission ? escHtml(commission) : '尚未登記'}</div>`);
+  if (bvCanSeeCommission_()) {
+    const commission = bvCommissionText_(brand);
+    lines.push(`<div><b>分潤：</b>${commission ? escHtml(commission) : '尚未登記'}</div>`);
+  }
   if (brand.lineContact) lines.push(`<div><b>LINE窗口：</b>${escHtml(brand.lineContact)}</div>`);
   if (brand.emailContact) lines.push(`<div><b>Email窗口：</b>${escHtml(brand.emailContact)}</div>`);
   if (brand.igContact) lines.push(`<div><b>IG窗口：</b>${escHtml(brand.igContact)}</div>`);
@@ -493,7 +505,7 @@ function renderEvBrandMatchInfo() {
 
     let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
     const lines = [];
-    const commission = bvCommissionText_(brand);
+    const commission = bvCanSeeCommission_() ? bvCommissionText_(brand) : '';
     if (commission) lines.push('分潤：' + commission);
     if (brand.lineContact) lines.push('LINE窗口：' + brand.lineContact);
     if (brand.emailContact) lines.push('Email窗口：' + brand.emailContact);

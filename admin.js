@@ -1399,11 +1399,26 @@ async function fetchMemos() {
   }
 }
 
-// 依目前登入者的身份／權限，切換相關功能入口的顯示與隱藏
+// 目前登入者有沒有某項權限。管理員（雪莉）一律全開。
+// ⚠️ 這只管「畫面上看不看得到」；真正的防線在 Code.gs 的權限閘門，前端藏起來不等於鎖住。
+function hasPerm(key) {
+  return isAdmin || !!myPermissions[key];
+}
+
+// 依目前登入者的身份／權限，切換相關功能入口的顯示與隱藏。
+// 入口一律在 admin.html 標 data-perm="<權限key>"，這裡統一掃過去——
+// 以後新增入口只要標屬性，不用回來改這個函式。
 function updatePermissionUI() {
-  const showImageLib = isAdmin || !!myPermissions.imageLibrary;
-  const iconEl = document.getElementById('toolIconImageLibrary');
-  if (iconEl) iconEl.style.display = showImageLib ? '' : 'none';
+  document.querySelectorAll('[data-perm]').forEach(el => {
+    const ok = hasPerm(el.dataset.perm);
+    if (el.tagName === 'OPTION') {
+      // <option> 各家瀏覽器對 display:none 支援不一，改用 disabled＋hidden 雙保險
+      el.disabled = !ok;
+      el.hidden = !ok;
+    } else {
+      el.style.display = ok ? '' : 'none';
+    }
+  });
 
   const permBtn = document.getElementById('settingsHubPermissionsBtn');
   if (permBtn) permBtn.style.display = isAdmin ? '' : 'none';
@@ -1708,6 +1723,11 @@ function ymdStr(d) {
 
 // ev 為 null＝新增活動；prefillDate 是從「當日活動面板」的＋新增活動點進來時，預先帶入的日期
 function openEventEditModal(ev, prefillDate) {
+  // 沒有行事曆編輯權限＝只能看，不開編輯視窗（後端也會擋 event-add/update/delete）
+  if (!hasPerm('calendarEdit')) {
+    alert('你沒有行事曆的編輯權限，如果需要請跟雪莉申請開通。');
+    return;
+  }
   const isNew = !ev;
   eventEditCtx = { isNew, ev };
   document.getElementById('eventEditTitle').textContent = isNew ? '➕ 新增活動' : '✏️ 編輯活動';
@@ -1986,8 +2006,11 @@ function isViewShown(name) {
 // target='right' 是寬螢幕雙欄工作區用的，把分頁搬進 #paneRight。
 function switchView(name, target) {
   target = (target === 'right') ? 'right' : 'left';
-  if (name === 'imageLibrary' && !(isAdmin || myPermissions.imageLibrary)) {
-    alert('你沒有圖片庫的使用權限，如果需要請跟雪莉申請開通。');
+  // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
+  // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
+  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計' };
+  if (VIEW_PERM[name] && !hasPerm(name)) {
+    alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
   }
   const el = document.getElementById(VIEW_ID_MAP[name]);
@@ -2367,18 +2390,30 @@ function closePermissionsModal() {
   document.getElementById('permissionsModal').classList.remove('show');
 }
 
+// 權限項目定義由後端 PERM_DEFS 提供，前端不寫死——之後加權限項目只要改 Code.gs
+let permDefs = [];
+let permRoleNames = [];
+let permRolePresets = {};
+let permRoles = {};
+
 async function loadPermissionsList() {
   const box = document.getElementById('permList');
   box.innerHTML = '<div class="task-empty">載入中…</div>';
   try {
     const result = await postTask({ type: 'perm-list' });
     allPermissions = result.permissions || {};
+    permDefs = result.defs || [];
+    permRoleNames = result.roleNames || [];
+    permRolePresets = result.rolePresets || {};
+    permRoles = result.roles || {};
     renderPermissionsList(result.staff || [], allPermissions);
   } catch (err) {
     box.innerHTML = '<div class="task-empty">讀取失敗：' + escHtml(err.message) + '</div>';
   }
 }
 
+// 每位員工一張卡：上面選角色（＝一次套一組預設），下面是每一項的個別開關。
+// 角色只是模板，套用後每一格都還能單獨改；真正生效的是下面那些開關。
 function renderPermissionsList(staffNames, permissions) {
   const box = document.getElementById('permList');
   if (!staffNames.length) {
@@ -2388,33 +2423,90 @@ function renderPermissionsList(staffNames, permissions) {
   box.innerHTML = '';
   staffNames.forEach(name => {
     const perm = permissions[name] || {};
-    const row = document.createElement('div');
-    row.className = 'perm-row';
+    const card = document.createElement('div');
+    card.className = 'perm-card';
+
+    const head = document.createElement('div');
+    head.className = 'perm-card-head';
 
     const nameEl = document.createElement('span');
     nameEl.className = 'perm-row-name';
     nameEl.textContent = name;
-    row.appendChild(nameEl);
+    head.appendChild(nameEl);
 
-    const toggleWrap = document.createElement('label');
-    toggleWrap.className = 'perm-row-toggle';
+    const roleSel = document.createElement('select');
+    roleSel.className = 'perm-role-select';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '－ 尚未指定角色 －';
+    roleSel.appendChild(blank);
+    permRoleNames.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = r;
+      roleSel.appendChild(opt);
+    });
+    roleSel.value = permRoles[name] || '';
+    roleSel.addEventListener('change', () => applyRole(name, roleSel.value, roleSel));
+    head.appendChild(roleSel);
+    card.appendChild(head);
 
-    const label = document.createElement('span');
-    label.className = 'pr-toggle-text';
-    label.textContent = '圖片庫權限';
-    toggleWrap.appendChild(label);
+    const grid = document.createElement('div');
+    grid.className = 'perm-grid';
+    permDefs.forEach(def => {
+      const item = document.createElement('label');
+      item.className = 'perm-item';
 
-    const sw = document.createElement('span');
-    sw.className = 'pr-switch' + (perm.imageLibrary ? ' on' : '');
-    const knob = document.createElement('span');
-    knob.className = 'pr-knob';
-    sw.appendChild(knob);
-    sw.addEventListener('click', () => togglePermission(name, 'imageLibrary', sw));
-    toggleWrap.appendChild(sw);
+      const textWrap = document.createElement('span');
+      textWrap.className = 'perm-item-text';
+      const t = document.createElement('span');
+      t.className = 'pr-toggle-text';
+      t.textContent = def.label;
+      textWrap.appendChild(t);
+      if (def.desc) {
+        const d = document.createElement('small');
+        d.className = 'perm-item-desc';
+        d.textContent = def.desc;
+        textWrap.appendChild(d);
+      }
+      item.appendChild(textWrap);
 
-    row.appendChild(toggleWrap);
-    box.appendChild(row);
+      const sw = document.createElement('span');
+      sw.className = 'pr-switch' + (perm[def.key] ? ' on' : '');
+      sw.dataset.permKey = def.key;
+      const knob = document.createElement('span');
+      knob.className = 'pr-knob';
+      sw.appendChild(knob);
+      sw.addEventListener('click', () => togglePermission(name, def.key, sw));
+      item.appendChild(sw);
+
+      grid.appendChild(item);
+    });
+    card.appendChild(grid);
+    box.appendChild(card);
   });
+}
+
+// 選角色 → 後端把整組預設寫進試算表，回傳實際結果後再重畫這張卡的開關
+async function applyRole(name, role, selectEl) {
+  if (!role) return;
+  const prev = permRoles[name] || '';
+  selectEl.disabled = true;
+  try {
+    const res = await postTask({ type: 'perm-set-role', name, role });
+    permRoles[name] = role;
+    allPermissions[name] = res.permissions || permRolePresets[role] || {};
+    const card = selectEl.closest('.perm-card');
+    if (card) {
+      card.querySelectorAll('.pr-switch').forEach(sw => {
+        sw.classList.toggle('on', !!allPermissions[name][sw.dataset.permKey]);
+      });
+    }
+  } catch (err) {
+    selectEl.value = prev;
+    alert('套用角色失敗：' + err.message);
+  }
+  selectEl.disabled = false;
 }
 
 async function togglePermission(name, key, switchEl) {

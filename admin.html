@@ -3039,6 +3039,54 @@
     font-weight: 700;
     color: var(--c-brown);
   }
+  /* 權限設定：每位員工一張卡（角色下拉＋各項開關） */
+  .perm-card {
+    border: 1.5px solid #F0DFCB;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .perm-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1.5px dashed #F0DFCB;
+  }
+  .perm-role-select {
+    flex: 0 1 190px;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 6px 8px;
+    margin: 0;
+  }
+  .perm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 2px 18px;
+    margin-top: 4px;
+  }
+  .perm-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .perm-item-text { display: flex; flex-direction: column; gap: 2px; }
+  .perm-item-text .pr-toggle-text {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--c-brown);
+  }
+  .perm-item-desc {
+    font-size: 10.5px;
+    color: #a89888;
+    line-height: 1.35;
+  }
   .settings-hub-list {
     display: flex;
     flex-direction: column;
@@ -3433,7 +3481,7 @@
     <button class="sn-item" data-view="prItems">🎀 公關品狀態</button>
     <button class="sn-item" data-view="groupStatus">📢 開團狀態</button>
     <button class="sn-item" data-view="brandVendor">🏢 品牌廠商</button>
-    <button class="sn-item" data-view="report">📊 報表統計</button>
+    <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -3473,7 +3521,7 @@
           <button class="menu-item" data-view="todoList">🗒️ 待辦事項</button>
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
           <button class="menu-item" data-view="brandVendor">🏢 品牌廠商</button>
-          <button class="menu-item" data-view="report">📊 報表統計</button>
+          <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -3509,7 +3557,7 @@
       <div class="home-card" onclick="switchView('brandVendor')">
         <span class="hc-icon">🏢</span><span class="hc-name">品牌廠商</span>
       </div>
-      <div class="home-card" onclick="switchView('report')">
+      <div class="home-card" data-perm="report" onclick="switchView('report')">
         <span class="hc-icon">📊</span><span class="hc-name">報表統計</span>
       </div>
     </div>
@@ -3681,7 +3729,7 @@
   <div class="view" id="viewBrandVendor">
     <div class="pnote-header-wrap">
       <h2 class="view-title">品牌廠商管理</h2>
-      <label class="pr-toggle show pnote-scope-toggle" id="bvEditToggleWrap" title="開啟後點廠商／品牌會直接跳出編輯視窗；關閉時點了只會顯示資料">
+      <label class="pr-toggle show pnote-scope-toggle" id="bvEditToggleWrap" data-perm="brandVendorEdit" title="開啟後點廠商／品牌會直接跳出編輯視窗；關閉時點了只會顯示資料">
         <span class="pr-toggle-text">✏️ 編輯</span>
         <span class="pr-switch" id="bvEditSwitch"><span class="pr-knob"></span></span>
       </label>
@@ -3757,7 +3805,7 @@
         </div>
         <span class="tool-icon-label">轉檔<br>小工具</span>
       </div>
-      <div class="tool-icon" id="toolIconImageLibrary" onclick="switchView('imageLibrary')">
+      <div class="tool-icon" id="toolIconImageLibrary" data-perm="imageLibrary" onclick="switchView('imageLibrary')">
         <div class="tool-icon-img-wrap">
           <img src="images/tools/imagelib.webp" alt="圖片庫" onerror="if(!this.dataset.f){this.dataset.f='1';this.src='images/tools/imagelib.png';}else{const w=this.parentElement; this.remove(); w.querySelector('.tool-icon-fallback').style.display='flex';}">
           <span class="tool-icon-fallback" style="display:none;">🖼️</span>
@@ -4043,7 +4091,7 @@
       <option value="prItems">🎀 公關品狀態</option>
       <option value="groupStatus">📢 開團狀態</option>
       <option value="brandVendor">🏢 品牌廠商</option>
-      <option value="report">📊 報表統計</option>
+      <option value="report" data-perm="report">📊 報表統計</option>
       <option value="tools">🧰 便利小工具</option>
       <option value="lotteryTool">🎉 抽獎小幫手</option>
       <option value="imageLibrary">🖼️ 圖片庫</option>
@@ -4342,10 +4390,13 @@
 
 <!-- ===== 權限設定浮動視窗（只有管理員雪莉看得到入口） ===== -->
 <div class="modal-backdrop" id="permissionsModal" onclick="if(event.target===this) closePermissionsModal()">
-  <div class="modal-box">
+  <div class="modal-box" style="width:min(680px, 94vw);">
     <button class="modal-close" onclick="closePermissionsModal()">✕</button>
     <h3>🛡️ 權限設定</h3>
-    <p style="font-size:12px; color:#a89888; margin:-6px 0 14px;">開放給員工的功能權限，切換後立即生效。</p>
+    <p style="font-size:12px; color:#a89888; margin:-6px 0 14px;">
+      先選角色套一組預設，再視情況單獨微調某一項。切換後立即生效。<br>
+      角色只是「一次勾好」的模板，實際生效的是下面每一項的開關。
+    </p>
     <div id="permList"></div>
   </div>
 </div>
@@ -4661,10 +4712,12 @@
       <input type="text" id="brandEmailInput" placeholder="email 地址">
       <label for="brandIgInput">IG窗口</label>
       <input type="text" id="brandIgInput" placeholder="IG 帳號或連結">
-      <label for="brandCommissionRateInput">分潤 %（只填數字，10 就是 10%；還沒談定就留空）</label>
-      <input type="number" id="brandCommissionRateInput" min="0" max="100" step="0.1" placeholder="例如：10">
-      <label for="brandCommissionNoteInput">分潤說明（特殊條件寫這裡，例如「滿萬 12%」「首團不抽」）</label>
-      <textarea id="brandCommissionNoteInput" rows="2" placeholder="沒有特殊條件就留空…"></textarea>
+      <div data-perm="commission">
+        <label for="brandCommissionRateInput">分潤 %（只填數字，10 就是 10%；還沒談定就留空）</label>
+        <input type="number" id="brandCommissionRateInput" min="0" max="100" step="0.1" placeholder="例如：10">
+        <label for="brandCommissionNoteInput">分潤說明（特殊條件寫這裡，例如「滿萬 12%」「首團不抽」）</label>
+        <textarea id="brandCommissionNoteInput" rows="2" placeholder="沒有特殊條件就留空…"></textarea>
+      </div>
       <label for="brandNoteInput">品牌備註</label>
       <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
       <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
@@ -4744,14 +4797,14 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=4"></script>
+<script src="brandVendor.js?v=5"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="admin.js?v=62"></script>
+<script src="admin.js?v=63"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
