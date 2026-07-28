@@ -2373,8 +2373,7 @@
      圖裡的空白圓圈疊上步驟數字（做法邏輯跟食譜頁面一致） -- */
   .pgp-step-section {
     position: relative;
-    height: 341px;
-    flex: none;
+    flex: 1 1 auto;
     margin-top: 20px;
     background: #FFFAF3;
     border: 2px dashed #FFC79A;
@@ -2499,12 +2498,13 @@
      清單一律單欄直排，不會跑到留白區。 -- */
   .pgp-tip-bar {
     position: relative;
-    flex: 1 1 auto;
+    flex: none;
+    height: 200px;
     margin-top: 20px;
     background: #FFF6EC;
     border: 2px dashed #FFC79A;
     border-radius: 20px;
-    padding: 36px 240px 18px 18px;
+    padding: 40px 240px 12px 18px;
     box-sizing: border-box;
     overflow: visible;
   }
@@ -2531,7 +2531,7 @@
     gap: 10px;
     font-size: 34px;
     color: var(--c-text-soft);
-    line-height: 1.3;
+    line-height: 1;
   }
   .pgp-tip-item img { width: 26px; height: 26px; margin-top: 7px; flex: none; }
   .pgp-tip-item span {
