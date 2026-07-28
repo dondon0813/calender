@@ -63,7 +63,9 @@ const ACCOUNTING_SHEET_NAME = '開團紀錄';
 const ACCT_COL = {
   ID: 1, DATE: 2, BRAND_ID: 3, BRAND_SPLIT: 4, RAW_NAME: 5, CONT_FROM: 6, VENDOR_ID: 7,
   COMPANY: 8, SALES: 9, RATE: 10, COMMISSION: 11, RATE_NOTE: 12, TAX_ADDED: 13, FEE: 14,
-  STATUS: 15, PAY_TO: 16, PAY_DATE: 17, INVOICE: 18, NOTE: 19, IMPORT_NOTE: 20
+  STATUS: 15, PAY_TO: 16, PAY_DATE: 17, INVOICE: 18, NOTE: 19, IMPORT_NOTE: 20,
+  // 稽核：金額是錢，改了要留痕跡才查得出是誰在什麼時候動的
+  UPDATED_BY: 21, UPDATED_AT: 22
 };
 const ACCT_STATUSES = ['未成團', '進行中', '待結算', '已請款', '已入帳'];
 
@@ -1076,22 +1078,30 @@ function getAccountingList_() {
       payDate: acctDate_(r[16]),
       invoice: String(r[17] || ''),
       note: String(r[18] || ''),
-      importNote: String(r[19] || '')
+      importNote: String(r[19] || ''),
+      updatedBy: String(r[20] || ''),
+      updatedAt: r[21] instanceof Date ? fmtDateTime_(r[21]) : String(r[21] || '')
     });
   }
   return list;
 }
 
-// ⚠️ 欄位級的權限遮蔽。業績（銷售金額）與分潤是兩種不同的權限：
-// 經紀人/助理看得到分潤（要幫忙算），但看不到業績。沒權限的欄位「整個 key 不回傳」，
-// 不是設成 0 或空字串——前端藏起來按 F12 就看得到，等於沒鎖。
+// ⚠️ 欄位級的權限遮蔽。業績與分潤的界線是「金額 vs 成數」，不是「銷售 vs 分潤」：
+//   commission（分潤）＝ 只有成數：分潤%、分潤說明
+//   revenue（業績）  ＝ 所有實際金額：銷售金額、分潤金額、稿酬、品牌金額分攤
+// 經紀人/助理拿得到成數（才能幫忙算分潤），但看不到任何實際金額。
+// 備註欄也歸業績：裡面有 118 筆寫著「總16800」「健保:635」這類金額，不遮就等於白鎖。
+// 沒權限的欄位「整個 key 不回傳」，不是設成 0——前端藏起來按 F12 就看得到，等於沒鎖。
+const ACCT_REVENUE_FIELDS = ['sales', 'commission', 'fee', 'brandSplit', 'note'];
+const ACCT_COMMISSION_FIELDS = ['rate', 'rateNote'];
+
 function stripAccounting_(list, canRevenue, canCommission) {
   if (canRevenue && canCommission) return list;
   return list.map(r => {
     const o = {};
     Object.keys(r).forEach(k => {
-      if (!canRevenue && (k === 'sales' || k === 'fee')) return;
-      if (!canCommission && (k === 'commission' || k === 'rate' || k === 'rateNote' || k === 'brandSplit')) return;
+      if (!canRevenue && ACCT_REVENUE_FIELDS.indexOf(k) !== -1) return;
+      if (!canCommission && ACCT_COMMISSION_FIELDS.indexOf(k) !== -1) return;
       o[k] = r[k];
     });
     return o;
@@ -1124,7 +1134,7 @@ function nextAcctId_(sheet) {
 }
 
 function acctRowFrom_(fields, id) {
-  const row = new Array(20).fill('');
+  const row = new Array(22).fill('');
   row[0] = id;
   row[1] = fields.date || '';
   row[2] = fields.brandId || '';
@@ -1145,18 +1155,22 @@ function acctRowFrom_(fields, id) {
   row[17] = fields.invoice || '';
   row[18] = fields.note || '';
   row[19] = fields.importNote || '';
+  row[20] = fields.updatedBy || '';
+  row[21] = fields.updatedAt || '';
   return row;
 }
 
-function addAccounting_(fields) {
+function addAccounting_(fields, user) {
   const sheet = getAccountingSheet_();
   const id = nextAcctId_(sheet);
+  fields.updatedBy = user || '';
+  fields.updatedAt = new Date();
   sheet.appendRow(acctRowFrom_(fields, id));
   return id;
 }
 
 // 只更新有送來的欄位；沒權限的欄位在 doPost 就已經被擋掉，不會進到 fields
-function updateAccounting_(id, fields) {
+function updateAccounting_(id, fields, user) {
   const sheet = getAccountingSheet_();
   const row = findAcctRowById_(sheet, id);
   if (row === -1) return false;
@@ -1188,6 +1202,8 @@ function updateAccounting_(id, fields) {
   set(ACCT_COL.PAY_DATE, fields.payDate);
   set(ACCT_COL.INVOICE, fields.invoice);
   set(ACCT_COL.NOTE, fields.note);
+  sheet.getRange(row, ACCT_COL.UPDATED_BY).setValue(user || '');
+  sheet.getRange(row, ACCT_COL.UPDATED_AT).setValue(new Date());
   return true;
 }
 
@@ -2642,27 +2658,28 @@ function doPost(e) {
       put('payTo', body.payTo === undefined ? undefined : String(body.payTo));
       put('payDate', body.payDate === undefined ? undefined : String(body.payDate));
       put('invoice', body.invoice === undefined ? undefined : String(body.invoice));
-      put('note', body.note === undefined ? undefined : String(body.note));
       if (body.taxAdded !== undefined) fields.taxAdded = !!body.taxAdded;
-      // 沒有對應權限就當作沒送，既有金額不會被覆寫掉
+      // 沒有對應權限就當作沒送，既有值不會被覆寫掉。
+      // 界線同 stripAccounting_：金額全歸業績，成數才歸分潤。
       if (allows_('revenue')) {
         put('sales', body.sales);
+        put('commission', body.commission);
         put('fee', body.fee);
+        put('brandSplit', body.brandSplit === undefined ? undefined : String(body.brandSplit));
+        put('note', body.note === undefined ? undefined : String(body.note));
       }
       if (allows_('commission')) {
         put('rate', body.rate);
-        put('commission', body.commission);
         put('rateNote', body.rateNote === undefined ? undefined : String(body.rateNote));
-        put('brandSplit', body.brandSplit === undefined ? undefined : String(body.brandSplit));
       }
       if (type === 'acct-add') {
         if (!fields.date) return jsonResult_({ success: false, error: '請選擇開團日期' });
         if (!fields.brandId) return jsonResult_({ success: false, error: '請選擇品牌' });
-        return jsonResult_({ success: true, id: addAccounting_(fields) });
+        return jsonResult_({ success: true, id: addAccounting_(fields, currentUser) });
       }
       const id = String(body.id || '').trim();
       if (!id) return jsonResult_({ success: false, error: '缺少紀錄編號' });
-      const ok = updateAccounting_(id, fields);
+      const ok = updateAccounting_(id, fields, currentUser);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆紀錄' });
     }
     if (type === 'acct-delete') {
