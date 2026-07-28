@@ -548,6 +548,11 @@ function pgBuildPosterHtml(r) {
         <div class="pgp-ing-text"><span class="pgp-ing-name">${name}</span>${qty ? `<span class="pgp-ing-qty">${qty}</span>` : ''}</div>
       </div>`;
   }).join('');
+  // 食材數量少（≤4個）時清單看起來太空，插入一張小插圖填補空間，
+  // 跟其他食材列一起參與 .pgp-ing-list 的 space-between 排版
+  const ingFillerHtml = (ingList.length >= 1 && ingList.length <= 4)
+    ? `<div class="pgp-ing-filler"><img crossorigin="anonymous" src="images/recipes/ing-filler-cat.webp" alt=""></div>`
+    : '';
 
   const stepCards = steps.map((s, idx) => {
     const n = idx + 1;
@@ -592,7 +597,7 @@ function pgBuildPosterHtml(r) {
         </div>
         <div class="pgp-side-card">
           <img class="pgp-ing-badge-img" crossorigin="anonymous" src="images/recipes/ingredients.png" alt="準備食材">
-          <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}</div>
+          <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}${ingFillerHtml}</div>
         </div>
       </div>
 
