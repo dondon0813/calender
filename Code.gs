@@ -210,7 +210,12 @@ function createSession_(name) {
   const sheet = getSessionSheet_();
   const token = Utilities.getUuid();
   sheet.appendRow([token, name, new Date()]);
-  cleanupExpiredSessions_(sheet);
+  // 清理過期 session 會刪列，要有鎖才安全；登入本身不搶鎖，所以搶不到就跳過，留給下次登入清。
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(1000)) {
+    try { cleanupExpiredSessions_(sheet); } catch (cleanErr) { /* 清理失敗不影響登入 */ }
+    finally { try { lock.releaseLock(); } catch (e2) {} }
+  }
   return token;
 }
 
@@ -2072,52 +2077,76 @@ function doGet(e) {
   return jsonResult_(result);
 }
 
+// 登入邏輯抽出來：它不進全域鎖，見 doPost 註解
+function handleLogin_(body) {
+  const name = String(body.name || '').trim();
+  const password = String(body.password || '').trim();
+  if (!password) return jsonResult_({ success: false, error: '請輸入密碼' });
+
+  const staff = getStaff_();
+  let matches;
+  if (name) {
+    matches = staff.filter(function (s) { return s.name === name && verifyPassword_(password, s.salt, s.hash); });
+  } else {
+    matches = staff.filter(function (s) { return verifyPassword_(password, s.salt, s.hash); });
+  }
+
+  if (matches.length === 0) {
+    return jsonResult_({ success: false, error: '密碼錯誤' });
+  }
+  if (matches.length > 1) {
+    return jsonResult_({ success: false, error: '有員工使用相同密碼，請到「員工名單」分頁設定成不同密碼' });
+  }
+
+  const token = createSession_(matches[0].name);
+  if (needsRehash_(matches[0].hash)) {
+    try { setStaffPassword_(matches[0].name, password); } catch (rehashErr) { /* 寫回失敗不影響登入成功 */ }
+  }
+  return jsonResult_({ success: true, token: token, name: matches[0].name, weakPassword: (password === DEFAULT_PASSWORD) });
+}
+
 function doPost(e) {
+  let body;
+  try {
+    body = JSON.parse(e.postData.contents);
+  } catch (parseErr) {
+    return jsonResult_({ success: false, error: '請求格式錯誤' });
+  }
+  const type = String(body.type || '');
+
+  // 登入不排隊搶全域鎖：圖片上傳／同步等長工作會佔住鎖數十秒，登入排隊超過等待時間就會回
+  // 「鎖定逾時」把所有人擋在門外。登入只是讀員工名單＋append 一列 session，沒有需要序列化的讀改寫。
+  if (type === 'login') {
+    try {
+      return handleLogin_(body);
+    } catch (err) {
+      return jsonResult_({ success: false, error: String(err) });
+    }
+  }
+
+  // 瀏覽／點擊統計是前台每次載入都會打的純計數：搶不到鎖就直接放棄這一筆，
+  // 不要排隊，否則公開頁流量會把鎖的隊伍塞滿，連帶拖垮後台操作。
+  if (type === 'stat-view' || type === 'stat-click') {
+    const statLock = LockService.getScriptLock();
+    if (!statLock.tryLock(3000)) return jsonResult_({ success: false, busy: true });
+    try {
+      const statKey = String(body.key || '').trim();
+      if (!statKey) return jsonResult_({ success: false, error: '缺少 key' });
+      return jsonResult_({ success: incrementStat_(statKey, type === 'stat-click' ? 'clicks' : 'views') });
+    } catch (err) {
+      return jsonResult_({ success: false, error: String(err) });
+    } finally {
+      try { statLock.releaseLock(); } catch (e2) {}
+    }
+  }
+
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(10000);
-    const body = JSON.parse(e.postData.contents);
-    const type = String(body.type || '');
-
-    if (type === 'login') {
-      const name = String(body.name || '').trim();
-      const password = String(body.password || '').trim();
-      if (!password) return jsonResult_({ success: false, error: '請輸入密碼' });
-
-      const staff = getStaff_();
-      let matches;
-      if (name) {
-        matches = staff.filter(function (s) { return s.name === name && verifyPassword_(password, s.salt, s.hash); });
-      } else {
-        matches = staff.filter(function (s) { return verifyPassword_(password, s.salt, s.hash); });
-      }
-
-      if (matches.length === 0) {
-        return jsonResult_({ success: false, error: '密碼錯誤' });
-      }
-      if (matches.length > 1) {
-        return jsonResult_({ success: false, error: '有員工使用相同密碼，請到「員工名單」分頁設定成不同密碼' });
-      }
-
-      const token = createSession_(matches[0].name);
-      if (needsRehash_(matches[0].hash)) {
-        try { setStaffPassword_(matches[0].name, password); } catch (rehashErr) { /* 寫回失敗不影響登入成功 */ }
-      }
-      return jsonResult_({ success: true, token: token, name: matches[0].name, weakPassword: (password === DEFAULT_PASSWORD) });
-    }
-
-    if (type === 'stat-view') {
-      const key = String(body.key || '').trim();
-      if (!key) return jsonResult_({ success: false, error: '缺少 key' });
-      return jsonResult_({ success: incrementStat_(key, 'views') });
-    }
-
-    if (type === 'stat-click') {
-      const key = String(body.key || '').trim();
-      if (!key) return jsonResult_({ success: false, error: '缺少 key' });
-      return jsonResult_({ success: incrementStat_(key, 'clicks') });
-    }
-
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return jsonResult_({ success: false, busy: true, error: '系統忙碌中（可能有人正在上傳圖片或同步資料），請等幾秒再操作一次' });
+  }
+  try {
     if (type === 'task-quick-add') {
       const secret = PropertiesService.getScriptProperties().getProperty('QUICK_ADD_SECRET');
       if (!secret || String(body.secret || '') !== secret) {
