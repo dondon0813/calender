@@ -3039,6 +3039,19 @@
     font-weight: 700;
     color: var(--c-brown);
   }
+  /* 品牌列表的合作狀態小標 */
+  .bv-coop{
+    display:inline-block;
+    margin-left:8px;
+    font-size:10.5px;
+    font-weight:800;
+    padding:1px 7px;
+    border-radius:999px;
+    vertical-align:1px;
+  }
+  .bv-coop.longterm{ background:var(--c-mint-bg); color:var(--c-mint-text); }
+  .bv-coop.normal{ background:var(--c-blue-bg); color:var(--c-blue-text); }
+  .bv-coop.ended{ background:var(--c-line); color:var(--c-muted); }
   /* 權限設定：每位員工一張卡（角色下拉＋各項開關） */
   .perm-card {
     border: 1.5px solid #F0DFCB;
@@ -4718,6 +4731,18 @@
         <label for="brandCommissionNoteInput">分潤說明（特殊條件寫這裡，例如「滿萬 12%」「首團不抽」）</label>
         <textarea id="brandCommissionNoteInput" rows="2" placeholder="沒有特殊條件就留空…"></textarea>
       </div>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
+        <input type="checkbox" id="brandLongTermInput" style="width:auto; margin:0;">
+        長期合作品牌（固定會回來開的主力品牌）
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;">
+        <input type="checkbox" id="brandEndedInput" style="width:auto; margin:0;">
+        已結束合作（不會刪除資料，只是標記；歷史開團紀錄仍然查得到）
+      </label>
+      <div id="brandEndReasonWrap" style="display:none;">
+        <label for="brandEndReasonInput">結束原因</label>
+        <input type="text" id="brandEndReasonInput" placeholder="例如：品牌收掉、改跟別的團購主合作、分潤談不攏">
+      </div>
       <label for="brandNoteInput">品牌備註</label>
       <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
       <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
@@ -4797,7 +4822,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=5"></script>
+<script src="brandVendor.js?v=6"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

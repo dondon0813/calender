@@ -849,7 +849,9 @@ function getBrandDbSheet_() {
     sheet = ss.insertSheet(BRAND_DB_SHEET_NAME);
     // 所屬廠商ID 可填多個，用逗號分隔（例：V001,V004）——同品牌跟不同廠商開不同聯名款
     // O「分潤%」存純數字（10 = 10%）供排序／統計；P「分潤說明」存自由文字（例：滿萬 12%、首團不抽）
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結', '分潤%', '分潤說明']);
+    // Q/R/S 合作狀態三欄：長期合作＝主力品牌；兩欄都空＝一般合作；已結束＝曾經合作過但現在沒了
+    // （「曾經是長期合作、後來結束」是兩欄都填「是」，這樣歷史也留得住）
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結', '分潤%', '分潤說明', '長期合作', '已結束合作', '結束原因']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -976,7 +978,11 @@ function getBrandDbList_() {
       shopeeUrl: String(row[13] || ''),  // 蝦皮連結（沒開團時前台食材/食譜頁導流用；空白＝不顯示按鈕）
       // 分潤：數字欄拿來排序／統計，說明欄放特殊條件；兩者都可留空。⚠️ 內部欄位，禁止進 scope=public
       commissionRate: normCommissionRate_(row[14]),
-      commissionNote: String(row[15] || '')
+      commissionNote: String(row[15] || ''),
+      // 合作狀態：兩個旗標都是 false ＝ 一般合作
+      longTerm: String(row[16] || '').trim() === '是',
+      ended: String(row[17] || '').trim() === '是',
+      endReason: String(row[18] || '')
     });
   }
   return list;
@@ -1020,7 +1026,10 @@ function addBrandDb_(fields) {
     fields.brandImageUrl || '',
     fields.shopeeUrl || '',
     normCommissionRate_(fields.commissionRate),
-    fields.commissionNote || ''
+    fields.commissionNote || '',
+    fields.longTerm || '',
+    fields.ended || '',
+    fields.endReason || ''
   ]);
   return id;
 }
@@ -1043,6 +1052,9 @@ function updateBrandDb_(id, fields) {
   setIf(14, fields.shopeeUrl);
   if (fields.commissionRate !== undefined) sheet.getRange(row, 15).setValue(normCommissionRate_(fields.commissionRate));
   setIf(16, fields.commissionNote);
+  setIf(17, fields.longTerm);
+  setIf(18, fields.ended);
+  setIf(19, fields.endReason);
   sheet.getRange(row, 10).setValue(new Date());
   return true;
 }
@@ -2420,7 +2432,10 @@ function doPost(e) {
         shopeeUrl: String(body.shopeeUrl || ''),
         // 沒有分潤權限的人就算硬送這兩個欄位也寫不進去
         commissionRate: allows_('commission') ? body.commissionRate : '',
-        commissionNote: allows_('commission') ? String(body.commissionNote || '') : ''
+        commissionNote: allows_('commission') ? String(body.commissionNote || '') : '',
+        longTerm: body.longTerm ? '是' : '',
+        ended: body.ended ? '是' : '',
+        endReason: String(body.endReason || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -2446,6 +2461,9 @@ function doPost(e) {
         if (body.commissionRate !== undefined) fields.commissionRate = body.commissionRate;
         if (body.commissionNote !== undefined) fields.commissionNote = String(body.commissionNote);
       }
+      if (body.longTerm !== undefined) fields.longTerm = body.longTerm ? '是' : '';
+      if (body.ended !== undefined) fields.ended = body.ended ? '是' : '';
+      if (body.endReason !== undefined) fields.endReason = String(body.endReason);
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }

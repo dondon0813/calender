@@ -28,6 +28,19 @@ function vendorNamesOf_(brand) {
   return (brand.vendorIds || []).map(vendorNameById_).filter(Boolean).join('、');
 }
 
+// 合作狀態：兩個旗標組合出三種狀態。已結束優先顯示，因為那是最需要一眼看到的
+function bvCoopState_(brand) {
+  if (brand.ended) return { text: '已結束', cls: 'ended' };
+  if (brand.longTerm) return { text: '長期合作', cls: 'longterm' };
+  return { text: '一般合作', cls: 'normal' };
+}
+
+// 「結束原因」只有勾了「已結束合作」才有意義，沒勾就收起來
+function bvSyncEndReason_() {
+  const on = document.getElementById('brandEndedInput').checked;
+  document.getElementById('brandEndReasonWrap').style.display = on ? '' : 'none';
+}
+
 // 有沒有分潤權限。沒權限的人後端根本不會回傳 commission* 欄位，
 // 這裡再把 UI 收掉，避免出現空欄位讓人以為是「還沒填」。
 function bvCanSeeCommission_() {
@@ -117,13 +130,17 @@ function renderBrandDbList() {
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
     const vendorName = vendorNamesOf_(b);
+    const st = bvCoopState_(b);
+    // 已結束合作的整列淡化，才不會跟現役品牌混在一起
+    if (st.cls === 'ended') row.style.opacity = '.5';
     // 右側標籤直接秀分潤，才能一眼掃出哪些品牌還沒登記（沒權限的人不顯示這個標籤）
     const commission = bvCanSeeCommission_() ? bvCommissionText_(b) : null;
     const tagHtml = !bvCanSeeCommission_() ? '' :
       `<span class="cal-edit-day-row-tag"${commission ? '' : ' style="opacity:.45;"'}>${commission ? '💰 ' + escHtml(commission) : '分潤未填'}</span>`;
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
-      `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}</span>` +
+      `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}` +
+      `<span class="bv-coop ${st.cls}">${st.text}</span></span>` +
       tagHtml;
     row.addEventListener('click', () => {
       if (brandVendorEditMode) openBrandEditModal(b);
@@ -256,6 +273,10 @@ function openBrandEditModal(brand) {
   document.getElementById('brandIgInput').value = brand ? brand.igContact : '';
   document.getElementById('brandCommissionRateInput').value = brand && brand.commissionRate !== '' && brand.commissionRate !== undefined ? brand.commissionRate : '';
   document.getElementById('brandCommissionNoteInput').value = brand ? (brand.commissionNote || '') : '';
+  document.getElementById('brandLongTermInput').checked = brand ? !!brand.longTerm : false;
+  document.getElementById('brandEndedInput').checked = brand ? !!brand.ended : false;
+  document.getElementById('brandEndReasonInput').value = brand ? (brand.endReason || '') : '';
+  bvSyncEndReason_();
   document.getElementById('brandNoteInput').value = brand ? brand.note : '';
   document.getElementById('brandShowInRecipeInput').checked = brand ? !!brand.showInRecipe : false;
   document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
@@ -280,6 +301,9 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     // 分潤% 留空就送空字串（等於「還沒談定」），後端不會硬塞 0
     commissionRate: document.getElementById('brandCommissionRateInput').value.trim(),
     commissionNote: document.getElementById('brandCommissionNoteInput').value.trim(),
+    longTerm: document.getElementById('brandLongTermInput').checked,
+    ended: document.getElementById('brandEndedInput').checked,
+    endReason: document.getElementById('brandEndReasonInput').value.trim(),
     note: document.getElementById('brandNoteInput').value.trim(),
     showInRecipe: document.getElementById('brandShowInRecipeInput').checked,
     intro: document.getElementById('brandIntroInput').value.trim(),
@@ -318,6 +342,7 @@ document.getElementById('brandDeleteBtn').addEventListener('click', async () => 
 });
 document.getElementById('vendorDbAddBtn').addEventListener('click', () => openVendorEditModal(null));
 document.getElementById('brandDbAddBtn').addEventListener('click', () => openBrandEditModal(null));
+document.getElementById('brandEndedInput').addEventListener('change', bvSyncEndReason_);
 
 // ===== 【新】廠商資料檢視（唯讀）：非編輯模式點廠商，顯示資料＋底下的品牌 =====
 let vendorDetailCtx = null;
@@ -425,6 +450,8 @@ function openBrandDetailModal(brand) {
 
   const lines = [];
   const vendorName = vendorNamesOf_(brand);
+  const dst = bvCoopState_(brand);
+  lines.push(`<div><b>合作狀態：</b>${dst.text}${brand.ended && brand.endReason ? '（' + escHtml(brand.endReason) + '）' : ''}</div>`);
   lines.push(`<div><b>所屬廠商：</b>${vendorName ? escHtml(vendorName) : '－'}</div>`);
   // 分潤沒填也要顯示「尚未登記」，不然會分不出「沒填」和「這個彈窗不顯示分潤」
   if (bvCanSeeCommission_()) {
