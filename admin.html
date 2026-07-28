@@ -4694,6 +4694,20 @@
       <input type="text" id="vendorRemitRuleInput" placeholder="例如：月結30天、出貨後7天…">
       <label for="vendorContactInput">廠商聯絡窗口</label>
       <input type="text" id="vendorContactInput" placeholder="沒有品牌獨立窗口時使用">
+      <label for="vendorCompanyNamesInput">公司名稱（開發票／匯款用的正式抬頭，跟廠商簡稱不同時填這裡）</label>
+      <textarea id="vendorCompanyNamesInput" rows="2" placeholder="有多個就用逗號分隔，例如：榛尼森國際有限公司,瑞久有限公司"></textarea>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
+        <input type="checkbox" id="vendorLongTermInput" style="width:auto; margin:0;">
+        長期合作廠商
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;">
+        <input type="checkbox" id="vendorEndedInput" style="width:auto; margin:0;">
+        已結束合作（底下的品牌不會跟著標記，要個別處理）
+      </label>
+      <div id="vendorEndReasonWrap" style="display:none;">
+        <label for="vendorEndReasonInput">結束原因</label>
+        <input type="text" id="vendorEndReasonInput" placeholder="例如：公司收掉、換代理、帳務問題">
+      </div>
       <label for="vendorNoteInput">廠商備註</label>
       <textarea id="vendorNoteInput" rows="3" placeholder="備註…"></textarea>
       <div style="display:flex; gap:8px; margin-top:16px;">
@@ -4822,7 +4836,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=6"></script>
+<script src="brandVendor.js?v=7"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

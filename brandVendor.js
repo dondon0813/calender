@@ -40,6 +40,19 @@ function bvSyncEndReason_() {
   const on = document.getElementById('brandEndedInput').checked;
   document.getElementById('brandEndReasonWrap').style.display = on ? '' : 'none';
 }
+function bvSyncVendorEndReason_() {
+  const on = document.getElementById('vendorEndedInput').checked;
+  document.getElementById('vendorEndReasonWrap').style.display = on ? '' : 'none';
+}
+
+// 品牌自己沒標結束，但它的所屬廠商「全部」都結束了 → 這個品牌實際上也接不到團了，要提示。
+// ⚠️ 只要還有一家廠商在合作就不算（例：藍海饌的鼎珈結束了，但改跟樂奎合作，品牌還活著）。
+function bvAllVendorsEnded_(brand) {
+  const ids = brand.vendorIds || [];
+  if (!ids.length) return false;
+  const vs = ids.map(id => vendorDb.find(v => v.id === id)).filter(Boolean);
+  return vs.length > 0 && vs.every(v => v.ended);
+}
 
 // 有沒有分潤權限。沒權限的人後端根本不會回傳 commission* 欄位，
 // 這裡再把 UI 收掉，避免出現空欄位讓人以為是「還沒填」。
@@ -91,7 +104,7 @@ function renderVendorDbList() {
     return;
   }
   const kw = bvSearchScope === 'vendor' ? bvSearchText_() : '';
-  const list = vendorDb.filter(v => bvMatch_(kw, [v.id, v.name, v.type, v.note]));
+  const list = vendorDb.filter(v => bvMatch_(kw, [v.id, v.name, v.type, v.note, v.companyNames]));
   if (!list.length) {
     el.innerHTML = '<div class="bv-search-empty">找不到符合「' + escHtml(kw) + '」的廠商</div>';
     return;
@@ -100,9 +113,12 @@ function renderVendorDbList() {
     const brandCount = brandDb.filter(b => (b.vendorIds || []).indexOf(v.id) !== -1).length;
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
+    const vst = bvCoopState_(v);
+    if (vst.cls === 'ended') row.style.opacity = '.5';
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#7AAEEB;"></span>` +
-      `<span class="cal-edit-day-row-name">${escHtml(v.id)}　${escHtml(v.name)}${v.type ? '（' + escHtml(v.type) + '）' : ''}</span>` +
+      `<span class="cal-edit-day-row-name">${escHtml(v.id)}　${escHtml(v.name)}${v.type ? '（' + escHtml(v.type) + '）' : ''}` +
+      `<span class="bv-coop ${vst.cls}">${vst.text}</span></span>` +
       `<span class="cal-edit-day-row-tag">${brandCount} 個品牌</span>`;
     row.addEventListener('click', () => {
       if (brandVendorEditMode) openVendorEditModal(v);
@@ -190,6 +206,11 @@ function openVendorEditModal(vendor) {
   document.getElementById('vendorRemitMethodInput').value = vendor ? vendor.remittanceMethod : '';
   document.getElementById('vendorRemitRuleInput').value = vendor ? vendor.remittanceRule : '';
   document.getElementById('vendorContactInput').value = vendor ? vendor.contact : '';
+  document.getElementById('vendorCompanyNamesInput').value = vendor ? (vendor.companyNames || '') : '';
+  document.getElementById('vendorLongTermInput').checked = vendor ? !!vendor.longTerm : false;
+  document.getElementById('vendorEndedInput').checked = vendor ? !!vendor.ended : false;
+  document.getElementById('vendorEndReasonInput').value = vendor ? (vendor.endReason || '') : '';
+  bvSyncVendorEndReason_();
   document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
   document.getElementById('vendorEditModal').classList.add('show');
 }
@@ -206,6 +227,10 @@ document.getElementById('vendorSaveBtn').addEventListener('click', async () => {
     remittanceMethod: document.getElementById('vendorRemitMethodInput').value.trim(),
     remittanceRule: document.getElementById('vendorRemitRuleInput').value.trim(),
     contact: document.getElementById('vendorContactInput').value.trim(),
+    companyNames: document.getElementById('vendorCompanyNamesInput').value.trim(),
+    longTerm: document.getElementById('vendorLongTermInput').checked,
+    ended: document.getElementById('vendorEndedInput').checked,
+    endReason: document.getElementById('vendorEndReasonInput').value.trim(),
     note: document.getElementById('vendorNoteInput').value.trim()
   };
   const btn = document.getElementById('vendorSaveBtn');
@@ -343,6 +368,7 @@ document.getElementById('brandDeleteBtn').addEventListener('click', async () => 
 document.getElementById('vendorDbAddBtn').addEventListener('click', () => openVendorEditModal(null));
 document.getElementById('brandDbAddBtn').addEventListener('click', () => openBrandEditModal(null));
 document.getElementById('brandEndedInput').addEventListener('change', bvSyncEndReason_);
+document.getElementById('vendorEndedInput').addEventListener('change', bvSyncVendorEndReason_);
 
 // ===== 【新】廠商資料檢視（唯讀）：非編輯模式點廠商，顯示資料＋底下的品牌 =====
 let vendorDetailCtx = null;
@@ -352,7 +378,10 @@ function openVendorDetailModal(vendor) {
 
   const lines = [];
   lines.push(`<div><b>廠商編號：</b>${escHtml(vendor.id)}</div>`);
+  const vst = bvCoopState_(vendor);
+  lines.push(`<div><b>合作狀態：</b>${vst.text}${vendor.ended && vendor.endReason ? '（' + escHtml(vendor.endReason) + '）' : ''}</div>`);
   lines.push(`<div><b>類型：</b>${escHtml(vendor.type || '－')}</div>`);
+  if (vendor.companyNames) lines.push(`<div><b>公司名稱：</b>${escHtml(vendor.companyNames)}</div>`);
   if (vendor.remittanceMethod) lines.push(`<div><b>匯款方式：</b>${escHtml(vendor.remittanceMethod)}</div>`);
   if (vendor.remittanceRule) lines.push(`<div><b>請款／匯款規則：</b>${escHtml(vendor.remittanceRule)}</div>`);
   if (vendor.contact) lines.push(`<div><b>聯絡窗口：</b>${escHtml(vendor.contact)}</div>`);
@@ -452,6 +481,10 @@ function openBrandDetailModal(brand) {
   const vendorName = vendorNamesOf_(brand);
   const dst = bvCoopState_(brand);
   lines.push(`<div><b>合作狀態：</b>${dst.text}${brand.ended && brand.endReason ? '（' + escHtml(brand.endReason) + '）' : ''}</div>`);
+  // 品牌本身還在，但所屬廠商全結束了＝實際上接不到團，提示但不自動改品牌狀態
+  if (!brand.ended && bvAllVendorsEnded_(brand)) {
+    lines.push('<div style="color:var(--c-danger); font-weight:800;">⚠ 所屬廠商都已結束合作，這個品牌目前接不到團</div>');
+  }
   lines.push(`<div><b>所屬廠商：</b>${vendorName ? escHtml(vendorName) : '－'}</div>`);
   // 分潤沒填也要顯示「尚未登記」，不然會分不出「沒填」和「這個彈窗不顯示分潤」
   if (bvCanSeeCommission_()) {

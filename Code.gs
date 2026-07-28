@@ -836,7 +836,9 @@ function getVendorDbSheet_() {
   let sheet = ss.getSheetByName(VENDOR_DB_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(VENDOR_DB_SHEET_NAME);
-    sheet.appendRow(['id', '廠商名稱', '廠商類型', '匯款方式', '請款規則', '廠商聯絡窗口', '廠商備註', '建立時間', '更新時間']);
+    // J 公司名稱：開發票／匯款用的正式抬頭，跟廠商簡稱常常不一樣；一家廠商可能有多個（逗號分隔）
+    // K/L/M 合作狀態：跟品牌資料庫同一套語意。廠商結束 ≠ 底下品牌全結束，兩層各自標記
+    sheet.appendRow(['id', '廠商名稱', '廠商類型', '匯款方式', '請款規則', '廠商聯絡窗口', '廠商備註', '建立時間', '更新時間', '公司名稱', '長期合作', '已結束合作', '結束原因']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -895,7 +897,11 @@ function getVendorDbList_() {
       contact: String(row[5] || ''),
       note: String(row[6] || ''),
       created: row[7] instanceof Date ? fmtDateTime_(row[7]) : String(row[7] || ''),
-      updated: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || '')
+      updated: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
+      companyNames: String(row[9] || ''),   // 開票抬頭，可多個
+      longTerm: String(row[10] || '').trim() === '是',
+      ended: String(row[11] || '').trim() === '是',
+      endReason: String(row[12] || '')
     });
   }
   return list;
@@ -913,7 +919,11 @@ function addVendorDb_(fields) {
     fields.remittanceRule || '',
     fields.contact || '',
     fields.note || '',
-    now, now
+    now, now,
+    fields.companyNames || '',
+    fields.longTerm || '',
+    fields.ended || '',
+    fields.endReason || ''
   ]);
   return id;
 }
@@ -929,6 +939,10 @@ function updateVendorDb_(id, fields) {
   setIf(5, fields.remittanceRule);
   setIf(6, fields.contact);
   setIf(7, fields.note);
+  setIf(10, fields.companyNames);
+  setIf(11, fields.longTerm);
+  setIf(12, fields.ended);
+  setIf(13, fields.endReason);
   sheet.getRange(row, 9).setValue(new Date());
   return true;
 }
@@ -2382,7 +2396,11 @@ function doPost(e) {
         remittanceMethod: String(body.remittanceMethod || ''),
         remittanceRule: String(body.remittanceRule || ''),
         contact: String(body.contact || ''),
-        note: String(body.note || '')
+        note: String(body.note || ''),
+        companyNames: String(body.companyNames || ''),
+        longTerm: body.longTerm ? '是' : '',
+        ended: body.ended ? '是' : '',
+        endReason: String(body.endReason || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -2396,6 +2414,10 @@ function doPost(e) {
       if (body.remittanceRule !== undefined) fields.remittanceRule = String(body.remittanceRule);
       if (body.contact !== undefined) fields.contact = String(body.contact);
       if (body.note !== undefined) fields.note = String(body.note);
+      if (body.companyNames !== undefined) fields.companyNames = String(body.companyNames);
+      if (body.longTerm !== undefined) fields.longTerm = body.longTerm ? '是' : '';
+      if (body.ended !== undefined) fields.ended = body.ended ? '是' : '';
+      if (body.endReason !== undefined) fields.endReason = String(body.endReason);
       const ok = updateVendorDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個廠商' });
     }
