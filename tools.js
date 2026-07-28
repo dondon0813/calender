@@ -313,7 +313,23 @@ function pgIngredientFilterKey(ing) {
   return raw.split('/')[0].trim();
 }
 
-// 依「使用食材ID」欄位（格式 ing001:50g/ing003:1包）比對出完整食材資料＋分量
+// 食材的所有別名清單（簡稱可能用 / 分隔多個），沒填簡稱就用食材名稱當唯一別名。
+// 跟 recipes.html 的 ingredientFilterKeys 同一套規則，比對「使用食材ID」欄位打的
+// 簡稱（例如「優格」）時要用。
+function pgIngredientFilterKeys(ing) {
+  const raw = String(ing['簡稱'] || '').trim();
+  if (!raw) return ing['食材名稱'] ? [ing['食材名稱']] : [];
+  return raw.split('/').map(s => s.trim()).filter(Boolean);
+}
+
+// 依「使用食材ID」欄位（格式 ing001:50g/ing003:1包，也可以直接打簡稱例如「優格」）
+// 比對出完整食材資料＋分量。跟 recipes.html 的 getRecipeIngredients 同一套規則：
+// 食材ID → 食材名稱 → 簡稱，一層一層往下比對；原本這裡少了「簡稱」這一層，導致
+// 食譜打簡稱（例如「優格」）時完全比對不到資料、變成純文字項目、沒有圖片網址，
+// 貼文圖就會破圖（食譜頁面因為有比對簡稱，所以顯示正常）。
+// 同一簡稱對到多個品項（例如兩個品牌都叫「優格」）時，優先挑「有圖片網址」的那個，
+// 避免隨機選到沒圖的那筆又破圖；recipes.html 是用開團狀態挑，但貼文產生器這裡
+// 沒有載入團購行事曆資料，用「有沒有圖片」當簡化版的挑選依據就夠了。
 function pgGetRecipeIngredients(recipe) {
   const tokens = String(recipe['使用食材ID'] || '').split('/').map(s => s.trim()).filter(Boolean);
   const result = [];
@@ -321,8 +337,15 @@ function pgGetRecipeIngredients(recipe) {
     const [idOrName, qty] = token.split(':').map(s => (s || '').trim());
     let ing = pgIngredients.find(i => i['食材ID'] === idOrName);
     if (!ing && idOrName) {
-      const nameMatches = pgIngredients.filter(i => i['食材名稱'] === idOrName);
-      if (nameMatches.length) ing = nameMatches[0];
+      let nameMatches = pgIngredients.filter(i => i['食材名稱'] === idOrName);
+      if (!nameMatches.length) {
+        nameMatches = pgIngredients.filter(i => pgIngredientFilterKeys(i).includes(idOrName));
+      }
+      if (nameMatches.length === 1) {
+        ing = nameMatches[0];
+      } else if (nameMatches.length > 1) {
+        ing = nameMatches.find(i => pgIsValidUrl(pgToSameOriginUrl(i['圖片網址']))) || nameMatches[0];
+      }
     }
     if (ing) {
       result.push(Object.assign({}, ing, { _quantity: qty || '' }));
