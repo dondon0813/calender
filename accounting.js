@@ -437,16 +437,19 @@ function acctReconEstimate(rec, salesVal) {
   return Math.round(acctNum(salesVal) * Number(rec.rate));
 }
 
-// 階段徽章配色分組：回填/核對＋稿酬前段一組（粉）、發票一組（黃金）、金流一組（藍）。
-// 顏色本身在 admin.html 的 .acct-recon-badge-* 走 shared.css 既有變數，這裡只決定分組。
+// 階段徽章配色（每階段一色）。顏色語意：紅=助理要動手（最醒目）、灰=長等待（最低調）、
+// 紫=審稿、綠=已發布、金=發票、藍=等錢、珊瑚=最後對帳。要調色只改這張表（class 定義在 admin.html）。
 const ACCT_RECON_BADGE_GROUP = {
-  '待回填': 'pink', '待核對業績': 'pink',
-  '審稿中': 'pink', '審稿完成(待發布)': 'pink', '已發布': 'pink',
+  '待回填': 'red',
+  '待核對業績': 'muted',
+  '審稿中': 'purple', '審稿完成(待發布)': 'purple',
+  '已發布': 'mint',
   '待開發票': 'gold', '待確認發票': 'gold',
-  '等待匯款': 'blue', '待對帳': 'blue'
+  '等待匯款': 'blue',
+  '待對帳': 'coral'
 };
 function acctReconBadgeGroup_(status) {
-  return ACCT_RECON_BADGE_GROUP[status] || 'pink';
+  return ACCT_RECON_BADGE_GROUP[status] || 'muted';
 }
 
 function acctReconTodayStr_() {
@@ -537,11 +540,13 @@ function renderAcctRecon() {
     return;
   }
 
-  // 每個月份還顯示幾團未對完（月份條用；清單本身都是未完成的列，所以就是該月筆數）
+  // 每個月份還顯示幾團未對完＋幾團還沒回填業績（月份條用；清單本身都是未完成的列，所以就是該月筆數）
   const monthCounts = new Map();
+  const monthPendingFill = new Map();
   list.forEach(r => {
     const key = (r.date || '').slice(0, 7);
     monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+    if (r.reconStatus === '待回填') monthPendingFill.set(key, (monthPendingFill.get(key) || 0) + 1);
   });
 
   let lastMonth = null;
@@ -551,7 +556,9 @@ function renderAcctRecon() {
     if (monthKey !== lastMonth) {
       lastMonth = monthKey;
       const [y, m] = monthKey.split('-');
-      monthBar = `<div class="acct-recon-month-bar">${y}年${Number(m)}月　還有 ${monthCounts.get(monthKey)} 團未對完</div>`;
+      const pf = monthPendingFill.get(monthKey) || 0;
+      const pfHtml = pf ? `<span class="acct-recon-month-pending">　・${pf} 團未回填業績</span>` : '';
+      monthBar = `<div class="acct-recon-month-bar">${y}年${Number(m)}月　還有 ${monthCounts.get(monthKey)} 團未對完${pfHtml}</div>`;
     }
 
     const hasRate = r.rate !== '' && r.rate !== undefined && r.rate !== null && !isNaN(Number(r.rate));

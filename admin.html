@@ -577,7 +577,7 @@
     color: var(--c-text);
     border: 2px solid var(--c-border);
     border-radius: 12px;
-    background: #fff;
+    background: var(--c-input-bg);
     padding: 10px 12px;
     outline: none;
   }
@@ -3236,9 +3236,16 @@
     font-size:11px; font-weight:800; padding:2px 9px; border-radius:var(--r-pill);
     white-space:nowrap; line-height:1.7; flex:none;
   }
-  .acct-recon-badge-pink{ background:var(--c-pink-bg-2); color:var(--c-pink-deep); }
+  /* 每階段一色（對照表在 accounting.js 的 ACCT_RECON_BADGE_GROUP）：
+     紅=待回填(要動手) 灰=待核對業績(長等待) 紫=審稿 綠=已發布 金=發票 藍=等錢 珊瑚=待對帳 */
+  .acct-recon-badge-red{ background:var(--c-danger); color:var(--c-text-invert); }
+  .acct-recon-badge-muted{ background:var(--c-line); color:var(--c-muted); }
+  .acct-recon-badge-purple{ background:var(--c-purple-bg); color:var(--c-purple-text); border:1px solid var(--c-purple-border); }
+  .acct-recon-badge-mint{ background:var(--c-mint-bg); color:var(--c-mint-text); border:1px solid var(--c-mint-border); }
   .acct-recon-badge-gold{ background:var(--c-gold-badge-bg); color:var(--c-gold-text); border:1px solid var(--c-gold-border); }
   .acct-recon-badge-blue{ background:var(--c-blue-bg); color:var(--c-blue-text); border:1px solid var(--c-blue-border); }
+  .acct-recon-badge-coral{ background:var(--c-coral-bg); color:var(--c-coral-text); border:1px solid var(--c-coral-border); }
+  .acct-recon-month-pending{ color:var(--c-danger); font-weight:800; }
   .acct-recon-detail{ display:none; padding:0 14px 14px; border-top:1px solid var(--c-line); margin-top:2px; }
   .acct-recon-row.open .acct-recon-detail{ display:block; padding-top:10px; }
   .acct-recon-head{ display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; margin-bottom:8px; }
@@ -3252,12 +3259,12 @@
     font-size:11.5px; font-weight:700; color:var(--c-muted); margin:0;
   }
   /* 跟帳務明細編輯彈窗（.task-form select/input）同一套邊框/圓角/字體，別自創一套；
-     底色用 --c-surface（.task-form 那邊是 #fff，這裡改用變數以符合本頁全站色碼規範） */
+     內裡走 shared.css 的 --c-input-bg（輸入框內裡統一變數，不要硬寫白也不要用卡片底色） */
   .acct-recon-grid input, .acct-recon-grid select{
     width:100%; margin:0; font-family:var(--font-body);
     font-size:13px; font-weight:700; color:var(--c-text);
     border:2px solid var(--c-border); border-radius:var(--r-sm);
-    background:var(--c-surface); padding:7px 9px; outline:none;
+    background:var(--c-input-bg); padding:7px 9px; outline:none;
   }
   .acct-recon-grid input:focus, .acct-recon-grid select:focus{ border-color:var(--c-primary); }
   /* 試算只是提示（分潤金額才是權威值），差太多才提醒去查一下，不會自動改數字 */
@@ -5243,7 +5250,7 @@
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=11"></script>
+<script src="accounting.js?v=12"></script>
 <script src="admin.js?v=66"></script>
 <script src="memo.js?v=5"></script>
 

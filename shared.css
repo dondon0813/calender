@@ -45,6 +45,8 @@
   --c-primary:       #FF8FA3;  /* 主粉 */
   --c-primary-dark:  #FF7391;  /* 主粉 hover */
   --c-danger:        #e0654f;  /* 錯誤訊息 */
+  --c-input-bg:      #fff;     /* 輸入框內裡（表單欄位一律用這個，別硬寫白） */
+  --c-text-invert:   #fff;     /* 深底上的反白文字 */
 
   /* ---------- 分類色盤（星期、標籤共用）---------- */
   --c-cat-0: #FF8FA3;  /* 粉 */
