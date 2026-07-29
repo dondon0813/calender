@@ -456,17 +456,17 @@ function renderAcctRecon() {
           </select>
         </label>
         <label>銷售金額
-          <input type="number" class="acct-recon-sales" step="1" value="${escHtml(salesVal)}">
+          ${r.sales !== undefined ? `<input type="number" class="acct-recon-sales" step="1" value="${escHtml(salesVal)}">` : '<span class="acct-recon-est">—</span>'}
         </label>
         <label>分潤金額
-          <input type="number" class="acct-recon-commission" step="1" value="${escHtml(commVal)}">
-          <span class="acct-recon-est${warn ? ' warn' : ''}">${est !== null ? '試算 $' + est.toLocaleString('en-US') : ''}</span>
+          ${r.commission !== undefined ? `<input type="number" class="acct-recon-commission" step="1" value="${escHtml(commVal)}">
+          <span class="acct-recon-est${warn ? ' warn' : ''}">${est !== null ? '試算 $' + est.toLocaleString('en-US') : ''}</span>` : '<span class="acct-recon-est">—</span>'}
         </label>
         <label>發票號碼
-          <input type="text" class="acct-recon-invoice" value="${escHtml(r.invoice || '')}">
+          ${r.invoice !== undefined ? `<input type="text" class="acct-recon-invoice" value="${escHtml(r.invoice || '')}">` : '<span class="acct-recon-est">—</span>'}
         </label>
         <label>備註
-          <input type="text" class="acct-recon-note" value="${escHtml(r.note || '')}">
+          ${r.note !== undefined ? `<input type="text" class="acct-recon-note" value="${escHtml(r.note || '')}">` : '<span class="acct-recon-est">—</span>'}
         </label>
       </div>
       <div class="acct-recon-actions">
@@ -486,16 +486,19 @@ function renderAcctRecon() {
     const estEl = rowEl.querySelector('.acct-recon-est');
     const msgEl = rowEl.querySelector('.acct-recon-msg');
 
-    // 試算只是提示，跟著輸入即時重算，但絕對不會反過來改寫分潤金額欄
-    const refreshEst = () => {
-      const est = acctReconEstimate(rec, salesEl.value);
-      if (est === null) { estEl.textContent = ''; estEl.classList.remove('warn'); return; }
-      estEl.textContent = '試算 $' + est.toLocaleString('en-US');
-      const w = commEl.value !== '' && Math.abs(acctNum(commEl.value) - est) > Math.max(est * 0.02, 5);
-      estEl.classList.toggle('warn', w);
-    };
-    salesEl.addEventListener('input', refreshEst);
-    commEl.addEventListener('input', refreshEst);
+    // 試算只是提示，跟著輸入即時重算，但絕對不會反過來改寫分潤金額欄。
+    // 金額欄沒權限時（後端沒回傳該 key）根本不會渲染輸入框，這裡就不用掛。
+    if (salesEl && commEl && estEl) {
+      const refreshEst = () => {
+        const est = acctReconEstimate(rec, salesEl.value);
+        if (est === null) { estEl.textContent = ''; estEl.classList.remove('warn'); return; }
+        estEl.textContent = '試算 $' + est.toLocaleString('en-US');
+        const w = commEl.value !== '' && Math.abs(acctNum(commEl.value) - est) > Math.max(est * 0.02, 5);
+        estEl.classList.toggle('warn', w);
+      };
+      salesEl.addEventListener('input', refreshEst);
+      commEl.addEventListener('input', refreshEst);
+    }
 
     const setMsg = (text, cls) => {
       msgEl.textContent = text;
@@ -504,18 +507,20 @@ function renderAcctRecon() {
 
     // 儲存跟下一階段都送同一組欄位，差別只在 reconStatus 要不要被強制推進；
     // 這樣「下一階段」不會把使用者剛改好還沒按儲存的金額/發票/備註弄丟。
-    // 防禦縱深：某欄位在這筆資料原本就沒有（後端因權限遮蔽而沒回傳這個 key）才略過不送，
-    // 避免看不到該欄位的人把輸入框的空字串當成「清空」送出去，覆寫掉看不見的真實金額。
+    // 沒權限的欄位（後端沒回傳該 key）連輸入框都不會渲染，這裡自然也不會送——
+    // 雙重條件（資料有 key 且輸入框存在）是保險絲，防止任何一邊漏掉時覆寫看不見的真實值。
     const gather = () => {
       const payload = {
         type: 'acct-update',
         id: rec.id,
         reconStatus: rowEl.querySelector('.acct-recon-status').value
       };
-      if (rec.sales !== undefined) payload.sales = salesEl.value;
-      if (rec.commission !== undefined) payload.commission = commEl.value;
-      if (rec.invoice !== undefined) payload.invoice = rowEl.querySelector('.acct-recon-invoice').value;
-      if (rec.note !== undefined) payload.note = rowEl.querySelector('.acct-recon-note').value;
+      const invEl = rowEl.querySelector('.acct-recon-invoice');
+      const noteEl = rowEl.querySelector('.acct-recon-note');
+      if (rec.sales !== undefined && salesEl) payload.sales = salesEl.value;
+      if (rec.commission !== undefined && commEl) payload.commission = commEl.value;
+      if (rec.invoice !== undefined && invEl) payload.invoice = invEl.value;
+      if (rec.note !== undefined && noteEl) payload.note = noteEl.value;
       return payload;
     };
 
