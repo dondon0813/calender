@@ -15,8 +15,22 @@
 let acctData = [];
 let acctCan = { revenue: false, commission: false, recon: false };
 let acctStatuses = ['未成團', '進行中', '待結算', '已請款', '已入帳'];
-// 對帳流程推進順序；後端沒回時用這組 fallback（跟 Code.gs 那邊的常值保持一致）
-let acctReconStatuses = ['待回填', '待核對業績', '待開發票', '待確認發票', '等待匯款', '待對帳'];
+// 對帳狀態白名單；後端沒回時用這組 fallback（跟 Code.gs 的 ACCT_RECON_STATUSES 保持逐字元一致）
+let acctReconStatuses = ['待回填', '待核對業績', '審稿中', '審稿完成(待發布)', '已發布', '待開發票', '待確認發票', '等待匯款', '待對帳'];
+// 對帳狀態「下一階段」推進對照表：雙流程（開團／稿酬）在「待開發票」合流，不是照陣列順序推進。
+// 開團流程：待回填→待核對業績→（合流）；稿酬流程：審稿中→審稿完成(待發布)→已發布→（合流）；
+// 共用後段：待開發票→待確認發票→等待匯款→待對帳→''（完成，呼叫端 confirm 後才送空字串）。
+// 不在這張表裡的狀態（含空白）＝已經是流程終點，「下一階段」按鈕不動作。
+const ACCT_RECON_NEXT = {
+  '待回填': '待核對業績',
+  '待核對業績': '待開發票',
+  '審稿中': '審稿完成(待發布)',
+  '審稿完成(待發布)': '已發布',
+  '已發布': '待開發票',
+  '待開發票': '待確認發票',
+  '待確認發票': '等待匯款',
+  '等待匯款': '待對帳'
+};
 let acctLoaded = false;
 let acctEditCtx = null;
 let acctTab = 'list';
@@ -190,7 +204,7 @@ function renderAccountingView() {
                  : (r.rateNote ? escHtml(r.rateNote) : '—'));
     const rc = r.reconStatus || '';
     const rcCls = rc ? 'wait' : 'ok';
-    const rcLabel = rc ? escHtml(rc) : '完成';
+    const rcLabel = rc ? escHtml(rc) : '—';
     return `<div class="acct-row" data-id="${escHtml(r.id)}">
       <span class="acct-date">${escHtml(r.date || '')}</span>
       <span class="acct-name">${escHtml(acctBrandName(r.brandId) || r.rawName)}
@@ -546,13 +560,14 @@ function renderAcctRecon() {
 
     rowEl.querySelector('.acct-recon-next').addEventListener('click', async () => {
       const payload = gather();
-      const idx = acctReconStatuses.indexOf(payload.reconStatus);
-      if (idx === -1) return;
-      if (idx === acctReconStatuses.length - 1) {
+      const cur = payload.reconStatus;
+      if (cur === '待對帳') {
         if (!confirm('標記為對帳完成？完成後此列會從對帳清單消失')) return;
         payload.reconStatus = '';
+      } else if (Object.prototype.hasOwnProperty.call(ACCT_RECON_NEXT, cur)) {
+        payload.reconStatus = ACCT_RECON_NEXT[cur];
       } else {
-        payload.reconStatus = acctReconStatuses[idx + 1];
+        return; // 不在對照表裡（含空白）＝流程終點，不動作
       }
       setMsg('處理中…', '');
       try {
