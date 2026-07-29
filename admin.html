@@ -3070,7 +3070,7 @@
   }
   .acct-row{
     display:grid;
-    grid-template-columns:92px minmax(120px,1fr) 68px 96px 96px 74px;
+    grid-template-columns:92px minmax(120px,1fr) 68px 96px 96px 74px 84px;
     gap:8px; align-items:center; padding:9px 12px;
     border-bottom:1px solid var(--c-line); font-size:13px; cursor:pointer;
   }
@@ -3101,6 +3101,7 @@
     .acct-status{ grid-column:3 / 4; grid-row:1; }
     .acct-name{ grid-column:1 / 2; }
     .acct-rate{ display:none; }
+    .acct-recon-col{ display:none; }
   }
   /* 帳務：分頁切換與金額切換 */
   .acct-tabs, .acct-metric-switch{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
@@ -3203,6 +3204,35 @@
     .acct-rank-row > span:nth-child(3), .acct-rank-row > span:nth-child(4),
     .acct-rank-row > span:nth-child(6){ display:none; }
   }
+  /* 對帳（acctRecon 工作佇列）：一列一團，欄位可直接填，跟明細/報表不同，
+     不用表格式而用卡片，因為每列的操作（下一階段／儲存）比純瀏覽重要 */
+  .acct-recon-list{ display:flex; flex-direction:column; gap:10px; }
+  .acct-recon-row{
+    border:1.5px solid var(--c-border-light); border-radius:10px;
+    background:var(--c-surface); padding:12px 14px;
+  }
+  .acct-recon-head{ display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; margin-bottom:8px; }
+  .acct-recon-head .acct-name{ font-weight:800; color:var(--c-text); }
+  .acct-recon-head .acct-rate{ font-size:12px; color:var(--c-text-soft); }
+  .acct-recon-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
+    gap:10px; margin-bottom:10px;
+  }
+  .acct-recon-grid label{
+    display:flex; flex-direction:column; gap:3px;
+    font-size:11.5px; font-weight:700; color:var(--c-muted); margin:0;
+  }
+  .acct-recon-grid input, .acct-recon-grid select{
+    font-size:13px; padding:6px 8px; margin:0; width:auto;
+  }
+  /* 試算只是提示（分潤金額才是權威值），差太多才提醒去查一下，不會自動改數字 */
+  .acct-recon-est{ font-size:11px; color:var(--c-muted); margin-top:2px; }
+  .acct-recon-est.warn{
+    color:var(--c-danger); font-weight:800;
+    background:var(--c-pink-bg-2); border-radius:5px; padding:1px 5px; width:fit-content;
+  }
+  .acct-recon-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .acct-recon-actions .form-status{ margin:0; font-size:12px; }
   /* 品牌檢視彈窗裡的帳務摘要 */
   .bda-wrap{
     margin-top:12px; padding:12px 14px; border-radius:10px;
@@ -3685,7 +3715,7 @@
     <button class="sn-item" data-view="groupStatus">📢 開團狀態</button>
     <button class="sn-item" data-view="brandVendor">🏢 品牌廠商</button>
     <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
-    <button class="sn-item" data-view="accounting" data-perm="revenue|commission">💰 開團帳務</button>
+    <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -3730,7 +3760,7 @@
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
           <button class="menu-item" data-view="brandVendor">🏢 品牌廠商</button>
           <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
-          <button class="menu-item" data-view="accounting" data-perm="revenue|commission">💰 開團帳務</button>
+          <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -4234,10 +4264,11 @@
     <div class="form-status" id="acctStatus" style="text-align:center;"></div>
 
     <div class="acct-tabs">
-      <button class="acct-tab on" data-tab="list">📋 明細</button>
-      <button class="acct-tab" data-tab="trend">📈 月營收趨勢</button>
-      <button class="acct-tab" data-tab="rank">🏆 品牌排行</button>
-      <button class="acct-tab" data-tab="print">🖨️ 列印報表</button>
+      <button class="acct-tab on" data-tab="list" data-perm="revenue|commission">📋 明細</button>
+      <button class="acct-tab" data-tab="trend" data-perm="revenue|commission">📈 月營收趨勢</button>
+      <button class="acct-tab" data-tab="rank" data-perm="revenue|commission">🏆 品牌排行</button>
+      <button class="acct-tab" data-tab="print" data-perm="revenue|commission">🖨️ 列印報表</button>
+      <button class="acct-tab" data-tab="recon" data-perm="revenue|acctRecon">✅ 對帳</button>
     </div>
 
     <div class="acct-filters">
@@ -4245,6 +4276,7 @@
       <select id="acctFilterMonth"><option value="">全部月份</option></select>
       <select id="acctFilterBrand"><option value="">全部品牌</option></select>
       <select id="acctFilterStatus"><option value="">全部狀態</option></select>
+      <select id="acctFilterRecon"><option value="">全部對帳狀態</option></select>
       <input type="search" id="acctFilterText" placeholder="搜尋團名、開票公司…">
       <button class="task-mini-btn" id="acctFilterClear">清除</button>
     </div>
@@ -4276,6 +4308,10 @@
         <button class="task-submit-btn" id="acctPrintBtn" style="margin:0; width:auto; padding:0 20px;">🖨️ 列印／存成 PDF</button>
       </div>
       <div id="acctPrintArea" class="acct-print-area"></div>
+    </div>
+
+    <div id="acctPaneRecon" style="display:none;">
+      <div id="acctReconList" class="acct-recon-list"></div>
     </div>
   </div>
 
@@ -4359,7 +4395,7 @@
       <option value="groupStatus">📢 開團狀態</option>
       <option value="brandVendor">🏢 品牌廠商</option>
       <option value="report" data-perm="report">📊 報表統計</option>
-      <option value="accounting" data-perm="revenue|commission">💰 開團帳務</option>
+      <option value="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</option>
       <option value="tools">🧰 便利小工具</option>
       <option value="lotteryTool">🎉 抽獎小幫手</option>
       <option value="imageLibrary">🖼️ 圖片庫</option>
@@ -4696,6 +4732,10 @@
 
       <label for="acctStatusSelect">狀態</label>
       <select id="acctStatusSelect"></select>
+      <div data-perm="revenue">
+        <label for="acctReconStatusSelect">對帳狀態</label>
+        <select id="acctReconStatusSelect"></select>
+      </div>
       <label for="acctPayToInput">匯款去向</label>
       <input type="text" id="acctPayToInput" placeholder="本人／老媽…">
       <label for="acctPayDateInput">匯款日期</label>
@@ -5168,8 +5208,8 @@
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=7"></script>
-<script src="admin.js?v=65"></script>
+<script src="accounting.js?v=8"></script>
+<script src="admin.js?v=66"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

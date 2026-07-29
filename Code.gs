@@ -65,9 +65,13 @@ const ACCT_COL = {
   COMPANY: 8, SALES: 9, RATE: 10, COMMISSION: 11, RATE_NOTE: 12, TAX_ADDED: 13, FEE: 14,
   STATUS: 15, PAY_TO: 16, PAY_DATE: 17, INVOICE: 18, NOTE: 19, IMPORT_NOTE: 20,
   // 稽核：金額是錢，改了要留痕跡才查得出是誰在什麼時候動的
-  UPDATED_BY: 21, UPDATED_AT: 22
+  UPDATED_BY: 21, UPDATED_AT: 22,
+  // 【新】對帳狀態（W 欄）：跟上面的稽核欄無關，是給 acctRecon 權限用的工作清單欄位
+  RECON: 23
 };
 const ACCT_STATUSES = ['未成團', '進行中', '待結算', '已請款', '已入帳'];
+// 對帳狀態：空白＝對帳完成；順序＝流程推進順序，前端「下一階段」按鈕依此排序
+const ACCT_RECON_STATUSES = ['待回填', '待核對業績', '待開發票', '待確認發票', '等待匯款', '待對帳'];
 
 // ===== 共用工具 =====
 
@@ -382,16 +386,17 @@ const PERM_DEFS = [
   { key: 'commission',      label: '分潤',         desc: '品牌資料庫的分潤%與分潤說明' },
   { key: 'revenue',         label: '業績',         desc: '開團紀錄的營業額／實收金額' },
   { key: 'brandVendorEdit', label: '品牌廠商編輯', desc: '關閉＝只能查看，不能新增或修改' },
-  { key: 'calendarEdit',    label: '行事曆編輯',   desc: '關閉＝只能查看檔期，不能排團或改內容' }
+  { key: 'calendarEdit',    label: '行事曆編輯',   desc: '關閉＝只能查看檔期，不能排團或改內容' },
+  { key: 'acctRecon',       label: '帳務對帳',     desc: '對帳工作清單：可看未完成團的完整金額與分潤%，看不到歷史帳' }
 ];
 
 // 角色預設值。選角色＝一次套上這組勾選，之後仍可針對個人單獨微調（微調結果存在該員工那一列）。
 // ⚠️ 這裡只是「預設模板」，真正生效的是試算表每個人自己那一列的勾選值。
 const ROLE_PRESETS = {
-  '副管理員':    { system: false, imageLibrary: false, report: true,  commission: true,  revenue: true,  brandVendorEdit: true,  calendarEdit: true },
-  '經紀人/助理': { system: false, imageLibrary: false, report: false, commission: true,  revenue: false, brandVendorEdit: true,  calendarEdit: true },
-  '行銷人員':    { system: false, imageLibrary: false, report: true,  commission: false, revenue: false, brandVendorEdit: false, calendarEdit: true },
-  '美編/小編':   { system: false, imageLibrary: false, report: false, commission: false, revenue: false, brandVendorEdit: false, calendarEdit: false }
+  '副管理員':    { system: false, imageLibrary: false, report: true,  commission: true,  revenue: true,  brandVendorEdit: true,  calendarEdit: true,  acctRecon: false },
+  '經紀人/助理': { system: false, imageLibrary: false, report: false, commission: true,  revenue: false, brandVendorEdit: true,  calendarEdit: true,  acctRecon: true },
+  '行銷人員':    { system: false, imageLibrary: false, report: true,  commission: false, revenue: false, brandVendorEdit: false, calendarEdit: true,  acctRecon: false },
+  '美編/小編':   { system: false, imageLibrary: false, report: false, commission: false, revenue: false, brandVendorEdit: false, calendarEdit: false, acctRecon: false }
 };
 const ROLE_NAMES = Object.keys(ROLE_PRESETS);
 
@@ -1085,7 +1090,8 @@ function getAccountingList_() {
       note: String(r[18] || ''),
       importNote: String(r[19] || ''),
       updatedBy: String(r[20] || ''),
-      updatedAt: r[21] instanceof Date ? fmtDateTime_(r[21]) : String(r[21] || '')
+      updatedAt: r[21] instanceof Date ? fmtDateTime_(r[21]) : String(r[21] || ''),
+      reconStatus: String(r[22] || '').trim()
     });
   }
   return list;
@@ -1113,11 +1119,26 @@ function stripAccounting_(list, canRevenue, canCommission) {
   });
 }
 
+// 【新】acctRecon（帳務對帳）權限：只給「對帳未完成」（reconStatus 非空白）的列，
+// 但那些列給完整金額與分潤%——因為要幫忙回填業績、跟會計核對，看不到成數/金額沒辦法做事。
+// 沒有 revenue/commission 又沒有 acctRecon 的人，doPost 的閘門就擋掉了，不會進來這裡。
 function getAccountingListFor_(user) {
   const list = getAccountingList_();
   if (isAdmin_(user)) return list;
   const p = getPermissionsFor_(user);
-  return stripAccounting_(list, !!p.revenue, !!p.commission);
+  const canRev = !!p.revenue;
+  const canCom = !!p.commission;
+  const canRecon = !!p.acctRecon;
+  if (!canRev && !canCom && !canRecon) return []; // 理論上到不了這裡（doPost 閘門已擋），保險起見還是回空陣列
+  // 列可見性：業績或分潤權限看得到全部列；只有 acctRecon 的人只看得到「對帳未完成」的列
+  const visible = (canRev || canCom) ? list : list.filter(item => item.reconStatus !== '');
+  // 欄位遮蔽改成逐列判斷：業績+分潤兩者都有才整列完全不遮（跟 stripAccounting_ 的短路邏輯一致），
+  // 或者這人有 acctRecon 而且這列還沒對帳完成——對帳中的列要靠金額與分潤%回填業績、跟會計核對，
+  // 遮起來沒辦法做事。已對帳完成的歷史列，沒有業績/分潤權限的人一律照 stripAccounting_ 原規則遮蔽。
+  return visible.map(item => {
+    const full = (canRev && canCom) || (canRecon && item.reconStatus !== '');
+    return full ? item : stripAccounting_([item], canRev, canCom)[0];
+  });
 }
 
 function findAcctRowById_(sheet, id) {
@@ -1139,7 +1160,7 @@ function nextAcctId_(sheet) {
 }
 
 function acctRowFrom_(fields, id) {
-  const row = new Array(22).fill('');
+  const row = new Array(23).fill('');
   row[0] = id;
   row[1] = fields.date || '';
   row[2] = fields.brandId || '';
@@ -1162,6 +1183,12 @@ function acctRowFrom_(fields, id) {
   row[19] = fields.importNote || '';
   row[20] = fields.updatedBy || '';
   row[21] = fields.updatedAt || '';
+  // 對帳狀態：值必須是空白或 ACCT_RECON_STATUSES 之一，非法值一律當空白（不擋整筆新增）。
+  // 新增時若沒送 reconStatus，預設「待回填」——新開的團一律要走一次對帳流程。
+  {
+    const rs = fields.reconStatus === undefined ? '待回填' : fields.reconStatus;
+    row[22] = (rs === '' || ACCT_RECON_STATUSES.indexOf(rs) !== -1) ? rs : '';
+  }
   return row;
 }
 
@@ -1207,6 +1234,7 @@ function updateAccounting_(id, fields, user) {
   set(ACCT_COL.PAY_DATE, fields.payDate);
   set(ACCT_COL.INVOICE, fields.invoice);
   set(ACCT_COL.NOTE, fields.note);
+  set(ACCT_COL.RECON, fields.reconStatus); // 純文字欄，不走 setNum；值的合法性在 doPost 分支已驗證過
   sheet.getRange(row, ACCT_COL.UPDATED_BY).setValue(user || '');
   sheet.getRange(row, ACCT_COL.UPDATED_AT).setValue(new Date());
   return true;
@@ -2497,11 +2525,11 @@ function doPost(e) {
       { re: /^event-(add|update|delete)$/,            key: 'calendarEdit',    msg: '你沒有行事曆的編輯權限' },
       { re: /^social-link-set$/,                      key: 'system',          msg: '你沒有系統設定的權限' }
     ];
-    // 帳務：業績與分潤是兩種權限，只要有其中一種就進得來（欄位層級再各自遮蔽）。
-    // 兩種都沒有的人，連清單都拿不到。
+    // 帳務：業績、分潤、acctRecon（對帳）三種權限，只要有其中一種就進得來（欄位/列層級再各自遮蔽）。
+    // 三種都沒有的人，連清單都拿不到。
     // 用上面已經算好的 myPerms／allows_，不要再呼叫一次 getPermissionsFor_：
     // 那個函式每次都會整表掃描＋逐格讀取，一個請求重複算三次會拖慢所有人。
-    if (/^acct-/.test(type) && !allows_('revenue') && !allows_('commission')) {
+    if (/^acct-/.test(type) && !allows_('revenue') && !allows_('commission') && !allows_('acctRecon')) {
       return jsonResult_({ success: false, error: '你沒有查看開團帳務的權限，如果需要請跟雪莉申請開通。' });
     }
     for (let ri = 0; ri < PERM_RULES.length; ri++) {
@@ -2649,10 +2677,17 @@ function doPost(e) {
         items: getAccountingListFor_(currentUser),
         canRevenue: allows_('revenue'),
         canCommission: allows_('commission'),
-        statuses: ACCT_STATUSES
+        canRecon: allows_('acctRecon'),
+        statuses: ACCT_STATUSES,
+        reconStatuses: ACCT_RECON_STATUSES
       });
     }
     if (type === 'acct-add' || type === 'acct-update') {
+      // acctRecon 但沒有 revenue：只能改「對帳未完成」的既有列，不能新增（新增等於能無中生有一筆歷史帳）。
+      const reconOnly = !allows_('revenue') && allows_('acctRecon');
+      if (type === 'acct-add' && !allows_('revenue')) {
+        return jsonResult_({ success: false, error: '需要業績權限才能新增帳務' });
+      }
       const fields = {};
       const put = (k, v) => { if (v !== undefined) fields[k] = v; };
       put('date', body.date === undefined ? undefined : String(body.date));
@@ -2666,8 +2701,9 @@ function doPost(e) {
       put('payDate', body.payDate === undefined ? undefined : String(body.payDate));
       put('invoice', body.invoice === undefined ? undefined : String(body.invoice));
       // 沒有對應權限就當作沒送，既有值不會被覆寫掉。
-      // 界線同 stripAccounting_：金額全歸業績，成數才歸分潤。
-      if (allows_('revenue')) {
+      // 界線同 stripAccounting_：金額全歸業績，成數才歸分潤。acctRecon（reconOnly）視同業績側，
+      // 因為要幫忙回填業績、跟會計核對，沒有金額欄位沒辦法做事。
+      if (allows_('revenue') || reconOnly) {
         put('sales', body.sales);
         put('commission', body.commission);
         put('fee', body.fee);
@@ -2676,9 +2712,20 @@ function doPost(e) {
         put('brandSplit', body.brandSplit === undefined ? undefined : String(body.brandSplit));
         put('note', body.note === undefined ? undefined : String(body.note));
       }
+      // 分潤%與分潤說明維持只認 commission，不因 acctRecon 放寬——經紀人助理本來就可能兩者都有，
+      // 但 reconOnly（沒有 revenue）不代表就有 commission，兩個權限各自獨立判斷。
       if (allows_('commission')) {
         put('rate', body.rate);
         put('rateNote', body.rateNote === undefined ? undefined : String(body.rateNote));
+      }
+      // 對帳狀態：業績權限或 reconOnly 都能改；非法值整筆回錯誤，不靜默改成空白
+      // （空白＝對帳完成，語意太重，不能因為打錯字就被默默標記完成）。
+      if (body.reconStatus !== undefined && (allows_('revenue') || reconOnly)) {
+        const rs = String(body.reconStatus);
+        if (rs !== '' && ACCT_RECON_STATUSES.indexOf(rs) === -1) {
+          return jsonResult_({ success: false, error: '對帳狀態不合法：' + rs });
+        }
+        fields.reconStatus = rs;
       }
       if (type === 'acct-add') {
         if (!fields.date) return jsonResult_({ success: false, error: '請選擇開團日期' });
@@ -2687,6 +2734,17 @@ function doPost(e) {
       }
       const id = String(body.id || '').trim();
       if (!id) return jsonResult_({ success: false, error: '缺少紀錄編號' });
+      if (reconOnly) {
+        // 伺服器端重讀目前的對帳狀態，不信前端送來的值：已完成對帳（空白）的列，
+        // 只有業績權限才能再動，acctRecon-only 整筆擋掉，不寫任何欄位。
+        const sheet = getAccountingSheet_();
+        const row = findAcctRowById_(sheet, id);
+        if (row === -1) return jsonResult_({ success: false, error: '找不到這筆紀錄' });
+        const curRecon = String(sheet.getRange(row, ACCT_COL.RECON).getValue() || '').trim();
+        if (curRecon === '') {
+          return jsonResult_({ success: false, error: '此筆已完成對帳，僅業績權限可修改' });
+        }
+      }
       const ok = updateAccounting_(id, fields, currentUser);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這筆紀錄' });
     }

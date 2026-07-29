@@ -13,8 +13,10 @@
 
 // ----- 模組層狀態（開機期就會被讀到，一律放最前段）-----
 let acctData = [];
-let acctCan = { revenue: false, commission: false };
+let acctCan = { revenue: false, commission: false, recon: false };
 let acctStatuses = ['未成團', '進行中', '待結算', '已請款', '已入帳'];
+// 對帳流程推進順序；後端沒回時用這組 fallback（跟 Code.gs 那邊的常值保持一致）
+let acctReconStatuses = ['待回填', '待核對業績', '待開發票', '待確認發票', '等待匯款', '待對帳'];
 let acctLoaded = false;
 let acctEditCtx = null;
 let acctTab = 'list';
@@ -56,12 +58,19 @@ function loadAccounting(force) {
 
   acctLoadingPromise = postTask({ type: 'acct-list' }).then(res => {
     acctData = Array.isArray(res.items) ? res.items : [];
-    acctCan = { revenue: !!res.canRevenue, commission: !!res.canCommission };
+    acctCan = { revenue: !!res.canRevenue, commission: !!res.canCommission, recon: !!res.canRecon };
     if (Array.isArray(res.statuses) && res.statuses.length) acctStatuses = res.statuses;
+    if (Array.isArray(res.reconStatuses) && res.reconStatuses.length) acctReconStatuses = res.reconStatuses;
     acctLoaded = true;
     acctFillFilters();
     acctFillPrintScope();
-    renderAccountingView();
+    // 只有對帳權限、沒有業績/分潤權限的助理：其他分頁對她來說是空白頁（沒資料也沒按鈕），
+    // 直接帶去唯一看得到的對帳分頁。只在還停在預設分頁時才自動切，避免蓋掉她自己選的分頁。
+    if (!acctCan.revenue && !acctCan.commission && acctCan.recon && acctTab === 'list') {
+      acctSwitchTab('recon');
+    } else {
+      renderAccountingView();
+    }
   }).catch(err => {
     if (box) box.innerHTML = '<div class="task-empty">讀取失敗：' + escHtml(err.message) + '</div>';
     throw err;
@@ -74,7 +83,7 @@ function loadAccounting(force) {
 // 所以填完要把原本選的值寫回去。
 function acctFillFilters() {
   const keep = {};
-  ['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus']
+  ['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus', 'acctFilterRecon']
     .forEach(id => { const el = document.getElementById(id); if (el) keep[id] = el.value; });
   acctFillFilterOptions_();
   Object.keys(keep).forEach(id => {
@@ -106,6 +115,11 @@ function acctFillFilterOptions_() {
   document.getElementById('acctFilterStatus').innerHTML =
     '<option value="">全部狀態</option>' +
     acctStatuses.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+
+  document.getElementById('acctFilterRecon').innerHTML =
+    '<option value="">全部對帳狀態</option>' +
+    '<option value="__pending__">未完成（進行中）</option>' +
+    acctReconStatuses.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
 }
 
 function acctFiltered() {
@@ -113,6 +127,7 @@ function acctFiltered() {
   const m = document.getElementById('acctFilterMonth').value;
   const b = document.getElementById('acctFilterBrand').value;
   const s = document.getElementById('acctFilterStatus').value;
+  const rc = document.getElementById('acctFilterRecon').value;
   const kw = (document.getElementById('acctFilterText').value || '').trim().toLowerCase();
   return acctData.filter(r => {
     const d = r.date || '';
@@ -120,6 +135,8 @@ function acctFiltered() {
     if (m && d.slice(5, 7) !== m) return false;
     if (b && r.brandId !== b) return false;
     if (s && r.status !== s) return false;
+    if (rc === '__pending__' && !r.reconStatus) return false;
+    if (rc && rc !== '__pending__' && r.reconStatus !== rc) return false;
     if (kw) {
       const hay = [r.rawName, acctBrandName(r.brandId), r.company, r.invoice, r.id]
         .filter(Boolean).join(' ').toLowerCase();
@@ -158,6 +175,7 @@ function renderAccountingView() {
   if (acctTab === 'trend') { renderAcctTrend(); return; }
   if (acctTab === 'rank') { renderAcctRank(); return; }
   if (acctTab === 'print') { renderAcctPrint(); return; }
+  if (acctTab === 'recon') { renderAcctRecon(); return; }
 
   if (!list.length) {
     box.innerHTML = '<div class="task-empty">沒有符合條件的紀錄</div>';
@@ -170,6 +188,9 @@ function renderAccountingView() {
     const rate = !acctCan.commission ? '<span class="acct-hidden">•••</span>'
       : (hasRate ? Math.round(acctNum(r.rate) * 1000) / 10 + '%'
                  : (r.rateNote ? escHtml(r.rateNote) : '—'));
+    const rc = r.reconStatus || '';
+    const rcCls = rc ? 'wait' : 'ok';
+    const rcLabel = rc ? escHtml(rc) : '完成';
     return `<div class="acct-row" data-id="${escHtml(r.id)}">
       <span class="acct-date">${escHtml(r.date || '')}</span>
       <span class="acct-name">${escHtml(acctBrandName(r.brandId) || r.rawName)}
@@ -179,6 +200,7 @@ function renderAccountingView() {
       <span class="acct-money">${acctCell(r, 'sales', acctCan.revenue)}</span>
       <span class="acct-money strong">${acctCell(r, 'commission', acctCan.revenue)}</span>
       <span class="acct-status ${stCls}">${escHtml(st || '—')}</span>
+      <span class="acct-status ${rcCls} acct-recon-col">${rcLabel}</span>
     </div>`;
   }).join('');
   box.querySelectorAll('.acct-row').forEach(el => {
@@ -391,6 +413,154 @@ function renderAcctPrint() {
     <div class="acct-print-foot">雪莉與朵栗 · 開團帳務系統　${escHtml(title)}　產生於 ${today}</div>`;
 }
 
+// ===== 對帳（acctRecon 角色的工作佇列）=====
+// 這裡的金額直接顯示、不走 acctCell 遮蔽：對帳權限的人（acctRecon-only）沒有
+// acctCan.revenue/commission，但後端契約保證這裡的列本來就含完整金額與 rate，
+// 遮起來反而讓她沒辦法做事。老闆本人 acctCan 全開，行為不變。
+function acctReconEstimate(rec, salesVal) {
+  const hasRate = rec.rate !== '' && rec.rate !== undefined && rec.rate !== null && !isNaN(Number(rec.rate));
+  if (!hasRate || salesVal === '' || salesVal === undefined || salesVal === null) return null;
+  return Math.round(acctNum(salesVal) * Number(rec.rate));
+}
+
+function renderAcctRecon() {
+  const box = document.getElementById('acctReconList');
+  if (!box) return;
+  // 後端對助理已經只回未完成的列，但老闆是全量資料，前端自己也要濾一次
+  const list = acctData.filter(r => r.reconStatus)
+    .slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  if (!list.length) {
+    box.innerHTML = '<div class="task-empty">目前沒有待對帳的紀錄</div>';
+    return;
+  }
+
+  box.innerHTML = list.map(r => {
+    const hasRate = r.rate !== '' && r.rate !== undefined && r.rate !== null && !isNaN(Number(r.rate));
+    const rateTxt = hasRate ? (Math.round(Number(r.rate) * 1000) / 10 + '%')
+      : (r.rateNote ? escHtml(r.rateNote) : '—');
+    const salesVal = (r.sales === undefined || r.sales === null) ? '' : r.sales;
+    const commVal = (r.commission === undefined || r.commission === null) ? '' : r.commission;
+    const est = acctReconEstimate(r, salesVal);
+    const warn = est !== null && commVal !== '' && Math.abs(acctNum(commVal) - est) > Math.max(est * 0.02, 5);
+    return `<div class="acct-recon-row" data-id="${escHtml(r.id)}">
+      <div class="acct-recon-head">
+        <span class="acct-date">${escHtml(r.date || '')}</span>
+        <span class="acct-name">${escHtml(acctBrandName(r.brandId) || r.rawName || '')}</span>
+        <span class="acct-rate">分潤 ${rateTxt}</span>
+      </div>
+      <div class="acct-recon-grid">
+        <label>對帳狀態
+          <select class="acct-recon-status">
+            ${acctReconStatuses.map(s => `<option value="${escHtml(s)}"${s === r.reconStatus ? ' selected' : ''}>${escHtml(s)}</option>`).join('')}
+          </select>
+        </label>
+        <label>銷售金額
+          <input type="number" class="acct-recon-sales" step="1" value="${escHtml(salesVal)}">
+        </label>
+        <label>分潤金額
+          <input type="number" class="acct-recon-commission" step="1" value="${escHtml(commVal)}">
+          <span class="acct-recon-est${warn ? ' warn' : ''}">${est !== null ? '試算 $' + est.toLocaleString('en-US') : ''}</span>
+        </label>
+        <label>發票號碼
+          <input type="text" class="acct-recon-invoice" value="${escHtml(r.invoice || '')}">
+        </label>
+        <label>備註
+          <input type="text" class="acct-recon-note" value="${escHtml(r.note || '')}">
+        </label>
+      </div>
+      <div class="acct-recon-actions">
+        <button class="task-mini-btn acct-recon-save">💾 儲存</button>
+        <button class="task-mini-btn acct-recon-next">下一階段 ▶</button>
+        <span class="form-status acct-recon-msg"></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.acct-recon-row').forEach(rowEl => {
+    const id = rowEl.dataset.id;
+    const rec = acctData.find(x => x.id === id);
+    if (!rec) return;
+    const salesEl = rowEl.querySelector('.acct-recon-sales');
+    const commEl = rowEl.querySelector('.acct-recon-commission');
+    const estEl = rowEl.querySelector('.acct-recon-est');
+    const msgEl = rowEl.querySelector('.acct-recon-msg');
+
+    // 試算只是提示，跟著輸入即時重算，但絕對不會反過來改寫分潤金額欄
+    const refreshEst = () => {
+      const est = acctReconEstimate(rec, salesEl.value);
+      if (est === null) { estEl.textContent = ''; estEl.classList.remove('warn'); return; }
+      estEl.textContent = '試算 $' + est.toLocaleString('en-US');
+      const w = commEl.value !== '' && Math.abs(acctNum(commEl.value) - est) > Math.max(est * 0.02, 5);
+      estEl.classList.toggle('warn', w);
+    };
+    salesEl.addEventListener('input', refreshEst);
+    commEl.addEventListener('input', refreshEst);
+
+    const setMsg = (text, cls) => {
+      msgEl.textContent = text;
+      msgEl.className = 'form-status acct-recon-msg' + (cls ? ' ' + cls : '');
+    };
+
+    // 儲存跟下一階段都送同一組欄位，差別只在 reconStatus 要不要被強制推進；
+    // 這樣「下一階段」不會把使用者剛改好還沒按儲存的金額/發票/備註弄丟。
+    // 防禦縱深：某欄位在這筆資料原本就沒有（後端因權限遮蔽而沒回傳這個 key）才略過不送，
+    // 避免看不到該欄位的人把輸入框的空字串當成「清空」送出去，覆寫掉看不見的真實金額。
+    const gather = () => {
+      const payload = {
+        type: 'acct-update',
+        id: rec.id,
+        reconStatus: rowEl.querySelector('.acct-recon-status').value
+      };
+      if (rec.sales !== undefined) payload.sales = salesEl.value;
+      if (rec.commission !== undefined) payload.commission = commEl.value;
+      if (rec.invoice !== undefined) payload.invoice = rowEl.querySelector('.acct-recon-invoice').value;
+      if (rec.note !== undefined) payload.note = rowEl.querySelector('.acct-recon-note').value;
+      return payload;
+    };
+
+    const applyLocal = (payload) => {
+      if ('sales' in payload) rec.sales = payload.sales === '' ? '' : acctNum(payload.sales);
+      if ('commission' in payload) rec.commission = payload.commission === '' ? '' : acctNum(payload.commission);
+      if ('invoice' in payload) rec.invoice = payload.invoice;
+      if ('note' in payload) rec.note = payload.note;
+      rec.reconStatus = payload.reconStatus;
+    };
+
+    rowEl.querySelector('.acct-recon-save').addEventListener('click', async () => {
+      const payload = gather();
+      setMsg('儲存中…', '');
+      try {
+        await postTask(payload);
+        applyLocal(payload);
+        renderAcctRecon();
+      } catch (err) {
+        setMsg('儲存失敗：' + err.message, 'error');
+      }
+    });
+
+    rowEl.querySelector('.acct-recon-next').addEventListener('click', async () => {
+      const payload = gather();
+      const idx = acctReconStatuses.indexOf(payload.reconStatus);
+      if (idx === -1) return;
+      if (idx === acctReconStatuses.length - 1) {
+        if (!confirm('標記為對帳完成？完成後此列會從對帳清單消失')) return;
+        payload.reconStatus = '';
+      } else {
+        payload.reconStatus = acctReconStatuses[idx + 1];
+      }
+      setMsg('處理中…', '');
+      try {
+        await postTask(payload);
+        applyLocal(payload);
+        renderAcctRecon();
+      } catch (err) {
+        setMsg('更新失敗：' + err.message, 'error');
+      }
+    });
+  });
+}
+
 // ===== 品牌檢視彈窗裡的帳務摘要 =====
 // brandVendor.js 排在本檔之前載入，所以它不能在最外層引用這裡的東西，
 // 但執行期（使用者點開品牌）本檔早就載完了，呼叫得到。
@@ -522,9 +692,10 @@ function acctSwitchTab(tab) {
   document.getElementById('acctPaneTrend').style.display = tab === 'trend' ? '' : 'none';
   document.getElementById('acctPaneRank').style.display = tab === 'rank' ? '' : 'none';
   document.getElementById('acctPanePrint').style.display = tab === 'print' ? '' : 'none';
-  // 列印報表自己有範圍選單，不吃上面的篩選列，避免兩套範圍打架
-  document.querySelector('.acct-filters').style.display = tab === 'print' ? 'none' : '';
-  document.getElementById('acctSummary').style.display = tab === 'print' ? 'none' : '';
+  document.getElementById('acctPaneRecon').style.display = tab === 'recon' ? '' : 'none';
+  // 列印報表自己有範圍選單、對帳是獨立工作佇列，兩者都不吃上面的篩選列/摘要
+  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon') ? 'none' : '';
+  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon') ? 'none' : '';
   // 只有真的在列印分頁才掛這個 class，否則在別頁按 Ctrl+P 會印出空白紙（見 @media print 註解）
   document.body.classList.toggle('acct-printing', tab === 'print');
   renderAccountingView();
@@ -547,6 +718,9 @@ function openAcctEditModal(rec) {
     vendorDb.map(v => `<option value="${escHtml(v.id)}">${escHtml(v.name)}</option>`).join('');
   document.getElementById('acctStatusSelect').innerHTML =
     acctStatuses.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
+  document.getElementById('acctReconStatusSelect').innerHTML =
+    '<option value="">完成（不需要對帳）</option>' +
+    acctReconStatuses.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('');
 
   const v = (id, val) => { document.getElementById(id).value = val === undefined || val === null ? '' : val; };
   v('acctDateInput', rec ? rec.date : new Date().toISOString().slice(0, 10));
@@ -563,6 +737,7 @@ function openAcctEditModal(rec) {
   v('acctCommissionInput', rec ? rec.commission : '');
   v('acctFeeInput', rec ? rec.fee : '');
   v('acctStatusSelect', rec ? (rec.status || '待結算') : '待結算');
+  v('acctReconStatusSelect', rec ? (rec.reconStatus || '') : (acctReconStatuses[0] || ''));
   v('acctPayToInput', rec ? rec.payTo : '');
   v('acctPayDateInput', rec ? rec.payDate : '');
   v('acctInvoiceInput', rec ? rec.invoice : '');
@@ -606,6 +781,7 @@ document.getElementById('acctSaveBtn').addEventListener('click', async () => {
     payload.fee = val('acctFeeInput');
     payload.note = val('acctNoteInput');
     payload.taxAdded = document.getElementById('acctTaxAddedInput').checked;
+    payload.reconStatus = document.getElementById('acctReconStatusSelect').value;
   }
   if (acctCan.commission) {
     // 輸入框是整數（15），存進試算表要換回小數（0.15）——跟載入時的換算對稱
@@ -659,12 +835,12 @@ document.getElementById('acctPrintScope').addEventListener('change', renderAcctP
 document.getElementById('acctPrintBtn').addEventListener('click', () => window.print());
 document.getElementById('acctAddBtn').addEventListener('click', () => openAcctEditModal(null));
 document.getElementById('acctReloadBtn').addEventListener('click', () => loadAccounting(true));
-['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus'].forEach(id => {
+['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus', 'acctFilterRecon'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderAccountingView);
 });
 document.getElementById('acctFilterText').addEventListener('input', renderAccountingView);
 document.getElementById('acctFilterClear').addEventListener('click', () => {
-  ['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus', 'acctFilterText']
+  ['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus', 'acctFilterRecon', 'acctFilterText']
     .forEach(id => { document.getElementById(id).value = ''; });
   renderAccountingView();
 });

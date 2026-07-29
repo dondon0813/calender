@@ -2011,7 +2011,7 @@ function switchView(name, target) {
   // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
   // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
   const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務' };
-  const VIEW_PERM_KEY = { accounting: 'revenue|commission' };
+  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon' };
   if (VIEW_PERM[name] && !hasPerm(VIEW_PERM_KEY[name] || name)) {
     alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
