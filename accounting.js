@@ -17,6 +17,10 @@ let acctCan = { revenue: false, commission: false };
 let acctStatuses = ['未成團', '進行中', '待結算', '已請款', '已入帳'];
 let acctLoaded = false;
 let acctEditCtx = null;
+let acctTab = 'list';
+let acctMetric = 'commission';
+
+const ACCT_METRIC_LABEL = { commission: '分潤', sales: '銷售金額', fee: '稿酬' };
 
 function acctNum(v) {
   const n = Number(v);
@@ -48,6 +52,7 @@ async function loadAccounting(force) {
     if (Array.isArray(res.statuses) && res.statuses.length) acctStatuses = res.statuses;
     acctLoaded = true;
     acctFillFilters();
+    acctFillPrintScope();
     renderAccountingView();
   } catch (err) {
     if (box) box.innerHTML = '<div class="task-empty">讀取失敗：' + escHtml(err.message) + '</div>';
@@ -138,6 +143,11 @@ function renderAccountingView() {
     tile('稿酬', acctCan.revenue ? acctMoney(fee) : hidden) +
     (acctCan.revenue && pend ? tile('其中未結算', acctMoney(pend), 'pend') : '');
 
+  // 其他分頁各自渲染，但摘要四格是共用的，所以上面一定要先算完
+  if (acctTab === 'trend') { renderAcctTrend(); return; }
+  if (acctTab === 'rank') { renderAcctRank(); return; }
+  if (acctTab === 'print') { renderAcctPrint(); return; }
+
   if (!list.length) {
     box.innerHTML = '<div class="task-empty">沒有符合條件的紀錄</div>';
     return;
@@ -166,6 +176,224 @@ function renderAccountingView() {
       if (rec) openAcctEditModal(rec);
     });
   });
+}
+
+// ===== 月營收趨勢 =====
+// 一次只畫一種金額。銷售是分潤的 6 倍量級，兩條畫同一張圖只有兩種下場：
+// 用雙 Y 軸（比例被縮放扭曲、會誤導）或小的那條被壓成貼地的一條線。
+function acctMonthly(list) {
+  const m = new Map();
+  list.forEach(r => {
+    const ym = (r.date || '').slice(0, 7);
+    if (!ym) return;
+    if (!m.has(ym)) m.set(ym, { ym, sales: 0, commission: 0, fee: 0, n: 0, teams: 0, pend: 0 });
+    const o = m.get(ym);
+    o.sales += acctNum(r.sales);
+    o.commission += acctNum(r.commission);
+    o.fee += acctNum(r.fee);
+    o.n++;
+    if (!r.contFrom) o.teams++;
+    if (r.status !== '已入帳' && r.status !== '已請款') o.pend += acctNum(r.commission);
+  });
+  return [...m.values()].sort((a, b) => a.ym.localeCompare(b.ym));
+}
+
+function renderAcctTrend() {
+  const box = document.getElementById('acctChart');
+  const note = document.getElementById('acctChartNote');
+  if (!box) return;
+  if (!acctCan.revenue) {
+    box.innerHTML = '<div class="task-empty">你沒有查看業績金額的權限，看不到趨勢圖</div>';
+    note.textContent = '';
+    return;
+  }
+  const rows = acctMonthly(acctFiltered());
+  if (!rows.length) { box.innerHTML = '<div class="task-empty">沒有資料</div>'; note.textContent = ''; return; }
+
+  const key = acctMetric;
+  const max = Math.max(...rows.map(r => r[key]), 1);
+  const BAR = 30, GAP = 6, PADL = 62, PADT = 14, H = 210, PADB = 44;
+  const W = PADL + rows.length * (BAR + GAP) + 12;
+  const y = v => PADT + (H - (v / max) * H);
+
+  // 格線：4 條，取好看的整數級距
+  const step = Math.pow(10, Math.floor(Math.log10(max))) * (max / Math.pow(10, Math.floor(Math.log10(max))) > 5 ? 2 : 1);
+  const ticks = [];
+  for (let v = 0; v <= max; v += step / 2) ticks.push(v);
+  if (ticks[ticks.length - 1] < max) ticks.push(max);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H + PADT + PADB}" width="${W}" height="${H + PADT + PADB}" role="img" aria-label="每月${ACCT_METRIC_LABEL[key]}長條圖">`;
+  ticks.forEach(v => {
+    svg += `<line x1="${PADL - 6}" x2="${W - 8}" y1="${y(v)}" y2="${y(v)}" class="acct-grid"/>`;
+    svg += `<text x="${PADL - 10}" y="${y(v) + 4}" class="acct-axis" text-anchor="end">${acctShort(v)}</text>`;
+  });
+  let lastYear = '';
+  rows.forEach((r, i) => {
+    const x = PADL + i * (BAR + GAP);
+    const h = Math.max((r[key] / max) * H, r[key] > 0 ? 2 : 0);
+    const top = PADT + (H - h);
+    svg += `<rect class="acct-bar" x="${x}" y="${top}" width="${BAR}" height="${h}" rx="4"
+             data-i="${i}"><title>${escHtml(r.ym)}　${ACCT_METRIC_LABEL[key]} ${acctMoney(r[key])}　${r.teams} 團</title></rect>`;
+    const mm = String(parseInt(r.ym.slice(5, 7), 10));
+    svg += `<text x="${x + BAR / 2}" y="${PADT + H + 15}" class="acct-axis" text-anchor="middle">${mm}</text>`;
+    const yr = r.ym.slice(0, 4);
+    if (yr !== lastYear) {
+      svg += `<text x="${x}" y="${PADT + H + 33}" class="acct-axis-year">${yr}</text>`;
+      lastYear = yr;
+    }
+  });
+  svg += '</svg>';
+  box.innerHTML = svg;
+
+  const tot = rows.reduce((a, r) => a + r[key], 0);
+  const best = rows.reduce((a, r) => (r[key] > a[key] ? r : a), rows[0]);
+  note.innerHTML = `共 ${rows.length} 個月　合計 <b>${acctMoney(tot)}</b>　` +
+    `平均每月 <b>${acctMoney(Math.round(tot / rows.length))}</b>　` +
+    `最高 <b>${escHtml(best.ym)}</b> 的 <b>${acctMoney(best[key])}</b>　` +
+    `<span class="acct-chart-hint">（滑過長條看該月數字）</span>`;
+}
+
+// 軸標籤用「萬」為單位，六位數字排在軸上會擠成一團
+function acctShort(v) {
+  if (v >= 10000) return Math.round(v / 10000 * 10) / 10 + '萬';
+  return acctMoney(v);
+}
+
+// ===== 品牌排行 =====
+function acctByBrand(list) {
+  const m = new Map();
+  list.forEach(r => {
+    const id = r.brandId || '(未指定)';
+    if (!m.has(id)) m.set(id, { id, teams: 0, n: 0, sales: 0, commission: 0, fee: 0, last: '' });
+    const o = m.get(id);
+    o.n++;
+    if (!r.contFrom) o.teams++;
+    o.sales += acctNum(r.sales);
+    o.commission += acctNum(r.commission);
+    o.fee += acctNum(r.fee);
+    if ((r.date || '') > o.last) o.last = r.date || '';
+  });
+  // 沒有業績權限的人拿到的金額全是 undefined→0，用金額排序會退化成隨機順序，
+  // 卻照樣印出 1、2、3 名，等於給了一份假排行。那種情況改用團數排。
+  const arr = [...m.values()];
+  if (!acctCan.revenue) return arr.sort((a, b) => b.teams - a.teams || b.n - a.n);
+  return arr.sort((a, b) => (b.commission + b.fee) - (a.commission + a.fee));
+}
+
+function renderAcctRank() {
+  const box = document.getElementById('acctRank');
+  if (!box) return;
+  const rows = acctByBrand(acctFiltered());
+  if (!rows.length) { box.innerHTML = '<div class="task-empty">沒有資料</div>'; return; }
+  const max = Math.max(...rows.map(r => r.commission + r.fee), 1);
+  const head = `<div class="acct-rank-row head">
+      <span>#</span><span>品牌${acctCan.revenue ? '' : '（依團數排序）'}</span><span>團數</span>
+      <span>銷售金額</span><span>分潤＋稿酬</span><span>最近一團</span></div>`;
+  box.innerHTML = head + rows.map((r, i) => {
+    const income = r.commission + r.fee;
+    const pct = acctCan.revenue ? (income / max * 100) : 0;
+    return `<div class="acct-rank-row">
+      <span class="acct-rank-no">${i + 1}</span>
+      <span class="acct-rank-name">${escHtml(acctBrandName(r.id) || r.id)}</span>
+      <span class="acct-rank-n">${r.teams}</span>
+      <span class="acct-money">${acctCan.revenue ? escHtml(acctMoney(r.sales)) : '<span class="acct-hidden">•••</span>'}</span>
+      <span class="acct-money strong">${acctCan.revenue ? escHtml(acctMoney(income)) : '<span class="acct-hidden">•••</span>'}
+        ${acctCan.revenue ? `<i class="acct-rank-bar" style="width:${pct}%"></i>` : ''}</span>
+      <span class="acct-rank-last">${escHtml(r.last || '—')}</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== 列印報表 =====
+function acctFillPrintScope() {
+  const sel = document.getElementById('acctPrintScope');
+  if (!sel) return;
+  const keep = sel.value;
+  const years = [...new Set(acctData.map(r => (r.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+  const months = [...new Set(acctData.map(r => (r.date || '').slice(0, 7)).filter(Boolean))].sort().reverse();
+  sel.innerHTML = '<option value="all">全部期間</option>' +
+    years.map(y => `<option value="Y${y}">${y} 年（整年）</option>`).join('') +
+    months.map(m => `<option value="M${m}">${m.slice(0, 4)} 年 ${parseInt(m.slice(5), 10)} 月</option>`).join('');
+  if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
+}
+
+function renderAcctPrint() {
+  const box = document.getElementById('acctPrintArea');
+  if (!box) return;
+  const scope = document.getElementById('acctPrintScope').value || 'all';
+  let list = acctData, title = '全部期間';
+  if (scope.startsWith('Y')) {
+    const y = scope.slice(1);
+    list = acctData.filter(r => (r.date || '').startsWith(y));
+    title = y + ' 年';
+  } else if (scope.startsWith('M')) {
+    const ym = scope.slice(1);
+    list = acctData.filter(r => (r.date || '').startsWith(ym));
+    title = ym.slice(0, 4) + ' 年 ' + parseInt(ym.slice(5), 10) + ' 月';
+  }
+  const sales = list.reduce((a, r) => a + acctNum(r.sales), 0);
+  const comm = list.reduce((a, r) => a + acctNum(r.commission), 0);
+  const fee = list.reduce((a, r) => a + acctNum(r.fee), 0);
+  const teams = list.filter(r => !r.contFrom).length;
+  const pend = list.filter(r => r.status !== '已入帳' && r.status !== '已請款');
+  const pendSum = pend.reduce((a, r) => a + acctNum(r.commission), 0);
+  const money = v => acctCan.revenue ? acctMoney(v) : '－';
+
+  const months = acctMonthly(list);
+  const brands = acctByBrand(list).slice(0, 20);
+  const today = new Date().toISOString().slice(0, 10);
+
+  box.innerHTML = `
+    <div class="acct-print-head">
+      <h2>開團帳務報表</h2>
+      <div class="acct-print-meta">${escHtml(title)}　·　列印日期 ${today}</div>
+    </div>
+    <table class="acct-print-kv">
+      <tr><th>開團數</th><td>${teams} 團（紀錄 ${list.length} 筆）</td>
+          <th>銷售金額</th><td>${money(sales)}</td></tr>
+      <tr><th>分潤</th><td>${money(comm)}</td>
+          <th>稿酬</th><td>${money(fee)}</td></tr>
+      <tr><th>收入合計</th><td class="strong">${money(comm + fee)}</td>
+          <th>其中未結算</th><td>${money(pendSum)}（${pend.length} 團）</td></tr>
+    </table>
+
+    <h3>各月明細</h3>
+    <table class="acct-print-table">
+      <thead><tr><th>月份</th><th>團數</th><th>銷售金額</th><th>分潤</th><th>稿酬</th><th>未結算</th></tr></thead>
+      <tbody>${months.map(m => `<tr>
+        <td>${escHtml(m.ym)}</td><td>${m.teams}</td>
+        <td>${money(m.sales)}</td><td>${money(m.commission)}</td>
+        <td>${money(m.fee)}</td><td>${m.pend ? money(m.pend) : '－'}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr><th>合計</th><th>${teams}</th><th>${money(sales)}</th>
+        <th>${money(comm)}</th><th>${money(fee)}</th><th>${money(pendSum)}</th></tr></tfoot>
+    </table>
+
+    <h3>品牌排行（前 20）</h3>
+    <table class="acct-print-table">
+      <thead><tr><th>#</th><th>品牌</th><th>團數</th><th>銷售金額</th><th>分潤＋稿酬</th></tr></thead>
+      <tbody>${brands.map((b, i) => `<tr>
+        <td>${i + 1}</td><td>${escHtml(acctBrandName(b.id) || b.id)}</td><td>${b.teams}</td>
+        <td>${money(b.sales)}</td><td>${money(b.commission + b.fee)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="acct-print-foot">雪莉與朵栗 · 開團帳務系統　${escHtml(title)}　產生於 ${today}</div>`;
+}
+
+// ----- 分頁切換 -----
+function acctSwitchTab(tab) {
+  acctTab = tab;
+  document.querySelectorAll('.acct-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.getElementById('acctPaneList').style.display = tab === 'list' ? '' : 'none';
+  document.getElementById('acctPaneTrend').style.display = tab === 'trend' ? '' : 'none';
+  document.getElementById('acctPaneRank').style.display = tab === 'rank' ? '' : 'none';
+  document.getElementById('acctPanePrint').style.display = tab === 'print' ? '' : 'none';
+  // 列印報表自己有範圍選單，不吃上面的篩選列，避免兩套範圍打架
+  document.querySelector('.acct-filters').style.display = tab === 'print' ? 'none' : '';
+  document.getElementById('acctSummary').style.display = tab === 'print' ? 'none' : '';
+  // 只有真的在列印分頁才掛這個 class，否則在別頁按 Ctrl+P 會印出空白紙（見 @media print 註解）
+  document.body.classList.toggle('acct-printing', tab === 'print');
+  renderAccountingView();
 }
 
 // ----- 新增／編輯 -----
@@ -283,6 +511,18 @@ document.getElementById('acctDeleteBtn').addEventListener('click', async () => {
   btn.disabled = false;
 });
 
+document.querySelectorAll('.acct-tab').forEach(btn => {
+  btn.addEventListener('click', () => acctSwitchTab(btn.dataset.tab));
+});
+document.querySelectorAll('.acct-metric').forEach(btn => {
+  btn.addEventListener('click', () => {
+    acctMetric = btn.dataset.metric;
+    document.querySelectorAll('.acct-metric').forEach(b => b.classList.toggle('on', b === btn));
+    renderAcctTrend();
+  });
+});
+document.getElementById('acctPrintScope').addEventListener('change', renderAcctPrint);
+document.getElementById('acctPrintBtn').addEventListener('click', () => window.print());
 document.getElementById('acctAddBtn').addEventListener('click', () => openAcctEditModal(null));
 document.getElementById('acctReloadBtn').addEventListener('click', () => loadAccounting(true));
 ['acctFilterYear', 'acctFilterMonth', 'acctFilterBrand', 'acctFilterStatus'].forEach(id => {

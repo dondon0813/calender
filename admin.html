@@ -3102,6 +3102,107 @@
     .acct-name{ grid-column:1 / 2; }
     .acct-rate{ display:none; }
   }
+  /* 帳務：分頁切換與金額切換 */
+  .acct-tabs, .acct-metric-switch{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .acct-tab, .acct-metric{
+    font:inherit; font-size:13px; font-weight:800; cursor:pointer;
+    padding:7px 14px; border-radius:999px;
+    border:1.5px solid var(--c-border-light); background:var(--c-surface); color:var(--c-text-soft);
+  }
+  .acct-tab.on, .acct-metric.on{
+    background:var(--c-primary); border-color:var(--c-primary); color:#fff;
+  }
+  .acct-metric{ font-size:12px; padding:5px 12px; }
+  /* 圖表 */
+  .acct-chart-wrap{
+    overflow-x:auto; border:1.5px solid var(--c-border-light);
+    border-radius:10px; background:var(--c-surface); padding:8px 4px;
+  }
+  .acct-bar{ fill:var(--c-cat-4); transition:fill .12s; }
+  .acct-bar:hover{ fill:var(--c-blue-text); }
+  .acct-grid{ stroke:var(--c-line); stroke-width:1; }
+  .acct-axis{ font-size:10px; fill:var(--c-muted); }
+  .acct-axis-year{ font-size:10.5px; font-weight:800; fill:var(--c-text-soft); }
+  .acct-chart-note{ font-size:12.5px; color:var(--c-text-soft); margin-top:10px; line-height:1.8; }
+  .acct-chart-note b{ color:var(--c-text); font-variant-numeric:tabular-nums; }
+  .acct-chart-hint{ color:var(--c-muted); font-size:11.5px; }
+  /* 品牌排行 */
+  .acct-rank{
+    border:1.5px solid var(--c-border-light); border-radius:10px;
+    overflow:hidden; background:var(--c-surface);
+  }
+  .acct-rank-row{
+    display:grid; grid-template-columns:34px minmax(110px,1fr) 52px 100px 132px 92px;
+    gap:8px; align-items:center; padding:8px 12px;
+    border-bottom:1px solid var(--c-line); font-size:13px;
+  }
+  .acct-rank-row.head{ font-size:11.5px; font-weight:800; color:var(--c-muted); background:var(--c-bg-bottom); }
+  .acct-rank-row.head span:nth-child(n+4){ text-align:right; }
+  .acct-rank-row:last-child{ border-bottom:none; }
+  .acct-rank-no{ font-weight:900; color:var(--c-muted); font-variant-numeric:tabular-nums; }
+  .acct-rank-name{ font-weight:800; color:var(--c-text); }
+  .acct-rank-n{ text-align:right; font-variant-numeric:tabular-nums; color:var(--c-text-soft); }
+  .acct-rank-last{ text-align:right; font-size:11.5px; color:var(--c-muted); font-variant-numeric:tabular-nums; }
+  .acct-rank-bar{
+    display:block; height:3px; border-radius:2px; background:var(--c-cat-4);
+    margin-top:3px; margin-left:auto;
+  }
+  /* 列印報表 */
+  .acct-print-bar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
+  .acct-print-bar label{ font-size:12.5px; font-weight:800; color:var(--c-text-soft); margin:0; }
+  .acct-print-bar select{ width:auto; min-width:160px; margin:0; }
+  /* 報表區刻意用純白底：它是「紙」的預覽，列印出來就是白的，
+     用站上的米色底會讓螢幕跟印出來差很多。文字色仍走 token。 */
+  .acct-print-area{
+    background:#fff; border:1.5px solid var(--c-border-light); border-radius:10px;
+    padding:22px 24px; color:var(--c-text);
+  }
+  .acct-print-head h2{ margin:0 0 4px; font-size:20px; color:var(--c-text); }
+  .acct-print-meta{ font-size:12px; color:var(--c-muted); margin-bottom:16px; }
+  .acct-print-area h3{ font-size:14px; margin:22px 0 8px; color:var(--c-text); }
+  .acct-print-kv, .acct-print-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .acct-print-kv th, .acct-print-kv td{
+    border:1px solid var(--c-line); padding:6px 10px; text-align:left;
+  }
+  .acct-print-kv th{ background:var(--c-bg-bottom); width:88px; font-weight:800; color:var(--c-text-soft); }
+  .acct-print-kv td{ font-variant-numeric:tabular-nums; }
+  .acct-print-kv td.strong{ font-weight:900; }
+  .acct-print-table th, .acct-print-table td{
+    border:1px solid var(--c-line); padding:5px 8px; font-variant-numeric:tabular-nums;
+  }
+  .acct-print-table thead th, .acct-print-table tfoot th{
+    background:var(--c-bg-bottom); font-weight:800; color:var(--c-text-soft);
+  }
+  .acct-print-table td:not(:nth-child(2)), .acct-print-table th:not(:nth-child(2)){ text-align:right; }
+  .acct-print-table td:first-child, .acct-print-table th:first-child{ text-align:left; }
+  .acct-print-foot{ margin-top:18px; font-size:11px; color:var(--c-muted); text-align:center; }
+  /* 列印時只留報表本身，其餘介面全部隱藏。
+     ⚠️ 必須用 visibility 不能用 display:none —— #acctPrintArea 埋在好幾層容器裡，
+     祖先一旦 display:none，子孫再怎麼設 display 都不會被算繪。visibility 則可以由
+     子孫個別覆寫回 visible。 */
+  /* 整組規則鎖在 body.acct-printing 之下：使用者可能人在別的分頁就按 Ctrl+P，
+     那時 #acctPrintArea 的祖先是 display:none、根本不算繪，若還把其他東西藏起來
+     就會印出一張全白的紙。只有真的在列印報表分頁時才套用。 */
+  @media print{
+    body.acct-printing{ background:#fff !important; }
+    body.acct-printing *{ visibility:hidden !important; }
+    body.acct-printing #acctPrintArea,
+    body.acct-printing #acctPrintArea *{ visibility:visible !important; }
+    body.acct-printing #acctPrintArea{
+      position:absolute !important; left:0 !important; top:0 !important;
+      width:100% !important; margin:0 !important;
+      border:none !important; border-radius:0 !important; padding:0 !important;
+      background:#fff !important;
+    }
+    .acct-print-table thead{ display:table-header-group; }
+    .acct-print-table tr{ break-inside:avoid; }
+    #acctPrintArea h3{ break-after:avoid; }
+  }
+  @media (max-width:700px){
+    .acct-rank-row{ grid-template-columns:28px 1fr 92px; }
+    .acct-rank-row > span:nth-child(3), .acct-rank-row > span:nth-child(4),
+    .acct-rank-row > span:nth-child(6){ display:none; }
+  }
   /* 品牌列表的合作狀態小標 */
   .bv-coop{
     display:inline-block;
@@ -4105,6 +4206,13 @@
     </div>
     <div class="form-status" id="acctStatus" style="text-align:center;"></div>
 
+    <div class="acct-tabs">
+      <button class="acct-tab on" data-tab="list">📋 明細</button>
+      <button class="acct-tab" data-tab="trend">📈 月營收趨勢</button>
+      <button class="acct-tab" data-tab="rank">🏆 品牌排行</button>
+      <button class="acct-tab" data-tab="print">🖨️ 列印報表</button>
+    </div>
+
     <div class="acct-filters">
       <select id="acctFilterYear"><option value="">全部年份</option></select>
       <select id="acctFilterMonth"><option value="">全部月份</option></select>
@@ -4115,7 +4223,33 @@
     </div>
 
     <div id="acctSummary" class="acct-summary"></div>
-    <div id="acctList" class="acct-list"></div>
+
+    <div id="acctPaneList"><div id="acctList" class="acct-list"></div></div>
+
+    <div id="acctPaneTrend" style="display:none;">
+      <div class="acct-metric-switch">
+        <button class="acct-metric on" data-metric="commission">分潤</button>
+        <button class="acct-metric" data-metric="sales">銷售金額</button>
+        <button class="acct-metric" data-metric="fee">稿酬</button>
+      </div>
+      <!-- 刻意一次只畫一種金額：銷售是分潤的 6 倍量級，畫在同一張圖要嘛用雙 Y 軸
+           （會誤導），要嘛小的那條被壓成一條線。切換比同時擠在一起好讀。 -->
+      <div class="acct-chart-wrap"><div id="acctChart"></div></div>
+      <div id="acctChartNote" class="acct-chart-note"></div>
+    </div>
+
+    <div id="acctPaneRank" style="display:none;">
+      <div id="acctRank" class="acct-rank"></div>
+    </div>
+
+    <div id="acctPanePrint" style="display:none;">
+      <div class="acct-print-bar">
+        <label for="acctPrintScope">報表範圍</label>
+        <select id="acctPrintScope"></select>
+        <button class="task-submit-btn" id="acctPrintBtn" style="margin:0; width:auto; padding:0 20px;">🖨️ 列印／存成 PDF</button>
+      </div>
+      <div id="acctPrintArea" class="acct-print-area"></div>
+    </div>
   </div>
 
   <!-- ===== 行事曆 ===== -->
@@ -4998,7 +5132,7 @@
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=2"></script>
+<script src="accounting.js?v=4"></script>
 <script src="admin.js?v=65"></script>
 <script src="memo.js?v=5"></script>
 
