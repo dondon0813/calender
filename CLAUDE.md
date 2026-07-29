@@ -26,6 +26,6 @@
 - 主後端：`APPS_SCRIPT_URL`（admin.js / recipes / school-list / school-labels 頂部常數；index.html 例外叫 `STATS_BACKEND_URL`）；GET `?scope=calendar`（行事曆）、`?scope=public`（公開資料）、POST `{type:"..."}`（動作清單見 10 號檔 §4）。
 - 行事曆表 SHEET_ID：`18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk`。
 - 改 admin.js / memo.js 後，admin.html 的 `?v=` 版本號要 +1。
-- 線上驗證：`https://dondon0813.github.io/calender/<頁>.html?cb=<git short hash>`。
+- 線上驗證：`https://sheridondon.com.tw/<頁>.html?cb=<git short hash>`（自訂網域；舊 github.io 網址回 301，curl 不帶 `-L` 會 grep 到導向頁）。
 - 語法檢查：`node --check admin.js`、`node --check Code.gs`。
 - 站上樣式改 `shared.css` 的 `:root` 變數，禁止在各頁硬寫色碼。

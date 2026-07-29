@@ -36,3 +36,10 @@
 根因：Claude Code 遠端環境的 outbound 走 agent proxy，網路政策把 `script.google.com` 與 `dondon0813.github.io` 都擋在 CONNECT 403，curl 一律 `http=000`。這不是程式問題，也不是部署問題。
 之後怎麼做：curl 回 000／連不上時，先跑 `curl -sS "$HTTPS_PROXY/__agentproxy/status"` 看 `recentRelayFailures`；確認是政策擋掉就**停止嘗試**（不要改自己的程式碼、不要換網址重試），改為：(1) 用 `git show origin/main:檔名 | grep` 確認 main 上的內容正確，(2) 如實回報「本 session 無法做線上驗證」，(3) 給使用者可自己照做的實測步驟＋失敗時的三個可能原因。禁止把「程式碼已在 main」講成「線上已驗證通過」。
 波及：50 號檔 §3 已補上這個 fallback。
+
+## L6 2026-07-29 線上驗證打舊網域，301 導向頁讓指紋永遠是 0
+情境：對帳功能上線後照 50 號檔 §2 做前端指紋確認。
+錯誤：`curl -s dondon0813.github.io/calender/accounting.js | grep -c 指紋` 連續 8 次回 0，一度以為 Pages 重建卡住。
+根因：站點已掛自訂網域 sheridondon.com.tw，github.io 網址回 301＋162 bytes 的導向頁；curl 沒帶 `-L` 就永遠在 grep 那張導向頁。
+之後怎麼做：線上驗證一律用 `curl -sL https://sheridondon.com.tw/…`；指紋連 2 次回 0 時先 `curl -sI` 看狀態碼，301/302 就是打錯網址，不是還沒部署。
+波及：50 號檔 §2、10 號檔 §1、CLAUDE.md 速查已同步改網域。

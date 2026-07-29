@@ -7,7 +7,7 @@
 
 ```
 使用者(客人/員工)
-   │ https://dondon0813.github.io/calender/   ← repo 拼字就是 calender，不是 calendar！
+   │ https://sheridondon.com.tw/（自訂網域，2026-07-29 發現；舊網址 dondon0813.github.io/calender/ 會 301 轉過來，repo 拼字仍是 calender）
    ▼
 前端靜態頁（GitHub Pages，push main 後 ~1 分鐘自動部署）
    │ fetch(APPS_SCRIPT_URL + "?scope=calendar" / "?scope=public" / POST {type:...})

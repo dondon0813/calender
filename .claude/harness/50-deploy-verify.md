@@ -18,7 +18,8 @@
 1. push 完成後等 60–90 秒（背景執行 push——GCM 憑證互動的關係，前景跑會卡住）。
 2. 取本地指紋：`git rev-parse --short HEAD`，並記下這次 diff 裡一段**唯一存在於新版**的字串（例：新函式名）。
 3. 帶 cache-buster 抓線上檔並找指紋字串：
-   `curl -s "https://dondon0813.github.io/calender/【檔名】?cb=【short-hash】" | grep -c "【指紋字串】"`
+   `curl -sL "https://sheridondon.com.tw/【檔名】?cb=【short-hash】" | grep -c "【指紋字串】"`
+   （站點已掛自訂網域；舊網址 `dondon0813.github.io/calender/` 只會回 301 導向頁，直接 grep 一律 0——要嘛用新網域、要嘛 curl 帶 `-L`。2026-07-29 踩坑，見 lessons L6。）
    - 回 ≥1 → 版本確認通過，才可以開始功能驗證。
    - 回 0 → 還是舊版：再等 60 秒重試，最多 3 次；3 次都失敗 → 檢查 push 是否真的成功（`git log origin/main -1`），仍異常則熔斷回報。
 4. 功能驗證：能用 Browser 工具就實際打開頁面看渲染結果；不能就 curl 抓 HTML 檢查關鍵 DOM。改了 admin.js/memo.js 的話，確認 admin.html 的 `?v=` 已 +1（否則使用者瀏覽器會繼續用舊快取）。
