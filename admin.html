@@ -3498,13 +3498,17 @@
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
-    <button class="sn-item" data-view="imageLibrary">🖼️ 圖片庫</button>
+    <button class="sn-item" data-view="imageLibrary" data-perm="imageLibrary">🖼️ 圖片庫</button>
     <button class="sn-item" data-view="convertTool">🔄 轉檔小工具</button>
     <button class="sn-item" data-view="calculator">🧮 計算機</button>
     <div class="sn-group-title">版面</div>
     <!-- 右欄的下拉選單在 #paneRight 裡面，右欄關閉時會一起消失，所以開關必須放在
          側邊欄這種永遠看得到的地方，否則關掉就再也打不開了。 -->
     <button class="sn-item" id="sideNavRightToggle">▥ 開啟右欄</button>
+    <div class="sn-group-title">系統</div>
+    <!-- ⚠️ 寬螢幕會用側邊欄取代漢堡選單，所以漢堡選單有的入口這裡都要有一份，
+         否則桌機使用者永遠點不到（權限設定就曾經因此完全進不去）。 -->
+    <button class="sn-item" id="sideNavSettingsBtn">⚙️ 設定</button>
   </div>
 
   <div id="mainContentCol">
@@ -4843,7 +4847,7 @@
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="admin.js?v=63"></script>
+<script src="admin.js?v=64"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

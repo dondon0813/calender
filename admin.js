@@ -2360,6 +2360,9 @@ async function submitPasswordChange() {
 }
 
 document.getElementById('menuSettingsBtn').addEventListener('click', openSettingsHubModal);
+// 寬螢幕走側邊欄、不會出現漢堡選單，所以側邊欄那顆也要接（漏接的話桌機進不去設定）
+const sideNavSettingsBtn = document.getElementById('sideNavSettingsBtn');
+if (sideNavSettingsBtn) sideNavSettingsBtn.addEventListener('click', openSettingsHubModal);
 document.getElementById('settingsSubmitBtn').addEventListener('click', submitPasswordChange);
 
 function openSettingsHubModal() {
