@@ -41,12 +41,20 @@ function acctBrandName(id) {
   return b ? b.name : (id || '');
 }
 
-async function loadAccounting(force) {
-  if (acctLoaded && !force) return;
+// 同一份資料有兩個入口（帳務分頁、品牌檢視彈窗），一律走這裡。
+// ⚠️ 不要另外寫一份 fetch：曾經那樣做，補拉完只設了 acctLoaded 卻沒建篩選 UI，
+// 結果先看品牌摘要再進帳務分頁時整頁是空的，還得按重新整理才會出來。
+let acctLoadingPromise = null;
+
+function loadAccounting(force) {
+  if (acctLoaded && !force) return Promise.resolve();
+  // 兩個入口同時觸發時共用同一個請求，不要打兩次後端
+  if (acctLoadingPromise && !force) return acctLoadingPromise;
+
   const box = document.getElementById('acctList');
-  if (box) box.innerHTML = '<div class="task-empty">載入中…</div>';
-  try {
-    const res = await postTask({ type: 'acct-list' });
+  if (box && !acctLoaded) box.innerHTML = '<div class="task-empty">載入中…</div>';
+
+  acctLoadingPromise = postTask({ type: 'acct-list' }).then(res => {
     acctData = Array.isArray(res.items) ? res.items : [];
     acctCan = { revenue: !!res.canRevenue, commission: !!res.canCommission };
     if (Array.isArray(res.statuses) && res.statuses.length) acctStatuses = res.statuses;
@@ -54,9 +62,12 @@ async function loadAccounting(force) {
     acctFillFilters();
     acctFillPrintScope();
     renderAccountingView();
-  } catch (err) {
+  }).catch(err => {
     if (box) box.innerHTML = '<div class="task-empty">讀取失敗：' + escHtml(err.message) + '</div>';
-  }
+    throw err;
+  }).finally(() => { acctLoadingPromise = null; });
+
+  return acctLoadingPromise;
 }
 
 // 重建下拉選項會把使用者選的值洗掉（改完一筆回來就變成看全部），
@@ -378,6 +389,64 @@ function renderAcctPrint() {
       </tbody>
     </table>
     <div class="acct-print-foot">雪莉與朵栗 · 開團帳務系統　${escHtml(title)}　產生於 ${today}</div>`;
+}
+
+// ===== 品牌檢視彈窗裡的帳務摘要 =====
+// brandVendor.js 排在本檔之前載入，所以它不能在最外層引用這裡的東西，
+// 但執行期（使用者點開品牌）本檔早就載完了，呼叫得到。
+async function renderBrandAcctSummary(brandId) {
+  const box = document.getElementById('brandDetailAcct');
+  if (!box) return;
+  if (typeof hasPerm === 'function' && !hasPerm('revenue|commission')) { box.innerHTML = ''; return; }
+
+  // 使用者可能在等待期間關掉彈窗或改看別的品牌，資料回來時要確認畫的還是同一個
+  const stillSame = () => brandDetailCtx && brandDetailCtx.id === brandId;
+  if (!acctLoaded) {
+    box.innerHTML = '<div class="bda-loading">帳務資料載入中…</div>';
+    try {
+      await loadAccounting();          // 共用主載入路徑，篩選與報表 UI 一併建好
+    } catch (err) {
+      if (stillSame()) box.innerHTML = '<div class="bda-loading">帳務資料讀取失敗：' + escHtml(err.message) + '</div>';
+      return;
+    }
+    if (!stillSame()) return;
+  }
+
+  const rows = acctData.filter(r => r.brandId === brandId);
+  if (!rows.length) {
+    box.innerHTML = '<div class="bda-wrap"><div class="bda-title">💰 開團帳務</div>' +
+      '<div class="bda-empty">這個品牌還沒有帳務紀錄</div></div>';
+    return;
+  }
+  const teams = rows.filter(r => !r.contFrom).length;
+  const sales = rows.reduce((a, r) => a + acctNum(r.sales), 0);
+  const income = rows.reduce((a, r) => a + acctNum(r.commission) + acctNum(r.fee), 0);
+  const sorted = rows.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const last = sorted[0];
+  const pend = rows.filter(r => r.status !== '已入帳' && r.status !== '已請款');
+  // 有成數的紀錄才拿來算平均，混合成數那種（分潤%空白、寫在分潤說明）不能算進去
+  const rated = rows.filter(r => r.rate !== '' && r.rate !== undefined && r.rate !== null);
+  const avgRate = rated.length
+    ? Math.round(rated.reduce((a, r) => a + acctNum(r.rate), 0) / rated.length * 1000) / 10 : null;
+  const hid = '<span class="acct-hidden">•••</span>';
+
+  box.innerHTML = `<div class="bda-wrap">
+    <div class="bda-title">💰 開團帳務</div>
+    <div class="bda-grid">
+      <div><b>${teams}</b><span>開團次數</span></div>
+      <div><b>${acctCan.revenue ? acctMoney(sales) : hid}</b><span>總銷售</span></div>
+      <div><b>${acctCan.revenue ? acctMoney(income) : hid}</b><span>總收入</span></div>
+      <div><b>${acctCan.commission ? (avgRate === null ? '—' : avgRate + '%') : hid}</b><span>平均分潤</span></div>
+    </div>
+    <div class="bda-line">最近一團：${escHtml(last.date || '—')}　${escHtml(last.rawName || '')}</div>
+    ${pend.length ? `<div class="bda-line warn">還有 ${pend.length} 團未結算</div>` : ''}
+    <div class="bda-recent">${sorted.slice(0, 5).map(r => `<div class="bda-row">
+        <span>${escHtml(r.date || '')}</span>
+        <span class="bda-row-name">${escHtml(r.rawName || '')}</span>
+        <span>${acctCan.revenue ? escHtml(acctMoney(acctNum(r.commission) + acctNum(r.fee))) : hid}</span>
+      </div>`).join('')}</div>
+    ${rows.length > 5 ? `<div class="bda-more">共 ${rows.length} 筆，完整紀錄請到「開團帳務」分頁</div>` : ''}
+  </div>`;
 }
 
 // ----- 分頁切換 -----

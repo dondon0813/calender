@@ -3203,6 +3203,31 @@
     .acct-rank-row > span:nth-child(3), .acct-rank-row > span:nth-child(4),
     .acct-rank-row > span:nth-child(6){ display:none; }
   }
+  /* 品牌檢視彈窗裡的帳務摘要 */
+  .bda-wrap{
+    margin-top:12px; padding:12px 14px; border-radius:10px;
+    background:var(--c-bg-bottom); border:1.5px solid var(--c-border-light);
+  }
+  .bda-title{ font-size:12.5px; font-weight:800; color:var(--c-brown); margin-bottom:9px; }
+  .bda-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:9px; }
+  .bda-grid > div{ display:flex; flex-direction:column; gap:1px; }
+  .bda-grid b{
+    font-size:15px; font-weight:900; color:var(--c-text);
+    font-variant-numeric:tabular-nums; line-height:1.25;
+  }
+  .bda-grid span{ font-size:10.5px; color:var(--c-muted); font-weight:700; }
+  .bda-line{ font-size:12px; color:var(--c-text-soft); line-height:1.7; }
+  .bda-line.warn{ color:var(--c-brown); font-weight:800; }
+  .bda-recent{ margin-top:8px; border-top:1px dashed var(--c-border); padding-top:6px; }
+  .bda-row{
+    display:grid; grid-template-columns:74px 1fr auto; gap:8px;
+    font-size:11.5px; color:var(--c-text-soft); padding:2px 0;
+    font-variant-numeric:tabular-nums;
+  }
+  .bda-row-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--c-text); }
+  .bda-more, .bda-empty, .bda-loading{ font-size:11.5px; color:var(--c-muted); margin-top:6px; }
+  .bda-empty, .bda-loading{ margin:0; }
+  @media (max-width:480px){ .bda-grid{ grid-template-columns:repeat(2,1fr); } }
   /* 品牌列表的合作狀態小標 */
   .bv-coop{
     display:inline-block;
@@ -5083,6 +5108,8 @@
     <button class="modal-close" onclick="closeBrandDetailModal()">✕</button>
     <h3 id="brandDetailTitle">品牌資料</h3>
     <div id="brandDetailBody" style="font-size:13.5px; line-height:1.9; color:var(--c-text);"></div>
+    <!-- 帳務摘要：只有拿得到業績或分潤權限的人看得到，內容由 accounting.js 填 -->
+    <div id="brandDetailAcct" data-perm="revenue|commission"></div>
 
     <div style="text-align:center; margin:14px 0 4px;"><span class="task-section-title">🗓 未來已排定的開團</span></div>
     <div id="brandDetailUpcomingList"></div>
@@ -5125,14 +5152,14 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=7"></script>
+<script src="brandVendor.js?v=8"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=4"></script>
+<script src="accounting.js?v=6"></script>
 <script src="admin.js?v=65"></script>
 <script src="memo.js?v=5"></script>
 

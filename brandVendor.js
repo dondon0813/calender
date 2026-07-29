@@ -521,6 +521,12 @@ function openBrandDetailModal(brand) {
   document.getElementById('brandDetailPastToggle').classList.remove('open');
   document.getElementById('brandDetailPastBody').style.display = 'none';
 
+  // 帳務摘要由 accounting.js 負責（它排在本檔之後載入，執行期一定在）。
+  // 非同步：第一次打開會去拉帳務資料，拉回來前先顯示載入中。
+  const acctBox = document.getElementById('brandDetailAcct');
+  if (acctBox) acctBox.innerHTML = '';
+  if (typeof renderBrandAcctSummary === 'function') renderBrandAcctSummary(brand.id);
+
   document.getElementById('brandDetailModal').classList.add('show');
 }
 function closeBrandDetailModal() {
