@@ -163,10 +163,18 @@ function renderBrandDbList() {
     const st = bvCoopState_(b);
     // 已結束合作的整列淡化，才不會跟現役品牌混在一起
     if (st.cls === 'ended') row.style.opacity = '.5';
-    // 右側標籤直接秀分潤，才能一眼掃出哪些品牌還沒登記（沒權限的人不顯示這個標籤）
+    // 右側標籤直接秀分潤，才能一眼掃出哪些品牌還沒登記（沒權限的人不顯示這個標籤）。
+    // 徽章只放短字（%數或截短的說明）——完整說明可能很長（歷史成數紀錄），放進徽章會把整列排版擠爆，
+    // 全文改放 title 滑過顯示；編輯/詳情彈窗仍顯示全文。
     const commission = bvCanSeeCommission_() ? bvCommissionText_(b) : null;
+    let commissionShort = '';
+    if (commission) {
+      const hasRate = b.commissionRate !== '' && b.commissionRate !== null && b.commissionRate !== undefined;
+      const note = String(b.commissionNote || '').trim();
+      commissionShort = hasRate ? b.commissionRate + '%' : (note.length > 8 ? note.slice(0, 8) + '…' : note);
+    }
     const tagHtml = !bvCanSeeCommission_() ? '' :
-      `<span class="cal-edit-day-row-tag"${commission ? '' : ' style="opacity:.45;"'}>${commission ? '💰 ' + escHtml(commission) : '分潤未填'}</span>`;
+      `<span class="cal-edit-day-row-tag"${commission ? ` title="${escHtml(commission)}"` : ' style="opacity:.45;"'}>${commission ? '💰 ' + escHtml(commissionShort) : '分潤未填'}</span>`;
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#FF8FA3;"></span>` +
       `<span class="cal-edit-day-row-name">${escHtml(b.id)}　${escHtml(b.name)}${vendorName ? '（' + escHtml(vendorName) + '）' : ''}` +
