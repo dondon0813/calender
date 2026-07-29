@@ -15,6 +15,8 @@
 // ----- 模組層狀態（開機期就會被讀到，一律放檔案最前段） -----
 // 品牌廠商管理頁的搜尋列
 let bvSearchScope = 'vendor';
+// 封存廠商預設不顯示（只合作過一兩次的，資料留著但不佔版面）
+let bvShowArchived = false;
 
 // ===== 【新】團購廠商／品牌資料庫管理 =====
 
@@ -104,7 +106,19 @@ function renderVendorDbList() {
     return;
   }
   const kw = bvSearchScope === 'vendor' ? bvSearchText_() : '';
-  const list = vendorDb.filter(v => bvMatch_(kw, [v.id, v.name, v.type, v.note, v.companyNames]));
+  // 封存的平常不顯示，但「有在搜尋」或「按了顯示封存」時要找得到——
+  // 封存的意思是「不佔版面」，不是「查不到」，不然留著資料就沒意義了
+  const showArchived = bvShowArchived || !!kw;
+  const list = vendorDb
+    .filter(v => showArchived || !v.archived)
+    .filter(v => bvMatch_(kw, [v.id, v.name, v.type, v.note, v.companyNames]));
+  const hiddenCount = vendorDb.filter(v => v.archived).length;
+  const toggle = document.getElementById('bvArchivedToggle');
+  if (toggle) {
+    toggle.style.display = hiddenCount ? '' : 'none';
+    toggle.textContent = (bvShowArchived ? '隱藏' : '顯示') + '封存的 ' + hiddenCount + ' 家';
+    toggle.classList.toggle('on', bvShowArchived);
+  }
   if (!list.length) {
     el.innerHTML = '<div class="bv-search-empty">找不到符合「' + escHtml(kw) + '」的廠商</div>';
     return;
@@ -114,7 +128,7 @@ function renderVendorDbList() {
     const row = document.createElement('div');
     row.className = 'cal-edit-day-row';
     const vst = bvCoopState_(v);
-    if (vst.cls === 'ended') row.style.opacity = '.5';
+    if (vst.cls === 'ended' || v.archived) row.style.opacity = '.5';
     row.innerHTML =
       `<span class="cal-edit-day-swatch" style="background:#7AAEEB;"></span>` +
       `<span class="cal-edit-day-row-name">${escHtml(v.id)}　${escHtml(v.name)}${v.type ? '（' + escHtml(v.type) + '）' : ''}` +
@@ -210,6 +224,7 @@ function openVendorEditModal(vendor) {
   document.getElementById('vendorLongTermInput').checked = vendor ? !!vendor.longTerm : false;
   document.getElementById('vendorEndedInput').checked = vendor ? !!vendor.ended : false;
   document.getElementById('vendorEndReasonInput').value = vendor ? (vendor.endReason || '') : '';
+  document.getElementById('vendorArchivedInput').checked = vendor ? !!vendor.archived : false;
   bvSyncVendorEndReason_();
   document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
   document.getElementById('vendorEditModal').classList.add('show');
@@ -231,6 +246,7 @@ document.getElementById('vendorSaveBtn').addEventListener('click', async () => {
     longTerm: document.getElementById('vendorLongTermInput').checked,
     ended: document.getElementById('vendorEndedInput').checked,
     endReason: document.getElementById('vendorEndReasonInput').value.trim(),
+    archived: document.getElementById('vendorArchivedInput').checked,
     note: document.getElementById('vendorNoteInput').value.trim()
   };
   const btn = document.getElementById('vendorSaveBtn');
@@ -369,6 +385,10 @@ document.getElementById('vendorDbAddBtn').addEventListener('click', () => openVe
 document.getElementById('brandDbAddBtn').addEventListener('click', () => openBrandEditModal(null));
 document.getElementById('brandEndedInput').addEventListener('change', bvSyncEndReason_);
 document.getElementById('vendorEndedInput').addEventListener('change', bvSyncVendorEndReason_);
+document.getElementById('bvArchivedToggle').addEventListener('click', () => {
+  bvShowArchived = !bvShowArchived;
+  renderVendorDbList();
+});
 
 // ===== 【新】廠商資料檢視（唯讀）：非編輯模式點廠商，顯示資料＋底下的品牌 =====
 let vendorDetailCtx = null;
@@ -379,7 +399,8 @@ function openVendorDetailModal(vendor) {
   const lines = [];
   lines.push(`<div><b>廠商編號：</b>${escHtml(vendor.id)}</div>`);
   const vst = bvCoopState_(vendor);
-  lines.push(`<div><b>合作狀態：</b>${vst.text}${vendor.ended && vendor.endReason ? '（' + escHtml(vendor.endReason) + '）' : ''}</div>`);
+  lines.push(`<div><b>合作狀態：</b>${vst.text}${vendor.ended && vendor.endReason ? '（' + escHtml(vendor.endReason) + '）' : ''}` +
+    `${vendor.archived ? '　<span class="bv-coop ended">已封存</span>' : ''}</div>`);
   lines.push(`<div><b>類型：</b>${escHtml(vendor.type || '－')}</div>`);
   if (vendor.companyNames) lines.push(`<div><b>公司名稱：</b>${escHtml(vendor.companyNames)}</div>`);
   if (vendor.remittanceMethod) lines.push(`<div><b>匯款方式：</b>${escHtml(vendor.remittanceMethod)}</div>`);

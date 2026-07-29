@@ -853,7 +853,9 @@ function getVendorDbSheet_() {
     sheet = ss.insertSheet(VENDOR_DB_SHEET_NAME);
     // J 公司名稱：開發票／匯款用的正式抬頭，跟廠商簡稱常常不一樣；一家廠商可能有多個（逗號分隔）
     // K/L/M 合作狀態：跟品牌資料庫同一套語意。廠商結束 ≠ 底下品牌全結束，兩層各自標記
-    sheet.appendRow(['id', '廠商名稱', '廠商類型', '匯款方式', '請款規則', '廠商聯絡窗口', '廠商備註', '建立時間', '更新時間', '公司名稱', '長期合作', '已結束合作', '結束原因']);
+    // N 封存：資料留著但平常不顯示。給「只合作過一兩次、之後可能用得到」的廠商用，
+    // 跟「已結束合作」語意不同——那是談過但結束了，封存是還沒到需要放在檯面上的程度。
+    sheet.appendRow(['id', '廠商名稱', '廠商類型', '匯款方式', '請款規則', '廠商聯絡窗口', '廠商備註', '建立時間', '更新時間', '公司名稱', '長期合作', '已結束合作', '結束原因', '封存']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -916,7 +918,8 @@ function getVendorDbList_() {
       companyNames: String(row[9] || ''),   // 開票抬頭，可多個
       longTerm: String(row[10] || '').trim() === '是',
       ended: String(row[11] || '').trim() === '是',
-      endReason: String(row[12] || '')
+      endReason: String(row[12] || ''),
+      archived: String(row[13] || '').trim() === '是'
     });
   }
   return list;
@@ -938,7 +941,8 @@ function addVendorDb_(fields) {
     fields.companyNames || '',
     fields.longTerm || '',
     fields.ended || '',
-    fields.endReason || ''
+    fields.endReason || '',
+    fields.archived || ''
   ]);
   return id;
 }
@@ -958,6 +962,7 @@ function updateVendorDb_(id, fields) {
   setIf(11, fields.longTerm);
   setIf(12, fields.ended);
   setIf(13, fields.endReason);
+  setIf(14, fields.archived);
   sheet.getRange(row, 9).setValue(new Date());
   return true;
 }
@@ -2601,7 +2606,8 @@ function doPost(e) {
         companyNames: String(body.companyNames || ''),
         longTerm: body.longTerm ? '是' : '',
         ended: body.ended ? '是' : '',
-        endReason: String(body.endReason || '')
+        endReason: String(body.endReason || ''),
+        archived: body.archived ? '是' : ''
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -2619,6 +2625,7 @@ function doPost(e) {
       if (body.longTerm !== undefined) fields.longTerm = body.longTerm ? '是' : '';
       if (body.ended !== undefined) fields.ended = body.ended ? '是' : '';
       if (body.endReason !== undefined) fields.endReason = String(body.endReason);
+      if (body.archived !== undefined) fields.archived = body.archived ? '是' : '';
       const ok = updateVendorDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個廠商' });
     }

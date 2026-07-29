@@ -3955,6 +3955,7 @@
       <div style="text-align:center; margin-bottom:10px;"><span class="task-section-title">🏭 廠商</span></div>
       <div style="text-align:center; margin-bottom:10px;">
         <button class="task-mini-btn" id="vendorDbAddBtn" style="font-size:13px; padding:8px 16px;">➕ 新增廠商</button>
+        <button class="task-mini-btn bv-arch-toggle" id="bvArchivedToggle" style="display:none; font-size:12px; padding:8px 14px; margin-left:6px;"></button>
       </div>
       <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
         <div id="vendorDbList"></div>
@@ -5018,6 +5019,10 @@
         <input type="checkbox" id="vendorEndedInput" style="width:auto; margin:0;">
         已結束合作（底下的品牌不會跟著標記，要個別處理）
       </label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;">
+        <input type="checkbox" id="vendorArchivedInput" style="width:auto; margin:0;">
+        封存（資料留著，但平常不出現在清單裡）
+      </label>
       <div id="vendorEndReasonWrap" style="display:none;">
         <label for="vendorEndReasonInput">結束原因</label>
         <input type="text" id="vendorEndReasonInput" placeholder="例如：公司收掉、換代理、帳務問題">
@@ -5152,7 +5157,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=8"></script>
+<script src="brandVendor.js?v=9"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
