@@ -429,6 +429,11 @@ function openVendorDetailModal(vendor) {
     });
   }
 
+  // 帳務摘要由 accounting.js 負責（它排在本檔之後載入，執行期一定在）
+  const vAcctBox = document.getElementById('vendorDetailAcct');
+  if (vAcctBox) vAcctBox.innerHTML = '';
+  if (typeof renderVendorAcctSummary === 'function') renderVendorAcctSummary(vendor.id);
+
   document.getElementById('vendorDetailModal').classList.add('show');
 }
 function closeVendorDetailModal() {

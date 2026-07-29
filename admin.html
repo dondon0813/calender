@@ -3225,6 +3225,7 @@
     font-variant-numeric:tabular-nums;
   }
   .bda-row-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--c-text); }
+  .bda-sub{ font-size:11px; font-weight:800; color:var(--c-muted); margin-bottom:3px; }
   .bda-more, .bda-empty, .bda-loading{ font-size:11.5px; color:var(--c-muted); margin-top:6px; }
   .bda-empty, .bda-loading{ margin:0; }
   @media (max-width:480px){ .bda-grid{ grid-template-columns:repeat(2,1fr); } }
@@ -5101,6 +5102,9 @@
     <button class="modal-close" onclick="closeVendorDetailModal()">✕</button>
     <h3 id="vendorDetailTitle">廠商資料</h3>
     <div id="vendorDetailBody" style="font-size:13.5px; line-height:1.9; color:var(--c-text);"></div>
+    <!-- 帳務摘要：封存的廠商在品牌資料庫沒有連結，光看公司名不知道是幹嘛的，
+         要靠帳務才看得出「這家幫我開過哪些團」。內容由 accounting.js 填 -->
+    <div id="vendorDetailAcct" data-perm="revenue|commission"></div>
     <div style="text-align:center; margin:14px 0 4px;"><span class="task-section-title">🏷 這個廠商底下的品牌</span></div>
     <div id="vendorDetailBrandList"></div>
     <button class="task-submit-btn" id="vendorDetailEditBtn" style="margin-top:16px;">✏️ 編輯這個廠商</button>
@@ -5157,14 +5161,14 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=9"></script>
+<script src="brandVendor.js?v=10"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=6"></script>
+<script src="accounting.js?v=7"></script>
 <script src="admin.js?v=65"></script>
 <script src="memo.js?v=5"></script>
 

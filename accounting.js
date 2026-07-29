@@ -449,6 +449,71 @@ async function renderBrandAcctSummary(brandId) {
   </div>`;
 }
 
+// ===== 廠商檢視彈窗裡的帳務摘要 =====
+// 封存的廠商在品牌資料庫沒有連結，光看「不老松」這種公司名根本不知道是幹嘛的。
+// 靠帳務反查「這家幫我開過哪些品牌的團」才有意義。
+async function renderVendorAcctSummary(vendorId) {
+  const box = document.getElementById('vendorDetailAcct');
+  if (!box) return;
+  if (typeof hasPerm === 'function' && !hasPerm('revenue|commission')) { box.innerHTML = ''; return; }
+
+  const stillSame = () => vendorDetailCtx && vendorDetailCtx.id === vendorId;
+  if (!acctLoaded) {
+    box.innerHTML = '<div class="bda-loading">帳務資料載入中…</div>';
+    try {
+      await loadAccounting();
+    } catch (err) {
+      if (stillSame()) box.innerHTML = '<div class="bda-loading">帳務資料讀取失敗：' + escHtml(err.message) + '</div>';
+      return;
+    }
+    if (!stillSame()) return;
+  }
+
+  const rows = acctData.filter(r => r.vendorId === vendorId);
+  if (!rows.length) {
+    box.innerHTML = '<div class="bda-wrap"><div class="bda-title">💰 開團帳務</div>' +
+      '<div class="bda-empty">這個廠商還沒有帳務紀錄（可能是還沒回填廠商，或本來就沒開過團）</div></div>';
+    return;
+  }
+  const teams = rows.filter(r => !r.contFrom).length;
+  const income = rows.reduce((a, r) => a + acctNum(r.commission) + acctNum(r.fee), 0);
+  const sorted = rows.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const hid = '<span class="acct-hidden">•••</span>';
+
+  // 這家幫忙開過哪些品牌 —— 這才是「這家是幹嘛的」的答案
+  const byBrand = new Map();
+  rows.forEach(r => {
+    const key = r.brandId || '(未指定品牌)';
+    if (!byBrand.has(key)) byBrand.set(key, { n: 0, income: 0, last: '' });
+    const o = byBrand.get(key);
+    o.n++;
+    o.income += acctNum(r.commission) + acctNum(r.fee);
+    if ((r.date || '') > o.last) o.last = r.date || '';
+  });
+  const brandRows = [...byBrand.entries()].sort((a, b) => b[1].income - a[1].income || b[1].n - a[1].n);
+  // 開票公司也列出來：同一家廠商可能有好幾種抬頭，對帳時很有用
+  const comps = [...new Set(rows.map(r => r.company).filter(Boolean))];
+
+  box.innerHTML = `<div class="bda-wrap">
+    <div class="bda-title">💰 開團帳務</div>
+    <div class="bda-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div><b>${teams}</b><span>開團次數</span></div>
+      <div><b>${byBrand.size}</b><span>合作品牌數</span></div>
+      <div><b>${acctCan.revenue ? acctMoney(income) : hid}</b><span>總收入</span></div>
+    </div>
+    <div class="bda-recent">
+      <div class="bda-sub">合作過的品牌</div>
+      ${brandRows.map(([bid, o]) => `<div class="bda-row">
+        <span class="bda-row-name">${escHtml(acctBrandName(bid) || bid)}</span>
+        <span>${o.n} 團</span>
+        <span>${acctCan.revenue ? escHtml(acctMoney(o.income)) : hid}</span>
+      </div>`).join('')}
+    </div>
+    <div class="bda-line" style="margin-top:8px;">最近一團：${escHtml(sorted[0].date || '—')}　${escHtml(sorted[0].rawName || '')}</div>
+    ${comps.length ? `<div class="bda-line">開票抬頭：${escHtml(comps.join('、'))}</div>` : ''}
+  </div>`;
+}
+
 // ----- 分頁切換 -----
 function acctSwitchTab(tab) {
   acctTab = tab;
