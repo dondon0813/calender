@@ -2658,13 +2658,14 @@ function doPost(e) {
       put('payTo', body.payTo === undefined ? undefined : String(body.payTo));
       put('payDate', body.payDate === undefined ? undefined : String(body.payDate));
       put('invoice', body.invoice === undefined ? undefined : String(body.invoice));
-      if (body.taxAdded !== undefined) fields.taxAdded = !!body.taxAdded;
       // 沒有對應權限就當作沒送，既有值不會被覆寫掉。
       // 界線同 stripAccounting_：金額全歸業績，成數才歸分潤。
       if (allows_('revenue')) {
         put('sales', body.sales);
         put('commission', body.commission);
         put('fee', body.fee);
+        // 稅外加是業績側的欄位（影響分潤金額怎麼算），要跟金額同一個權限
+        if (body.taxAdded !== undefined) fields.taxAdded = !!body.taxAdded;
         put('brandSplit', body.brandSplit === undefined ? undefined : String(body.brandSplit));
         put('note', body.note === undefined ? undefined : String(body.note));
       }
