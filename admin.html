@@ -3204,15 +3204,44 @@
     .acct-rank-row > span:nth-child(3), .acct-rank-row > span:nth-child(4),
     .acct-rank-row > span:nth-child(6){ display:none; }
   }
-  /* 對帳（acctRecon 工作佇列）：一列一團，欄位可直接填，跟明細/報表不同，
-     不用表格式而用卡片，因為每列的操作（下一階段／儲存）比純瀏覽重要 */
+  /* 對帳（acctRecon 工作佇列）：一列一團，預設收合只顯示重點（日期／品牌／階段徽章／警示），
+     點列頭展開才看得到可填欄位，跟明細/報表的表格式不同，因為這裡操作（下一階段／儲存）比純瀏覽重要 */
+  .acct-recon-toolbar{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    font-size:12.5px; font-weight:700; color:var(--c-text-soft); margin-bottom:10px;
+  }
+  .acct-recon-toolbar input[type="checkbox"]{ width:auto; margin:0; accent-color:var(--c-primary); }
+  /* 月份分組條：跟卡片列拉開視覺層級的窄長條，本身不是可互動元素 */
+  .acct-recon-month-bar{
+    font-size:11.5px; font-weight:800; color:var(--c-text-soft);
+    background:var(--c-bg-bottom); border-radius:6px; padding:4px 10px;
+  }
   .acct-recon-list{ display:flex; flex-direction:column; gap:10px; }
   .acct-recon-row{
     border:1.5px solid var(--c-border-light); border-radius:10px;
-    background:var(--c-surface); padding:12px 14px;
+    background:var(--c-surface); overflow:hidden;
   }
+  /* 收合時唯一顯示的一行，點它 toggle .open（JS 只加/減 class，展開靠下面兩條 CSS 規則顯示，
+     不需要重繪整個清單，其他列的展開狀態跟輸入到一半的字才不會被洗掉） */
+  .acct-recon-summary{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    cursor:pointer; padding:10px 14px;
+  }
+  .acct-recon-summary:hover{ background:var(--c-bg-bottom); }
+  .acct-recon-date{ font-size:12px; color:var(--c-muted); font-variant-numeric:tabular-nums; flex:none; }
+  .acct-recon-brand{ font-weight:800; color:var(--c-text); flex:1 1 auto; min-width:0; }
+  .acct-recon-warn{ color:var(--c-danger); font-weight:900; font-size:13px; flex:none; }
+  /* 階段徽章：分三組配色（回填/核對＋稿酬前段＝粉、發票＝黃金、金流＝藍），分組邏輯在 accounting.js 的 ACCT_RECON_BADGE_GROUP */
+  .acct-recon-badge{
+    font-size:11px; font-weight:800; padding:2px 9px; border-radius:var(--r-pill);
+    white-space:nowrap; line-height:1.7; flex:none;
+  }
+  .acct-recon-badge-pink{ background:var(--c-pink-bg-2); color:var(--c-pink-deep); }
+  .acct-recon-badge-gold{ background:var(--c-gold-badge-bg); color:var(--c-gold-text); border:1px solid var(--c-gold-border); }
+  .acct-recon-badge-blue{ background:var(--c-blue-bg); color:var(--c-blue-text); border:1px solid var(--c-blue-border); }
+  .acct-recon-detail{ display:none; padding:0 14px 14px; border-top:1px solid var(--c-line); margin-top:2px; }
+  .acct-recon-row.open .acct-recon-detail{ display:block; padding-top:10px; }
   .acct-recon-head{ display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; margin-bottom:8px; }
-  .acct-recon-head .acct-name{ font-weight:800; color:var(--c-text); }
   .acct-recon-head .acct-rate{ font-size:12px; color:var(--c-text-soft); }
   .acct-recon-grid{
     display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
@@ -3222,9 +3251,15 @@
     display:flex; flex-direction:column; gap:3px;
     font-size:11.5px; font-weight:700; color:var(--c-muted); margin:0;
   }
+  /* 跟帳務明細編輯彈窗（.task-form select/input）同一套邊框/圓角/字體，別自創一套；
+     底色用 --c-surface（.task-form 那邊是 #fff，這裡改用變數以符合本頁全站色碼規範） */
   .acct-recon-grid input, .acct-recon-grid select{
-    font-size:13px; padding:6px 8px; margin:0; width:auto;
+    width:100%; margin:0; font-family:var(--font-body);
+    font-size:13px; font-weight:700; color:var(--c-text);
+    border:2px solid var(--c-border); border-radius:var(--r-sm);
+    background:var(--c-surface); padding:7px 9px; outline:none;
   }
+  .acct-recon-grid input:focus, .acct-recon-grid select:focus{ border-color:var(--c-primary); }
   /* 試算只是提示（分潤金額才是權威值），差太多才提醒去查一下，不會自動改數字 */
   .acct-recon-est{ font-size:11px; color:var(--c-muted); margin-top:2px; }
   .acct-recon-est.warn{
@@ -5208,7 +5243,7 @@
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=10"></script>
+<script src="accounting.js?v=11"></script>
 <script src="admin.js?v=66"></script>
 <script src="memo.js?v=5"></script>
 

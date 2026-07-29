@@ -437,19 +437,123 @@ function acctReconEstimate(rec, salesVal) {
   return Math.round(acctNum(salesVal) * Number(rec.rate));
 }
 
+// 階段徽章配色分組：回填/核對＋稿酬前段一組（粉）、發票一組（黃金）、金流一組（藍）。
+// 顏色本身在 admin.html 的 .acct-recon-badge-* 走 shared.css 既有變數，這裡只決定分組。
+const ACCT_RECON_BADGE_GROUP = {
+  '待回填': 'pink', '待核對業績': 'pink',
+  '審稿中': 'pink', '審稿完成(待發布)': 'pink', '已發布': 'pink',
+  '待開發票': 'gold', '待確認發票': 'gold',
+  '等待匯款': 'blue', '待對帳': 'blue'
+};
+function acctReconBadgeGroup_(status) {
+  return ACCT_RECON_BADGE_GROUP[status] || 'pink';
+}
+
+function acctReconTodayStr_() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// 行事曆事件（admin.js 的 allEvents）按「正規化後的品牌名」建一次索引，
+// 576 筆帳務逐筆查表就好，不要每一筆都重新掃一次全部事件（bvBrandsInTitle_ 本身就是 O(brandDb)）。
+// 依賴 brandVendor.js 的 bvNormBrandKey_ / bvBrandsInTitle_（先載入），
+// 與 admin.js 的 allEvents（執行期一定在，理由同本檔其他跨模組呼叫）。
+function acctReconBuildEventIndex_() {
+  const map = new Map();
+  if (typeof allEvents === 'undefined' || !Array.isArray(allEvents)) return map;
+  if (typeof bvBrandsInTitle_ !== 'function') return map;
+  allEvents.forEach(ev => {
+    bvBrandsInTitle_(ev.title).forEach(b => {
+      const key = bvNormBrandKey_(b.name);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(ev);
+    });
+  });
+  return map;
+}
+
+// 這筆帳務對應到哪個行事曆檔期（同品牌、日期落在 start~displayEnd 之間，含首尾）。
+// 找不到就回 null，呼叫端走 fallback。
+function acctReconFindEvent_(r, eventIndex) {
+  const brand = brandDb.find(x => x.id === r.brandId);
+  if (!brand || typeof bvNormBrandKey_ !== 'function') return null;
+  const evs = eventIndex.get(bvNormBrandKey_(brand.name));
+  if (!evs || !evs.length) return null;
+  const d = parseDateStr(r.date);
+  if (!d || typeof startOfDay !== 'function') return null;
+  const dd = startOfDay(d);
+  return evs.find(ev => startOfDay(ev.start) <= dd && dd <= startOfDay(ev.displayEnd)) || null;
+}
+
+// 判斷一筆帳務是不是「已結團」（＝對帳清單預設要不要顯示），刻意不用 r.status——
+// 那欄要人手動更新，常常忘記改，靠不住。順序：
+// ①比對到品牌對應的檔期 → 用檔期結束日（含延長，跟 getBrandGroupBuys_ 同一套 displayEnd）判斷；
+// ②比對不到（歷史舊團、品牌改過名、事件被刪）→ fallback 用帳務日期本身跟今天比。
+function acctReconIsClosed_(r, todayStr, eventIndex) {
+  const ev = acctReconFindEvent_(r, eventIndex);
+  if (ev) {
+    const todayD = parseDateStr(todayStr);
+    return startOfDay(ev.displayEnd) < startOfDay(todayD);
+  }
+  return (r.date || '') <= todayStr; // fallback：對不到檔期就看日期本身
+}
+
+// 收合清單的展開狀態、「顯示未結團／未開團」勾選狀態，都要跨重繪保留——
+// 使用者勾 checkbox 或換分頁再回來時，不該把剛展開的列通通收回去。
+let acctReconOpenIds = new Set();
+let acctReconShowAll = false;
+
 function renderAcctRecon() {
   const box = document.getElementById('acctReconList');
   if (!box) return;
   // 後端對助理已經只回未完成的列，但老闆是全量資料，前端自己也要濾一次
-  const list = acctData.filter(r => r.reconStatus)
+  const all = acctData.filter(r => r.reconStatus)
     .slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-  if (!list.length) {
+  if (!all.length) {
     box.innerHTML = '<div class="task-empty">目前沒有待對帳的紀錄</div>';
     return;
   }
 
-  box.innerHTML = list.map(r => {
+  const todayStr = acctReconTodayStr_();
+  const eventIndex = acctReconBuildEventIndex_();
+  const isClosed = r => acctReconIsClosed_(r, todayStr, eventIndex);
+  const hiddenCount = all.filter(r => !isClosed(r)).length;
+  const list = acctReconShowAll ? all : all.filter(isClosed);
+
+  const toolbarHtml = `<label class="acct-recon-toolbar">
+      <input type="checkbox" id="acctReconShowAllChk"${acctReconShowAll ? ' checked' : ''}>
+      顯示未結團／未開團（${hiddenCount}）
+    </label>`;
+  const bindToolbar = () => {
+    const chk = document.getElementById('acctReconShowAllChk');
+    if (chk) chk.addEventListener('change', () => { acctReconShowAll = chk.checked; renderAcctRecon(); });
+  };
+
+  if (!list.length) {
+    box.innerHTML = toolbarHtml + '<div class="task-empty">目前沒有待對帳的紀錄' +
+      (hiddenCount ? '（另有 ' + hiddenCount + ' 團還沒開團或還在進行中，勾選上方可查看）' : '') + '</div>';
+    bindToolbar();
+    return;
+  }
+
+  // 每個月份還顯示幾團未對完（月份條用；清單本身都是未完成的列，所以就是該月筆數）
+  const monthCounts = new Map();
+  list.forEach(r => {
+    const key = (r.date || '').slice(0, 7);
+    monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+  });
+
+  let lastMonth = null;
+  const rowsHtml = list.map(r => {
+    const monthKey = (r.date || '').slice(0, 7);
+    let monthBar = '';
+    if (monthKey !== lastMonth) {
+      lastMonth = monthKey;
+      const [y, m] = monthKey.split('-');
+      monthBar = `<div class="acct-recon-month-bar">${y}年${Number(m)}月　還有 ${monthCounts.get(monthKey)} 團未對完</div>`;
+    }
+
     const hasRate = r.rate !== '' && r.rate !== undefined && r.rate !== null && !isNaN(Number(r.rate));
     const rateTxt = hasRate ? (Math.round(Number(r.rate) * 1000) / 10 + '%')
       : (r.rateNote ? escHtml(r.rateNote) : '—');
@@ -457,47 +561,67 @@ function renderAcctRecon() {
     const commVal = (r.commission === undefined || r.commission === null) ? '' : r.commission;
     const est = acctReconEstimate(r, salesVal);
     const warn = est !== null && commVal !== '' && Math.abs(acctNum(commVal) - est) > Math.max(est * 0.02, 5);
-    return `<div class="acct-recon-row" data-id="${escHtml(r.id)}">
-      <div class="acct-recon-head">
-        <span class="acct-date">${escHtml(r.date || '')}</span>
-        <span class="acct-name">${escHtml(acctBrandName(r.brandId) || r.rawName || '')}</span>
-        <span class="acct-rate">分潤 ${rateTxt}</span>
+    const badgeGroup = acctReconBadgeGroup_(r.reconStatus);
+    const isOpen = acctReconOpenIds.has(r.id);
+
+    return `${monthBar}<div class="acct-recon-row${isOpen ? ' open' : ''}" data-id="${escHtml(r.id)}">
+      <div class="acct-recon-summary">
+        <span class="acct-recon-date">${escHtml((r.date || '').slice(5))}</span>
+        <span class="acct-recon-brand">${escHtml(acctBrandName(r.brandId) || r.rawName || '')}</span>
+        <span class="acct-recon-badge acct-recon-badge-${badgeGroup}">${escHtml(r.reconStatus)}</span>
+        <span class="acct-recon-warn"${warn ? '' : ' style="display:none"'} title="分潤金額跟試算差異超標，回頭check一下">⚠</span>
       </div>
-      <div class="acct-recon-grid">
-        <label>對帳狀態
-          <select class="acct-recon-status">
-            ${acctReconStatuses.map(s => `<option value="${escHtml(s)}"${s === r.reconStatus ? ' selected' : ''}>${escHtml(s)}</option>`).join('')}
-          </select>
-        </label>
-        <label>銷售金額
-          ${r.sales !== undefined ? `<input type="number" class="acct-recon-sales" step="1" value="${escHtml(salesVal)}">` : '<span class="acct-recon-est">—</span>'}
-        </label>
-        <label>分潤金額
-          ${r.commission !== undefined ? `<input type="number" class="acct-recon-commission" step="1" value="${escHtml(commVal)}">
-          <span class="acct-recon-est${warn ? ' warn' : ''}">${est !== null ? '試算 $' + est.toLocaleString('en-US') : ''}</span>` : '<span class="acct-recon-est">—</span>'}
-        </label>
-        <label>發票號碼
-          ${r.invoice !== undefined ? `<input type="text" class="acct-recon-invoice" value="${escHtml(r.invoice || '')}">` : '<span class="acct-recon-est">—</span>'}
-        </label>
-        <label>備註
-          ${r.note !== undefined ? `<input type="text" class="acct-recon-note" value="${escHtml(r.note || '')}">` : '<span class="acct-recon-est">—</span>'}
-        </label>
-      </div>
-      <div class="acct-recon-actions">
-        <button class="task-mini-btn acct-recon-save">💾 儲存</button>
-        <button class="task-mini-btn acct-recon-next">下一階段 ▶</button>
-        <span class="form-status acct-recon-msg"></span>
+      <div class="acct-recon-detail">
+        <div class="acct-recon-head"><span class="acct-rate">分潤 ${rateTxt}</span></div>
+        <div class="acct-recon-grid">
+          <label>對帳狀態
+            <select class="acct-recon-status">
+              ${acctReconStatuses.map(s => `<option value="${escHtml(s)}"${s === r.reconStatus ? ' selected' : ''}>${escHtml(s)}</option>`).join('')}
+            </select>
+          </label>
+          <label>銷售金額
+            ${r.sales !== undefined ? `<input type="number" class="acct-recon-sales" step="1" value="${escHtml(salesVal)}">` : '<span class="acct-recon-est">—</span>'}
+          </label>
+          <label>分潤金額
+            ${r.commission !== undefined ? `<input type="number" class="acct-recon-commission" step="1" value="${escHtml(commVal)}">
+            <span class="acct-recon-est${warn ? ' warn' : ''}">${est !== null ? '試算 $' + est.toLocaleString('en-US') : ''}</span>` : '<span class="acct-recon-est">—</span>'}
+          </label>
+          <label>發票號碼
+            ${r.invoice !== undefined ? `<input type="text" class="acct-recon-invoice" value="${escHtml(r.invoice || '')}">` : '<span class="acct-recon-est">—</span>'}
+          </label>
+          <label>備註
+            ${r.note !== undefined ? `<input type="text" class="acct-recon-note" value="${escHtml(r.note || '')}">` : '<span class="acct-recon-est">—</span>'}
+          </label>
+        </div>
+        <div class="acct-recon-actions">
+          <button class="task-mini-btn acct-recon-save">💾 儲存</button>
+          <button class="task-mini-btn acct-recon-next">下一階段 ▶</button>
+          <span class="form-status acct-recon-msg"></span>
+        </div>
       </div>
     </div>`;
   }).join('');
+
+  box.innerHTML = toolbarHtml + '<div class="acct-recon-list">' + rowsHtml + '</div>';
+  bindToolbar();
 
   box.querySelectorAll('.acct-recon-row').forEach(rowEl => {
     const id = rowEl.dataset.id;
     const rec = acctData.find(x => x.id === id);
     if (!rec) return;
+
+    // 收合／展開：只是 toggle class 靠 CSS 顯示，不重繪清單，其他列的展開狀態與
+    // 輸入到一半的字才不會被洗掉。展開狀態記進模組層的 Set，換分頁/勾 checkbox 重繪時還原。
+    rowEl.querySelector('.acct-recon-summary').addEventListener('click', () => {
+      rowEl.classList.toggle('open');
+      if (rowEl.classList.contains('open')) acctReconOpenIds.add(id);
+      else acctReconOpenIds.delete(id);
+    });
+
     const salesEl = rowEl.querySelector('.acct-recon-sales');
     const commEl = rowEl.querySelector('.acct-recon-commission');
     const estEl = rowEl.querySelector('.acct-recon-est');
+    const warnFlagEl = rowEl.querySelector('.acct-recon-warn');
     const msgEl = rowEl.querySelector('.acct-recon-msg');
 
     // 試算只是提示，跟著輸入即時重算，但絕對不會反過來改寫分潤金額欄。
@@ -505,10 +629,15 @@ function renderAcctRecon() {
     if (salesEl && commEl && estEl) {
       const refreshEst = () => {
         const est = acctReconEstimate(rec, salesEl.value);
-        if (est === null) { estEl.textContent = ''; estEl.classList.remove('warn'); return; }
+        if (est === null) {
+          estEl.textContent = ''; estEl.classList.remove('warn');
+          if (warnFlagEl) warnFlagEl.style.display = 'none';
+          return;
+        }
         estEl.textContent = '試算 $' + est.toLocaleString('en-US');
         const w = commEl.value !== '' && Math.abs(acctNum(commEl.value) - est) > Math.max(est * 0.02, 5);
         estEl.classList.toggle('warn', w);
+        if (warnFlagEl) warnFlagEl.style.display = w ? '' : 'none';
       };
       salesEl.addEventListener('input', refreshEst);
       commEl.addEventListener('input', refreshEst);
@@ -546,13 +675,27 @@ function renderAcctRecon() {
       rec.reconStatus = payload.reconStatus;
     };
 
+    // 局部更新這一列的徽章文字/配色跟警示旗標；成功後不整頁重繪，
+    // 其他列的展開狀態與使用者打到一半的輸入值才不會被洗掉。
+    const updateRowBadge = () => {
+      const badgeEl = rowEl.querySelector('.acct-recon-badge');
+      const group = acctReconBadgeGroup_(rec.reconStatus);
+      badgeEl.className = 'acct-recon-badge acct-recon-badge-' + group;
+      badgeEl.textContent = rec.reconStatus;
+      const est2 = acctReconEstimate(rec, rec.sales);
+      const commVal2 = (rec.commission === undefined || rec.commission === null) ? '' : rec.commission;
+      const w = est2 !== null && commVal2 !== '' && Math.abs(acctNum(commVal2) - est2) > Math.max(est2 * 0.02, 5);
+      if (warnFlagEl) warnFlagEl.style.display = w ? '' : 'none';
+    };
+
     rowEl.querySelector('.acct-recon-save').addEventListener('click', async () => {
       const payload = gather();
       setMsg('儲存中…', '');
       try {
         await postTask(payload);
         applyLocal(payload);
-        renderAcctRecon();
+        updateRowBadge();
+        setMsg('已儲存 ✓', 'ok');
       } catch (err) {
         setMsg('儲存失敗：' + err.message, 'error');
       }
@@ -573,7 +716,14 @@ function renderAcctRecon() {
       try {
         await postTask(payload);
         applyLocal(payload);
-        renderAcctRecon();
+        if (payload.reconStatus === '') {
+          // 完成了，這筆已經不屬於對帳清單：局部拿掉這一列就好，不用整頁重繪
+          acctReconOpenIds.delete(id);
+          rowEl.remove();
+        } else {
+          updateRowBadge();
+          setMsg('已更新 ✓', 'ok');
+        }
       } catch (err) {
         setMsg('更新失敗：' + err.message, 'error');
       }
