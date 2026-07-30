@@ -566,6 +566,28 @@ body.pane-text  [data-pane="image"] { display: none !important; }
     </fieldset>
 
     <fieldset>
+      <legend>儲存的設定</legend>
+      <p class="hint">把現在的版面、顏色、文案樣板和逐團微調存成一份、取個名字，下個月選月份之後按「套用」就好。逐團的部分是<b>用團名對應</b>，所以同一個品牌下次開團會自動套上（這個月沒有的團就略過）。底圖與人像照太大，不進設定檔。</p>
+      <div class="row">
+        <label>設定檔</label>
+        <select id="selPreset"></select>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnPresetApply">套用到這個月</button>
+        <button class="btn" id="btnPresetOverwrite">覆寫</button>
+        <button class="btn" id="btnPresetDelete">刪除</button>
+      </div>
+      <div class="row">
+        <label>新設定名稱</label>
+        <input type="text" id="tPresetName" placeholder="例：4:5 貼文版">
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnPresetSave">另存新設定</button>
+      </div>
+      <p class="hint" id="presetStatus"></p>
+    </fieldset>
+
+    <fieldset>
       <legend>設定</legend>
       <div class="btn-row">
         <button class="btn" id="btnResetAll">全部恢復預設</button>
@@ -612,6 +634,7 @@ const SIZES = {
 const LS_SETTINGS = 'calposter.settings.v1';
 const LS_EVENTS   = 'calposter.events.v1';
 const LS_ASSETS   = 'calposter.assets.v1';   // 底圖／人像的 dataURL（可能很大，單獨存）
+const LS_PRESETS  = 'calposter.presets.v1';  // 命名設定檔：版面＋文案樣板＋逐團微調（逐團的用團名當 key）
 
 const DEFAULTS = {
   pane: 'image',            // 'image'＝產生圖片｜'text'＝產生貼文
@@ -1351,6 +1374,109 @@ async function copyCaption(e) {
   setTimeout(() => btn.textContent = old, 1500);
 }
 
+/* ============================================================
+   4c. 命名設定檔（下個月可以直接套用）
+   ------------------------------------------------------------
+   逐團微調本來是綁「行事曆的活動 ID」，下個月同一個品牌是新的一列＝新的 ID，
+   所以設定檔裡改用**團名**當 key（normKey：轉小寫、去空白與標點），
+   「Parakito｜防蚊」和「Parakito 防蚊」會對到同一個團。
+   ============================================================ */
+
+let PRESETS = {};
+
+function loadPresets() {
+  try { PRESETS = JSON.parse(localStorage.getItem(LS_PRESETS) || '{}') || {}; } catch (e) { PRESETS = {}; }
+}
+function savePresets() {
+  try { localStorage.setItem(LS_PRESETS, JSON.stringify(PRESETS)); }
+  catch (e) { presetSay('存不下了（瀏覽器空間不足），可以先刪掉用不到的設定檔'); }
+}
+function presetSay(msg) {
+  const el = document.getElementById('presetStatus');
+  if (el) el.textContent = msg || '';
+}
+
+function renderPresetList(selectName) {
+  const sel = document.getElementById('selPreset');
+  const names = Object.keys(PRESETS).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  sel.innerHTML = '';
+  if (!names.length) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '（還沒有存過設定）';
+    sel.appendChild(o);
+    return;
+  }
+  names.forEach(n => {
+    const o = document.createElement('option');
+    o.value = n;
+    const cnt = Object.keys(PRESETS[n].evs || {}).length;
+    o.textContent = n + (cnt ? `（${cnt} 團）` : '');
+    sel.appendChild(o);
+  });
+  if (selectName && PRESETS[selectName]) sel.value = selectName;
+}
+
+// 只存「真的有改過」的團，沒動過的不佔空間
+function presetEvSnapshot() {
+  const out = {};
+  monthEvents().forEach(ev => {
+    const o = EV_OVERRIDES[ev.id];
+    if (!o) return;
+    if (!o.name && !o.hi && !o.badge && !o.hidden && !o.note && !o.mergePrev) return;
+    out[normKey(ev.title)] = {
+      label: plainName(ev.title),          // 只是給人看的，比對不用它
+      name: o.name || '', hi: !!o.hi, badge: o.badge || '',
+      hidden: !!o.hidden, note: o.note || '', mergePrev: !!o.mergePrev
+    };
+  });
+  return out;
+}
+
+function writePreset(name) {
+  name = String(name || '').trim();
+  if (!name) { presetSay('請先輸入設定名稱'); return; }
+  PRESETS[name] = {
+    savedAt: new Date().toISOString(),
+    settings: Object.assign({}, S),
+    evs: presetEvSnapshot()
+  };
+  savePresets();
+  renderPresetList(name);
+  presetSay(`已存「${name}」：版面＋文案樣板，以及 ${Object.keys(PRESETS[name].evs).length} 個團的微調`);
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) { presetSay('請先選一個設定檔'); return; }
+
+  // 用 DEFAULTS 打底，設定檔沒有的欄位回到預設值（避免舊設定檔缺欄位時殘留上一組的值）
+  S = Object.assign({}, DEFAULTS, p.settings || {});
+  saveSettings();
+  syncControls();
+
+  const evs = monthEvents();
+  let hit = 0;
+  const miss = [];
+  Object.keys(p.evs || {}).forEach(key => {
+    const src = p.evs[key];
+    const ev = evs.find(e => normKey(e.title) === key);
+    if (!ev) { miss.push(src.label || key); return; }
+    const o = ovOf(ev.id);
+    o.name = src.name || '';
+    o.hi = !!src.hi;
+    o.badge = src.badge || '';
+    o.hidden = !!src.hidden;
+    o.note = src.note || '';
+    o.mergePrev = !!src.mergePrev;
+    hit++;
+  });
+  saveEvents();
+  renderAll();
+
+  presetSay(`套用「${name}」：${hit} 個團對到` +
+    (miss.length ? `，這個月沒有的 ${miss.length} 個略過（${miss.slice(0, 3).join('、')}${miss.length > 3 ? '…' : ''}）` : ''));
+}
+
 function mkCheck(label, checked, onChange) {
   const l = document.createElement('label');
   const c = document.createElement('input');
@@ -1550,6 +1676,8 @@ function syncControls() {
 
 function init() {
   loadStored();
+  loadPresets();
+  renderPresetList();
 
   bindSeg('segMode', v => { S.mode = v; });
   bindSeg('segSize', v => { S.size = v; });
@@ -1608,6 +1736,32 @@ function init() {
   });
   document.getElementById('btnClearPhoto').addEventListener('click', () => {
     ASSETS.photo = ''; document.getElementById('filePhoto').value = ''; saveAssets(); renderPoster();
+  });
+
+  document.getElementById('btnPresetSave').addEventListener('click', () => {
+    const input = document.getElementById('tPresetName');
+    const name = input.value.trim();
+    if (!name) { presetSay('請先輸入設定名稱'); input.focus(); return; }
+    if (PRESETS[name] && !confirm(`已經有一個叫「${name}」的設定，要覆蓋掉嗎？`)) return;
+    writePreset(name);
+    input.value = '';
+  });
+  document.getElementById('btnPresetOverwrite').addEventListener('click', () => {
+    const name = document.getElementById('selPreset').value;
+    if (!name) { presetSay('請先選一個設定檔'); return; }
+    if (!confirm(`要把「${name}」覆寫成現在的設定嗎？`)) return;
+    writePreset(name);
+  });
+  document.getElementById('btnPresetApply').addEventListener('click', () => {
+    applyPreset(document.getElementById('selPreset').value);
+  });
+  document.getElementById('btnPresetDelete').addEventListener('click', () => {
+    const name = document.getElementById('selPreset').value;
+    if (!name) { presetSay('請先選一個設定檔'); return; }
+    if (!confirm(`確定刪除設定檔「${name}」嗎？`)) return;
+    delete PRESETS[name];
+    savePresets(); renderPresetList();
+    presetSay(`已刪除「${name}」`);
   });
 
   document.getElementById('btnResetEv').addEventListener('click', () => {
