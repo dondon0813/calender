@@ -278,7 +278,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 .poster-head {
   position: absolute;
   left: var(--p-inset-l); right: var(--p-inset-r);
-  top: 34px; height: var(--p-head-h);
+  top: var(--p-head-top); height: var(--p-head-h);
   display: flex; align-items: center; gap: 16px;
 }
 .poster.has-bg .poster-head { display: none; }
@@ -570,6 +570,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
         </div>
       </div>
       <div class="row"><label>標題大小</label><input type="range" id="rHeadH" min="80" max="420" step="2"><span class="val" id="vHeadH"></span></div>
+      <div class="row"><label>標題上下</label><input type="range" id="rHeadTop" min="-60" max="400" step="2"><span class="val" id="vHeadTop"></span></div>
       <p class="hint">月份標題圖是 <code>images/calendar/</code> 那 24 張去背圖，會照月份自動換、置中。<b>列表模式且本月超過 24 團</b>時自動換成壓扁的長條版，其餘用標準版。「標題大小」是標題區的高度，圖會等比縮到塞得下為止。再下面三個欄位只有選「仿版標題」時才會用到。</p>
       <div class="row"><label>標題第一行</label><input type="text" id="tTitle1"></div>
       <div class="row"><label>標題第二行</label><input type="text" id="tTitle2"></div>
@@ -682,6 +683,7 @@ const DEFAULTS = {
   cols: 5,
   insetT: 250, insetB: 118, insetL: 60, insetR: 60,
   titleImg: 'on',           // 'on'＝用 images/calendar 的月份標題圖；'off'＝用 CSS 仿版標題
+  headTop: 34,              // 標題距離頂端幾 px（可以是負的，把標題往上推出邊界）
   zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
   fs: 1, gap: 10, radius: 14, headH: 190,
@@ -947,6 +949,7 @@ function renderPoster() {
   poster.style.setProperty('--p-gap', S.gap + 'px');
   poster.style.setProperty('--p-radius', S.radius + 'px');
   poster.style.setProperty('--p-head-h', S.headH + 'px');
+  poster.style.setProperty('--p-head-top', S.headTop + 'px');
   poster.style.setProperty('--p-inset-t', S.insetT + 'px');
   poster.style.setProperty('--p-inset-b', S.insetB + 'px');
   poster.style.setProperty('--p-inset-l', S.insetL + 'px');
@@ -1783,7 +1786,7 @@ function syncControls() {
   document.getElementById('selZoom').value = String(S.zoom || 0);
   ['rInsetT|insetT|vInsetT', 'rInsetB|insetB|vInsetB', 'rInsetL|insetL|vInsetL', 'rInsetR|insetR|vInsetR',
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
-   'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rFs|fs|vFs'].forEach(spec => {
+   'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop', 'rFs|fs|vFs'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -1819,6 +1822,7 @@ function init() {
   bindRange('rGap', 'gap', 'vGap');
   bindRange('rRadius', 'radius', 'vRadius');
   bindRange('rHeadH', 'headH', 'vHeadH');
+  bindRange('rHeadTop', 'headTop', 'vHeadTop');
 
   ['cOuter|cOuter', 'cPanel|cPanel', 'cCellBg|cCellBg', 'cCellBorder|cCellBorder',
    'cChipBg|cChipBg', 'cChipBorder|cChipBorder', 'cChipText|cChipText', 'cDate|cDate',
