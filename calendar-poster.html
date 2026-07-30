@@ -408,7 +408,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   padding: 4px 5px;
   text-align: center;
   font-weight: 800;
-  line-height: 1.16;
+  line-height: var(--p-line-h);
   overflow: hidden;
   word-break: break-word;
 }
@@ -480,7 +480,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   align-self: stretch;                   /* 撐滿列高，autoFit 才量得出多行有沒有爆版 */
   display: flex; flex-direction: column; justify-content: center;
   font-weight: 700; color: var(--p-title-color);
-  overflow: hidden; line-height: 1.2;
+  overflow: hidden; line-height: var(--p-line-h);
 }
 .list-row .name .name-line {             /* 同框的團一個品牌一行 */
   display: block;
@@ -595,6 +595,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><input type="number" class="val" id="vDayTop"></div>
       <div class="row"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><input type="number" class="val" id="vDaySize"></div>
       <div class="row"><label>徽章間距</label><input type="range" id="rBadgeGap" min="0" max="40" step="1"><input type="number" class="val" id="vBadgeGap"></div>
+      <div class="row"><label>文字行距</label><input type="range" id="rLineH" min="0.9" max="2.2" step="0.02"><input type="number" class="val" id="vLineH"></div>
       <p class="hint">日期數字往上調時，團的框會自動跟著往上補滿，不會留一條空白，也不會被數字壓到。</p>
     </fieldset>
 
@@ -730,7 +731,7 @@ const LS_USERDEF  = 'calposter.userdefaults.v1';  // 使用者自己調好的預
 // 顏色、標題文字、文案樣板等其餘設定兩邊共用。
 const PER_MODE_KEYS = ['size', 'insetT', 'insetB', 'insetL', 'insetR',
                        'fs', 'gap', 'radius', 'headH', 'headTop', 'dayTop', 'daySize',
-                       'badgeGap', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
+                       'badgeGap', 'lineH', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
 
 const DEFAULTS = {
   modes: {},                // { calendar: {...}, list: {...} }：上面那些欄位的兩套值
@@ -742,6 +743,7 @@ const DEFAULTS = {
   titleImg: 'on',           // 'on'＝用 images/calendar 的月份標題圖；'off'＝用 CSS 仿版標題
   headTop: 34,              // 標題距離頂端幾 px（可以是負的，把標題往上推出邊界）
   dayTop: 4, daySize: 22,   // 格子左上角日期數字的位置與大小（格子上方留白會自動跟著算）
+  lineH: 1.16,              // 團名的文字行距（多行時才看得出來）
   badgeGap: 4,              // 徽章與團名的距離（行事曆是上下、列表是左右）
   zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
@@ -1012,6 +1014,7 @@ function renderPoster() {
   poster.style.setProperty('--p-day-top', S.dayTop + 'px');
   poster.style.setProperty('--p-day-size', S.daySize + 'px');
   poster.style.setProperty('--p-badge-gap', S.badgeGap + 'px');
+  poster.style.setProperty('--p-line-h', S.lineH);
   // 團的框從「日期數字底下」才開始，不管數字調到多大多低都不會被壓到
   poster.style.setProperty('--p-day-pad', Math.max(8, S.dayTop + S.daySize + 4) + 'px');
   poster.style.setProperty('--p-inset-t', S.insetT + 'px');
@@ -1947,7 +1950,7 @@ function syncControls() {
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
    'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop',
    'rDayTop|dayTop|vDayTop', 'rDaySize|daySize|vDaySize',
-   'rBadgeGap|badgeGap|vBadgeGap', 'rFs|fs|vFs'].forEach(spec => {
+   'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH', 'rFs|fs|vFs'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -1989,6 +1992,7 @@ function init() {
   bindRange('rDayTop', 'dayTop', 'vDayTop');
   bindRange('rDaySize', 'daySize', 'vDaySize');
   bindRange('rBadgeGap', 'badgeGap', 'vBadgeGap');
+  bindRange('rLineH', 'lineH', 'vLineH');
 
   ['cOuter|cOuter', 'cPanel|cPanel', 'cCellBg|cCellBg', 'cCellBorder|cCellBorder',
    'cChipBg|cChipBg', 'cChipBorder|cChipBorder', 'cChipText|cChipText', 'cDate|cDate',
