@@ -282,6 +282,13 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   display: flex; align-items: center; gap: 16px;
 }
 .poster.has-bg .poster-head { display: none; }
+/* 月份標題圖：置中、等比縮到標題區塞得下（高度用「標題高度」滑桿調） */
+.poster-head.use-img { justify-content: center; align-items: flex-start; }
+.head-img {
+  display: block; margin: 0 auto;
+  max-width: 100%; max-height: 100%;
+  width: auto; height: auto;
+}
 .head-month {
   font-family: var(--font-display);
   font-size: 92px; font-weight: 800; line-height: 1;
@@ -537,7 +544,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>字級縮放</label><input type="range" id="rFs" min="0.7" max="1.4" step="0.02"><span class="val" id="vFs"></span></div>
       <div class="row"><label>格子間距</label><input type="range" id="rGap" min="0" max="30" step="1"><span class="val" id="vGap"></span></div>
       <div class="row"><label>圓角</label><input type="range" id="rRadius" min="0" max="40" step="1"><span class="val" id="vRadius"></span></div>
-      <div class="row"><label>標題高度</label><input type="range" id="rHeadH" min="80" max="320" step="2"><span class="val" id="vHeadH"></span></div>
+      <div class="row"><label>標題高度</label><input type="range" id="rHeadH" min="80" max="420" step="2"><span class="val" id="vHeadH"></span></div>
     </fieldset>
 
     <fieldset data-pane="image">
@@ -554,6 +561,14 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 
     <fieldset data-pane="image">
       <legend>標題與頁尾（沒放底圖時才會顯示）</legend>
+      <div class="row">
+        <label>標題</label>
+        <div class="seg" id="segTitleImg">
+          <button data-v="on" class="on">月份標題圖</button>
+          <button data-v="off">仿版標題</button>
+        </div>
+      </div>
+      <p class="hint">月份標題圖是 <code>images/calendar/</code> 那 24 張去背圖，會照月份自動換、置中。<b>列表模式且本月超過 24 團</b>時自動換成壓扁的長條版，其餘用標準版。大小用下面的「標題高度」滑桿調。下面三個欄位只有選「仿版標題」時才會用到。</p>
       <div class="row"><label>標題第一行</label><input type="text" id="tTitle1"></div>
       <div class="row"><label>標題第二行</label><input type="text" id="tTitle2"></div>
       <div class="row"><label>頁尾文字</label><input type="text" id="tFoot"></div>
@@ -664,6 +679,7 @@ const DEFAULTS = {
   size: '4:5',
   cols: 5,
   insetT: 250, insetB: 118, insetL: 60, insetR: 60,
+  titleImg: 'on',           // 'on'＝用 images/calendar 的月份標題圖；'off'＝用 CSS 仿版標題
   zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
   fs: 1, gap: 10, radius: 14, headH: 190,
@@ -1001,10 +1017,40 @@ function autoFit() {
   });
 }
 
+/* 月份標題圖：images/calendar/title-MM.webp（去背 webp，12 個月 × 標準／壓扁兩款）。
+   壓扁的長條版只在「列表模式 且 本月超過 24 團」時用——那種月份格子多，
+   標題要壓扁才留得下空間。其餘一律標準版，兩款都置中。 */
+function titleImgSrc() {
+  const mm = String(currentMonth + 1).padStart(2, '0');
+  const slim = (S.mode === 'list' && visibleGroups().length > 24);
+  return `images/calendar/title-${mm}${slim ? '-slim' : ''}.webp`;
+}
+
 function buildHead() {
   const head = document.createElement('div');
   head.className = 'poster-head';
 
+  if (S.titleImg !== 'off') {
+    const img = document.createElement('img');
+    img.className = 'head-img';
+    img.alt = '';
+    // 圖檔不在（例如本機沒有 images/ 資料夾）就自動退回仿版標題，不要開天窗
+    img.addEventListener('error', () => {
+      head.classList.remove('use-img');
+      head.innerHTML = '';
+      buildHeadFallback(head);
+    });
+    img.src = titleImgSrc();
+    head.classList.add('use-img');
+    head.appendChild(img);
+    return head;
+  }
+
+  buildHeadFallback(head);
+  return head;
+}
+
+function buildHeadFallback(head) {
   const mo = document.createElement('div');
   mo.className = 'head-month';
   mo.textContent = (currentMonth + 1) + '月';
@@ -1731,6 +1777,7 @@ function syncControls() {
   segSet('segSize', S.size);
   segSet('segCols', S.cols);
   segSet('segMonthOv', S.monthOverlay ? 'on' : 'off');
+  segSet('segTitleImg', S.titleImg || 'on');
   document.getElementById('selZoom').value = String(S.zoom || 0);
   ['rInsetT|insetT|vInsetT', 'rInsetB|insetB|vInsetB', 'rInsetL|insetL|vInsetL', 'rInsetR|insetR|vInsetR',
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
@@ -1757,6 +1804,7 @@ function init() {
   bindSeg('segSize', v => { S.size = v; });
   bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
   bindSeg('segMonthOv', v => { S.monthOverlay = (v === 'on'); });
+  bindSeg('segTitleImg', v => { S.titleImg = v; });
 
   bindRange('rInsetT', 'insetT', 'vInsetT');
   bindRange('rInsetB', 'insetB', 'vInsetB');
