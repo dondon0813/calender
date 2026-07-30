@@ -545,6 +545,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
         </div>
       </div>
       <p class="hint">「週一～五」是你原本 Canva 的版型。週末開團的團會自動移到前一個週五，並列在下面提醒你。</p>
+      <p class="hint"><b>行事曆與列表的版面各記各的</b>：尺寸、內容內縮、字級、間距、圓角、日期數字、標題大小與位置，兩個模式分開儲存，切換時各自回到自己那一套。顏色、標題文字、文案樣板則是共用。</p>
       <div id="moveWarn"></div>
     </fieldset>
 
@@ -712,7 +713,14 @@ const LS_ASSETS   = 'calposter.assets.v1';   // 底圖／人像的 dataURL（可
 const LS_PRESETS  = 'calposter.presets.v1';
 const LS_USERDEF  = 'calposter.userdefaults.v1';  // 使用者自己調好的預設版面  // 命名設定檔：版面＋文案樣板＋逐團微調（逐團的用團名當 key）
 
+// 行事曆與列表是兩套版面，這些欄位各記各的（切換模式時互不干擾）；
+// 顏色、標題文字、文案樣板等其餘設定兩邊共用。
+const PER_MODE_KEYS = ['size', 'insetT', 'insetB', 'insetL', 'insetR',
+                       'fs', 'gap', 'radius', 'headH', 'headTop', 'dayTop', 'daySize',
+                       'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
+
 const DEFAULTS = {
+  modes: {},                // { calendar: {...}, list: {...} }：上面那些欄位的兩套值
   pane: 'image',            // 'image'＝產生圖片｜'text'＝產生貼文
   mode: 'calendar',
   size: '4:5',
@@ -1523,6 +1531,25 @@ function buildCaption() {
   return lines.join('\n');
 }
 
+/* 切換「行事曆 / 列表」：先把目前模式的版面收進 S.modes，再把另一套叫出來。
+   S.modes 就存在 S 裡面，所以自動跟著存檔、設定檔、「我的預設」一起走。
+   某個模式還沒調過的話，就沿用現在畫面上的數值當起點。 */
+function pickModeSettings(src) {
+  const out = {};
+  PER_MODE_KEYS.forEach(k => { out[k] = src[k]; });
+  return out;
+}
+function switchMode(next) {
+  if (!next || next === S.mode) return;
+  if (!S.modes) S.modes = {};
+  S.modes[S.mode] = pickModeSettings(S);
+  S.mode = next;
+  if (S.modes[next]) Object.assign(S, S.modes[next]);
+  saveSettings();
+  syncControls();
+  renderAll();
+}
+
 // 切換「產生圖片 / 產生貼文」：左邊面板與右邊舞台都跟著換
 function applyPane() {
   const isText = S.pane === 'text';
@@ -1915,7 +1942,7 @@ function init() {
   loadPresets();
   renderPresetList();
 
-  bindSeg('segMode', v => { S.mode = v; });
+  bindSeg('segMode', v => { switchMode(v); });
   bindSeg('segSize', v => { S.size = v; });
   bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
   bindSeg('segMonthOv', v => { S.monthOverlay = (v === 'on'); });
