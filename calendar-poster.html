@@ -345,6 +345,18 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   display: grid;
   gap: var(--p-gap);
 }
+/* 間距調到 0 時：格子只留上與左的框線，右與下的收邊交給整個網格畫，
+   相鄰兩格才會是「一條線」而不是兩條疊在一起變粗。圓角這時一律歸零，
+   否則接縫處會出現一堆小圓角，接不成直線。 */
+.cal-grid.collapse {
+  box-sizing: border-box;
+  border-right: 3px solid var(--p-cell-border);
+  border-bottom: 3px solid var(--p-cell-border);
+}
+.cal-grid.collapse .cal-cell {
+  border-width: 3px 0 0 3px;
+  border-radius: 0;
+}
 .cal-cell {
   position: relative;
   box-sizing: border-box;
@@ -1195,7 +1207,7 @@ function buildCalendar() {
   }
 
   const grid = document.createElement('div');
-  grid.className = 'cal-grid';
+  grid.className = 'cal-grid' + (S.gap === 0 ? ' collapse' : '');
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${rows.length}, 1fr)`;
 
