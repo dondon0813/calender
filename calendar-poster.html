@@ -432,7 +432,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 .list-grid {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 1fr;   /* 單欄：一團一列，由上往下排 */
+  grid-template-columns: 1fr 1fr;
   gap: var(--p-gap);
   align-content: start;
 }
@@ -1066,8 +1066,19 @@ function autoFit() {
   document.querySelectorAll('#poster .list-row .name').forEach(n => {
     let fs = parseFloat(getComputedStyle(n).fontSize) || 24;
     let guard = 0;
+    // 量「文字實際佔多寬」而不是元素的 scrollWidth：.name-line 是區塊元素，
+    // 它的 scrollWidth 永遠等於容器寬（塞不下時被 ellipsis 截掉也一樣），
+    // 拿來比對永遠不會超出、字就不會縮，直接被截成「…」。
+    // 改用 Range 量文字的實際範圍——它會回小數，也不受預覽縮放影響（兩邊同樣被縮）。
+    const inner = n.querySelector('.name-line');
+    const textRange = document.createRange();
+    const tooWide = () => {
+      if (!inner) return n.scrollWidth > n.clientWidth + 1;
+      textRange.selectNodeContents(inner);
+      return textRange.getBoundingClientRect().width > n.getBoundingClientRect().width - 0.5;
+    };
     while (guard++ < 40 && fs > 13 &&
-           (n.scrollWidth > n.clientWidth + 1 || n.scrollHeight > n.clientHeight + 1)) {
+           (tooWide() || n.scrollHeight > n.clientHeight + 1)) {
       fs -= 1;
       n.style.fontSize = fs + 'px';
     }
@@ -1309,12 +1320,12 @@ function buildList() {
   const grid = document.createElement('div');
   grid.className = 'list-grid';
 
-  // 單欄：一團一列。列高由「剩下的高度 ÷ 團數」決定，團多就自動變扁
-  const rows = Math.max(1, groups.length);
+  const rows = Math.max(1, Math.ceil(groups.length / 2));
   const dim = SIZES[S.size];
   const avail = dim.h - S.insetT - S.insetB;
-  const rowH = Math.max(16, Math.floor((avail - (rows - 1) * S.gap) / rows));
+  const rowH = Math.max(28, Math.floor((avail - (rows - 1) * S.gap) / rows));
   grid.style.gridTemplateRows = `repeat(${rows}, ${rowH}px)`;
+  grid.style.gridAutoFlow = 'column';   // 先填滿左欄再換右欄（跟你 Canva 版一樣 1~12 / 13~24）
 
   const fs = Math.round(Math.min(rowH * 0.42, 30) * S.fs);
 
@@ -1346,13 +1357,12 @@ function buildList() {
 
     const name = document.createElement('div');
     name.className = 'name';
-    // 同框的團、以及團名裡的「｜」，在列表模式都排成多行（autoFit 會把字縮到塞得下）
-    groupLines(group).forEach(t => {
-      const line = document.createElement('span');
-      line.className = 'name-line';
-      line.textContent = t;
-      name.appendChild(line);
-    });
+    // 列表模式一列就是一行字：團名裡的「｜」接回空白，同框的團用「＋」串起來。
+    // （行事曆模式才需要斷行，那邊格子窄；這裡是橫的一長列，斷行反而醜。）
+    const line = document.createElement('span');
+    line.className = 'name-line';
+    line.textContent = groupNames(group).join('＋');
+    name.appendChild(line);
     r.appendChild(name);
 
     grid.appendChild(r);
