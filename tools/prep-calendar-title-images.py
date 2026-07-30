@@ -34,7 +34,7 @@ import sys
 from PIL import Image
 
 OUT_HEIGHT = 300      # 標準版輸出高度（來源裁切後約 305，等於原尺寸）
-SLIM_HEIGHT = None    # 壓扁版輸出高度；等使用者的壓扁來源檔進來再定（None＝先沿用 --height）
+SLIM_HEIGHT = 222     # 壓扁版輸出高度（來源裁切後 226，跟標準版同一個縮放比例，字級關係才不會跑掉）
 QUALITY = 92          # webp 品質（有文字邊緣，比照片類再高一點）
 ALPHA_MIN = 10        # 判斷「這個像素算內容」的 alpha 門檻
 PHOTO_BAND = 40       # 底部這個範圍內的欄位視為「照片區」（照片是全圖最低的部分）
