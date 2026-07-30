@@ -103,6 +103,16 @@ body {
   background: var(--c-input-bg); cursor: pointer;
 }
 .row .val { flex: 0 0 46px; text-align: right; font-size: 12px; color: var(--c-muted); }
+/* 滑桿旁邊的數字可以直接打（超出滑桿範圍也吃，滑桿只是會停在底/頂） */
+.row input.val {
+  flex: 0 0 58px; box-sizing: border-box;
+  padding: 3px 4px; text-align: right;
+  border: 2px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-input-bg); color: var(--c-text-soft);
+  font-family: var(--font-body); font-size: 12px;
+}
+.row input.val::-webkit-outer-spin-button,
+.row input.val::-webkit-inner-spin-button { margin-left: 2px; }
 
 .seg { display: flex; gap: 6px; flex: 1; }
 .seg button {
@@ -547,10 +557,10 @@ body.pane-text  [data-pane="image"] { display: none !important; }
         <button class="btn" id="btnClearBg">清除底圖</button>
       </div>
       <p class="hint">放了底圖之後，仿版的標題與頁尾會自動隱藏，只留格子。用下面四個滑桿把格子對準底圖的空位。</p>
-      <div class="row"><label>內容 上</label><input type="range" id="rInsetT" min="0" max="600" step="2"><span class="val" id="vInsetT"></span></div>
-      <div class="row"><label>內容 下</label><input type="range" id="rInsetB" min="0" max="600" step="2"><span class="val" id="vInsetB"></span></div>
-      <div class="row"><label>內容 左</label><input type="range" id="rInsetL" min="0" max="400" step="2"><span class="val" id="vInsetL"></span></div>
-      <div class="row"><label>內容 右</label><input type="range" id="rInsetR" min="0" max="400" step="2"><span class="val" id="vInsetR"></span></div>
+      <div class="row"><label>內容 上</label><input type="range" id="rInsetT" min="0" max="600" step="2"><input type="number" class="val" id="vInsetT"></div>
+      <div class="row"><label>內容 下</label><input type="range" id="rInsetB" min="0" max="600" step="2"><input type="number" class="val" id="vInsetB"></div>
+      <div class="row"><label>內容 左</label><input type="range" id="rInsetL" min="0" max="400" step="2"><input type="number" class="val" id="vInsetL"></div>
+      <div class="row"><label>內容 右</label><input type="range" id="rInsetR" min="0" max="400" step="2"><input type="number" class="val" id="vInsetR"></div>
       <div class="row">
         <label>月份數字</label>
         <div class="seg" id="segMonthOv">
@@ -558,18 +568,18 @@ body.pane-text  [data-pane="image"] { display: none !important; }
           <button data-v="on">疊在底圖上</button>
         </div>
       </div>
-      <div class="row"><label>數字 X</label><input type="range" id="rMoX" min="0" max="1000" step="2"><span class="val" id="vMoX"></span></div>
-      <div class="row"><label>數字 Y</label><input type="range" id="rMoY" min="0" max="1800" step="2"><span class="val" id="vMoY"></span></div>
-      <div class="row"><label>數字大小</label><input type="range" id="rMoS" min="30" max="200" step="2"><span class="val" id="vMoS"></span></div>
+      <div class="row"><label>數字 X</label><input type="range" id="rMoX" min="0" max="1000" step="2"><input type="number" class="val" id="vMoX"></div>
+      <div class="row"><label>數字 Y</label><input type="range" id="rMoY" min="0" max="1800" step="2"><input type="number" class="val" id="vMoY"></div>
+      <div class="row"><label>數字大小</label><input type="range" id="rMoS" min="30" max="200" step="2"><input type="number" class="val" id="vMoS"></div>
     </fieldset>
 
     <fieldset data-pane="image">
       <legend>版面微調</legend>
-      <div class="row"><label>字級縮放</label><input type="range" id="rFs" min="0.7" max="1.4" step="0.02"><span class="val" id="vFs"></span></div>
-      <div class="row"><label>格子間距</label><input type="range" id="rGap" min="0" max="30" step="1"><span class="val" id="vGap"></span></div>
-      <div class="row"><label>圓角</label><input type="range" id="rRadius" min="0" max="40" step="1"><span class="val" id="vRadius"></span></div>
-      <div class="row"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><span class="val" id="vDayTop"></span></div>
-      <div class="row"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><span class="val" id="vDaySize"></span></div>
+      <div class="row"><label>字級縮放</label><input type="range" id="rFs" min="0.7" max="1.4" step="0.02"><input type="number" class="val" id="vFs"></div>
+      <div class="row"><label>格子間距</label><input type="range" id="rGap" min="0" max="30" step="1"><input type="number" class="val" id="vGap"></div>
+      <div class="row"><label>圓角</label><input type="range" id="rRadius" min="0" max="40" step="1"><input type="number" class="val" id="vRadius"></div>
+      <div class="row"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><input type="number" class="val" id="vDayTop"></div>
+      <div class="row"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><input type="number" class="val" id="vDaySize"></div>
       <p class="hint">日期數字往上調時，團的框會自動跟著往上補滿，不會留一條空白，也不會被數字壓到。</p>
     </fieldset>
 
@@ -594,8 +604,8 @@ body.pane-text  [data-pane="image"] { display: none !important; }
           <button data-v="off">仿版標題</button>
         </div>
       </div>
-      <div class="row"><label>標題大小</label><input type="range" id="rHeadH" min="80" max="420" step="2"><span class="val" id="vHeadH"></span></div>
-      <div class="row"><label>標題上下</label><input type="range" id="rHeadTop" min="-60" max="400" step="2"><span class="val" id="vHeadTop"></span></div>
+      <div class="row"><label>標題大小</label><input type="range" id="rHeadH" min="80" max="420" step="2"><input type="number" class="val" id="vHeadH"></div>
+      <div class="row"><label>標題上下</label><input type="range" id="rHeadTop" min="-60" max="400" step="2"><input type="number" class="val" id="vHeadTop"></div>
       <p class="hint">月份標題圖是 <code>images/calendar/</code> 那 24 張去背圖，會照月份自動換、置中。<b>列表模式且本月超過 24 團</b>時自動換成壓扁的長條版，其餘用標準版。「標題大小」是標題區的高度，圖會等比縮到塞得下為止。再下面三個欄位只有選「仿版標題」時才會用到。</p>
       <div class="row"><label>標題第一行</label><input type="text" id="tTitle1"></div>
       <div class="row"><label>標題第二行</label><input type="text" id="tTitle2"></div>
@@ -1653,13 +1663,31 @@ function escapeHtml(s) {
 function bindRange(id, key, valId, suffix) {
   const el = document.getElementById(id);
   const val = valId ? document.getElementById(valId) : null;
-  const sync = () => { if (val) val.textContent = S[key] + (suffix || ''); };
+  const typable = !!val && val.tagName === 'INPUT';
+  const sync = () => {
+    if (!val) return;
+    // 正在打字時不要蓋掉使用者輸入到一半的字
+    if (typable) { if (document.activeElement !== val) val.value = S[key]; }
+    else val.textContent = S[key] + (suffix || '');
+  };
   el.value = S[key];
   sync();
   el.addEventListener('input', () => {
     S[key] = parseFloat(el.value);
     sync(); saveSettings(); renderPoster();
   });
+
+  if (typable) {
+    val.step = el.step || 1;                 // 刻意不設 min/max：打得比滑桿範圍大也照用
+    val.addEventListener('input', () => {
+      const v = parseFloat(val.value);
+      if (isNaN(v)) return;                  // 清空／打到一半不要當成 0
+      S[key] = v;
+      el.value = v;                          // 滑桿超出範圍時會自己停在底或頂
+      saveSettings(); renderPoster();
+    });
+    val.addEventListener('blur', () => { val.value = S[key]; });
+  }
 }
 function bindColor(id, key) {
   const el = document.getElementById(id);
@@ -1848,7 +1876,9 @@ function syncControls() {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
-    document.getElementById(valId).textContent = S[key];
+    const val = document.getElementById(valId);
+    if (val.tagName === 'INPUT') val.value = S[key];
+    else val.textContent = S[key];
   });
   ['tTitle1|title1', 'tTitle2|title2', 'tFoot|foot',
    'tCapIntro|capIntro', 'tCapListTitle|capListTitle', 'tCapOutro|capOutro', 'tCapTags|capTags'].forEach(spec => {
