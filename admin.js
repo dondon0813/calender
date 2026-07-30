@@ -1684,6 +1684,32 @@ function updateEvWeekdayHints() {
 document.getElementById('evStartDateInput').addEventListener('change', updateEvWeekdayHints);
 document.getElementById('evEndDateInput').addEventListener('change', updateEvWeekdayHints);
 
+// 延長時間欄的即時預覽：填天數 → 算出延到幾號；填日期 → 算出等於延長幾天
+function updateEvExtendHint() {
+  const hint = document.getElementById('evExtendHint');
+  const raw = document.getElementById('evExtendInput').value.trim();
+  if (raw === '') { hint.textContent = ''; return; }
+  const end = parseYmd(document.getElementById('evEndDateInput').value);
+  if (!end) { hint.textContent = '請先填結束日期，才能算出延長到幾號'; return; }
+  if (/^\d+$/.test(raw)) {
+    const days = parseInt(raw, 10);
+    if (days === 0) { hint.textContent = '延長 0 天＝等於沒延長'; return; }
+    const to = new Date(end.getFullYear(), end.getMonth(), end.getDate() + days);
+    hint.textContent = `延長 ${days} 天 → 延到 ${fmtWeekdayHint(ymdStr(to))}`;
+    return;
+  }
+  const exDate = parseDateStr(raw);
+  if (!exDate || isNaN(exDate.getTime()) || exDate.getFullYear() < 2000) {
+    hint.textContent = '看不懂這個格式，請填天數（例如 3）或日期（例如 2026-08-15）';
+    return;
+  }
+  const days = Math.round((exDate.getTime() - end.getTime()) / 86400000);
+  if (days <= 0) { hint.textContent = '這個日期沒有晚於結束日期，請直接改結束日期'; return; }
+  hint.textContent = `延到 ${fmtWeekdayHint(ymdStr(exDate))}（等於延長 ${days} 天）`;
+}
+document.getElementById('evExtendInput').addEventListener('input', updateEvExtendHint);
+document.getElementById('evEndDateInput').addEventListener('change', updateEvExtendHint);
+
 function setEvSwitch(id, on) {
   document.getElementById(id).classList.toggle('on', on);
 }
@@ -1776,6 +1802,7 @@ function openEventEditModal(ev, prefillDate) {
   setEvTimeSelects('evStartAmPmInput', 'evStartHourInput', 'evStartMinuteInput', ev ? ev.startTime : '');
   setEvTimeSelects('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput', ev ? ev.endTime : '');
   updateEvWeekdayHints();
+  updateEvExtendHint();
 
   document.getElementById('eventEditModal').classList.add('show');
 }
