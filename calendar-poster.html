@@ -432,7 +432,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 .list-grid {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;   /* 單欄：一團一列，由上往下排 */
   gap: var(--p-gap);
   align-content: start;
 }
@@ -459,6 +459,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .range {
   flex: 0 0 auto;
+  white-space: nowrap;   /* 日期絕對不能折行（欄寬是量出來的，差 1px 就會斷成兩行） */
   font-family: var(--font-display); font-weight: 800;
   color: var(--p-month-color);
 }
@@ -1050,7 +1051,18 @@ function autoFit() {
     }
   });
 
-  // 列表模式：長品名寧可縮字，也不要被截成「…」（截掉之後客人看不出是哪個團）
+  // 列表模式：日期欄一律對齊到「最長的那個日期」的寬度（8/3-8/9 跟 8/12-8/18 長度不同，
+  // 不對齊的話每一列的團名起點都不一樣）。用 offsetWidth 量，不受預覽縮放影響。
+  const ranges = Array.prototype.slice.call(document.querySelectorAll('#poster .list-row .range'));
+  if (ranges.length) {
+    ranges.forEach(r => { r.style.width = ''; });
+    let maxW = 0;
+    ranges.forEach(r => { maxW = Math.max(maxW, r.offsetWidth); });
+    maxW += 2;   // offsetWidth 是整數會往下捨，多留 2px 免得最長的那個剛好被擠掉
+    ranges.forEach(r => { r.style.width = maxW + 'px'; });
+  }
+
+  // 長品名寧可縮字，也不要被截成「…」（截掉之後客人看不出是哪個團）
   document.querySelectorAll('#poster .list-row .name').forEach(n => {
     let fs = parseFloat(getComputedStyle(n).fontSize) || 24;
     let guard = 0;
@@ -1297,12 +1309,12 @@ function buildList() {
   const grid = document.createElement('div');
   grid.className = 'list-grid';
 
-  const rows = Math.max(1, Math.ceil(groups.length / 2));
+  // 單欄：一團一列。列高由「剩下的高度 ÷ 團數」決定，團多就自動變扁
+  const rows = Math.max(1, groups.length);
   const dim = SIZES[S.size];
   const avail = dim.h - S.insetT - S.insetB;
-  const rowH = Math.max(28, Math.floor((avail - (rows - 1) * S.gap) / rows));
+  const rowH = Math.max(16, Math.floor((avail - (rows - 1) * S.gap) / rows));
   grid.style.gridTemplateRows = `repeat(${rows}, ${rowH}px)`;
-  grid.style.gridAutoFlow = 'column';   // 先填滿左欄再換右欄（跟你 Canva 版一樣 1~12 / 13~24）
 
   const fs = Math.round(Math.min(rowH * 0.42, 30) * S.fs);
 
