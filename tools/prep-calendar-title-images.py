@@ -8,20 +8,23 @@
   1. 切掉所有透明邊。
   2. 人物下半身切掉：以「文字最底」為基準線，右邊照片超出的部分一併裁掉，
      所以整張圖底部是齊平的。
-  3. 輸出兩種比例（同一份來源）：
-       標準版 title-MM.webp        → 高 300，原始比例
-       壓扁版 title-MM-slim.webp   → 同寬，高度再壓成 SLIM_RATIO（長條版面用）
+  3. 縮到統一高度後存成 title-MM.webp。
 
      這裡是「對高度」而不是「對寬度」：每個月只有數字不一樣，左邊界會差幾十像素，
      若對齊寬度，12 個月的字會一個比一個大一點點。對齊高度則每個月的
      「團購行事曆」大小完全一致，寬度差那 3% 交給版面靠左/置中即可。
 
+標準版和壓扁長條版是**兩套不同的來源檔**（都是使用者自己排版好的），不是這裡壓出來的。
+處理壓扁版時加 `--slim`，檔名會變成 title-MM-slim.webp，高度改用 SLIM_HEIGHT。
+
 用法（Pillow 裝在 scratchpad，不要裝進本 repo）：
     pip install Pillow
-    python3 tools/prep-calendar-title-images.py <來源檔>:<月份> [...] [--out images/calendar] [--dry]
+    python3 tools/prep-calendar-title-images.py <來源檔>:<月份> [...] \
+        [--slim] [--height 300] [--out images/calendar] [--dry]
 
 例：
     python3 tools/prep-calendar-title-images.py IMG_3615.png:1 IMG_3616.png:2
+    python3 tools/prep-calendar-title-images.py IMG_3627.png:1 --slim
 
 來源檔不會被覆蓋，輸出一律 .webp（保留透明背景）。
 """
@@ -31,7 +34,7 @@ import sys
 from PIL import Image
 
 OUT_HEIGHT = 300      # 標準版輸出高度（來源裁切後約 305，等於原尺寸）
-SLIM_RATIO = 0.70     # 壓扁版：高度乘以這個比例（寬度不變）
+SLIM_HEIGHT = None    # 壓扁版輸出高度；等使用者的壓扁來源檔進來再定（None＝先沿用 --height）
 QUALITY = 92          # webp 品質（有文字邊緣，比照片類再高一點）
 ALPHA_MIN = 10        # 判斷「這個像素算內容」的 alpha 門檻
 PHOTO_BAND = 40       # 底部這個範圍內的欄位視為「照片區」（照片是全圖最低的部分）
@@ -69,37 +72,38 @@ def content_box(im):
     return box
 
 
-def process(src, month, out_dir, dry=False):
+def process(src, month, out_dir, height, slim=False, dry=False):
     im = Image.open(src).convert('RGBA')
     box = content_box(im)
     crop = im.crop(box)
     cw, ch = crop.size
 
-    out_w = max(1, round(cw * OUT_HEIGHT / ch))
-    slim_h = max(1, round(OUT_HEIGHT * SLIM_RATIO))
+    out_w = max(1, round(cw * height / ch))
+    out = crop.resize((out_w, height), Image.LANCZOS)
 
-    std = crop.resize((out_w, OUT_HEIGHT), Image.LANCZOS)
-    slim = crop.resize((out_w, slim_h), Image.LANCZOS)
-
-    base = f'title-{month:02d}'
-    jobs = [(std, f'{base}.webp'), (slim, f'{base}-slim.webp')]
-    for img, name in jobs:
-        dest = os.path.join(out_dir, name)
-        print(f'{os.path.basename(src)} → {dest}  {img.size[0]}x{img.size[1]}'
-              + ('  (dry)' if dry else ''))
-        if not dry:
-            os.makedirs(out_dir, exist_ok=True)
-            img.save(dest, 'WEBP', quality=QUALITY, method=6)
+    name = f'title-{month:02d}{"-slim" if slim else ""}.webp'
+    dest = os.path.join(out_dir, name)
+    print(f'{os.path.basename(src)} → {dest}  {out_w}x{height}'
+          + ('  (dry)' if dry else ''))
+    if not dry:
+        os.makedirs(out_dir, exist_ok=True)
+        out.save(dest, 'WEBP', quality=QUALITY, method=6)
 
 
 def main():
     args = sys.argv[1:]
     dry = '--dry' in args
-    args = [a for a in args if a != '--dry']
+    slim = '--slim' in args
+    args = [a for a in args if a not in ('--dry', '--slim')]
     out_dir = 'images/calendar'
     if '--out' in args:
         i = args.index('--out')
         out_dir = args[i + 1]
+        del args[i:i + 2]
+    height = (SLIM_HEIGHT or OUT_HEIGHT) if slim else OUT_HEIGHT
+    if '--height' in args:
+        i = args.index('--height')
+        height = int(args[i + 1])
         del args[i:i + 2]
 
     pairs = []
@@ -114,7 +118,7 @@ def main():
         return 1
 
     for path, month in pairs:
-        process(path, month, out_dir, dry)
+        process(path, month, out_dir, height, slim, dry)
     return 0
 
 

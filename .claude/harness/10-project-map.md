@@ -91,7 +91,7 @@ Google 試算表（兩份！）
 
 ## 6. 圖片資產規則與陷阱
 
-- `icons/`：開學清單/標籤頁專用圖示（.png+.webp 成對）。`images/tools/`：後台工具圖示。`images/recipes/`：食譜 UI 圖。`images/brands/`：品牌去背小圖，**檔名=品牌代號**（見該資料夾 README.md），由 GAS `updateBrandThumbs()` 寫網址進試算表。`images/Ingredients/`：食材照片，由試算表「圖片網址」欄動態載入。`images/name-stickers/`：姓名貼產生器素材（cat-01~08.webp 喵星人、animal-01~04.webp 可愛動物，皆去背透明底、長邊 300px），純前端靜態圖，不經 Code.gs。`images/calendar/`：行事曆產生器的月份標題圖（`title-01`～`title-12`，另有 `-slim` 壓扁長條版；去背透明底、高 300 / 210px），見該資料夾 README.md，來源 PNG 用 `tools/prep-calendar-title-images.py` 批次處理。
+- `icons/`：開學清單/標籤頁專用圖示（.png+.webp 成對）。`images/tools/`：後台工具圖示。`images/recipes/`：食譜 UI 圖。`images/brands/`：品牌去背小圖，**檔名=品牌代號**（見該資料夾 README.md），由 GAS `updateBrandThumbs()` 寫網址進試算表。`images/Ingredients/`：食材照片，由試算表「圖片網址」欄動態載入。`images/name-stickers/`：姓名貼產生器素材（cat-01~08.webp 喵星人、animal-01~04.webp 可愛動物，皆去背透明底、長邊 300px），純前端靜態圖，不經 Code.gs。`images/calendar/`：行事曆產生器的月份標題圖（`title-01`～`title-12` 標準版，高 300px；壓扁長條版另存 `title-MM-slim`，是**另一套來源檔**不是壓出來的，尚未提供），去背透明底，見該資料夾 README.md，來源 PNG 用 `tools/prep-calendar-title-images.py` 批次處理。
 - **陷阱 1**：食材/品牌圖在試算表存的是**絕對網址**（github.io 或外部 cloudimg）→ 本機預覽也是抓線上圖，離線會「版面正常但圖全破」，且 onerror 會換 emoji 備援，不易察覺。
 - **陷阱 2**：副檔名要跟實際檔案一致，`.png` 已大量移除只留 `.webp`；資料填錯副檔名＝線上 404。
 - **陷阱 3**：品牌名比對走 `normalizeBrandKey()`（轉小寫＋去空格，school-list.html）；品牌命名一律用「客人看得懂的名稱」（`B21pro` 不是「精臣」），原廠名寫品牌備註。

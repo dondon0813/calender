@@ -1,11 +1,12 @@
 # images/calendar — 行事曆產生器的月份標題圖
 
-每個月一組，共 12 個月 × 2 款（目前已備妥 1～5 月）。
+每個月一組，共 12 個月 × 2 款＝24 張。兩款是**使用者各自排版好的兩套來源檔**，
+不是互相壓縮出來的。
 
-| 檔名 | 尺寸 | 用途 |
-|---|---|---|
-| `title-MM.webp` | 高 300px（寬約 1210～1250） | 標準版，原始比例 |
-| `title-MM-slim.webp` | 高 210px（寬同標準版） | 壓扁長條版，給比較扁的版面用 |
+| 檔名 | 尺寸 | 用途 | 目前進度 |
+|---|---|---|---|
+| `title-MM.webp` | 高 300px（寬約 1210～1250） | 標準版 | 1～5 月已備妥 |
+| `title-MM-slim.webp` | 壓扁長條版，尺寸待來源檔進來再定 | 比較扁的版面用 | 尚未提供 |
 
 `MM` 是兩位數月份（`01`～`12`）。
 
@@ -26,7 +27,9 @@
 ```bash
 pip install Pillow
 python3 tools/prep-calendar-title-images.py IMG_3620.png:6 IMG_3621.png:7
+# 壓扁長條版的來源檔加 --slim，檔名會變成 title-MM-slim.webp
+python3 tools/prep-calendar-title-images.py IMG_3630.png:1 --slim
 ```
 
 參數格式是 `<來源檔>:<月份>`，輸出固定進 `images/calendar/`，來源檔不會被動到。
-要改高度或壓扁比例，改腳本頂端的 `OUT_HEIGHT` / `SLIM_RATIO`。
+輸出高度改 `--height`（或腳本頂端的 `OUT_HEIGHT` / `SLIM_HEIGHT`）。
