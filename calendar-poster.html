@@ -358,6 +358,8 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 /* 月初／月底補上的前後月日期：淡一點、日期字小一點，一眼看得出不是這個月 */
 .cal-cell.out { opacity: .45; }
 .cal-cell.out .daynum { font-size: 17px; }
+/* 補位格裡有團的話別淡到看不清楚，但仍比本月的淡一點 */
+.cal-cell.out.has-ev { opacity: .85; }
 .cal-cell .daynum {
   position: absolute; top: 4px; left: 9px;
   font-family: var(--font-display); font-weight: 700;
@@ -1143,6 +1145,30 @@ function buildCalendar() {
   function cellDateOf(row, col) {
     return new Date(baseWeek.getFullYear(), baseWeek.getMonth(), baseWeek.getDate() + row * 7 + col);
   }
+
+  // 月初月底補位格（前後月的日期）也要畫團：8 月的圖尾巴有 9/1～9/4，
+  // 那幾天開的團前台已經看得到了，圖上就不該是空格。
+  // 這些團不參與同框與逐團微調（那些是「本月」的設定），一團一框。
+  const outCells = {};   // key `${row}-${col}`
+  for (let row = 0; row <= maxRow; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (cells[`${row}-${col}`]) continue;
+      const d = cellDateOf(row, col);
+      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) continue;
+      outCells[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] = { key: `${row}-${col}`, events: [] };
+    }
+  }
+  allEvents.forEach(ev => {
+    if ((EV_OVERRIDES[ev.id] || {}).hidden) return;
+    const s = ev.start;
+    const slot = outCells[`${s.getFullYear()}-${s.getMonth()}-${s.getDate()}`];
+    if (slot) slot.events.push([ev]);
+  });
+  const outByCell = {};
+  Object.keys(outCells).forEach(k => {
+    const slot = outCells[k];
+    if (slot.events.length) outByCell[slot.key] = slot.events;
+  });
   function isThisMonth(d) {
     return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
   }
@@ -1166,10 +1192,11 @@ function buildCalendar() {
   rows.forEach(row => {
     for (let col = 0; col < cols; col++) {
       const cell = cells[`${row}-${col}`];
+      const outEvents = outByCell[`${row}-${col}`] || null;
       const d = cellDateOf(row, col);
       const mine = isThisMonth(d);
       const el = document.createElement('div');
-      el.className = 'cal-cell' + (mine ? '' : ' out');
+      el.className = 'cal-cell' + (mine ? '' : ' out') + (outEvents ? ' has-ev' : '');
 
       const n = document.createElement('div');
       n.className = 'daynum';
@@ -1179,6 +1206,7 @@ function buildCalendar() {
 
       // 一格幾團會決定字級（分兩格時字要小一點才塞得下）
       if (cell) cell.events.forEach(group => el.appendChild(buildChip(group, cell.events.length)));
+      else if (outEvents) outEvents.forEach(group => el.appendChild(buildChip(group, outEvents.length)));
       grid.appendChild(el);
     }
   });
