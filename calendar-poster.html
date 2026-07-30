@@ -348,12 +348,12 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 /* 間距調到 0 時：格子只留上與左的框線，右與下的收邊交給整個網格畫，
    相鄰兩格才會是「一條線」而不是兩條疊在一起變粗。圓角這時一律歸零，
    否則接縫處會出現一堆小圓角，接不成直線。 */
+/* 外框整圈由網格自己畫（才有完整的圓角），格子只負責「內部的分隔線」：
+   除了第一列不畫上框、第一欄不畫左框，其餘一律上＋左，接縫就只有一條線。
+   不能讓格子也畫最外側那圈，否則外緣會變成 3px＋3px 的雙線、圓角接不起來。 */
 .cal-grid.collapse {
   box-sizing: border-box;
-  border-right: 3px solid var(--p-cell-border);
-  border-bottom: 3px solid var(--p-cell-border);
-  /* 圓角改畫在整張表的四個外角：格子自己不留圓角（接縫要是直線），
-     靠外框的圓角＋裁切把最外側的上下左右四角修圓 */
+  border: 3px solid var(--p-cell-border);
   border-radius: var(--p-radius);
   overflow: hidden;
 }
@@ -361,6 +361,8 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   border-width: 3px 0 0 3px;
   border-radius: 0;
 }
+.cal-grid.collapse .cal-cell.first-row { border-top-width: 0; }
+.cal-grid.collapse .cal-cell.first-col { border-left-width: 0; }
 .cal-cell {
   position: relative;
   box-sizing: border-box;
@@ -1215,14 +1217,15 @@ function buildCalendar() {
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${rows.length}, 1fr)`;
 
-  rows.forEach(row => {
+  rows.forEach((row, rowIdx) => {
     for (let col = 0; col < cols; col++) {
       const cell = cells[`${row}-${col}`];
       const outEvents = outByCell[`${row}-${col}`] || null;
       const d = cellDateOf(row, col);
       const mine = isThisMonth(d);
       const el = document.createElement('div');
-      el.className = 'cal-cell' + (mine ? '' : ' out') + (outEvents ? ' has-ev' : '');
+      el.className = 'cal-cell' + (mine ? '' : ' out') + (outEvents ? ' has-ev' : '') +
+                     (rowIdx === 0 ? ' first-row' : '') + (col === 0 ? ' first-col' : '');
 
       const n = document.createElement('div');
       n.className = 'daynum';
