@@ -417,13 +417,17 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   border-color: var(--p-hi-border);
   color: var(--p-hi-text);
 }
-.chip .chip-name { display: block; }
+/* 字型補正：Baloo 2／Huninn 的字框下緣有一大塊用不到的空間（每 100px：字框上108/下52，
+   中文墨水只有上84/下8），純靠 flex 置中會讓字看起來浮在上面約 0.1em。
+   這裡用 em 等比往下補，字級再怎麼縮都成立；--p-text-shift 是使用者自己的額外微調。 */
+.chip .chip-name { display: block; position: relative; top: calc(0.09em + var(--p-text-shift)); }
 /* 徽章：用 inline-flex 置中，不要靠 padding 硬喬——中文字的 ascent 比較高，
    line-height 1.25＋不對稱 padding 會讓字看起來黏在上緣 */
 .chip .chip-badge, .list-row .row-badge {
   display: inline-flex;
   align-items: center; justify-content: center;
-  padding: 4px 12px;
+  /* 同樣的字型補正：上多留 0.2em、下少留，字才會在膠囊正中間（膠囊的 line-height 是 1，字框被壓縮，補正量比團名大） */
+  padding: calc(4px + 0.15em) 12px max(0px, calc(4px - 0.15em));
   border-radius: 999px;
   background: var(--p-badge-bg);
   color: var(--p-badge-text);
@@ -437,7 +441,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 .list-row .row-badge {
   flex: 0 0 auto;
   margin-left: var(--p-badge-gap);
-  padding: 3px 10px;
+  padding: calc(3px + 0.15em) 10px max(0px, calc(3px - 0.15em));
 }
 
 /* ---------- 列表模式 ---------- */
@@ -483,7 +487,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   overflow: hidden; line-height: var(--p-line-h);
 }
 .list-row .name .name-line {             /* 同框的團一個品牌一行 */
-  display: block;
+  display: block; position: relative; top: calc(0.09em + var(--p-text-shift));
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .list-row.hi { background: var(--p-hi-bg); border-color: var(--p-hi-border); }
@@ -596,6 +600,8 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><input type="number" class="val" id="vDaySize"></div>
       <div class="row"><label>徽章間距</label><input type="range" id="rBadgeGap" min="0" max="40" step="1"><input type="number" class="val" id="vBadgeGap"></div>
       <div class="row"><label>文字行距</label><input type="range" id="rLineH" min="0.9" max="2.2" step="0.02"><input type="number" class="val" id="vLineH"></div>
+      <div class="row"><label>文字上下</label><input type="range" id="rTextShift" min="-24" max="24" step="1"><input type="number" class="val" id="vTextShift"></div>
+      <p class="hint">「文字上下」是把團名整塊往上／往下挪，不會改變框的大小或位置（負的往上）。</p>
       <p class="hint">日期數字往上調時，團的框會自動跟著往上補滿，不會留一條空白，也不會被數字壓到。</p>
     </fieldset>
 
@@ -731,7 +737,7 @@ const LS_USERDEF  = 'calposter.userdefaults.v1';  // 使用者自己調好的預
 // 顏色、標題文字、文案樣板等其餘設定兩邊共用。
 const PER_MODE_KEYS = ['size', 'insetT', 'insetB', 'insetL', 'insetR',
                        'fs', 'gap', 'radius', 'headH', 'headTop', 'dayTop', 'daySize',
-                       'badgeGap', 'lineH', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
+                       'badgeGap', 'lineH', 'textShift', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
 
 const DEFAULTS = {
   modes: {},                // { calendar: {...}, list: {...} }：上面那些欄位的兩套值
@@ -744,6 +750,7 @@ const DEFAULTS = {
   headTop: 34,              // 標題距離頂端幾 px（可以是負的，把標題往上推出邊界）
   dayTop: 4, daySize: 22,   // 格子左上角日期數字的位置與大小（格子上方留白會自動跟著算）
   lineH: 1.16,              // 團名的文字行距（多行時才看得出來）
+  textShift: 0,             // 團名在框裡的上下微調（負的往上、正的往下；不影響版面配置）
   badgeGap: 4,              // 徽章與團名的距離（行事曆是上下、列表是左右）
   zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
@@ -1015,6 +1022,7 @@ function renderPoster() {
   poster.style.setProperty('--p-day-size', S.daySize + 'px');
   poster.style.setProperty('--p-badge-gap', S.badgeGap + 'px');
   poster.style.setProperty('--p-line-h', S.lineH);
+  poster.style.setProperty('--p-text-shift', S.textShift + 'px');
   // 團的框從「日期數字底下」才開始，不管數字調到多大多低都不會被壓到
   poster.style.setProperty('--p-day-pad', Math.max(8, S.dayTop + S.daySize + 4) + 'px');
   poster.style.setProperty('--p-inset-t', S.insetT + 'px');
@@ -1950,7 +1958,8 @@ function syncControls() {
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
    'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop',
    'rDayTop|dayTop|vDayTop', 'rDaySize|daySize|vDaySize',
-   'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH', 'rFs|fs|vFs'].forEach(spec => {
+   'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH',
+   'rTextShift|textShift|vTextShift', 'rFs|fs|vFs'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -1993,6 +2002,7 @@ function init() {
   bindRange('rDaySize', 'daySize', 'vDaySize');
   bindRange('rBadgeGap', 'badgeGap', 'vBadgeGap');
   bindRange('rLineH', 'lineH', 'vLineH');
+  bindRange('rTextShift', 'textShift', 'vTextShift');
 
   ['cOuter|cOuter', 'cPanel|cPanel', 'cCellBg|cCellBg', 'cCellBorder|cCellBorder',
    'cChipBg|cChipBg', 'cChipBorder|cChipBorder', 'cChipText|cChipText', 'cDate|cDate',
