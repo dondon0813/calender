@@ -467,6 +467,21 @@ body.pane-text  [data-pane="image"] { display: none !important; }
     <fieldset data-pane="image">
       <legend>版面</legend>
       <div class="row">
+        <label>預覽大小</label>
+        <select id="selZoom">
+          <option value="0">自動（符合寬度）</option>
+          <option value="100">100%</option>
+          <option value="75">75%</option>
+          <option value="60">60%</option>
+          <option value="50">50%</option>
+          <option value="40">40%</option>
+          <option value="30">30%</option>
+          <option value="25">25%</option>
+        </select>
+        <span class="val" id="zoomNow"></span>
+      </div>
+      <p class="hint">只影響畫面上的預覽大小，下載的圖一律是原尺寸（4:5＝1080×1350、9:16＝1080×1920）。</p>
+      <div class="row">
         <label>模式</label>
         <div class="seg" id="segMode">
           <button data-v="calendar" class="on">行事曆</button>
@@ -649,6 +664,7 @@ const DEFAULTS = {
   size: '4:5',
   cols: 5,
   insetT: 250, insetB: 118, insetL: 60, insetR: 60,
+  zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
   fs: 1, gap: 10, radius: 14, headH: 190,
   cOuter: '#FBE8D0', cPanel: '#FFF9F0',
@@ -1218,14 +1234,22 @@ function buildList() {
 
 /* ---------- 預覽縮放 ---------- */
 
+// 預覽縮放：S.zoom = 0 代表「自動符合寬度」，其他是百分比（只影響畫面，
+// 下載的 PNG 一律是 SIZES 裡的原尺寸，不受這裡影響）
 function fitScaler() {
   const wrap = document.querySelector('.stage-wrap');
   const scaler = document.getElementById('scaler');
   const dim = SIZES[S.size];
   const avail = Math.max(240, wrap.clientWidth - 32);
-  const k = Math.min(1, avail / dim.w);
+  const auto = Math.min(1, avail / dim.w);
+  const k = S.zoom > 0 ? S.zoom / 100 : auto;
   scaler.style.transform = `scale(${k})`;
+  // 讓外框的捲動範圍等於「縮放後」的實際大小，縮小時才不會多出一堆空白／捲軸
+  scaler.style.width = Math.round(dim.w * k) + 'px';
+  scaler.style.height = Math.round(dim.h * k) + 'px';
   wrap.style.height = (dim.h * k + 32) + 'px';
+  const label = document.getElementById('zoomNow');
+  if (label) label.textContent = Math.round(k * 100) + '%';
 }
 
 /* ============================================================
@@ -1707,6 +1731,7 @@ function syncControls() {
   segSet('segSize', S.size);
   segSet('segCols', S.cols);
   segSet('segMonthOv', S.monthOverlay ? 'on' : 'off');
+  document.getElementById('selZoom').value = String(S.zoom || 0);
   ['rInsetT|insetT|vInsetT', 'rInsetB|insetB|vInsetB', 'rInsetL|insetL|vInsetL', 'rInsetR|insetR|vInsetR',
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
    'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rFs|fs|vFs'].forEach(spec => {
@@ -1763,6 +1788,11 @@ function init() {
   document.getElementById('btnCopyCap').addEventListener('click', copyCaption);
   document.getElementById('btnCopyCapTop').addEventListener('click', copyCaption);
   bindSeg('segPane', v => { S.pane = v; applyPane(); });
+
+  document.getElementById('selZoom').addEventListener('change', e => {
+    S.zoom = parseInt(e.target.value, 10) || 0;
+    saveSettings(); fitScaler();
+  });
 
   document.getElementById('selMonth').addEventListener('change', e => {
     const [y, m] = e.target.value.split('-').map(Number);
