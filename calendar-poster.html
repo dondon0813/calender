@@ -346,8 +346,9 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   display: flex; flex-direction: column; gap: 6px;
   min-height: 0;
 }
-/* 月初／月底補位的空格：跟「當月但沒團」的空格長一樣（原設計就是一格淡淡的空框） */
-.cal-cell.blank { opacity: .55; }
+/* 月初／月底補上的前後月日期：淡一點、日期字小一點，一眼看得出不是這個月 */
+.cal-cell.out { opacity: .45; }
+.cal-cell.out .daynum { font-size: 17px; }
 .cal-cell .daynum {
   position: absolute; top: 4px; left: 9px;
   font-family: var(--font-display); font-weight: 700;
@@ -1024,27 +1025,49 @@ function buildCalendar() {
     if (cell) cell.events.push(group);
   });
 
+  // 第 row 列第 col 格是哪一天（baseWeek＝第 0 列第 0 格）
+  function cellDateOf(row, col) {
+    return new Date(baseWeek.getFullYear(), baseWeek.getMonth(), baseWeek.getDate() + row * 7 + col);
+  }
+  function isThisMonth(d) {
+    return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+  }
+
+  // 整列都不是本月的日子就整列不畫。
+  // 例：2026/8 的 1 號是週六，「週一～五」版型的第一列整列都是 7 月，畫出來就是一排空框。
+  const rows = [];
+  for (let row = 0; row <= maxRow; row++) {
+    let keep = false;
+    for (let col = 0; col < cols; col++) {
+      if (isThisMonth(cellDateOf(row, col))) { keep = true; break; }
+    }
+    if (keep) rows.push(row);
+  }
+
   const grid = document.createElement('div');
   grid.className = 'cal-grid';
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  grid.style.gridTemplateRows = `repeat(${maxRow + 1}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${rows.length}, 1fr)`;
 
-  // 一格最多幾團 → 決定字級（分兩格時字要小一點才塞得下）
-  for (let row = 0; row <= maxRow; row++) {
+  rows.forEach(row => {
     for (let col = 0; col < cols; col++) {
       const cell = cells[`${row}-${col}`];
+      const d = cellDateOf(row, col);
+      const mine = isThisMonth(d);
       const el = document.createElement('div');
-      el.className = 'cal-cell' + (cell ? '' : ' blank');
-      if (cell) {
-        const n = document.createElement('div');
-        n.className = 'daynum';
-        n.textContent = cell.day;
-        el.appendChild(n);
-        cell.events.forEach(group => el.appendChild(buildChip(group, cell.events.length)));
-      }
+      el.className = 'cal-cell' + (mine ? '' : ' out');
+
+      const n = document.createElement('div');
+      n.className = 'daynum';
+      // 本月只寫日；月初月底補上的前後月日期連月份一起寫（7/31），才看得出不是這個月
+      n.textContent = mine ? d.getDate() : (d.getMonth() + 1) + '/' + d.getDate();
+      el.appendChild(n);
+
+      // 一格幾團會決定字級（分兩格時字要小一點才塞得下）
+      if (cell) cell.events.forEach(group => el.appendChild(buildChip(group, cell.events.length)));
       grid.appendChild(el);
     }
-  }
+  });
 
   renderMoveWarn();
   return grid;
