@@ -64,7 +64,7 @@ function generateCopyGenText() {
   if (closingToday.length) {
     lines.push(`✦ 今日結單 ${dateLabel} ✦`);
     closingToday.forEach(ev => {
-      lines.push(ev.title || '');
+      lines.push(plainTitle(ev.title || ''));   // 團名的「｜」在文案裡接回空白（plainTitle 在 admin.js）
       lines.push(ev.url || '');
     });
   }
@@ -73,7 +73,7 @@ function generateCopyGenText() {
     if (lines.length) lines.push('');
     lines.push('✦ 現正開團中✦');
     stillOpen.forEach(ev => {
-      lines.push(ev.title || '');
+      lines.push(plainTitle(ev.title || ''));   // 團名的「｜」在文案裡接回空白（plainTitle 在 admin.js）
       lines.push(ev.url || '');
     });
   }

@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>行事曆圖產生器｜雪莉與朵栗</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ============================================================
+   calendar-poster.html — 行事曆貼文圖產生器（後台工具，不對外）
+
+   架構：左邊控制面板 + 右邊即時預覽。預覽的 DOM 就是 html2canvas
+   會截下來的東西（所見即所得），不存在「調完再產生才發現不一樣」。
+
+   版面分兩層：
+     ① 背景框（使用者從 Canva 匯出的美術 PNG，可不放）
+     ② 前景內容（本檔用行事曆資料自動畫的格子／列表）
+   沒放背景圖時會用下面這套 CSS 仿版裝飾頂著，先能用。
+
+   ⚠ html2canvas 相容性：這裡刻意不用 object-fit（會拉伸變形）、
+     不在需要溢出的元素上用 box-shadow（會糊成髒灰色）。踩過的坑見
+     admin.html 食譜貼文產生器與 school-list.html 的註解。
+   ============================================================ */
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--c-bg-top), var(--c-bg-bottom));
+  color: var(--c-text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 18px;
+  background: var(--c-surface);
+  border-bottom: 2px solid var(--c-border-light);
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar h1 {
+  margin: 0; font-family: var(--font-display);
+  font-size: 20px; color: var(--c-brown);
+}
+.topbar .spacer { flex: 1; }
+.topbar .status { font-size: 13px; color: var(--c-muted); }
+.topbar .status.error { color: var(--c-danger); }
+
+.layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 18px;
+  padding: 18px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+/* ---------- 控制面板 ---------- */
+.panel {
+  background: var(--c-surface);
+  border: 2px solid var(--c-border-light);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky; top: 74px;
+}
+@media (max-width: 980px) {
+  .panel { position: static; max-height: none; }
+}
+.panel fieldset {
+  border: 0; padding: 0; margin: 0 0 16px;
+}
+.panel legend {
+  font-family: var(--font-display);
+  font-size: 15px; color: var(--c-brown);
+  padding: 0 0 6px; margin: 0;
+  border-bottom: 2px dashed var(--c-line);
+  width: 100%;
+}
+.row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 9px 0;
+}
+.row > label:first-child {
+  flex: 0 0 96px; font-size: 13px; color: var(--c-text-soft);
+}
+.row input[type="text"], .row select, .row input[type="number"] {
+  flex: 1; min-width: 0;
+  padding: 6px 8px;
+  border: 2px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-input-bg);
+  color: var(--c-text);
+  font-family: var(--font-body); font-size: 13px;
+}
+.row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--c-primary); }
+.row input[type="color"] {
+  width: 40px; height: 28px; padding: 0;
+  border: 2px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-input-bg); cursor: pointer;
+}
+.row .val { flex: 0 0 46px; text-align: right; font-size: 12px; color: var(--c-muted); }
+
+.seg { display: flex; gap: 6px; flex: 1; }
+.seg button {
+  flex: 1; padding: 7px 4px;
+  border: 2px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-input-bg); color: var(--c-text-soft);
+  font-family: var(--font-round); font-size: 13px; cursor: pointer;
+}
+.seg button.on {
+  background: var(--c-primary); border-color: var(--c-primary);
+  color: var(--c-text-invert);
+}
+
+.btn {
+  padding: 8px 14px;
+  border: 2px solid var(--c-border); border-radius: var(--r-pill);
+  background: var(--c-input-bg); color: var(--c-brown);
+  font-family: var(--font-round); font-size: 14px; cursor: pointer;
+}
+.btn.primary {
+  background: var(--c-primary); border-color: var(--c-primary);
+  color: var(--c-text-invert);
+}
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+.hint {
+  font-size: 12px; color: var(--c-muted);
+  line-height: 1.6; margin: 6px 0 0;
+}
+
+/* 團清單（每團微調） */
+.ev-list { display: flex; flex-direction: column; gap: 6px; }
+.ev-item {
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-sm);
+  padding: 7px 8px;
+  background: var(--c-surface-3);
+}
+.ev-item .ev-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--c-muted);
+}
+.ev-item .ev-date { font-weight: 700; color: var(--c-brown); }
+.ev-item .ev-orig { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-item input[type="text"] {
+  width: 100%; box-sizing: border-box; margin-top: 5px;
+  padding: 5px 7px;
+  border: 2px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-input-bg); font-family: var(--font-body); font-size: 13px;
+}
+.ev-item .ev-opts {
+  display: flex; align-items: center; gap: 10px; margin-top: 5px;
+  font-size: 12px; color: var(--c-text-soft); flex-wrap: wrap;
+}
+.ev-item .ev-opts label { display: flex; align-items: center; gap: 3px; cursor: pointer; }
+.ev-item .ev-opts input[type="text"] { width: 78px; margin: 0; }
+.ev-item.hidden-ev { opacity: .45; }
+.ev-item input.ev-note { font-size: 12px; }
+.ev-item .ev-merge {
+  flex: 1 0 100%; margin-top: 2px;
+  color: var(--c-brown); font-weight: 700;
+}
+
+/* 貼文文案 */
+.row textarea {
+  flex: 1; box-sizing: border-box;
+  padding: 6px 8px;
+  border: 2px solid var(--c-border); border-radius: var(--r-sm);
+  background: var(--c-input-bg); font-family: var(--font-body); font-size: 13px;
+  resize: vertical;
+}
+/* 兩個入口：圖片 / 貼文。body 上的 pane-* 決定左右兩邊各顯示什麼 */
+body.pane-image [data-pane="text"]  { display: none !important; }
+body.pane-text  [data-pane="image"] { display: none !important; }
+.seg-pane { flex: 0 0 auto; }
+.seg-pane button { flex: 0 0 auto; font-size: 14px; padding: 7px 14px; white-space: nowrap; }
+
+.cap-pane {
+  background: var(--c-surface);
+  border: 2px solid var(--c-border-light);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.cap-bar { display: flex; align-items: center; gap: 10px; }
+.cap-bar .cap-title { font-weight: 700; color: var(--c-brown); }
+.cap-bar .cap-count { font-size: 12px; color: var(--c-muted); flex: 1; }
+.cap-out {
+  width: 100%; box-sizing: border-box;
+  min-height: 60vh;
+  padding: 14px 16px;
+  border: 2px solid var(--c-line); border-radius: var(--r-sm);
+  background: var(--c-surface-3);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.75;
+  resize: vertical;
+}
+.cap-missing { color: var(--c-danger, #E8455E); display: none; }
+
+.warnbox {
+  margin-top: 8px; padding: 8px 10px;
+  border: 2px solid var(--c-gold-border); border-radius: var(--r-sm);
+  background: var(--c-gold-badge-bg);
+  font-size: 12px; color: var(--c-gold-text); line-height: 1.6;
+}
+
+/* ---------- 預覽舞台 ---------- */
+.stage-wrap {
+  background: var(--c-surface);
+  border: 2px solid var(--c-border-light);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  overflow: auto;
+}
+.stage-scaler { transform-origin: top left; }
+
+/* ============================================================
+   以下是「圖本身」的樣式。單位一律用 px（1080 寬的座標系），
+   不要用 vw/vh/%，否則截圖尺寸一變版面就跑掉。
+   ============================================================ */
+.poster {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--p-outer-bg);
+  font-family: var(--font-round);
+  /* 預設值，會被 JS 以 inline style 覆寫 */
+  --p-outer-bg: #FBE8D0;
+  --p-panel-bg: #FFF9F0;
+  --p-cell-bg: #FFFDF9;
+  --p-cell-border: #F2DFC2;
+  --p-date-color: #A98A6B;
+  --p-chip-bg: #FBE1BC;
+  --p-chip-border: #E8A54F;
+  --p-chip-text: #8A5426;
+  --p-hi-bg: #CFE1F7;
+  --p-hi-border: #7FA9DE;
+  --p-hi-text: #35598D;
+  --p-badge-bg: #E8455E;
+  --p-badge-text: #FFFFFF;
+  --p-month-color: #F2707E;
+  --p-title-color: #7A4A22;
+  --p-gap: 10px;
+  --p-radius: 14px;
+  --p-fs: 1;
+}
+
+.poster-bgimg {
+  position: absolute; inset: 0;
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* CSS 仿版裝飾：只有沒放背景圖時才畫 */
+.poster-deco {
+  position: absolute;
+  inset: 26px;
+  border-radius: 42px;
+  background: var(--p-panel-bg);
+}
+.poster.has-bg .poster-deco { display: none; }
+
+/* 內容層：位置由四個滑桿控制，方便對齊使用者的 Canva 底圖 */
+.poster-content {
+  position: absolute;
+  left: var(--p-inset-l); right: var(--p-inset-r);
+  top: var(--p-inset-t); bottom: var(--p-inset-b);
+  display: flex; flex-direction: column;
+}
+
+/* ---------- 標題（仿版） ---------- */
+.poster-head {
+  position: absolute;
+  left: var(--p-inset-l); right: var(--p-inset-r);
+  top: 34px; height: var(--p-head-h);
+  display: flex; align-items: center; gap: 16px;
+}
+.poster.has-bg .poster-head { display: none; }
+.head-month {
+  font-family: var(--font-display);
+  font-size: 92px; font-weight: 800; line-height: 1;
+  color: var(--p-month-color);
+  flex: 0 0 auto;
+}
+.head-title {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; gap: 4px;
+  font-family: var(--font-display); font-weight: 800;
+  color: var(--p-title-color);
+  line-height: 1.15;
+}
+.head-title .t1 { font-size: 48px; color: var(--p-month-color); }
+.head-title .t2 { font-size: 54px; }
+.head-photo {
+  flex: 0 0 auto;
+  width: 210px; height: var(--p-head-h);
+  border-radius: 24px;
+  background-position: center top;
+  background-size: cover;   /* 不用 <img>+object-fit：html2canvas 對 object-fit 支援不可靠 */
+  background-repeat: no-repeat;
+  background-color: #F6DFC6;
+}
+.head-photo.empty { border: 3px dashed var(--p-chip-border); }
+
+/* 背景圖模式下，可選的月份數字浮水印（對齊使用者底圖的留白處） */
+.month-overlay {
+  position: absolute;
+  font-family: var(--font-display); font-weight: 800; line-height: 1;
+  color: var(--p-month-color);
+  white-space: nowrap;
+}
+
+/* ---------- 頁尾（仿版） ---------- */
+.poster-foot {
+  position: absolute;
+  left: var(--p-inset-l); right: var(--p-inset-r);
+  bottom: 34px; height: 62px;
+  border-radius: 999px;
+  background: #FDF0DE;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 28px; color: #A9825C;
+}
+.poster.has-bg .poster-foot { display: none; }
+.poster-foot .heart { color: var(--p-badge-bg); font-size: 26px; }
+
+/* ---------- 行事曆格 ---------- */
+.cal-grid {
+  flex: 1 1 auto;
+  display: grid;
+  gap: var(--p-gap);
+}
+.cal-cell {
+  position: relative;
+  box-sizing: border-box;
+  border-radius: var(--p-radius);
+  border: 3px solid var(--p-cell-border);
+  background: var(--p-cell-bg);
+  padding: 26px 8px 8px;
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 0;
+}
+/* 月初／月底補位的空格：跟「當月但沒團」的空格長一樣（原設計就是一格淡淡的空框） */
+.cal-cell.blank { opacity: .55; }
+.cal-cell .daynum {
+  position: absolute; top: 4px; left: 9px;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 22px; color: var(--p-date-color);
+}
+.chip {
+  flex: 1 1 0;
+  min-height: 0;
+  box-sizing: border-box;
+  border-radius: var(--p-radius);
+  border: 3px solid var(--p-chip-border);
+  background: var(--p-chip-bg);
+  color: var(--p-chip-text);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  padding: 4px 5px;
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.16;
+  overflow: hidden;
+  word-break: break-word;
+}
+.chip.hi {
+  background: var(--p-hi-bg);
+  border-color: var(--p-hi-border);
+  color: var(--p-hi-text);
+}
+.chip .chip-name { display: block; }
+.chip .chip-badge {
+  display: inline-block;
+  padding: 2px 12px 3px;
+  border-radius: 999px;
+  background: var(--p-badge-bg);
+  color: var(--p-badge-text);
+  font-size: 20px; font-weight: 800;
+  line-height: 1.25;
+}
+
+/* ---------- 列表模式 ---------- */
+.list-grid {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--p-gap);
+  align-content: start;
+}
+.list-row {
+  box-sizing: border-box;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px 0 10px;
+  border-radius: var(--p-radius);
+  border: 3px solid var(--p-cell-border);
+  background: var(--p-cell-bg);
+  overflow: hidden;
+}
+.list-row .num {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  color: #fff; font-family: var(--font-display); font-weight: 800;
+}
+.list-row .sep {
+  flex: 0 0 auto;
+  align-self: stretch;
+  margin: 8px 0;
+  border-left: 3px dotted var(--p-chip-border);
+}
+.list-row .range {
+  flex: 0 0 auto;
+  font-family: var(--font-display); font-weight: 800;
+  color: var(--p-month-color);
+}
+.list-row .name {
+  flex: 1 1 auto; min-width: 0;
+  align-self: stretch;                   /* 撐滿列高，autoFit 才量得出多行有沒有爆版 */
+  display: flex; flex-direction: column; justify-content: center;
+  font-weight: 700; color: var(--p-title-color);
+  overflow: hidden; line-height: 1.2;
+}
+.list-row .name .name-line {             /* 同框的團一個品牌一行 */
+  display: block;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.list-row.hi { background: var(--p-hi-bg); border-color: var(--p-hi-border); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🗓️ 行事曆產生器</h1>
+  <div class="seg seg-pane" id="segPane">
+    <button data-v="image" class="on">🖼 產生圖片</button>
+    <button data-v="text">📝 產生貼文</button>
+  </div>
+  <span class="status" id="status">資料載入中…</span>
+  <span class="spacer"></span>
+  <button class="btn" id="btnReload">重新載入資料</button>
+  <button class="btn primary" id="btnExport" data-pane="image">下載 PNG</button>
+  <button class="btn primary" id="btnCopyCapTop" data-pane="text">複製文案</button>
+</div>
+
+<div class="layout">
+
+  <!-- ================= 控制面板 ================= -->
+  <aside class="panel">
+
+    <fieldset>
+      <legend>月份</legend>
+      <div class="row">
+        <label>月份</label>
+        <select id="selMonth"></select>
+      </div>
+      <p class="hint">圖片和貼文都用這個月份，兩邊會一起換。</p>
+    </fieldset>
+
+    <fieldset data-pane="image">
+      <legend>版面</legend>
+      <div class="row">
+        <label>模式</label>
+        <div class="seg" id="segMode">
+          <button data-v="calendar" class="on">行事曆</button>
+          <button data-v="list">列表</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>尺寸</label>
+        <div class="seg" id="segSize">
+          <button data-v="4:5" class="on">4:5 貼文</button>
+          <button data-v="9:16">9:16 限動</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>欄位</label>
+        <div class="seg" id="segCols">
+          <button data-v="5" class="on">週一～五</button>
+          <button data-v="7">整週七天</button>
+        </div>
+      </div>
+      <p class="hint">「週一～五」是你原本 Canva 的版型。週末開團的團會自動移到前一個週五，並列在下面提醒你。</p>
+      <div id="moveWarn"></div>
+    </fieldset>
+
+    <fieldset data-pane="image">
+      <legend>背景框圖（你的 Canva 美術）</legend>
+      <div class="row">
+        <label>底圖</label>
+        <input type="file" id="fileBg" accept="image/*" style="flex:1;font-size:12px;">
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnClearBg">清除底圖</button>
+      </div>
+      <p class="hint">放了底圖之後，仿版的標題與頁尾會自動隱藏，只留格子。用下面四個滑桿把格子對準底圖的空位。</p>
+      <div class="row"><label>內容 上</label><input type="range" id="rInsetT" min="0" max="600" step="2"><span class="val" id="vInsetT"></span></div>
+      <div class="row"><label>內容 下</label><input type="range" id="rInsetB" min="0" max="600" step="2"><span class="val" id="vInsetB"></span></div>
+      <div class="row"><label>內容 左</label><input type="range" id="rInsetL" min="0" max="400" step="2"><span class="val" id="vInsetL"></span></div>
+      <div class="row"><label>內容 右</label><input type="range" id="rInsetR" min="0" max="400" step="2"><span class="val" id="vInsetR"></span></div>
+      <div class="row">
+        <label>月份數字</label>
+        <div class="seg" id="segMonthOv">
+          <button data-v="off" class="on">不顯示</button>
+          <button data-v="on">疊在底圖上</button>
+        </div>
+      </div>
+      <div class="row"><label>數字 X</label><input type="range" id="rMoX" min="0" max="1000" step="2"><span class="val" id="vMoX"></span></div>
+      <div class="row"><label>數字 Y</label><input type="range" id="rMoY" min="0" max="1800" step="2"><span class="val" id="vMoY"></span></div>
+      <div class="row"><label>數字大小</label><input type="range" id="rMoS" min="30" max="200" step="2"><span class="val" id="vMoS"></span></div>
+    </fieldset>
+
+    <fieldset data-pane="image">
+      <legend>版面微調</legend>
+      <div class="row"><label>字級縮放</label><input type="range" id="rFs" min="0.7" max="1.4" step="0.02"><span class="val" id="vFs"></span></div>
+      <div class="row"><label>格子間距</label><input type="range" id="rGap" min="0" max="30" step="1"><span class="val" id="vGap"></span></div>
+      <div class="row"><label>圓角</label><input type="range" id="rRadius" min="0" max="40" step="1"><span class="val" id="vRadius"></span></div>
+      <div class="row"><label>標題高度</label><input type="range" id="rHeadH" min="80" max="320" step="2"><span class="val" id="vHeadH"></span></div>
+    </fieldset>
+
+    <fieldset data-pane="image">
+      <legend>顏色</legend>
+      <div class="row"><label>外框底色</label><input type="color" id="cOuter"><label>面板底</label><input type="color" id="cPanel"></div>
+      <div class="row"><label>格子底</label><input type="color" id="cCellBg"><label>格子框</label><input type="color" id="cCellBorder"></div>
+      <div class="row"><label>團底色</label><input type="color" id="cChipBg"><label>團框</label><input type="color" id="cChipBorder"></div>
+      <div class="row"><label>團字色</label><input type="color" id="cChipText"><label>日期色</label><input type="color" id="cDate"></div>
+      <div class="row"><label>高亮底</label><input type="color" id="cHiBg"><label>高亮框</label><input type="color" id="cHiBorder"></div>
+      <div class="row"><label>高亮字</label><input type="color" id="cHiText"><label>徽章底</label><input type="color" id="cBadge"></div>
+      <div class="row"><label>月份色</label><input type="color" id="cMonth"><label>標題色</label><input type="color" id="cTitle"></div>
+    </fieldset>
+
+    <fieldset data-pane="image">
+      <legend>標題與頁尾（沒放底圖時才會顯示）</legend>
+      <div class="row"><label>標題第一行</label><input type="text" id="tTitle1"></div>
+      <div class="row"><label>標題第二行</label><input type="text" id="tTitle2"></div>
+      <div class="row"><label>頁尾文字</label><input type="text" id="tFoot"></div>
+      <div class="row"><label>人像照</label><input type="file" id="filePhoto" accept="image/*" style="flex:1;font-size:12px;"></div>
+      <div class="btn-row"><button class="btn" id="btnClearPhoto">清除人像照</button></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>本月團（逐團微調）</legend>
+      <p class="hint" data-pane="image">改「顯示名稱」只影響這張圖，不會動到行事曆資料。留空＝用原本的活動名稱。</p>
+      <p class="hint" data-pane="text">這裡改的是貼文裡 👉🏻 那句，只影響這個月。留空＝用 brand-notes.js 的品牌備註。</p>
+      <div class="ev-list" id="evList"></div>
+      <div class="btn-row">
+        <button class="btn" id="btnResetEv">清空本月微調</button>
+      </div>
+    </fieldset>
+
+    <fieldset data-pane="text">
+      <legend>文案樣板</legend>
+      <p class="hint">👉🏻 那行來自 <code>brand-notes.js</code> 的品牌備註，會自動比對團名。要改這個月的某一團，就在上面「本月團」的備註欄打字。</p>
+      <div class="row"><label>開頭</label><textarea id="tCapIntro" rows="2"></textarea></div>
+      <div class="row"><label>清單標題</label><input type="text" id="tCapListTitle"></div>
+      <div class="row"><label>結尾</label><textarea id="tCapOutro" rows="3"></textarea></div>
+      <div class="row"><label>Hashtag</label><input type="text" id="tCapTags"></div>
+      <p class="hint">可用 <code>{月}</code>＝8、<code>{國字月}</code>＝八。</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>設定</legend>
+      <div class="btn-row">
+        <button class="btn" id="btnResetAll">全部恢復預設</button>
+      </div>
+      <p class="hint">所有設定會自動存在這台電腦的瀏覽器裡，下個月打開直接沿用。</p>
+    </fieldset>
+
+  </aside>
+
+  <!-- ================= 預覽 ================= -->
+  <main class="stage-col">
+    <!-- 產生圖片 -->
+    <div class="stage-wrap" id="paneImage" data-pane="image">
+      <div class="stage-scaler" id="scaler">
+        <div class="poster" id="poster"></div>
+      </div>
+    </div>
+
+    <!-- 產生貼文 -->
+    <div class="cap-pane" id="paneText" data-pane="text">
+      <div class="cap-bar">
+        <span class="cap-title">📝 貼文文案</span>
+        <span class="cap-count" id="capCount"></span>
+        <button class="btn primary" id="btnCopyCap">複製文案</button>
+      </div>
+      <textarea id="capOut" class="cap-out" spellcheck="false"></textarea>
+      <p class="hint cap-missing" id="capMissing"></p>
+      <p class="hint">這裡可以直接改字，改完再按複製；但重新選月份或改備註會重畫，改動會不見。要留住的句子請寫回左邊的備註欄。</p>
+    </div>
+  </main>
+
+</div>
+
+<script src="vendor/html2canvas.min.js"></script>
+<script src="brand-notes.js"></script>
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+
+const SIZES = {
+  '4:5':  { w: 1080, h: 1350 },
+  '9:16': { w: 1080, h: 1920 }
+};
+
+const LS_SETTINGS = 'calposter.settings.v1';
+const LS_EVENTS   = 'calposter.events.v1';
+const LS_ASSETS   = 'calposter.assets.v1';   // 底圖／人像的 dataURL（可能很大，單獨存）
+
+const DEFAULTS = {
+  pane: 'image',            // 'image'＝產生圖片｜'text'＝產生貼文
+  mode: 'calendar',
+  size: '4:5',
+  cols: 5,
+  insetT: 250, insetB: 118, insetL: 60, insetR: 60,
+  monthOverlay: false, moX: 90, moY: 60, moS: 92,
+  fs: 1, gap: 10, radius: 14, headH: 190,
+  cOuter: '#FBE8D0', cPanel: '#FFF9F0',
+  cCellBg: '#FFFDF9', cCellBorder: '#F2DFC2',
+  cChipBg: '#FBE1BC', cChipBorder: '#E8A54F', cChipText: '#8A5426',
+  cDate: '#A98A6B',
+  cHiBg: '#CFE1F7', cHiBorder: '#7FA9DE', cHiText: '#35598D',
+  cBadge: '#E8455E',
+  cMonth: '#F2707E', cTitle: '#7A4A22',
+  title1: '雪莉與朵栗', title2: '團購行事曆',
+  foot: 'IG @dondon0813',
+  // 貼文文案的樣板。{月}=8、{國字月}=八，產文案時才代換
+  capIntro: '❤️ {月}月團購行事曆來囉 ❤️\n趕快來看看有沒有你們喜歡的團💕',
+  capListTitle: '📅 {國字月}月團購行事曆',
+  capOutro: '🎁 文末留言告訴我：\n這個月最期待哪一團？\n抽一位送神秘小禮物❤️',
+  capTags: '#育兒日記 #新手媽媽'
+};
+
+// 列表模式的號碼圈配色（照 shared.css 的分類色盤循環）
+const NUM_COLORS = ['#FF8FA3', '#9ACB85', '#FFB37A', '#F0C36D', '#6FC8C2', '#7AAEEB', '#B79AE8'];
+
+let S = Object.assign({}, DEFAULTS);
+let EV_OVERRIDES = {};          // { [eventId]: {name, hi, badge, hidden} }
+let ASSETS = { bg: '', photo: '' };
+let allEvents = [];
+let currentYear, currentMonth;
+let movedFromWeekend = [];      // 這個月被從週末挪到週五的團，用來提醒使用者
+
+/* ============================================================
+   1. 資料載入（與 index.html 同一套解析，欄位語意見 harness 10 號檔 §3）
+   ============================================================ */
+
+function parseDateStr(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  const m = s.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+  const parts = s.split(/[\/\-]/).map(p => parseInt(p, 10));
+  if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
+  return null;
+}
+
+function parseExtendRaw(raw, originalEnd) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (typeof raw === 'number') return { type: 'days', value: raw };
+  const s = String(raw).trim();
+  if (s === '') return null;
+  if (/^\d+$/.test(s)) return { type: 'days', value: parseInt(s, 10) };
+  const d = parseDateStr(s);
+  if (d) {
+    // 試算表把「延長天數」存成日期格式時，數字會變成 1900 年初的某天，換算回天數
+    if (d.getFullYear() < 2000) {
+      const days = Math.round((d.getTime() - new Date(1899, 11, 30).getTime()) / 86400000);
+      return days > 0 ? { type: 'days', value: days } : null;
+    }
+    return { type: 'date', value: d };
+  }
+  return null;
+}
+
+function computeDisplayEnd(end, extend) {
+  if (!extend) return end;
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endStart = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  if (todayStart <= endStart) return end;
+  if (extend.type === 'days') return new Date(end.getFullYear(), end.getMonth(), end.getDate() + extend.value);
+  return extend.value;
+}
+
+async function loadData() {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = '資料載入中…';
+  statusEl.classList.remove('error');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('網路錯誤 ' + res.status);
+    const text = await res.text();
+    const data = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+
+    const events = [];
+    (data.table.rows || []).forEach(row => {
+      const c = row.c;
+      if (!c || !c[0] || c[0].v === null || c[0].v === '') return;
+      const start = parseDateStr(c[1] ? c[1].v : null);
+      const end   = parseDateStr(c[2] ? c[2].v : null);
+      const title = c[4] ? c[4].v : '';
+      if (!start || !end || !title) return;
+      const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
+      const publishedRaw  = c[16] ? String(c[16].v || '').trim() : '';
+      if (publishedRaw !== '' && publishedRaw !== '是') return;          // 未發布不進圖
+      if (isGroupBuyRaw !== '' && isGroupBuyRaw !== '是') return;        // 非團購不進圖
+      const extend = parseExtendRaw(c[3] ? c[3].v : null, end);
+      events.push({
+        id: String(c[0].v),
+        start, end,
+        displayEnd: computeDisplayEnd(end, extend),
+        title: String(title).trim()
+      });
+    });
+
+    allEvents = events;
+    statusEl.textContent = `已同步 ${events.length} 檔團購 · ${new Date().toLocaleString('zh-TW')}`;
+    populateMonths();
+    renderAll();
+  } catch (err) {
+    statusEl.textContent = '讀取行事曆失敗：' + err.message;
+    statusEl.classList.add('error');
+  }
+}
+
+function populateMonths() {
+  const sel = document.getElementById('selMonth');
+  const set = new Set();
+  allEvents.forEach(ev => set.add(`${ev.start.getFullYear()}-${ev.start.getMonth()}`));
+  const now = new Date();
+  set.add(`${now.getFullYear()}-${now.getMonth()}`);
+  const months = Array.from(set).map(s => { const [y, m] = s.split('-').map(Number); return { y, m }; })
+                      .sort((a, b) => a.y - b.y || a.m - b.m);
+  sel.innerHTML = '';
+  months.forEach(({ y, m }) => {
+    const o = document.createElement('option');
+    o.value = `${y}-${m}`;
+    o.textContent = `${y} 年 ${m + 1} 月`;
+    sel.appendChild(o);
+  });
+  if (currentYear === undefined) { currentYear = now.getFullYear(); currentMonth = now.getMonth(); }
+  sel.value = `${currentYear}-${currentMonth}`;
+  if (sel.value !== `${currentYear}-${currentMonth}` && sel.options.length) {
+    const [y, m] = sel.options[0].value.split('-').map(Number);
+    currentYear = y; currentMonth = m; sel.value = sel.options[0].value;
+  }
+}
+
+/* ============================================================
+   2. 本月的團 + 逐團覆寫
+   ============================================================ */
+
+function monthEvents() {
+  return allEvents
+    .filter(ev => ev.start.getFullYear() === currentYear && ev.start.getMonth() === currentMonth)
+    .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
+}
+
+function ovOf(id) {
+  return EV_OVERRIDES[id] || (EV_OVERRIDES[id] = { name: '', hi: false, badge: '', hidden: false, note: '', mergePrev: false });
+}
+
+/* 合團：像 yookidoo + trixie 那種「行事曆分兩列、其實是同一團」的情形。
+   勾了「與上一團同框」就跟前一團併成一個外框（圖）／一條編號（貼文）。
+   只認同一天開團的前一團——同日期的別團（8/3 還有 KiGO）不會被自動掃進來，
+   所以這件事一定要她手動勾，不能靠日期猜。 */
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function visibleGroups() {
+  const groups = [];
+  monthEvents().forEach(ev => {
+    if ((EV_OVERRIDES[ev.id] || {}).hidden) return;
+    const prev = groups[groups.length - 1];
+    if ((EV_OVERRIDES[ev.id] || {}).mergePrev && prev && sameDay(prev[0].start, ev.start)) prev.push(ev);
+    else groups.push([ev]);
+  });
+  return groups;
+}
+// 面板用：這一團前面那個「還看得見」的團，用來標示會跟誰同框
+function prevVisibleEvent(ev) {
+  const evs = monthEvents().filter(e => !(EV_OVERRIDES[e.id] || {}).hidden);
+  const i = evs.findIndex(e => e.id === ev.id);
+  return i > 0 ? evs[i - 1] : null;
+}
+// 貼文／提醒用：一團一個字串，｜ 接回空格
+function groupNames(group) { return group.map(ev => plainName(displayName(ev))); }
+// 圖上用：一團可能兩行（｜），同框再串起來
+function groupLines(group) { return group.reduce((out, ev) => out.concat(nameLines(displayName(ev))), []); }
+function groupNotes(group) {
+  const out = [];
+  group.forEach(ev => { const n = noteOf(ev); if (n && out.indexOf(n) === -1) out.push(n); });
+  return out;
+}
+function displayName(ev) {
+  const o = EV_OVERRIDES[ev.id];
+  return (o && o.name) ? o.name : ev.title;
+}
+
+/* 團名裡的「｜」＝她指定的斷行點（例：Parakito｜防蚊用品）。
+   品牌名本身就含產品的（雪坊優格、韓爸米餅）不會有這個符號，維持一行。
+   圖上照斷、貼文接回一行用空格；別的地方要純文字就用 plainName()。 */
+const NAME_SEP = /[｜|]/;
+function nameLines(s) {
+  return String(s || '').split(NAME_SEP).map(t => t.trim()).filter(Boolean);
+}
+function plainName(s) { return nameLines(s).join(' '); }
+
+/* 品牌小備註：先看這個月有沒有手動覆寫，沒有才回 brand-notes.js 的庫存。
+   團名每月寫法會變，所以比對是「正規化後含關鍵字」，命中最長的關鍵字。 */
+function normKey(s) {
+  return String(s || '').toLowerCase().replace(/[\s　&＆+＋\-–—_/／|｜、,，.。!！?？:：()（）\[\]【】]/g, '');
+}
+function brandNoteFor(title) {
+  const t = normKey(title);
+  if (!t) return '';
+  let best = '', bestLen = 0;
+  (window.BRAND_NOTES || []).forEach(b => {
+    (b.keys || []).forEach(k => {
+      const nk = normKey(k);
+      if (nk && nk.length > bestLen && t.indexOf(nk) !== -1) { best = b.note; bestLen = nk.length; }
+    });
+  });
+  return best;
+}
+function noteOf(ev) {
+  const o = EV_OVERRIDES[ev.id];
+  if (o && o.note) return o.note;
+  return brandNoteFor(displayName(ev)) || brandNoteFor(ev.title);
+}
+
+/* ============================================================
+   3. 畫圖
+   ============================================================ */
+
+function fmtMD(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
+
+function renderPoster() {
+  const poster = document.getElementById('poster');
+  const dim = SIZES[S.size];
+
+  // 尺寸與所有 CSS 變數走 inline style：cloneNode 會一併帶走，截圖時不會掉樣式
+  poster.style.width  = dim.w + 'px';
+  poster.style.height = dim.h + 'px';
+  poster.style.setProperty('--p-outer-bg', S.cOuter);
+  poster.style.setProperty('--p-panel-bg', S.cPanel);
+  poster.style.setProperty('--p-cell-bg', S.cCellBg);
+  poster.style.setProperty('--p-cell-border', S.cCellBorder);
+  poster.style.setProperty('--p-date-color', S.cDate);
+  poster.style.setProperty('--p-chip-bg', S.cChipBg);
+  poster.style.setProperty('--p-chip-border', S.cChipBorder);
+  poster.style.setProperty('--p-chip-text', S.cChipText);
+  poster.style.setProperty('--p-hi-bg', S.cHiBg);
+  poster.style.setProperty('--p-hi-border', S.cHiBorder);
+  poster.style.setProperty('--p-hi-text', S.cHiText);
+  poster.style.setProperty('--p-badge-bg', S.cBadge);
+  poster.style.setProperty('--p-month-color', S.cMonth);
+  poster.style.setProperty('--p-title-color', S.cTitle);
+  poster.style.setProperty('--p-gap', S.gap + 'px');
+  poster.style.setProperty('--p-radius', S.radius + 'px');
+  poster.style.setProperty('--p-head-h', S.headH + 'px');
+  poster.style.setProperty('--p-inset-t', S.insetT + 'px');
+  poster.style.setProperty('--p-inset-b', S.insetB + 'px');
+  poster.style.setProperty('--p-inset-l', S.insetL + 'px');
+  poster.style.setProperty('--p-inset-r', S.insetR + 'px');
+  poster.classList.toggle('has-bg', !!ASSETS.bg);
+
+  poster.innerHTML = '';
+
+  if (ASSETS.bg) {
+    const bg = document.createElement('div');
+    bg.className = 'poster-bgimg';
+    bg.style.backgroundImage = `url("${ASSETS.bg}")`;
+    poster.appendChild(bg);
+  }
+
+  const deco = document.createElement('div');
+  deco.className = 'poster-deco';
+  poster.appendChild(deco);
+
+  poster.appendChild(buildHead());
+
+  if (ASSETS.bg && S.monthOverlay) {
+    const mo = document.createElement('div');
+    mo.className = 'month-overlay';
+    mo.style.left = S.moX + 'px';
+    mo.style.top = S.moY + 'px';
+    mo.style.fontSize = S.moS + 'px';
+    mo.textContent = (currentMonth + 1) + '月';
+    poster.appendChild(mo);
+  }
+
+  const content = document.createElement('div');
+  content.className = 'poster-content';
+  content.appendChild(S.mode === 'calendar' ? buildCalendar() : buildList());
+  poster.appendChild(content);
+
+  poster.appendChild(buildFoot());
+
+  autoFit();
+  fitScaler();
+}
+
+// 團名長度差很多（「永圻魚湯」vs「快閃！UBMOM 兒童雨衣」），固定字級一定有幾格會爆版。
+// 插進 DOM 之後量一次實際高寬，塞不下就一格一格降字級，降到剛好放得下為止。
+// 使用者仍然可以在左邊改「顯示名稱」把名字縮短，讓字回到大字級。
+function autoFit() {
+  // 行事曆模式：格子裡的團
+  document.querySelectorAll('#poster .chip').forEach(chip => {
+    const badge = chip.querySelector('.chip-badge');
+    let fs = parseFloat(chip.style.fontSize) || 24;
+    const min = 11;
+    let guard = 0;
+    while (guard++ < 40 && fs > min &&
+           (chip.scrollHeight > chip.clientHeight + 1 || chip.scrollWidth > chip.clientWidth + 1)) {
+      fs -= 1;
+      chip.style.fontSize = fs + 'px';
+      if (badge) badge.style.fontSize = Math.round(fs * 0.66) + 'px';
+    }
+  });
+
+  // 列表模式：長品名寧可縮字，也不要被截成「…」（截掉之後客人看不出是哪個團）
+  document.querySelectorAll('#poster .list-row .name').forEach(n => {
+    let fs = parseFloat(getComputedStyle(n).fontSize) || 24;
+    let guard = 0;
+    while (guard++ < 40 && fs > 13 &&
+           (n.scrollWidth > n.clientWidth + 1 || n.scrollHeight > n.clientHeight + 1)) {
+      fs -= 1;
+      n.style.fontSize = fs + 'px';
+    }
+  });
+}
+
+function buildHead() {
+  const head = document.createElement('div');
+  head.className = 'poster-head';
+
+  const mo = document.createElement('div');
+  mo.className = 'head-month';
+  mo.textContent = (currentMonth + 1) + '月';
+  head.appendChild(mo);
+
+  const t = document.createElement('div');
+  t.className = 'head-title';
+  const t1 = document.createElement('div'); t1.className = 't1'; t1.textContent = S.title1;
+  const t2 = document.createElement('div'); t2.className = 't2'; t2.textContent = S.title2;
+  t.appendChild(t1); t.appendChild(t2);
+  head.appendChild(t);
+
+  const ph = document.createElement('div');
+  ph.className = 'head-photo' + (ASSETS.photo ? '' : ' empty');
+  if (ASSETS.photo) ph.style.backgroundImage = `url("${ASSETS.photo}")`;
+  head.appendChild(ph);
+
+  return head;
+}
+
+function buildFoot() {
+  const f = document.createElement('div');
+  f.className = 'poster-foot';
+  const h1 = document.createElement('span'); h1.className = 'heart'; h1.textContent = '♥';
+  const tx = document.createElement('span'); tx.textContent = S.foot;
+  const h2 = document.createElement('span'); h2.className = 'heart'; h2.textContent = '♥';
+  f.appendChild(h1); f.appendChild(tx); f.appendChild(h2);
+  return f;
+}
+
+/* ---------- 行事曆模式 ---------- */
+
+// 週一～五版型時，把日期對到 0~4 欄；週末回傳 null（呼叫端會往前挪到週五）
+function colOf(dow, cols) {
+  if (cols === 7) return dow;                       // 0=日 … 6=六
+  return (dow === 0 || dow === 6) ? null : dow - 1; // 1=一 → 0 … 5=五 → 4
+}
+
+function buildCalendar() {
+  const cols = S.cols;
+  const first = new Date(currentYear, currentMonth, 1);
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // 每一天一個格子，先算出它落在第幾列
+  // 列的分界：cols=7 時以週日為首，cols=5 時以週一為首
+  function weekStartOf(d) {
+    const dow = d.getDay();
+    const back = cols === 7 ? dow : (dow === 0 ? 6 : dow - 1);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - back);
+  }
+  const baseWeek = weekStartOf(first);
+
+  const cells = {};   // key `${row}-${col}` → { day, events: [] }
+  let maxRow = 0;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(currentYear, currentMonth, day);
+    const col = colOf(d.getDay(), cols);
+    if (col === null) continue;   // 週一～五版型不畫週末格
+    const row = Math.round((weekStartOf(d) - baseWeek) / 604800000);
+    maxRow = Math.max(maxRow, row);
+    cells[`${row}-${col}`] = { day, events: [] };
+  }
+
+  // 把團放進「開團日」那一格（同框的團是一組，整組一起放）
+  movedFromWeekend = [];
+  visibleGroups().forEach(group => {
+    const ev = group[0];
+    let d = new Date(currentYear, currentMonth, ev.start.getDate());
+    let col = colOf(d.getDay(), cols);
+    if (col === null) {
+      // 週末開團：往前挪到最近的週五，並記下來提醒使用者
+      const back = d.getDay() === 6 ? 1 : 2;
+      const moved = new Date(currentYear, currentMonth, d.getDate() - back);
+      if (moved.getMonth() !== currentMonth) return;   // 挪出本月就不畫
+      movedFromWeekend.push({ name: groupNames(group).join('＋'), from: fmtMD(d), to: fmtMD(moved) });
+      d = moved;
+      col = colOf(d.getDay(), cols);
+    }
+    const row = Math.round((weekStartOf(d) - baseWeek) / 604800000);
+    const cell = cells[`${row}-${col}`];
+    if (cell) cell.events.push(group);
+  });
+
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${maxRow + 1}, 1fr)`;
+
+  // 一格最多幾團 → 決定字級（分兩格時字要小一點才塞得下）
+  for (let row = 0; row <= maxRow; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = cells[`${row}-${col}`];
+      const el = document.createElement('div');
+      el.className = 'cal-cell' + (cell ? '' : ' blank');
+      if (cell) {
+        const n = document.createElement('div');
+        n.className = 'daynum';
+        n.textContent = cell.day;
+        el.appendChild(n);
+        cell.events.forEach(group => el.appendChild(buildChip(group, cell.events.length)));
+      }
+      grid.appendChild(el);
+    }
+  }
+
+  renderMoveWarn();
+  return grid;
+}
+
+function buildChip(group, siblings) {
+  const chip = document.createElement('div');
+  // 同框的團只要有一個勾高亮，整框就高亮
+  chip.className = 'chip' + (group.some(ev => (EV_OVERRIDES[ev.id] || {}).hi) ? ' hi' : '');
+
+  // 一格一團給大字，一格兩團縮到 0.78，三團以上再縮；同框多品牌再讓 autoFit 收尾
+  const base = siblings <= 1 ? 30 : (siblings === 2 ? 25 : 20);
+  chip.style.fontSize = Math.round(base * S.fs) + 'px';
+
+  group.forEach(ev => {
+    nameLines(displayName(ev)).forEach(t => {
+      const name = document.createElement('span');
+      name.className = 'chip-name';
+      name.textContent = t;
+      chip.appendChild(name);
+    });
+  });
+
+  const badge = group.map(ev => (EV_OVERRIDES[ev.id] || {}).badge).find(Boolean);
+  if (badge) {
+    const b = document.createElement('span');
+    b.className = 'chip-badge';
+    b.style.fontSize = Math.round(base * 0.66 * S.fs) + 'px';
+    b.textContent = badge;
+    chip.appendChild(b);
+  }
+  return chip;
+}
+
+function renderMoveWarn() {
+  const box = document.getElementById('moveWarn');
+  if (!movedFromWeekend.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="warnbox">週末開團、已自動挪到前一個週五：<br>' +
+    movedFromWeekend.map(m => `・${m.name}（${m.from} → ${m.to}）`).join('<br>') + '</div>';
+}
+
+/* ---------- 列表模式 ---------- */
+
+function buildList() {
+  const groups = visibleGroups();
+  const grid = document.createElement('div');
+  grid.className = 'list-grid';
+
+  const rows = Math.max(1, Math.ceil(groups.length / 2));
+  const dim = SIZES[S.size];
+  const avail = dim.h - S.insetT - S.insetB;
+  const rowH = Math.max(28, Math.floor((avail - (rows - 1) * S.gap) / rows));
+  grid.style.gridTemplateRows = `repeat(${rows}, ${rowH}px)`;
+  grid.style.gridAutoFlow = 'column';   // 先填滿左欄再換右欄（跟你 Canva 版一樣 1~12 / 13~24）
+
+  const fs = Math.round(Math.min(rowH * 0.42, 30) * S.fs);
+
+  groups.forEach((group, i) => {
+    const ev = group[0];
+    const r = document.createElement('div');
+    r.className = 'list-row' + (group.some(e => (EV_OVERRIDES[e.id] || {}).hi) ? ' hi' : '');
+    r.style.height = rowH + 'px';
+    r.style.fontSize = fs + 'px';
+
+    const num = document.createElement('div');
+    num.className = 'num';
+    const numSize = Math.round(rowH * 0.62);
+    num.style.width = numSize + 'px';
+    num.style.height = numSize + 'px';
+    num.style.fontSize = Math.round(numSize * 0.56) + 'px';
+    num.style.background = NUM_COLORS[i % NUM_COLORS.length];
+    num.textContent = i + 1;
+    r.appendChild(num);
+
+    const sep = document.createElement('div');
+    sep.className = 'sep';
+    r.appendChild(sep);
+
+    const range = document.createElement('div');
+    range.className = 'range';
+    range.textContent = `${fmtMD(ev.start)}-${fmtMD(ev.displayEnd)}`;
+    r.appendChild(range);
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    // 同框的團、以及團名裡的「｜」，在列表模式都排成多行（autoFit 會把字縮到塞得下）
+    groupLines(group).forEach(t => {
+      const line = document.createElement('span');
+      line.className = 'name-line';
+      line.textContent = t;
+      name.appendChild(line);
+    });
+    r.appendChild(name);
+
+    grid.appendChild(r);
+  });
+
+  document.getElementById('moveWarn').innerHTML = '';
+  return grid;
+}
+
+/* ---------- 預覽縮放 ---------- */
+
+function fitScaler() {
+  const wrap = document.querySelector('.stage-wrap');
+  const scaler = document.getElementById('scaler');
+  const dim = SIZES[S.size];
+  const avail = Math.max(240, wrap.clientWidth - 32);
+  const k = Math.min(1, avail / dim.w);
+  scaler.style.transform = `scale(${k})`;
+  wrap.style.height = (dim.h * k + 32) + 'px';
+}
+
+/* ============================================================
+   4. 控制面板
+   ============================================================ */
+
+function renderEvList() {
+  const box = document.getElementById('evList');
+  box.innerHTML = '';
+  const evs = monthEvents();
+  if (!evs.length) {
+    box.innerHTML = '<p class="hint">這個月還沒有團購資料。</p>';
+    return;
+  }
+  evs.forEach(ev => {
+    const o = ovOf(ev.id);
+    const item = document.createElement('div');
+    item.className = 'ev-item' + (o.hidden ? ' hidden-ev' : '');
+
+    const head = document.createElement('div');
+    head.className = 'ev-head';
+    head.innerHTML = `<span class="ev-date">${fmtMD(ev.start)}</span>` +
+                     `<span class="ev-orig">${escapeHtml(plainName(ev.title))}</span>`;
+    item.appendChild(head);
+
+    const nameIn = document.createElement('input');
+    nameIn.type = 'text';
+    nameIn.setAttribute('data-pane', 'image');
+    nameIn.placeholder = '顯示名稱（留空＝用原名）';
+    nameIn.value = o.name || '';
+    nameIn.addEventListener('input', () => {
+      o.name = nameIn.value; saveEvents(); renderPoster();
+      noteIn.placeholder = notePlaceholder(ev);
+      renderCaption();
+    });
+    item.appendChild(nameIn);
+
+    // 貼文的 👉🏻 那行。留空＝用 brand-notes.js 的品牌備註（顯示在 placeholder）
+    const noteIn = document.createElement('input');
+    noteIn.type = 'text';
+    noteIn.className = 'ev-note';
+    noteIn.setAttribute('data-pane', 'text');
+    noteIn.placeholder = notePlaceholder(ev);
+    noteIn.value = o.note || '';
+    noteIn.addEventListener('input', () => { o.note = noteIn.value; saveEvents(); renderCaption(); });
+    item.appendChild(noteIn);
+
+    const opts = document.createElement('div');
+    opts.className = 'ev-opts';
+
+    // 合團：只有「前一團也是同一天開團」時才給勾（否則圖上根本不在同一格）
+    const prev = prevVisibleEvent(ev);
+    if (prev && sameDay(prev.start, ev.start)) {
+      const mergeWrap = mkCheck(`與「${plainName(displayName(prev))}」同框`, o.mergePrev, v => {
+        o.mergePrev = v; saveEvents(); renderAll();
+      });
+      mergeWrap.classList.add('ev-merge');
+      opts.appendChild(mergeWrap);
+    } else if (o.mergePrev) {
+      o.mergePrev = false;   // 前一團被隱藏或換月份後失效，順手清掉
+    }
+
+    const hiWrap = mkCheck('高亮', o.hi, v => { o.hi = v; saveEvents(); renderPoster(); });
+    hiWrap.setAttribute('data-pane', 'image');
+    opts.appendChild(hiWrap);
+    opts.appendChild(mkCheck('不顯示', o.hidden, v => {
+      o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v); renderPoster(); renderCaption();
+    }));
+
+    const badgeWrap = document.createElement('label');
+    badgeWrap.setAttribute('data-pane', 'image');
+    const badgeIn = document.createElement('input');
+    badgeIn.type = 'text';
+    badgeIn.placeholder = '徽章';
+    badgeIn.value = o.badge || '';
+    badgeIn.addEventListener('input', () => { o.badge = badgeIn.value; saveEvents(); renderPoster(); });
+    badgeWrap.appendChild(badgeIn);
+    opts.appendChild(badgeWrap);
+
+    item.appendChild(opts);
+    box.appendChild(item);
+  });
+}
+
+/* ============================================================
+   4b. 貼文文案
+   ============================================================ */
+
+const CN_MONTH = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+// ①..⑳ ㉑..㉟ ㊱..㊿，超過 50 就退回 "51."
+function circledNum(n) {
+  if (n >= 1 && n <= 20)  return String.fromCharCode(0x2460 + n - 1);
+  if (n >= 21 && n <= 35) return String.fromCharCode(0x3251 + n - 21);
+  if (n >= 36 && n <= 50) return String.fromCharCode(0x32B1 + n - 36);
+  return String(n);
+}
+
+function notePlaceholder(ev) {
+  const auto = brandNoteFor(displayName(ev)) || brandNoteFor(ev.title);
+  return auto ? `👉🏻 ${auto}（品牌備註，留空就用這句）` : '👉🏻 這個品牌還沒有備註，打一句就會用在貼文';
+}
+
+function fillTokens(tpl) {
+  return String(tpl || '')
+    .replace(/\{月\}/g, String(currentMonth + 1))
+    .replace(/\{國字月\}/g, CN_MONTH[currentMonth] || String(currentMonth + 1));
+}
+
+function buildCaption() {
+  const groups = visibleGroups();
+  const lines = [];
+  const intro = fillTokens(S.capIntro).trim();
+  const listTitle = fillTokens(S.capListTitle).trim();
+  const outro = fillTokens(S.capOutro).trim();
+  const tags = fillTokens(S.capTags).trim();
+
+  if (intro) lines.push(intro, '');
+  if (listTitle) lines.push(listTitle);
+
+  // 同框＝同一團：一個編號、品牌用＋連，備註每個品牌各自一行（一樣的句子只留一行）
+  groups.forEach((group, i) => {
+    const ev = group[0];
+    lines.push(`${circledNum(i + 1)}. ${fmtMD(ev.start)} - ${fmtMD(ev.displayEnd)} ${groupNames(group).join('＋')}`);
+    groupNotes(group).forEach(note => lines.push(`👉🏻 ${note}`));
+  });
+
+  if (outro) lines.push('', outro);
+  if (tags)  lines.push('', tags);
+  return lines.join('\n');
+}
+
+// 切換「產生圖片 / 產生貼文」：左邊面板與右邊舞台都跟著換
+function applyPane() {
+  const isText = S.pane === 'text';
+  document.body.classList.toggle('pane-text', isText);
+  document.body.classList.toggle('pane-image', !isText);
+  segSet('segPane', S.pane);
+  if (!isText) fitScaler();
+}
+
+function renderCaption() {
+  const box = document.getElementById('capOut');
+  if (!box) return;
+  box.value = buildCaption();
+  const groups = visibleGroups();
+  const brands = groups.reduce((n, g) => n + g.length, 0);
+  document.getElementById('capCount').textContent =
+    `${currentMonth + 1} 月 · ${groups.length} 團` + (brands > groups.length ? `（${brands} 個品牌）` : '');
+  const miss = monthEvents()
+    .filter(ev => !(EV_OVERRIDES[ev.id] || {}).hidden && !noteOf(ev))
+    .map(ev => plainName(displayName(ev)));
+  const warn = document.getElementById('capMissing');
+  warn.textContent = miss.length ? `還沒有備註的團（${miss.length}）：${miss.join('、')}` : '';
+  warn.style.display = miss.length ? 'block' : 'none';
+}
+
+async function copyCaption(e) {
+  const box = document.getElementById('capOut');
+  const btn = (e && e.currentTarget) || document.getElementById('btnCopyCap');
+  const old = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(box.value);
+  } catch (e) {
+    // file:// 或沒授權時 clipboard API 會失敗，退回選取＋execCommand
+    box.focus(); box.select();
+    try { document.execCommand('copy'); } catch (e2) { btn.textContent = '請手動 Ctrl+C'; setTimeout(() => btn.textContent = old, 2000); return; }
+  }
+  btn.textContent = '已複製 ✓';
+  setTimeout(() => btn.textContent = old, 1500);
+}
+
+function mkCheck(label, checked, onChange) {
+  const l = document.createElement('label');
+  const c = document.createElement('input');
+  c.type = 'checkbox';
+  c.checked = !!checked;
+  c.addEventListener('change', () => onChange(c.checked));
+  l.appendChild(c);
+  l.appendChild(document.createTextNode(label));
+  return l;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+// 滑桿 / 色票 / 文字框統一接線：改值 → 存設定 → 重畫
+function bindRange(id, key, valId, suffix) {
+  const el = document.getElementById(id);
+  const val = valId ? document.getElementById(valId) : null;
+  const sync = () => { if (val) val.textContent = S[key] + (suffix || ''); };
+  el.value = S[key];
+  sync();
+  el.addEventListener('input', () => {
+    S[key] = parseFloat(el.value);
+    sync(); saveSettings(); renderPoster();
+  });
+}
+function bindColor(id, key) {
+  const el = document.getElementById(id);
+  el.value = S[key];
+  el.addEventListener('input', () => { S[key] = el.value; saveSettings(); renderPoster(); });
+}
+function bindText(id, key) {
+  const el = document.getElementById(id);
+  el.value = S[key];
+  el.addEventListener('input', () => { S[key] = el.value; saveSettings(); renderPoster(); });
+}
+// 文案欄位只影響貼文，不用重畫圖
+function bindCapText(id, key) {
+  const el = document.getElementById(id);
+  el.value = S[key];
+  el.addEventListener('input', () => { S[key] = el.value; saveSettings(); renderCaption(); });
+}
+function bindSeg(id, apply) {
+  const box = document.getElementById(id);
+  box.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
+    apply(btn.dataset.v);
+    saveSettings(); renderPoster();
+  });
+}
+function segSet(id, v) {
+  document.querySelectorAll(`#${id} button`).forEach(b => b.classList.toggle('on', b.dataset.v === String(v)));
+}
+
+/* ============================================================
+   5. 設定存取
+   ============================================================ */
+
+function saveSettings() { try { localStorage.setItem(LS_SETTINGS, JSON.stringify(S)); } catch (e) {} }
+function saveEvents()   { try { localStorage.setItem(LS_EVENTS, JSON.stringify(EV_OVERRIDES)); } catch (e) {} }
+function saveAssets() {
+  try { localStorage.setItem(LS_ASSETS, JSON.stringify(ASSETS)); }
+  catch (e) { alert('圖片太大，瀏覽器存不下，這次可以用但重新整理後要再上傳一次。'); }
+}
+function loadStored() {
+  try { Object.assign(S, JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}')); } catch (e) {}
+  try { EV_OVERRIDES = JSON.parse(localStorage.getItem(LS_EVENTS) || '{}') || {}; } catch (e) {}
+  try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(LS_ASSETS) || '{}')); } catch (e) {}
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(new Error('讀取檔案失敗'));
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ============================================================
+   6. 產圖（沿用 school-list.html 已驗證過的「乾淨 iframe + 看門狗」）
+   ============================================================ */
+
+function withWatchdog(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('WATCHDOG_TIMEOUT')), ms))
+  ]);
+}
+
+// html2canvas 會把「整個頁面」複製一份，這頁的控制面板 DOM 不小；
+// 改成把海報複製進一個乾淨的 iframe 再截圖，只複製一個很小的頁面。
+async function captureInIsolatedFrame(sourceEl, options) {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed; left:-99999px; top:0; border:0;';
+  iframe.width = String(options.width);
+  iframe.height = String(options.height);
+  document.body.appendChild(iframe);
+  try {
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><base href="${location.href}"></head><body style="margin:0;"></body></html>`);
+    doc.close();
+
+    // 版面樣式寫在本頁的 <style> 與 shared.css，複製過去 iframe 才有樣式可用
+    document.querySelectorAll('head style').forEach(el => {
+      const s = doc.createElement('style'); s.textContent = el.textContent; doc.head.appendChild(s);
+    });
+    document.querySelectorAll('head link[rel="stylesheet"]').forEach(el => {
+      const l = doc.createElement('link'); l.rel = 'stylesheet'; l.href = el.href; doc.head.appendChild(l);
+    });
+
+    const clone = sourceEl.cloneNode(true);
+    doc.body.appendChild(clone);
+
+    const fontsReady = doc.fonts && doc.fonts.ready ? doc.fonts.ready : Promise.resolve();
+    const imgs = Array.from(clone.querySelectorAll('img'));
+    const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(r => {
+      img.addEventListener('load', r); img.addEventListener('error', r);
+    })));
+    await Promise.race([
+      Promise.all([fontsReady, imgsReady]),
+      new Promise(r => setTimeout(r, 3000))
+    ]);
+
+    return await html2canvas(clone, options);
+  } finally {
+    document.body.removeChild(iframe);
+  }
+}
+
+async function exportPng() {
+  const btn = document.getElementById('btnExport');
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = '產生中…';
+  try {
+    const dim = SIZES[S.size];
+    // 明確傳寬高，不讓 html2canvas 自己量測 DOM 尺寸（school-list 卡住的成因之一）
+    const canvas = await withWatchdog(captureInIsolatedFrame(document.getElementById('poster'), {
+      width: dim.w,
+      height: dim.h,
+      scale: 1,               // 樣板本身就是 1080 寬，已是出圖解析度，不需再放大
+      backgroundColor: S.cOuter,
+      useCORS: true,
+      imageTimeout: 8000
+    }), 45000);
+
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) throw new Error('轉檔失敗');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `行事曆_${currentYear}-${String(currentMonth + 1).padStart(2, '0')}_${S.mode === 'calendar' ? '行事曆' : '列表'}_${S.size.replace(':', 'x')}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (err) {
+    alert(err.message === 'WATCHDOG_TIMEOUT'
+      ? '產圖超過 45 秒沒有完成，已中止。請重新整理後再試一次。'
+      : '產圖失敗：' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = old;
+  }
+}
+
+/* ============================================================
+   7. 開機
+   ============================================================ */
+
+function renderAll() {
+  renderEvList();
+  renderPoster();
+  renderCaption();
+}
+
+function syncControls() {
+  segSet('segMode', S.mode);
+  segSet('segSize', S.size);
+  segSet('segCols', S.cols);
+  segSet('segMonthOv', S.monthOverlay ? 'on' : 'off');
+  ['rInsetT|insetT|vInsetT', 'rInsetB|insetB|vInsetB', 'rInsetL|insetL|vInsetL', 'rInsetR|insetR|vInsetR',
+   'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
+   'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rFs|fs|vFs'].forEach(spec => {
+    const [id, key, valId] = spec.split('|');
+    const el = document.getElementById(id);
+    el.value = S[key];
+    document.getElementById(valId).textContent = S[key];
+  });
+  ['tTitle1|title1', 'tTitle2|title2', 'tFoot|foot',
+   'tCapIntro|capIntro', 'tCapListTitle|capListTitle', 'tCapOutro|capOutro', 'tCapTags|capTags'].forEach(spec => {
+    const [id, key] = spec.split('|');
+    document.getElementById(id).value = S[key];
+  });
+  applyPane();
+}
+
+function init() {
+  loadStored();
+
+  bindSeg('segMode', v => { S.mode = v; });
+  bindSeg('segSize', v => { S.size = v; });
+  bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
+  bindSeg('segMonthOv', v => { S.monthOverlay = (v === 'on'); });
+
+  bindRange('rInsetT', 'insetT', 'vInsetT');
+  bindRange('rInsetB', 'insetB', 'vInsetB');
+  bindRange('rInsetL', 'insetL', 'vInsetL');
+  bindRange('rInsetR', 'insetR', 'vInsetR');
+  bindRange('rMoX', 'moX', 'vMoX');
+  bindRange('rMoY', 'moY', 'vMoY');
+  bindRange('rMoS', 'moS', 'vMoS');
+  bindRange('rFs', 'fs', 'vFs');
+  bindRange('rGap', 'gap', 'vGap');
+  bindRange('rRadius', 'radius', 'vRadius');
+  bindRange('rHeadH', 'headH', 'vHeadH');
+
+  ['cOuter|cOuter', 'cPanel|cPanel', 'cCellBg|cCellBg', 'cCellBorder|cCellBorder',
+   'cChipBg|cChipBg', 'cChipBorder|cChipBorder', 'cChipText|cChipText', 'cDate|cDate',
+   'cHiBg|cHiBg', 'cHiBorder|cHiBorder', 'cHiText|cHiText', 'cBadge|cBadge',
+   'cMonth|cMonth', 'cTitle|cTitle'].forEach(s => {
+    const [id, key] = s.split('|'); bindColor(id, key);
+  });
+
+  bindText('tTitle1', 'title1');
+  bindText('tTitle2', 'title2');
+  bindText('tFoot', 'foot');
+
+  bindCapText('tCapIntro', 'capIntro');
+  bindCapText('tCapListTitle', 'capListTitle');
+  bindCapText('tCapOutro', 'capOutro');
+  bindCapText('tCapTags', 'capTags');
+  document.getElementById('btnCopyCap').addEventListener('click', copyCaption);
+  document.getElementById('btnCopyCapTop').addEventListener('click', copyCaption);
+  bindSeg('segPane', v => { S.pane = v; applyPane(); });
+
+  document.getElementById('selMonth').addEventListener('change', e => {
+    const [y, m] = e.target.value.split('-').map(Number);
+    currentYear = y; currentMonth = m;
+    renderAll();
+  });
+
+  document.getElementById('fileBg').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    ASSETS.bg = await readFileAsDataURL(f);
+    saveAssets(); renderPoster();
+  });
+  document.getElementById('btnClearBg').addEventListener('click', () => {
+    ASSETS.bg = ''; document.getElementById('fileBg').value = ''; saveAssets(); renderPoster();
+  });
+  document.getElementById('filePhoto').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    ASSETS.photo = await readFileAsDataURL(f);
+    saveAssets(); renderPoster();
+  });
+  document.getElementById('btnClearPhoto').addEventListener('click', () => {
+    ASSETS.photo = ''; document.getElementById('filePhoto').value = ''; saveAssets(); renderPoster();
+  });
+
+  document.getElementById('btnResetEv').addEventListener('click', () => {
+    monthEvents().forEach(ev => { delete EV_OVERRIDES[ev.id]; });
+    saveEvents(); renderAll();
+  });
+  document.getElementById('btnResetAll').addEventListener('click', () => {
+    if (!confirm('所有版面設定都會恢復預設（逐團微調與圖片會保留），確定嗎？')) return;
+    S = Object.assign({}, DEFAULTS);
+    saveSettings(); syncControls(); renderPoster();
+  });
+
+  document.getElementById('btnReload').addEventListener('click', loadData);
+  document.getElementById('btnExport').addEventListener('click', exportPng);
+  window.addEventListener('resize', fitScaler);
+
+  syncControls();
+  applyPane();
+  loadData();
+}
+
+init();
+</script>
+</body>
+</html>

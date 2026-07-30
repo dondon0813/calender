@@ -293,6 +293,8 @@
     font-size: 19px;
     font-weight: 700;
   }
+  /* 團名寫成「品牌｜產品」時，每段各佔一行（斷在哪由後台的團名決定） */
+  .gs-card-name .title-line { display: block; }
   .gs-card-date {
     font-size: 13px;
     opacity: 0.85;
@@ -928,7 +930,35 @@ function segmentTitle(title) {
 
 const KNOWN_BRANDS = ['林貝兒', '小影霸', '台東初鹿', '永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
 
+/* 團名裡的「｜」＝後台自己指定的斷行點（例：Parakito｜防蚊用品）。
+   品牌名本身就含產品的（雪坊優格、韓爸米餅）不會有這個符號，維持一行。
+   會斷行的地方照斷，橫排一行的地方（清單列、tooltip、彈窗標題）用 plainTitle() 換成空白。
+   下面的 KNOWN_BRANDS 是還沒改寫的舊團名的備援，改寫完可以再刪。 */
+const TITLE_SEP = /[｜|]/;
+function titleParts(t) {
+  return String(t || '').split(TITLE_SEP).map(s => s.trim()).filter(s => s !== '');
+}
+function plainTitle(t) { return titleParts(t).join(' '); }
+function setTitleLines(el, t) {
+  const parts = titleParts(t);
+  el.textContent = '';
+  if (parts.length < 2) { el.textContent = parts[0] || ''; return; }
+  parts.forEach(p => {
+    const s = document.createElement('span');
+    s.className = 'title-line';
+    s.textContent = p;
+    el.appendChild(s);
+  });
+}
+
 function wrapTitleLines(title, maxCharsPerLine) {
+  const byBar = titleParts(title);
+  if (byBar.length > 1) {
+    const lines = [];
+    byBar.forEach(part => { lines.push(...wrapSegment(part, maxCharsPerLine)); });
+    return lines;
+  }
+
   const manualParts = title.split(/[\/、]/).map(s => s.trim()).filter(s => s !== '');
   if (manualParts.length > 1) {
     const lines = [];
@@ -974,7 +1004,8 @@ function isFrozenEvent(ev) {
   if (cat !== '') {
     return cat.includes('冷凍');
   }
-  return FROZEN_KEYWORDS.some(k => ev.title.includes(k));
+  // 比對前先把斷行符號去掉，萬一團名寫成「雪坊｜優格」也照樣認得
+  return FROZEN_KEYWORDS.some(k => titleParts(ev.title).join('').includes(k));
 }
 
 function isLinkUnlocked(ev) {
@@ -1210,11 +1241,11 @@ function renderGroupList() {
       card.addEventListener('click', () => openGroupChoiceModal(ev));
     }
     attachStatTracking(card, ev, clickable, 'now');
-    card.title = ev.title + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+    card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
-    nameEl.textContent = ev.title;
+    setTitleLines(nameEl, ev.title);
     card.appendChild(nameEl);
 
     const dateEl = document.createElement('div');
@@ -1366,7 +1397,7 @@ function renderAllMode() {
         bar.addEventListener('click', () => showEarlyBirdModal(item.ev));
       }
       attachStatTracking(bar, item.ev, clickable);
-      bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+      bar.title = `${plainTitle(item.ev.title)} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
       if (gbNumber) {
         const badge = document.createElement('span');
@@ -1388,7 +1419,7 @@ function renderAllMode() {
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'ev-title';
-      titleSpan.textContent = item.ev.title;
+      titleSpan.textContent = plainTitle(item.ev.title);
       bar.appendChild(titleSpan);
 
       if (item.ev.tag) {
@@ -1491,7 +1522,7 @@ function renderSingleDayMode(mode) {
             bar.addEventListener('click', () => showEarlyBirdModal(ev));
           }
           attachStatTracking(bar, ev, clickable);
-          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+          bar.title = `${plainTitle(ev.title)} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
@@ -1544,7 +1575,7 @@ function showEarlyBirdModal(ev) {
   const modal = document.getElementById('earlyBirdModal');
   const titleEl = document.getElementById('earlyBirdTitle');
   const listEl = document.getElementById('earlyBirdList');
-  titleEl.textContent = ev.title + ' 早鳥禮';
+  titleEl.textContent = plainTitle(ev.title) + ' 早鳥禮';
   listEl.innerHTML = '';
   ev.earlyBird.forEach(item => {
     const li = document.createElement('li');
@@ -1564,7 +1595,7 @@ function openGroupChoiceModal(ev) {
   if (!brand && !code) return;
 
   const modal = document.getElementById('groupChoiceModal');
-  document.getElementById('groupChoiceTitle').textContent = ev.title;
+  document.getElementById('groupChoiceTitle').textContent = plainTitle(ev.title);
 
   const introBtn = document.getElementById('gcIntroBtn');
   const recipeBtn = document.getElementById('gcRecipeBtn');
