@@ -351,19 +351,21 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   border-radius: var(--p-radius);
   border: 3px solid var(--p-cell-border);
   background: var(--p-cell-bg);
-  padding: 26px 8px 8px;
+  /* 上方留白跟著日期數字的位置與大小走，數字才不會壓到團的框 */
+  padding: var(--p-day-pad) 8px 8px;
   display: flex; flex-direction: column; gap: 6px;
   min-height: 0;
 }
 /* 月初／月底補上的前後月日期：淡一點、日期字小一點，一眼看得出不是這個月 */
 .cal-cell.out { opacity: .45; }
-.cal-cell.out .daynum { font-size: 17px; }
+.cal-cell.out .daynum { font-size: calc(var(--p-day-size) * 0.78); }
 /* 補位格裡有團的話別淡到看不清楚，但仍比本月的淡一點 */
 .cal-cell.out.has-ev { opacity: .85; }
 .cal-cell .daynum {
-  position: absolute; top: 4px; left: 9px;
+  position: absolute; top: var(--p-day-top); left: 9px;
   font-family: var(--font-display); font-weight: 700;
-  font-size: 22px; color: var(--p-date-color);
+  font-size: var(--p-day-size); color: var(--p-date-color);
+  line-height: 1;
 }
 .chip {
   flex: 1 1 0;
@@ -548,6 +550,9 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>字級縮放</label><input type="range" id="rFs" min="0.7" max="1.4" step="0.02"><span class="val" id="vFs"></span></div>
       <div class="row"><label>格子間距</label><input type="range" id="rGap" min="0" max="30" step="1"><span class="val" id="vGap"></span></div>
       <div class="row"><label>圓角</label><input type="range" id="rRadius" min="0" max="40" step="1"><span class="val" id="vRadius"></span></div>
+      <div class="row"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><span class="val" id="vDayTop"></span></div>
+      <div class="row"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><span class="val" id="vDaySize"></span></div>
+      <p class="hint">日期數字往上調時，團的框會自動跟著往上補滿，不會留一條空白，也不會被數字壓到。</p>
     </fieldset>
 
     <fieldset data-pane="image">
@@ -686,6 +691,7 @@ const DEFAULTS = {
   insetT: 250, insetB: 118, insetL: 60, insetR: 60,
   titleImg: 'on',           // 'on'＝用 images/calendar 的月份標題圖；'off'＝用 CSS 仿版標題
   headTop: 34,              // 標題距離頂端幾 px（可以是負的，把標題往上推出邊界）
+  dayTop: 4, daySize: 22,   // 格子左上角日期數字的位置與大小（格子上方留白會自動跟著算）
   zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
   fs: 1, gap: 10, radius: 14, headH: 190,
@@ -952,6 +958,10 @@ function renderPoster() {
   poster.style.setProperty('--p-radius', S.radius + 'px');
   poster.style.setProperty('--p-head-h', S.headH + 'px');
   poster.style.setProperty('--p-head-top', S.headTop + 'px');
+  poster.style.setProperty('--p-day-top', S.dayTop + 'px');
+  poster.style.setProperty('--p-day-size', S.daySize + 'px');
+  // 團的框從「日期數字底下」才開始，不管數字調到多大多低都不會被壓到
+  poster.style.setProperty('--p-day-pad', Math.max(8, S.dayTop + S.daySize + 4) + 'px');
   poster.style.setProperty('--p-inset-t', S.insetT + 'px');
   poster.style.setProperty('--p-inset-b', S.insetB + 'px');
   poster.style.setProperty('--p-inset-l', S.insetL + 'px');
@@ -1814,7 +1824,8 @@ function syncControls() {
   document.getElementById('selZoom').value = String(S.zoom || 0);
   ['rInsetT|insetT|vInsetT', 'rInsetB|insetB|vInsetB', 'rInsetL|insetL|vInsetL', 'rInsetR|insetR|vInsetR',
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
-   'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop', 'rFs|fs|vFs'].forEach(spec => {
+   'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop',
+   'rDayTop|dayTop|vDayTop', 'rDaySize|daySize|vDaySize', 'rFs|fs|vFs'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -1851,6 +1862,8 @@ function init() {
   bindRange('rRadius', 'radius', 'vRadius');
   bindRange('rHeadH', 'headH', 'vHeadH');
   bindRange('rHeadTop', 'headTop', 'vHeadTop');
+  bindRange('rDayTop', 'dayTop', 'vDayTop');
+  bindRange('rDaySize', 'daySize', 'vDaySize');
 
   ['cOuter|cOuter', 'cPanel|cPanel', 'cCellBg|cCellBg', 'cCellBorder|cCellBorder',
    'cChipBg|cChipBg', 'cChipBorder|cChipBorder', 'cChipText|cChipText', 'cDate|cDate',
