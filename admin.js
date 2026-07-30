@@ -1746,7 +1746,10 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evUrlInput').value = ev ? (ev.url || '') : '';
   document.getElementById('evCategoryInput').value = ev ? (ev.category || '') : '';
   document.getElementById('evTagInput').value = ev ? (ev.tag || '') : '';
-  document.getElementById('evExtendInput').value = (ev && ev.extend && ev.extend.type === 'days') ? ev.extend.value : '';
+  // 延長欄可以是天數或日期，兩種都要能回填（回填不到就等於編輯時被清空）
+  document.getElementById('evExtendInput').value = (ev && ev.extend)
+    ? (ev.extend.type === 'days' ? String(ev.extend.value) : ymdStr(ev.extend.value))
+    : '';
   document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
   document.getElementById('evDiscountCodeInput').value = ev ? (ev.discountCode || '') : '';
   document.getElementById('evDiscountDescInput').value = ev ? (ev.discountDesc || '') : '';
@@ -1797,8 +1800,25 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const url = document.getElementById('evUrlInput').value.trim();
   const category = document.getElementById('evCategoryInput').value.trim();
   const tag = document.getElementById('evTagInput').value.trim();
+  // 延長欄：純數字＝延長幾天；日期（YYYY-MM-DD，也接受 2026/8/15）＝延長到那天
   const extendRaw = document.getElementById('evExtendInput').value.trim();
-  const extend = extendRaw === '' ? '' : (parseInt(extendRaw, 10) || 0);
+  let extend = '';
+  if (extendRaw !== '') {
+    if (/^\d+$/.test(extendRaw)) {
+      extend = parseInt(extendRaw, 10);
+    } else {
+      const exDate = parseDateStr(extendRaw);
+      if (!exDate || isNaN(exDate.getTime()) || exDate.getFullYear() < 2000) {
+        setFormStatus('evEditStatus', '延長時間只能填天數（例如 3）或日期（例如 2026-08-15）', 'error');
+        return;
+      }
+      if (ymdStr(exDate) <= endDateStr) {
+        setFormStatus('evEditStatus', '延長日期要晚於結束日期，否則請直接改結束日期', 'error');
+        return;
+      }
+      extend = ymdStr(exDate);
+    }
+  }
   const earlyBird = document.getElementById('evEarlyBirdInput').value
     .split('\n').map(s => s.trim()).filter(s => s !== '').join('/');
   const startTime = allDay ? '' : getEvTimeValue('evStartAmPmInput', 'evStartHourInput', 'evStartMinuteInput');

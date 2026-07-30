@@ -1731,7 +1731,9 @@ function addEvent_(fields) {
   row[EVENT_COL.ID - 1] = id;
   row[EVENT_COL.START - 1] = startDate;
   row[EVENT_COL.END - 1] = endDate;
-  row[EVENT_COL.EXTEND - 1] = (fields.extend === '' || fields.extend === undefined || fields.extend === null) ? '' : Number(fields.extend);
+  // 延長欄先留空，下面統一交給 setEventExtend_ 寫（它同時支援天數與「延長至 YYYY-MM-DD」，
+  // 這裡若直接 Number() 日期字串會變成 NaN 塞進 setValues）
+  row[EVENT_COL.EXTEND - 1] = '';
   row[EVENT_COL.TITLE - 1] = fields.title || '';
   row[EVENT_COL.TAG - 1] = fields.tag || '';
   row[EVENT_COL.CATEGORY - 1] = fields.category || '';
