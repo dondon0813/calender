@@ -632,7 +632,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 
     <fieldset>
       <legend>本月團（逐團微調）</legend>
-      <p class="hint" data-pane="image">改「顯示名稱」只影響這張圖，不會動到行事曆資料。留空＝用原本的活動名稱。</p>
+      <p class="hint" data-pane="image">改「顯示名稱」只影響這張圖，不會動到行事曆資料。留空＝用原本的活動名稱。<b>要在某個位置斷行就打「｜」</b>——例如想讓「安可堡泡泡」分成兩行，就填 <code>安可堡｜泡泡</code>。列表模式一律一行，｜ 會自動變回空白。</p>
       <p class="hint" data-pane="text">這裡改的是貼文裡 👉🏻 那句，只影響這個月。留空＝用 brand-notes.js 的品牌備註。</p>
       <div class="ev-list" id="evList"></div>
       <div class="btn-row">
@@ -1454,7 +1454,7 @@ function renderEvList() {
     const nameIn = document.createElement('input');
     nameIn.type = 'text';
     nameIn.setAttribute('data-pane', 'image');
-    nameIn.placeholder = '顯示名稱（留空＝用原名）';
+    nameIn.placeholder = '顯示名稱（留空＝用原名；打｜可斷行）';
     nameIn.value = o.name || '';
     nameIn.addEventListener('input', () => {
       o.name = nameIn.value; saveEvents(); renderPoster();
