@@ -816,12 +816,26 @@ async function renderVendorAcctSummary(vendorId) {
     if (!stillSame()) return;
   }
 
-  const rows = acctData.filter(r => r.vendorId === vendorId);
+  // 帳務的「廠商」欄記的是**這一團實際跟誰請款／誰開的發票**，
+  // 品牌資料庫的「所屬廠商」記的是**這個品牌歸哪家廠商管**，兩者常常不是同一個：
+  //   ・行銷公司自己有發票，但幫旗下某些品牌開的是品牌自己的抬頭（吃土也要BUY → 禾沐生活）
+  //   ・同一家公司在帳務裡用開票抬頭建檔、在品牌那邊用品牌名建檔（愛子伴桌 V006 ↔ 貝比富 V033）
+  // 一個廠商對到多個公司名稱是常態，不是資料錯誤。只認廠商欄的話，
+  // 「底下明明掛著品牌、品牌點進去也看得到過去的團」的廠商會顯示成 0 筆，自相矛盾。
+  // 所以這裡取聯集：廠商欄指到我 ∪ 我底下品牌的團，另外標示哪幾團是別的抬頭開的。
+  const myBrandIds = new Set(
+    (typeof brandDb !== 'undefined' ? brandDb : [])
+      .filter(b => (b.vendorIds || []).indexOf(vendorId) !== -1)
+      .map(b => b.id)
+  );
+  const rows = acctData.filter(r => r.vendorId === vendorId || (r.brandId && myBrandIds.has(r.brandId)));
   if (!rows.length) {
     box.innerHTML = '<div class="bda-wrap"><div class="bda-title">💰 開團帳務</div>' +
-      '<div class="bda-empty">這個廠商還沒有帳務紀錄（可能是還沒回填廠商，或本來就沒開過團）</div></div>';
+      '<div class="bda-empty">這個廠商還沒有帳務紀錄（底下的品牌也沒有開過團）</div></div>';
     return;
   }
+  // 不是靠廠商欄、而是靠品牌關聯撈進來的團：錢實際上記在別的抬頭下，要讓使用者看得出來
+  const viaBrand = rows.filter(r => r.vendorId !== vendorId);
   const teams = rows.filter(r => !r.contFrom).length;
   const income = rows.reduce((a, r) => a + acctNum(r.commission) + acctNum(r.fee), 0);
   const sorted = rows.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -840,6 +854,14 @@ async function renderVendorAcctSummary(vendorId) {
   const brandRows = [...byBrand.entries()].sort((a, b) => b[1].income - a[1].income || b[1].n - a[1].n);
   // 開票公司也列出來：同一家廠商可能有好幾種抬頭，對帳時很有用
   const comps = [...new Set(rows.map(r => r.company).filter(Boolean))];
+  // 帳務出現過、但廠商資料的「公司名稱」欄還沒登記的抬頭 → 標出來提醒去補。
+  // 補進去之後，之後依開票公司做的自動比對才認得這是同一家。
+  const knownComps = new Set(
+    String((vendorDetailCtx && vendorDetailCtx.companyNames) || '')
+      .split(/[,、，]/).map(s => s.trim()).filter(Boolean)
+  );
+  knownComps.add(String((vendorDetailCtx && vendorDetailCtx.name) || '').trim());
+  const newComps = comps.filter(c => !knownComps.has(c));
 
   box.innerHTML = `<div class="bda-wrap">
     <div class="bda-title">💰 開團帳務</div>
@@ -858,6 +880,8 @@ async function renderVendorAcctSummary(vendorId) {
     </div>
     <div class="bda-line" style="margin-top:8px;">最近一團：${escHtml(sorted[0].date || '—')}　${escHtml(sorted[0].rawName || '')}</div>
     ${comps.length ? `<div class="bda-line">開票抬頭：${escHtml(comps.join('、'))}</div>` : ''}
+    ${viaBrand.length ? `<div class="bda-line">其中 ${viaBrand.length} 團的帳掛在別的抬頭下，是靠底下的品牌關聯進來的</div>` : ''}
+    ${newComps.length ? `<div class="bda-line warn">這些抬頭還沒登記到本廠商的「公司名稱」欄：${escHtml(newComps.join('、'))}</div>` : ''}
   </div>`;
 }
 
