@@ -4073,6 +4073,17 @@
         </div>
         <span class="tool-icon-label">食譜貼文<br>產生器</span>
       </div>
+      <!-- 行事曆圖產生器是獨立頁（calendar-poster.html），不塞進 admin.html：
+           它有自己的一整套海報樣式，混進來只會讓這支本來就過大的檔更難改。
+           圖示檔還沒做，img 會 404 兩次後自動退到 emoji 備援，之後把
+           images/tools/calposter.webp 放進去就會自動換成圖 -->
+      <div class="tool-icon" onclick="window.open('calendar-poster.html', '_blank')">
+        <div class="tool-icon-img-wrap">
+          <img src="images/tools/calposter.webp" alt="行事曆圖產生器" onerror="if(!this.dataset.f){this.dataset.f='1';this.src='images/tools/calposter.png';}else{const w=this.parentElement; this.remove(); w.querySelector('.tool-icon-fallback').style.display='flex';}">
+          <span class="tool-icon-fallback" style="display:none;">🗓️</span>
+        </div>
+        <span class="tool-icon-label">行事曆圖<br>產生器</span>
+      </div>
       <div class="tool-icon" onclick="switchView('lotteryTool')">
         <div class="tool-icon-img-wrap">
           <img src="images/tools/lottery.webp" alt="抽獎小幫手" onerror="if(!this.dataset.f){this.dataset.f='1';this.src='images/tools/lottery.png';}else{const w=this.parentElement; this.remove(); w.querySelector('.tool-icon-fallback').style.display='flex';}">
@@ -4748,8 +4759,9 @@
       <input type="text" id="acctRawNameInput" placeholder="例如：雪坊優格 中秋團">
       <label for="acctVendorSelect">廠商（這一團實際對接的，可留空）</label>
       <select id="acctVendorSelect"></select>
-      <label for="acctCompanyInput">開票公司（這次用的抬頭）</label>
-      <input type="text" id="acctCompanyInput" placeholder="例如：榛尼森國際有限公司">
+      <label for="acctCompanyInput">開票公司（這次用的抬頭）<small>　可從過去用過的抬頭選，這次不一樣就直接打</small></label>
+      <input type="text" id="acctCompanyInput" list="acctCompanyList" autocomplete="off" placeholder="例如：榛尼森國際有限公司">
+      <datalist id="acctCompanyList"></datalist>
 
       <div data-perm="revenue">
         <label for="acctSalesInput">銷售金額</label>
@@ -5251,7 +5263,7 @@
 <script src="customBlocks.js?v=1"></script>
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=2"></script>
-<script src="accounting.js?v=13"></script>
+<script src="accounting.js?v=14"></script>
 <script src="admin.js?v=68"></script>
 <script src="memo.js?v=5"></script>
 

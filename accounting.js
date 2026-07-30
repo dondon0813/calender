@@ -902,6 +902,47 @@ function acctSwitchTab(tab) {
   renderAccountingView();
 }
 
+// ----- 開票抬頭候選清單 -----
+// 填發票資料時讓助理直接選，不用每次手打（打錯就變成新的一家廠商，見「雪紡優格」那類錯字）。
+// 排序＝越可能是這次要用的排越前面：
+//   1) 這個品牌過去用過的 —— 抬頭常常跟品牌綁（美姬饅頭固定走禾沐），最準
+//   2) 這個廠商登記在「公司名稱」欄的、以及它過去實際用過的
+//   3) 其餘所有用過的
+// 用 datalist 而不是 select：清單裡沒有的照樣能手打，換抬頭本來就是常態。
+function acctSyncCompanyOptions(autoFill) {
+  const dl = document.getElementById('acctCompanyList');
+  if (!dl) return;
+  const brandId = document.getElementById('acctBrandSelect').value;
+  const vendorId = document.getElementById('acctVendorSelect').value;
+
+  // 同一個抬頭出現多次時，用最近一次的日期決定它排多前面
+  const compsOf = rows => rows.slice()
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .map(r => r.company).filter(Boolean);
+
+  const brandComps = brandId ? compsOf(acctData.filter(r => r.brandId === brandId)) : [];
+  const vendor = vendorId ? vendorDb.find(v => v.id === vendorId) : null;
+  const vendorRegistered = vendor
+    ? String(vendor.companyNames || '').split(/[,、，]/).map(s => s.trim()).filter(Boolean)
+    : [];
+  const vendorComps = vendorId ? compsOf(acctData.filter(r => r.vendorId === vendorId)) : [];
+
+  const seen = new Set();
+  const ordered = [];
+  [brandComps, vendorRegistered, vendorComps, compsOf(acctData)].forEach(list => {
+    list.forEach(c => { if (!seen.has(c)) { seen.add(c); ordered.push(c); } });
+  });
+  dl.innerHTML = ordered.map(c => `<option value="${escHtml(c)}"></option>`).join('');
+
+  // 欄位還空著才自動帶入，不覆蓋助理已經打好的內容
+  const input = document.getElementById('acctCompanyInput');
+  if (autoFill && input && !input.value.trim() && brandComps.length) input.value = brandComps[0];
+}
+
+// 選了品牌／廠商就重算候選；.value = 不會觸發 change，所以編輯既有紀錄時不會被蓋掉
+document.getElementById('acctBrandSelect').addEventListener('change', () => acctSyncCompanyOptions(true));
+document.getElementById('acctVendorSelect').addEventListener('change', () => acctSyncCompanyOptions(false));
+
 // ----- 新增／編輯 -----
 function openAcctEditModal(rec) {
   acctEditCtx = { isNew: !rec, rec: rec };
@@ -950,6 +991,9 @@ function openAcctEditModal(rec) {
   if (rec && rec.importNote) audit.push('匯入註記：' + rec.importNote);
   if (rec && rec.contFrom) audit.push('這是 ' + rec.contFrom + ' 同一團重開表單的延續');
   document.getElementById('acctAuditLine').innerHTML = audit.map(escHtml).join('<br>');
+
+  // 新增時才自動帶抬頭；編輯既有紀錄一律照原值，不要偷改助理已經對過的帳
+  acctSyncCompanyOptions(!rec);
 
   document.getElementById('acctEditModal').classList.add('show');
 }

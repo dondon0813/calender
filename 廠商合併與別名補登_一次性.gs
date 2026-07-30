@@ -28,19 +28,51 @@ var MERGE_JOBS = [
   { keep: 'V004', merge: 'V024', why: '森林麵食的團開票抬頭是唯進食品，同一家' }
 ];
 
-// 只補「公司名稱」欄的抬頭別名（同一家的縮寫／全名／錯字，不新增也不刪除廠商）
+// 只補「公司名稱」欄的抬頭別名（不新增也不刪除廠商）
 // key = 廠商ID，值 = 要補進去的抬頭陣列
+//
+// 兩種都放在這裡，語意不同但作用一樣（讓比對認得）：
+//   ・同一家的縮寫／全名／錯字 —— 例：雪坊＝雪坊優格的簡稱、雪紡＝錯字
+//   ・行銷公司底下、由各品牌自己的廠商開的抬頭 —— 例：V011 吃土也要BUY 的
+//     美姬饅頭走禾沐、B21pro 走寶媽咪／銳錡。這些抬頭本身也是獨立廠商，
+//     一個抬頭同時登記在兩家名下是**刻意的**，因為那些團確實同時屬於兩邊。
+//
+// ⚠️ 沒放進來的（經使用者確認後刻意排除）：
+//   ・V001 樂奎 ← 鼎珈國際／鼎珈：藍海饌 2025 以前是舊行銷公司鼎珈，2026 才改樂奎，
+//     不是同一家，也不是樂奎底下開的票。
+//   ・V010 朶玫黎 ← 宇羽國際：2024 早期單一團，抬頭不處理。
+//   ・V012 精臣 ← 寶媽咪／銳錡／禾沐：B21pro 那幾團的開票方歸 V011 吃土也要BUY
+//     （精臣是原廠品牌，不是開票方）。
 var ALIAS_JOBS = {
   'V001': ['樂奎'],
   'V003': ['雪坊', '雪紡'],
   'V005': ['賽博購股份'],
   'V007': ['璟豐開發'],
-  'V008': ['榛尼森國際', '榛尼森國際有限公司'],
+  'V008': ['榛尼森國際有限公司'],
+  'V011': ['禾沐', '禾沐生活', '寶媽咪', '銳錡有限公司'],
   'V013': ['朴蜜兒有限公司'],
   'V014': ['匯盛國際'],
   'V015': ['子熊'],
   'V017': ['杏豐'],
-  'V018': ['淨毒五郎']
+  'V018': ['淨毒五郎'],
+  'V084': ['汎絡數位行銷']
+};
+
+// 品牌備註要補的說明（append 到既有備註後面，不覆蓋）。
+// 用途：品牌換過行銷公司時，光看「所屬廠商」只會看到現在這家，
+// 舊帳會被算到新廠商頭上而看不出原因。
+var BRAND_NOTE_JOBS = {
+  'B065': '2026 起改由樂奎（V001）承接；2025 以前的團是舊行銷公司鼎珈國際（V037）開票，' +
+          '所以廠商統計裡樂奎會含到那 4 團（2024-09～2025-02）。'
+};
+
+// 廠商備註要補的說明（append 到既有備註後面，不覆蓋）。
+// 用途：光看「公司名稱」欄只知道有這些抬頭，不知道哪個抬頭開的是哪一團。
+var NOTE_JOBS = {
+  'V011': '開票抬頭對應（2026-07 整理）：美姬饅頭走「禾沐／禾沐生活」（2024-10 起共 11 團）；' +
+          'B21pro 標籤機每團抬頭不同——寶媽咪（2025-01-10、2025-05-12）、' +
+          '銳錡有限公司（2025-10-22、2026-04-06）、禾沐（2026-06-26 三麗鷗聯名）。' +
+          '這些抬頭都是各品牌自己的廠商，團本身都是吃土也要BUY 這家行銷公司底下的。'
 };
 
 var MERGE_ACCT_SHEET_ID = '1Ba9oFudDTqHP7qAjZPPqp8csrMfscUlXlPPUA9Qy7Ug';
@@ -176,9 +208,54 @@ function 廠商合併與別名補登_ONETIME() {
     else vWrites.push({ row: row, col: iVComp + 1, value: comps.join(',') });
   });
 
-  // ---- 3. 寫入 ----
+  // ---- 3. 補廠商備註 ----
   say('');
-  say('【3】異動統計');
+  say('【3】補廠商備註（哪個抬頭開的是哪一團）');
+  if (iVNote < 0) {
+    say('  ⚠ 廠商表找不到「廠商備註」欄，整段跳過');
+  } else {
+    Object.keys(NOTE_JOBS).forEach(function (vid) {
+      var row = vRowOf[vid];
+      if (!row) { say('  ⚠ 找不到 ' + vid + '，跳過'); return; }
+      var name = String(vData[row - 1][iVName] || '').trim();
+      var pending = null;
+      vWrites.forEach(function (w) { if (w.row === row && w.col === iVNote + 1) pending = w; });
+      var cur = String(pending ? pending.value : (vData[row - 1][iVNote] || '')).trim();
+      if (cur.indexOf(NOTE_JOBS[vid]) !== -1) { say('  ' + vid + ' ' + name + '：備註已存在，略過'); return; }
+      var merged = (cur ? cur + ' / ' : '') + NOTE_JOBS[vid];
+      if (pending) pending.value = merged;
+      else vWrites.push({ row: row, col: iVNote + 1, value: merged });
+      say('  ' + vid + ' ' + name + ' 備註 → ' + merged);
+    });
+  }
+
+  // ---- 3b. 補品牌備註 ----
+  say('');
+  say('【3b】補品牌備註（換過行銷公司的說明）');
+  var iBNote = bHead.indexOf('品牌備註');
+  if (iBNote < 0) {
+    say('  ⚠ 品牌表找不到「品牌備註」欄，整段跳過');
+  } else {
+    var bRowOf = {};
+    for (var bj = 1; bj < bData.length; bj++) {
+      var bid2 = String(bData[bj][0]).trim();
+      if (bid2) bRowOf[bid2] = bj + 1;
+    }
+    Object.keys(BRAND_NOTE_JOBS).forEach(function (bid) {
+      var row = bRowOf[bid];
+      if (!row) { say('  ⚠ 找不到品牌 ' + bid + '，跳過'); return; }
+      var nm = String(bData[row - 1][iBName] || '').trim();
+      var cur = String(bData[row - 1][iBNote] || '').trim();
+      if (cur.indexOf(BRAND_NOTE_JOBS[bid]) !== -1) { say('  ' + bid + ' ' + nm + '：備註已存在，略過'); return; }
+      var merged2 = (cur ? cur + ' / ' : '') + BRAND_NOTE_JOBS[bid];
+      bWrites.push({ row: row, col: iBNote + 1, value: merged2 });
+      say('  ' + bid + ' ' + nm + ' 備註 → ' + merged2);
+    });
+  }
+
+  // ---- 4. 寫入 ----
+  say('');
+  say('【4】異動統計');
   say('  廠商表寫入 ' + vWrites.length + ' 格、刪除 ' + vDeleteRows.length + ' 列');
   say('  品牌表寫入 ' + bWrites.length + ' 格');
   say('  帳務表寫入 ' + aWrites.length + ' 格');
