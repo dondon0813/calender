@@ -531,8 +531,9 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>格子底</label><input type="color" id="cCellBg"><label>格子框</label><input type="color" id="cCellBorder"></div>
       <div class="row"><label>團底色</label><input type="color" id="cChipBg"><label>團框</label><input type="color" id="cChipBorder"></div>
       <div class="row"><label>團字色</label><input type="color" id="cChipText"><label>日期色</label><input type="color" id="cDate"></div>
-      <div class="row"><label>高亮底</label><input type="color" id="cHiBg"><label>高亮框</label><input type="color" id="cHiBorder"></div>
-      <div class="row"><label>高亮字</label><input type="color" id="cHiText"><label>徽章底</label><input type="color" id="cBadge"></div>
+      <div class="row"><label>冷凍底</label><input type="color" id="cHiBg"><label>冷凍框</label><input type="color" id="cHiBorder"></div>
+      <div class="row"><label>冷凍字</label><input type="color" id="cHiText"><label>徽章底</label><input type="color" id="cBadge"></div>
+      <p class="hint">藍色那組＝冷凍／冷藏團。哪些團算冷凍是看行事曆的「分類」欄（含「冷凍」），沒填就用品牌名判斷，跟前台同一套規則；要個別調整就在下面「本月團」勾。</p>
       <div class="row"><label>月份色</label><input type="color" id="cMonth"><label>標題色</label><input type="color" id="cTitle"></div>
     </fieldset>
 
@@ -590,7 +591,12 @@ body.pane-text  [data-pane="image"] { display: none !important; }
     <fieldset>
       <legend>設定</legend>
       <div class="btn-row">
+        <button class="btn primary" id="btnSaveDefault">存成我的預設</button>
+      </div>
+      <p class="hint">調到滿意就按這個：以後「全部恢復預設」會回到這一版，不是回到我寫死的初始值。<span id="userDefState"></span></p>
+      <div class="btn-row">
         <button class="btn" id="btnResetAll">全部恢復預設</button>
+        <button class="btn" id="btnClearDefault">清除我的預設</button>
       </div>
       <p class="hint">所有設定會自動存在這台電腦的瀏覽器裡，下個月打開直接沿用。</p>
     </fieldset>
@@ -634,7 +640,8 @@ const SIZES = {
 const LS_SETTINGS = 'calposter.settings.v1';
 const LS_EVENTS   = 'calposter.events.v1';
 const LS_ASSETS   = 'calposter.assets.v1';   // 底圖／人像的 dataURL（可能很大，單獨存）
-const LS_PRESETS  = 'calposter.presets.v1';  // 命名設定檔：版面＋文案樣板＋逐團微調（逐團的用團名當 key）
+const LS_PRESETS  = 'calposter.presets.v1';
+const LS_USERDEF  = 'calposter.userdefaults.v1';  // 使用者自己調好的預設版面  // 命名設定檔：版面＋文案樣板＋逐團微調（逐團的用團名當 key）
 
 const DEFAULTS = {
   pane: 'image',            // 'image'＝產生圖片｜'text'＝產生貼文
@@ -739,7 +746,8 @@ async function loadData() {
         id: String(c[0].v),
         start, end,
         displayEnd: computeDisplayEnd(end, extend),
-        title: String(title).trim()
+        title: String(title).trim(),
+        category: c[6] ? String(c[6].v || '').trim() : ''   // G 欄分類：判斷冷凍/冷藏團用
       });
     });
 
@@ -787,7 +795,7 @@ function monthEvents() {
 }
 
 function ovOf(id) {
-  return EV_OVERRIDES[id] || (EV_OVERRIDES[id] = { name: '', hi: false, badge: '', hidden: false, note: '', mergePrev: false });
+  return EV_OVERRIDES[id] || (EV_OVERRIDES[id] = { name: '', badge: '', hidden: false, note: '', mergePrev: false });
 }
 
 /* 合團：像 yookidoo + trixie 那種「行事曆分兩列、其實是同一團」的情形。
@@ -835,6 +843,22 @@ function nameLines(s) {
   return String(s || '').split(NAME_SEP).map(t => t.trim()).filter(Boolean);
 }
 function plainName(s) { return nameLines(s).join(' '); }
+
+/* 藍底＝冷凍／冷藏團。判斷規則跟前台 index.html 的 isFrozenEvent() 同一套：
+   G 欄「分類」有填就看它含不含「冷凍」，沒填才用品牌名比對。
+   使用者可以在面板逐團手動改，改過的就以她的為準（存 o.cold）。 */
+const COLD_KEYWORDS = ['永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
+function autoCold(ev) {
+  const cat = String(ev.category || '').trim();
+  if (cat !== '') return cat.indexOf('冷凍') !== -1;
+  const flat = nameLines(ev.title).join('');
+  return COLD_KEYWORDS.some(k => flat.indexOf(k) !== -1);
+}
+function isCold(ev) {
+  const o = EV_OVERRIDES[ev.id];
+  if (o && typeof o.cold === 'boolean') return o.cold;
+  return autoCold(ev);
+}
 
 /* 品牌小備註：先看這個月有沒有手動覆寫，沒有才回 brand-notes.js 的庫存。
    團名每月寫法會變，所以比對是「正規化後含關鍵字」，命中最長的關鍵字。 */
@@ -1098,8 +1122,8 @@ function buildCalendar() {
 
 function buildChip(group, siblings) {
   const chip = document.createElement('div');
-  // 同框的團只要有一個勾高亮，整框就高亮
-  chip.className = 'chip' + (group.some(ev => (EV_OVERRIDES[ev.id] || {}).hi) ? ' hi' : '');
+  // 同框的團只要有一個是冷凍/冷藏，整框就上藍色
+  chip.className = 'chip' + (group.some(isCold) ? ' hi' : '');
 
   // 一格一團給大字，一格兩團縮到 0.78，三團以上再縮；同框多品牌再讓 autoFit 收尾
   const base = siblings <= 1 ? 30 : (siblings === 2 ? 25 : 20);
@@ -1151,7 +1175,7 @@ function buildList() {
   groups.forEach((group, i) => {
     const ev = group[0];
     const r = document.createElement('div');
-    r.className = 'list-row' + (group.some(e => (EV_OVERRIDES[e.id] || {}).hi) ? ' hi' : '');
+    r.className = 'list-row' + (group.some(isCold) ? ' hi' : '');
     r.style.height = rowH + 'px';
     r.style.fontSize = fs + 'px';
 
@@ -1264,7 +1288,8 @@ function renderEvList() {
       o.mergePrev = false;   // 前一團被隱藏或換月份後失效，順手清掉
     }
 
-    const hiWrap = mkCheck('高亮', o.hi, v => { o.hi = v; saveEvents(); renderPoster(); });
+    // 冷凍/冷藏：預設照分類欄自動判斷，勾或取消就變成手動指定
+    const hiWrap = mkCheck('冷凍/冷藏', isCold(ev), v => { o.cold = v; saveEvents(); renderPoster(); });
     hiWrap.setAttribute('data-pane', 'image');
     opts.appendChild(hiWrap);
     opts.appendChild(mkCheck('不顯示', o.hidden, v => {
@@ -1422,10 +1447,10 @@ function presetEvSnapshot() {
   monthEvents().forEach(ev => {
     const o = EV_OVERRIDES[ev.id];
     if (!o) return;
-    if (!o.name && !o.hi && !o.badge && !o.hidden && !o.note && !o.mergePrev) return;
+    if (!o.name && typeof o.cold !== 'boolean' && !o.badge && !o.hidden && !o.note && !o.mergePrev) return;
     out[normKey(ev.title)] = {
       label: plainName(ev.title),          // 只是給人看的，比對不用它
-      name: o.name || '', hi: !!o.hi, badge: o.badge || '',
+      name: o.name || '', cold: (typeof o.cold === 'boolean' ? o.cold : null), badge: o.badge || '',
       hidden: !!o.hidden, note: o.note || '', mergePrev: !!o.mergePrev
     };
   });
@@ -1450,7 +1475,7 @@ function applyPreset(name) {
   if (!p) { presetSay('請先選一個設定檔'); return; }
 
   // 用 DEFAULTS 打底，設定檔沒有的欄位回到預設值（避免舊設定檔缺欄位時殘留上一組的值）
-  S = Object.assign({}, DEFAULTS, p.settings || {});
+  S = Object.assign({}, effectiveDefaults(), p.settings || {});
   saveSettings();
   syncControls();
 
@@ -1463,7 +1488,7 @@ function applyPreset(name) {
     if (!ev) { miss.push(src.label || key); return; }
     const o = ovOf(ev.id);
     o.name = src.name || '';
-    o.hi = !!src.hi;
+    if (typeof src.cold === 'boolean') o.cold = src.cold; else delete o.cold;
     o.badge = src.badge || '';
     o.hidden = !!src.hidden;
     o.note = src.note || '';
@@ -1544,7 +1569,31 @@ function saveAssets() {
   try { localStorage.setItem(LS_ASSETS, JSON.stringify(ASSETS)); }
   catch (e) { alert('圖片太大，瀏覽器存不下，這次可以用但重新整理後要再上傳一次。'); }
 }
+/* 「我的預設」：把調好的版面存成這台電腦的預設值。
+   之後「全部恢復預設」回到這一版，而不是回到程式裡寫死的初始值。
+   （要讓別台電腦也是這一版的話，把設定值給我寫進 DEFAULTS。）*/
+let USER_DEFAULTS = null;
+function effectiveDefaults() {
+  return Object.assign({}, DEFAULTS, USER_DEFAULTS || {});
+}
+function saveUserDefaults() {
+  USER_DEFAULTS = Object.assign({}, S);
+  try { localStorage.setItem(LS_USERDEF, JSON.stringify(USER_DEFAULTS)); } catch (e) {}
+  renderUserDefState();
+}
+function clearUserDefaults() {
+  USER_DEFAULTS = null;
+  try { localStorage.removeItem(LS_USERDEF); } catch (e) {}
+  renderUserDefState();
+}
+function renderUserDefState() {
+  const el = document.getElementById('userDefState');
+  if (el) el.textContent = USER_DEFAULTS ? '（目前已經有一份你的預設）' : '（目前用的是初始值）';
+}
+
 function loadStored() {
+  try { USER_DEFAULTS = JSON.parse(localStorage.getItem(LS_USERDEF) || 'null'); } catch (e) { USER_DEFAULTS = null; }
+  S = Object.assign({}, effectiveDefaults());
   try { Object.assign(S, JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}')); } catch (e) {}
   try { EV_OVERRIDES = JSON.parse(localStorage.getItem(LS_EVENTS) || '{}') || {}; } catch (e) {}
   try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(LS_ASSETS) || '{}')); } catch (e) {}
@@ -1738,6 +1787,15 @@ function init() {
     ASSETS.photo = ''; document.getElementById('filePhoto').value = ''; saveAssets(); renderPoster();
   });
 
+  document.getElementById('btnSaveDefault').addEventListener('click', () => {
+    saveUserDefaults();
+    presetSay('已把現在的版面存成你的預設');
+  });
+  document.getElementById('btnClearDefault').addEventListener('click', () => {
+    if (!confirm('要清除「你的預設」、回到程式的初始值嗎？（現在畫面上的設定不會變）')) return;
+    clearUserDefaults();
+  });
+
   document.getElementById('btnPresetSave').addEventListener('click', () => {
     const input = document.getElementById('tPresetName');
     const name = input.value.trim();
@@ -1770,7 +1828,7 @@ function init() {
   });
   document.getElementById('btnResetAll').addEventListener('click', () => {
     if (!confirm('所有版面設定都會恢復預設（逐團微調與圖片會保留），確定嗎？')) return;
-    S = Object.assign({}, DEFAULTS);
+    S = Object.assign({}, effectiveDefaults());
     saveSettings(); syncControls(); renderPoster();
   });
 
@@ -1780,6 +1838,7 @@ function init() {
 
   syncControls();
   applyPane();
+  renderUserDefState();
   loadData();
 }
 
