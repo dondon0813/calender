@@ -352,6 +352,10 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   box-sizing: border-box;
   border-right: 3px solid var(--p-cell-border);
   border-bottom: 3px solid var(--p-cell-border);
+  /* 圓角改畫在整張表的四個外角：格子自己不留圓角（接縫要是直線），
+     靠外框的圓角＋裁切把最外側的上下左右四角修圓 */
+  border-radius: var(--p-radius);
+  overflow: hidden;
 }
 .cal-grid.collapse .cal-cell {
   border-width: 3px 0 0 3px;
