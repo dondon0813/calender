@@ -15,10 +15,16 @@
 // ===================================================================
 
 // ----- 模組層常數（開機期就會被讀到，一律放檔案最前段） -----
+// key 要跟各前台頁面送出的 page_<key>_日期 完全一致（頁面代號只能小寫英數，見 Code.gs STAT_KEY_WHITELIST_RE）
+// 2026-07-31 新增 kids／starcard／namesticker／schoollabels 四頁，之前這四頁沒有任何統計
 const RPT_PAGE_DEFS = [
   { key: 'index', label: '團購行事曆' },
   { key: 'recipes', label: '食譜大全' },
-  { key: 'school', label: '開學清單' }
+  { key: 'school', label: '開學清單' },
+  { key: 'kids', label: '免費資源' },
+  { key: 'starcard', label: '集點卡' },
+  { key: 'namesticker', label: '姓名貼產生器' },
+  { key: 'schoollabels', label: '開學姓名貼' }
 ];
 // 對應 index.html 的 attachStatTracking()：來源 key 固定是 evKey + '_src_' + mode
 // 行事曆各模式維持單層；食譜頁／開學清單頁 2026-07-27 拆成頁內細項（items），
