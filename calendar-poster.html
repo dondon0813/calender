@@ -427,15 +427,17 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 /* 徽章：用 inline-flex 置中，不要靠 padding 硬喬——中文字的 ascent 比較高，
    line-height 1.25＋不對稱 padding 會讓字看起來黏在上緣 */
 .chip .chip-badge, .list-row .row-badge {
-  display: inline-flex;
-  align-items: center; justify-content: center;
-  /* 同樣的字型補正：上多留 0.2em、下少留，字才會在膠囊正中間（膠囊的 line-height 是 1，字框被壓縮，補正量比團名大） */
-  padding: calc(4px + 0.15em) 12px max(0px, calc(4px - 0.15em));
+  /* 原本是 inline-flex＋line-height:1＋不對稱 padding：字的墨水其實是「溢出」行框、
+     再靠 padding 硬喬回中間。桌機瀏覽器畫得出來，但 html2canvas 換個裝置重畫就會
+     整串往下掉、被膠囊切掉（她 iPhone 匯出的圖）。改成行框本來就裝得下整個墨水，
+     上下留白用 em，字級再怎麼變都成立。 */
+  display: inline-block;
+  padding: 0.26em 0.55em 0.16em;
   border-radius: 999px;
   background: var(--p-badge-bg);
   color: var(--p-badge-text);
   font-size: 20px; font-weight: 800;
-  line-height: 1;
+  line-height: 1.26;
   white-space: nowrap;
 }
 /* 徽章與團名的距離：行事曆模式是上下、列表模式是左右，都吃同一個設定。
@@ -466,9 +468,16 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .num {
   flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: center;
+  /* 不用 flex 置中：數字是文字，flex 的垂直置中是對「字框」不是對「墨水」，
+     而且 html2canvas 在不同裝置上重畫時容易跑掉（她 iPhone 匯出的圖就是歪的）。
+     改成「行高＝圓圈高＋水平置中」，再用 em 補掉字型上下不對稱的那一點點。 */
+  display: block; text-align: center;
   border-radius: 999px;
   color: #fff; font-family: var(--font-display); font-weight: 800;
+}
+.list-row .num span {
+  display: inline-block;
+  position: relative; top: 0.08em;   /* 字框上緣比墨水多、下緣多更多，往下推一點才是視覺置中 */
 }
 .list-row .sep {
   flex: 0 0 auto;
@@ -478,6 +487,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .range {
   flex: 0 0 auto;
+  text-align: center;    /* 欄寬照最長的日期算，短日期置中，左右各分一半空白比較不會忽寬忽窄 */
   white-space: nowrap;   /* 日期絕對不能折行（欄寬是量出來的，差 1px 就會斷成兩行） */
   font-family: var(--font-display); font-weight: 800;
   color: var(--p-month-color);
@@ -1178,7 +1188,10 @@ function autoFit() {
     ranges.forEach(r => { r.style.width = ''; });
     let maxW = 0;
     ranges.forEach(r => { maxW = Math.max(maxW, r.offsetWidth); });
-    maxW += 2;   // offsetWidth 是整數會往下捨，多留 2px 免得最長的那個剛好被擠掉
+    // +2 是因為 offsetWidth 取整會往下捨；再加半個字寬，最長的那個日期才不會
+    // 幾乎貼著團名（日期長度差一位數就差很多，欄寬是照最長的那個算的）
+    const rangeFs = parseFloat(getComputedStyle(ranges[0]).fontSize) || 20;
+    maxW += 2 + Math.round(rangeFs * 0.45);
     ranges.forEach(r => { r.style.width = maxW + 'px'; });
   }
 
@@ -1480,9 +1493,12 @@ function buildList() {
     const numSize = Math.round(rowH * 0.62);
     num.style.width = numSize + 'px';
     num.style.height = numSize + 'px';
+    num.style.lineHeight = numSize + 'px';   // 行高＝圓圈高＝垂直置中（不靠 flex）
     num.style.fontSize = Math.round(numSize * 0.56) + 'px';
     num.style.background = NUM_COLORS[i % NUM_COLORS.length];
-    num.textContent = i + 1;
+    const numTxt = document.createElement('span');
+    numTxt.textContent = i + 1;
+    num.appendChild(numTxt);
     r.appendChild(num);
 
     const sep = document.createElement('div');
