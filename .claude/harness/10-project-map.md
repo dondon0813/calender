@@ -67,7 +67,12 @@ Google 試算表（兩份！）
 
 ## 4. Code.gs 端點目錄（Grep 錨點）
 
-- `doGet`（Code.gs:1877 附近）：scope=calendar → `getEventsAsGviz_()`；scope=public；帶 token → 全量。
+- `doGet`（Grep `^function doGet`）：scope=calendar → `getEventsAsGviz_()`；scope=public → `buildPublicResult_()`；**scope=blocks**（2026-07-31 新增，index.html 專用輕量端點，只回 blocks＋socialLinks）；帶 token → 全量（**不走快取**，後台一律即時讀）。
+- **公開端點快取層**（2026-07-31 建立，Grep `cachedJsonResult_`）：calendar／public／blocks 三支的 JSON 字串放進 CacheService，TTL **90 秒**。命中就完全不碰試算表。
+  - **TTL 不可以拉長**：食材／成品／食譜／開學清單是**直接在試算表編輯**的，不經過 doPost，程式攔不到；TTL 就是「人手改完到前台更新」的上限。要更即時只能裝 onChange 觸發器。
+  - 失效：doPost 的 finally 對非唯讀動作呼叫 `invalidatePublicCache_()`（唯讀清單在 `READONLY_POST_TYPES_RE`，**新增唯讀 type 才可以加進去，加錯就會有「寫了卻不清快取」的破口**）。
+  - 切片鐵律：CacheService 單筆 100KB 是**位元組**，切片用 25000 字元，且切點不可落在 emoji 代理對中間（`safeChunkEnd_`）——切壞了會整個 TTL 都在送壞 JSON 且無聲無息。
+  - 競態：`cachedJsonResult_` 用世代標記（`CACHE_KEY_EPOCH`）擋「讀試算表期間有人存檔」，不一致就不寫回快取。
 - `doPost`（Code.gs:1952 附近）：以 `if (type === '...')` 分支。找某動作直接 Grep：`type === 'event-update'`。
 - 動作家族（前綴）：`vendor-db-*`、`brand-db-*`、`pnote-*`（備忘錄）、`task-*`／`taskname-*`（任務）、`pr-*`（公關品）、`todo-*`、`event-*`、`block-*`（自訂區塊）、`image-*`（GitHub 圖片庫代理）、`perm-*`、`stat-*`、`login`、`change-password`、`social-link-set`。
 - **權限系統**（2026-07-29 由「只有圖片庫一項」擴充）：權限項目定義在 Code.gs 的 `PERM_DEFS`（7 項：`system`／`imageLibrary`／`report`／`commission`(分潤)／`revenue`(業績)／`brandVendorEdit`／`calendarEdit`），角色模板在 `ROLE_PRESETS`（副管理員／經紀人助理／行銷人員／美編小編）。管理員由 `isAdmin_()` 判斷（名字＝`ADMIN_NAME`＝雪莉），一律全開。**要加權限項目只改 `PERM_DEFS`**：試算表「員工權限」分頁會自動補欄、`perm-list` 會把 defs 吐給前端動態渲染設定頁，前端不用動。角色只是「一次勾好」的模板，`setStaffRole_()` 會把預設值實際寫進每一格，**不做「空白＝繼承角色」的隱含邏輯**——試算表看到什麼就是什麼。

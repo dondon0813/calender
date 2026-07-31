@@ -77,6 +77,124 @@ const ACCT_STATUSES = ['未成團', '進行中', '待結算', '已請款', '已�
 // 陣列僅作白名單枚舉，不代表推進順序；「下一階段」推進對照表在前端 accounting.js。
 const ACCT_RECON_STATUSES = ['待回填', '待核對業績', '審稿中', '審稿完成(待發布)', '已發布', '待開發票', '待確認發票', '等待匯款', '待對帳'];
 
+// ===== 【新】公開端點快取（2026-07-31 建立）=====
+// 背景：Google 寄信警告「同時執行作業」逼近 1000 上限。原因是三個公開頁（行事曆／食譜／開學清單）
+// 每個訪客打開都會打 scope=calendar 與 scope=public，而 scope=public 一次要讀
+// 品牌庫（兩次）＋食材＋成品＋食譜＋開學清單＋自訂區塊＋社群連結，每個請求都重讀一次試算表、
+// 動輒好幾秒。開學季流量一上來，這些慢執行就會堆疊成並行數爆量。
+//
+// 對策：把回傳的 JSON 字串放進 CacheService。命中快取的請求完全不碰試算表、毫秒級回覆，
+// 並行數自然掉下來。
+//
+// ⚠️ 失效的兩條路，缺一不可：
+//  1. 後台的寫入型動作結束時主動清（見 doPost 的 finally）→ 用後台改的東西，客人立刻看得到。
+//  2. TTL 到期自動失效 → **食材資料庫／成品／食譜／開學清單這幾張表是直接在試算表裡編輯的，
+//     不經過 doPost，沒有任何程式抓得到那個動作**，只能靠 TTL 兜底。所以 TTL 不可以拉長：
+//     它就是「雪莉直接改試算表之後，前台最久多久才會更新」的上限。
+const PUBLIC_CACHE_TTL_SEC = 90;
+const CACHE_KEY_CALENDAR = 'pub_calendar_v1';
+const CACHE_KEY_PUBLIC = 'pub_public_v1';
+const CACHE_KEY_BLOCKS = 'pub_blocks_v1';
+const PUBLIC_CACHE_KEYS = [CACHE_KEY_CALENDAR, CACHE_KEY_PUBLIC, CACHE_KEY_BLOCKS];
+// 世代標記：用來擋「讀試算表讀到一半，有人存檔清了快取」的競態，見 cachedJsonResult_。
+// 它不在 PUBLIC_CACHE_KEYS 裡，所以清快取時不會把自己清掉。
+const CACHE_KEY_EPOCH = 'pub_cache_epoch';
+const CACHE_EPOCH_TTL_SEC = 21600; // CacheService 允許的最長 TTL（6 小時）
+// CacheService 單筆上限 100KB，是**位元組**不是字元；中文一個字 3 bytes，
+// 所以切片以 25000 字元為單位（最壞情況 75KB），不要改大。
+const CACHE_CHUNK_CHARS = 25000;
+const CACHE_MAX_CHUNKS = 40;
+
+// 快取讀取：回傳原始 JSON 字串（不 parse，因為要直接吐出去）。任何一片不見就整份當作沒有——
+// 拼半份資料出去比沒有快取更糟。
+function cacheGetJson_(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const count = Number(cache.get(key));
+    if (!count || count < 1) return null;
+    const keys = [];
+    for (let i = 0; i < count; i++) keys.push(key + '_' + i);
+    const parts = cache.getAll(keys);
+    let out = '';
+    for (let i = 0; i < count; i++) {
+      const piece = parts[key + '_' + i];
+      if (piece == null) return null;
+      out += piece;
+    }
+    return out;
+  } catch (err) {
+    return null; // 快取壞掉一律當作沒快取，不能影響正常回應
+  }
+}
+
+// 切片邊界不可以切在「代理對」中間。站上到處是 emoji（🛒、自訂區塊標題…），
+// 一個 emoji 在 JS 字串裡是兩個 code unit；從中間切開會留下兩個孤兒 code unit，
+// 存進快取再拼回來就變成壞字，而且命中快取時是原字串直接吐出、不會被發現，
+// 客人端 res.json() 直接爆掉，整個 TTL 都在送壞資料。所以切點落在高位代理後面就往前退一格。
+function safeChunkEnd_(str, end) {
+  if (end >= str.length) return str.length;
+  const code = str.charCodeAt(end - 1);
+  if (code >= 0xD800 && code <= 0xDBFF) return end - 1;
+  return end;
+}
+
+function cachePutJson_(key, jsonStr) {
+  try {
+    const pieces = [];
+    let pos = 0;
+    while (pos < jsonStr.length) {
+      let end = safeChunkEnd_(jsonStr, Math.min(pos + CACHE_CHUNK_CHARS, jsonStr.length));
+      if (end <= pos) end = Math.min(pos + CACHE_CHUNK_CHARS, jsonStr.length); // 保險：不可能切出空片段
+      pieces.push(jsonStr.substring(pos, end));
+      pos = end;
+      if (pieces.length > CACHE_MAX_CHUNKS) {
+        // 資料長大到塞不進快取時要留下痕跡，否則快取安靜失效、並行數又爆回去卻查不到原因
+        console.warn('公開端點 ' + key + ' 的資料超過快取上限（' + jsonStr.length + ' 字元），這次不快取');
+        return;
+      }
+    }
+    if (!pieces.length) return;
+    const map = {};
+    for (let i = 0; i < pieces.length; i++) map[key + '_' + i] = pieces[i];
+    const cache = CacheService.getScriptCache();
+    cache.putAll(map, PUBLIC_CACHE_TTL_SEC);
+    // 索引鍵最後才寫：先有切片再有索引，讀的人就不會拿到指向空片段的索引。
+    cache.put(key, String(pieces.length), PUBLIC_CACHE_TTL_SEC);
+  } catch (err) { /* 快取寫入失敗不影響這次回應 */ }
+}
+
+function getCacheEpoch_() {
+  try { return CacheService.getScriptCache().get(CACHE_KEY_EPOCH) || ''; }
+  catch (err) { return ''; }
+}
+
+function invalidatePublicCache_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const keys = [];
+    PUBLIC_CACHE_KEYS.forEach(function (key) {
+      keys.push(key);
+      for (let i = 0; i < CACHE_MAX_CHUNKS; i++) keys.push(key + '_' + i);
+    });
+    cache.removeAll(keys);
+    // 換一個世代標記，讓「正在讀試算表」的請求知道自己手上那份已經過期，不要寫回快取
+    cache.put(CACHE_KEY_EPOCH, Utilities.getUuid(), CACHE_EPOCH_TTL_SEC);
+  } catch (err) { /* 清不掉最多就是撐到 TTL 過期，不算致命 */ }
+}
+
+// 走快取的公開回應：命中就直接吐字串，沒命中才真的去讀試算表。
+function cachedJsonResult_(cacheKey, builder) {
+  const cached = cacheGetJson_(cacheKey);
+  if (cached) return jsonTextResult_(cached);
+  const epochBefore = getCacheEpoch_();
+  const jsonStr = JSON.stringify(builder());
+  // scope=public 讀完整份試算表要好幾秒，這期間若有人在後台存檔（已經清過快取了），
+  // 我們手上這份就是舊資料——這次照樣回給對方，但**不寫進快取**，
+  // 否則舊資料會被釘住一整個 TTL，等於那次存檔白清了。
+  if (getCacheEpoch_() === epochBefore) cachePutJson_(cacheKey, jsonStr);
+  return jsonTextResult_(jsonStr);
+}
+
 // ===== 共用工具 =====
 
 function getKeyValueSheet_(name, headerLabel) {
@@ -1931,26 +2049,77 @@ function isValidStatKey_(key) {
   return STAT_KEY_WHITELIST_RE.test(key);
 }
 
-function incrementStat_(key, field) {
-  if (!isValidStatKey_(key)) return false;
-  const col = field === 'clicks' ? 3 : 2;
+const STAT_BATCH_MAX_ITEMS = 60; // 一次最多收這麼多筆，避免有人拿這支端點灌爆試算表
+
+// 批次累加統計：把同一批 key 的增量先在記憶體加總，再一次寫回試算表。
+// items 格式：[{ key: '12_2026-7-31', field: 'views'|'clicks' }, ...]
+// 回傳實際寫進去的 key 數量。
+function incrementStats_(items) {
+  const deltas = {};
+  const order = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i] || {};
+    const key = String(it.key || '').trim();
+    if (!isValidStatKey_(key)) continue;
+    if (!deltas[key]) { deltas[key] = { views: 0, clicks: 0 }; order.push(key); }
+    if (it.field === 'clicks') deltas[key].clicks++;
+    else deltas[key].views++;
+  }
+  if (!order.length) return 0;
+
   const sheet = getStatSheet_();
-  const data = sheet.getDataRange().getValues();
-  let rowIndex = -1;
+  const lastRow = sheet.getLastRow();
+  const data = lastRow > 1 ? sheet.getRange(1, 1, lastRow, 4).getValues() : [];
+  const rowOf = {};
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === key) { rowIndex = i + 1; break; }
+    const k = String(data[i][0]);
+    if (k && rowOf[k] === undefined) rowOf[k] = i; // 0-based 資料索引，寫入時 +1
   }
-  if (rowIndex === -1) {
-    if (data.length - 1 >= STAT_KEY_ROW_CAP) return false; // 既有 key 數已達上限，不再新增；既有 key 累加不受此限制
-    const row = [key, 0, 0, new Date()];
-    row[col - 1] = 1;
-    sheet.appendRow(row);
-  } else {
-    const cell = sheet.getRange(rowIndex, col);
-    cell.setValue((Number(cell.getValue()) || 0) + 1);
-    sheet.getRange(rowIndex, 4).setValue(new Date());
+
+  const now = new Date();
+  const newRows = [];
+  const existingCount = Math.max(0, data.length - 1);
+  let minTouched = -1, maxTouched = -1; // 被動到的資料索引範圍（0-based，含頭尾）
+  let written = 0;
+
+  for (let i = 0; i < order.length; i++) {
+    const key = order[i];
+    const d = deltas[key];
+    const idx = rowOf[key];
+    if (idx === undefined) {
+      // 既有 key 數已達上限就不再新增；既有 key 的累加不受此限制
+      if (existingCount + newRows.length >= STAT_KEY_ROW_CAP) continue;
+      newRows.push([key, d.views, d.clicks, now]);
+      written++;
+    } else {
+      // 先改記憶體裡的副本，最後一次寫回。不要在迴圈裡逐列 setValues——
+      // 那是握著統計鎖對試算表來回幾十次，其他人的統計會搶不到鎖而整批被丟掉。
+      data[idx][1] = (Number(data[idx][1]) || 0) + d.views;
+      data[idx][2] = (Number(data[idx][2]) || 0) + d.clicks;
+      data[idx][3] = now;
+      if (minTouched < 0 || idx < minTouched) minTouched = idx;
+      if (idx > maxTouched) maxTouched = idx;
+      written++;
+    }
   }
-  return true;
+
+  if (minTouched >= 0) {
+    // 只寫「被動到的最小～最大列」這一段，不要整張表重寫：這張表上限 5000 列，
+    // 整表 setValues 是一萬多格的寫入，只為了改一列而握著統計鎖跑一兩秒，
+    // 反而比原本的逐列寫更糟。中間夾到的未動列填的是自己原本的值，等同沒動。
+    const out = [];
+    for (let i = minTouched; i <= maxTouched; i++) out.push([data[i][1], data[i][2], data[i][3]]);
+    sheet.getRange(minTouched + 1, 2, out.length, 3).setValues(out);
+  }
+  if (newRows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 4).setValues(newRows);
+  }
+  return written;
+}
+
+// 單筆版保留給舊前端（沒清快取的瀏覽器還會送 stat-view／stat-click）
+function incrementStat_(key, field) {
+  return incrementStats_([{ key: key, field: field === 'clicks' ? 'clicks' : 'views' }]) > 0;
 }
 
 // ===== 【新】開團狀態清單：自訂區塊 =====
@@ -2342,17 +2511,11 @@ function repairWebpUrlsInText_(text, cache) {
 
 // ===== 對外介面 =====
 
-function doGet(e) {
-  const scope = e && e.parameter ? e.parameter.scope : '';
-  const token = e && e.parameter ? e.parameter.token : '';
-
-  // 前台行事曆專用：回傳與 gviz 相同格式的活動資料（公開、免登入）
-  if (scope === 'calendar') {
-    return jsonResult_(getEventsAsGviz_());
-  }
-
+// 公開端點的資料組裝抽出來，讓 doGet 的三條公開路徑都能走 cachedJsonResult_()。
+// ⚠️ 這是免登入公開範圍，白名單規則寫在各欄註解裡，加欄位前先讀。
+function buildPublicResult_() {
   // 前台食材/食譜頁的品牌篩選＋品牌介紹：改由「團購品牌資料庫」勾選「顯示於食材食譜=是」的品牌提供。
-  // ⚠️ 這是免登入公開範圍，只輸出「品牌名稱／品牌介紹／蝦皮連結」三欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
+  // ⚠️ 只輸出「品牌名稱／品牌介紹／蝦皮連結」三欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
   // 「蝦皮連結」是刻意公開的欄位：它本來就是要給客人點的導購網址（沒開團時前台食材/食譜頁用它導流），
   // 與聯絡窗口那種內部資料性質不同；除了這三欄以外，任何新欄位一律不准加進來。
   const publicBrands = getBrandDbList_()
@@ -2367,7 +2530,7 @@ function doGet(e) {
     .filter(b => b.name && b.thumbUrl)
     .map(b => ({ '品牌名稱': b.name, '去背小圖': b.thumbUrl }));
 
-  const publicResult = {
+  return {
     brands: publicBrands,
     brandThumbs: publicBrandThumbs,
     ingredients: getMergedIngredientsAndProducts_(),
@@ -2376,10 +2539,31 @@ function doGet(e) {
     blocks: getPublicCustomBlocks_(),
     socialLinks: getSocialLinks_()
   };
+}
+
+function doGet(e) {
+  const scope = e && e.parameter ? e.parameter.scope : '';
+  const token = e && e.parameter ? e.parameter.token : '';
+
+  // 前台行事曆專用：回傳與 gviz 相同格式的活動資料（公開、免登入）
+  if (scope === 'calendar') {
+    return cachedJsonResult_(CACHE_KEY_CALENDAR, getEventsAsGviz_);
+  }
+
+  // 首頁（index.html）的自訂區塊＋社群連結專用輕量端點。
+  // 首頁本來是整包抓 scope=public，但它只用得到這兩樣，卻要害後端把品牌庫讀兩次、
+  // 再加食材／成品／食譜／開學清單——那是同時執行作業爆量的主因之一。
+  if (scope === 'blocks') {
+    return cachedJsonResult_(CACHE_KEY_BLOCKS, function () {
+      return { blocks: getPublicCustomBlocks_(), socialLinks: getSocialLinks_() };
+    });
+  }
 
   if (scope === 'public') {
-    return jsonResult_(publicResult);
+    return cachedJsonResult_(CACHE_KEY_PUBLIC, buildPublicResult_);
   }
+
+  const publicResult = buildPublicResult_();
 
   const user = getSessionUser_(token);
   if (!user) {
@@ -2448,6 +2632,11 @@ function handleLogin_(body) {
   return jsonResult_({ success: true, token: token, name: matches[0].name, weakPassword: (password === DEFAULT_PASSWORD) });
 }
 
+// 純查詢的動作不必清公開端點快取——後台開著清單頁會一直打這些，每次都清就等於沒有快取。
+// ⚠️ 只放「確定不寫任何資料」的 type。doPost 結尾有 memo/url 的 fall-through
+//（不認得的 type 帶著 key 進來其實會寫資料），所以名單寧可短，不要放沒查證過的名字。
+const READONLY_POST_TYPES_RE = /^(acct-list|brand-db-list|brand-db-lookup|vendor-db-list|perm-list|pnote-list|pr-item-list|image-list|image-folder-list|image-usage-check|stat-report)$/;
+
 function doPost(e) {
   let body;
   try {
@@ -2469,10 +2658,19 @@ function doPost(e) {
 
   // 瀏覽／點擊統計是前台每次載入都會打的純計數：搶不到鎖就直接放棄這一筆，
   // 不要排隊，否則公開頁流量會把鎖的隊伍塞滿，連帶拖垮後台操作。
-  if (type === 'stat-view' || type === 'stat-click') {
+  // stat-batch 是 2026-07-31 加的批次版：前台把 1.5 秒內累積的統計併成一次送，
+  // 十幾次執行作業變一次。舊的單筆 stat-view／stat-click 保留，前台改版前後都收得到。
+  if (type === 'stat-view' || type === 'stat-click' || type === 'stat-batch') {
     const statLock = LockService.getScriptLock();
     if (!statLock.tryLock(3000)) return jsonResult_({ success: false, busy: true });
     try {
+      if (type === 'stat-batch') {
+        const rawItems = Array.isArray(body.items) ? body.items.slice(0, STAT_BATCH_MAX_ITEMS) : [];
+        if (!rawItems.length) return jsonResult_({ success: false, error: '缺少 items' });
+        const writtenCount = incrementStats_(rawItems);
+        // 整批 key 全部無效時回 false，跟單筆路徑的語意一致（前端不看回應，但除錯時不要被騙）
+        return jsonResult_({ success: writtenCount > 0, written: writtenCount });
+      }
       const statKey = String(body.key || '').trim();
       if (!statKey) return jsonResult_({ success: false, error: '缺少 key' });
       return jsonResult_({ success: incrementStat_(statKey, type === 'stat-click' ? 'clicks' : 'views') });
@@ -3375,6 +3573,11 @@ function doPost(e) {
     return jsonResult_({ success: false, error: String(err) });
   } finally {
     try { lock.releaseLock(); } catch (e2) {}
+    // 後台只要動過資料就把公開端點的快取清掉，客人下一次載入就是新的，不必等 TTL。
+    // 寧可多清（最多就是下一個請求重讀一次試算表），也不要讓客人看到舊資料。
+    if (!READONLY_POST_TYPES_RE.test(type)) {
+      invalidatePublicCache_();
+    }
   }
 }
 
@@ -3762,5 +3965,12 @@ function upsertPrStatus_(key, fields) {
 function jsonResult_(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// 已經是 JSON 字串時用這個（快取拿出來的東西不必 parse 完再 stringify 回去）
+function jsonTextResult_(jsonStr) {
+  return ContentService
+    .createTextOutput(jsonStr)
     .setMimeType(ContentService.MimeType.JSON);
 }
