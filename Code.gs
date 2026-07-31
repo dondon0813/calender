@@ -77,6 +77,83 @@ const ACCT_STATUSES = ['未成團', '進行中', '待結算', '已請款', '已�
 // 陣列僅作白名單枚舉，不代表推進順序；「下一階段」推進對照表在前端 accounting.js。
 const ACCT_RECON_STATUSES = ['待回填', '待核對業績', '審稿中', '審稿完成(待發布)', '已發布', '待開發票', '待確認發票', '等待匯款', '待對帳'];
 
+// ===== 【新】公開端點快取（2026-07-31 建立）=====
+// 背景：Google 寄信警告「同時執行作業」逼近 1000 上限。原因是三個公開頁（行事曆／食譜／開學清單）
+// 每個訪客打開都會打 scope=calendar 與 scope=public，而 scope=public 一次要讀
+// 品牌庫（兩次）＋食材＋成品＋食譜＋開學清單＋自訂區塊＋社群連結，每個請求都重讀一次試算表、
+// 動輒好幾秒。開學季流量一上來，這些慢執行就會堆疊成並行數爆量。
+//
+// 對策：把回傳的 JSON 字串放進 CacheService。命中快取的請求完全不碰試算表、毫秒級回覆，
+// 並行數自然掉下來。**後台任何寫入動作都會清快取**（見 doPost 的 finally），
+// 所以雪莉改完資料客人立刻看得到，不必等 TTL 到期。
+const PUBLIC_CACHE_TTL_SEC = 300;
+const CACHE_KEY_CALENDAR = 'pub_calendar_v1';
+const CACHE_KEY_PUBLIC = 'pub_public_v1';
+const CACHE_KEY_BLOCKS = 'pub_blocks_v1';
+const PUBLIC_CACHE_KEYS = [CACHE_KEY_CALENDAR, CACHE_KEY_PUBLIC, CACHE_KEY_BLOCKS];
+// CacheService 單筆上限 100KB，是**位元組**不是字元；中文一個字 3 bytes，
+// 所以切片以 25000 字元為單位（最壞情況 75KB），不要改大。
+const CACHE_CHUNK_CHARS = 25000;
+const CACHE_MAX_CHUNKS = 40;
+
+// 快取讀取：回傳原始 JSON 字串（不 parse，因為要直接吐出去）。任何一片不見就整份當作沒有——
+// 拼半份資料出去比沒有快取更糟。
+function cacheGetJson_(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const count = Number(cache.get(key));
+    if (!count || count < 1) return null;
+    const keys = [];
+    for (let i = 0; i < count; i++) keys.push(key + '_' + i);
+    const parts = cache.getAll(keys);
+    let out = '';
+    for (let i = 0; i < count; i++) {
+      const piece = parts[key + '_' + i];
+      if (piece == null) return null;
+      out += piece;
+    }
+    return out;
+  } catch (err) {
+    return null; // 快取壞掉一律當作沒快取，不能影響正常回應
+  }
+}
+
+function cachePutJson_(key, jsonStr) {
+  try {
+    const count = Math.ceil(jsonStr.length / CACHE_CHUNK_CHARS);
+    if (count < 1 || count > CACHE_MAX_CHUNKS) return; // 太大就不快取，別把 cache 配額塞爆
+    const map = {};
+    for (let i = 0; i < count; i++) {
+      map[key + '_' + i] = jsonStr.substring(i * CACHE_CHUNK_CHARS, (i + 1) * CACHE_CHUNK_CHARS);
+    }
+    const cache = CacheService.getScriptCache();
+    cache.putAll(map, PUBLIC_CACHE_TTL_SEC);
+    // 索引鍵最後才寫：先有切片再有索引，讀的人就不會拿到指向空片段的索引。
+    cache.put(key, String(count), PUBLIC_CACHE_TTL_SEC);
+  } catch (err) { /* 快取寫入失敗不影響這次回應 */ }
+}
+
+function invalidatePublicCache_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const keys = [];
+    PUBLIC_CACHE_KEYS.forEach(function (key) {
+      keys.push(key);
+      for (let i = 0; i < CACHE_MAX_CHUNKS; i++) keys.push(key + '_' + i);
+    });
+    cache.removeAll(keys);
+  } catch (err) { /* 清不掉最多就是撐到 TTL 過期，不算致命 */ }
+}
+
+// 走快取的公開回應：命中就直接吐字串，沒命中才真的去讀試算表。
+function cachedJsonResult_(cacheKey, builder) {
+  const cached = cacheGetJson_(cacheKey);
+  if (cached) return jsonTextResult_(cached);
+  const jsonStr = JSON.stringify(builder());
+  cachePutJson_(cacheKey, jsonStr);
+  return jsonTextResult_(jsonStr);
+}
+
 // ===== 共用工具 =====
 
 function getKeyValueSheet_(name, headerLabel) {
@@ -1931,26 +2008,64 @@ function isValidStatKey_(key) {
   return STAT_KEY_WHITELIST_RE.test(key);
 }
 
-function incrementStat_(key, field) {
-  if (!isValidStatKey_(key)) return false;
-  const col = field === 'clicks' ? 3 : 2;
+const STAT_BATCH_MAX_ITEMS = 60; // 一次最多收這麼多筆，避免有人拿這支端點灌爆試算表
+
+// 批次累加統計：把同一批 key 的增量先在記憶體加總，再一次寫回試算表。
+// items 格式：[{ key: '12_2026-7-31', field: 'views'|'clicks' }, ...]
+// 回傳實際寫進去的 key 數量。
+function incrementStats_(items) {
+  const deltas = {};
+  const order = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i] || {};
+    const key = String(it.key || '').trim();
+    if (!isValidStatKey_(key)) continue;
+    if (!deltas[key]) { deltas[key] = { views: 0, clicks: 0 }; order.push(key); }
+    if (it.field === 'clicks') deltas[key].clicks++;
+    else deltas[key].views++;
+  }
+  if (!order.length) return 0;
+
   const sheet = getStatSheet_();
-  const data = sheet.getDataRange().getValues();
-  let rowIndex = -1;
+  const lastRow = sheet.getLastRow();
+  const data = lastRow > 1 ? sheet.getRange(1, 1, lastRow, 3).getValues() : [];
+  const rowOf = {};
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === key) { rowIndex = i + 1; break; }
+    const k = String(data[i][0]);
+    if (k && rowOf[k] === undefined) rowOf[k] = i; // 0-based 資料索引，寫入時 +1
   }
-  if (rowIndex === -1) {
-    if (data.length - 1 >= STAT_KEY_ROW_CAP) return false; // 既有 key 數已達上限，不再新增；既有 key 累加不受此限制
-    const row = [key, 0, 0, new Date()];
-    row[col - 1] = 1;
-    sheet.appendRow(row);
-  } else {
-    const cell = sheet.getRange(rowIndex, col);
-    cell.setValue((Number(cell.getValue()) || 0) + 1);
-    sheet.getRange(rowIndex, 4).setValue(new Date());
+
+  const now = new Date();
+  const newRows = [];
+  let existingCount = Math.max(0, data.length - 1);
+  let written = 0;
+
+  for (let i = 0; i < order.length; i++) {
+    const key = order[i];
+    const d = deltas[key];
+    const idx = rowOf[key];
+    if (idx === undefined) {
+      // 既有 key 數已達上限就不再新增；既有 key 的累加不受此限制
+      if (existingCount + newRows.length >= STAT_KEY_ROW_CAP) continue;
+      newRows.push([key, d.views, d.clicks, now]);
+      written++;
+    } else {
+      const views = (Number(data[idx][1]) || 0) + d.views;
+      const clicks = (Number(data[idx][2]) || 0) + d.clicks;
+      sheet.getRange(idx + 1, 2, 1, 3).setValues([[views, clicks, now]]);
+      written++;
+    }
   }
-  return true;
+
+  if (newRows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 4).setValues(newRows);
+  }
+  return written;
+}
+
+// 單筆版保留給舊前端（沒清快取的瀏覽器還會送 stat-view／stat-click）
+function incrementStat_(key, field) {
+  return incrementStats_([{ key: key, field: field === 'clicks' ? 'clicks' : 'views' }]) > 0;
 }
 
 // ===== 【新】開團狀態清單：自訂區塊 =====
@@ -2342,17 +2457,11 @@ function repairWebpUrlsInText_(text, cache) {
 
 // ===== 對外介面 =====
 
-function doGet(e) {
-  const scope = e && e.parameter ? e.parameter.scope : '';
-  const token = e && e.parameter ? e.parameter.token : '';
-
-  // 前台行事曆專用：回傳與 gviz 相同格式的活動資料（公開、免登入）
-  if (scope === 'calendar') {
-    return jsonResult_(getEventsAsGviz_());
-  }
-
+// 公開端點的資料組裝抽出來，讓 doGet 的三條公開路徑都能走 cachedJsonResult_()。
+// ⚠️ 這是免登入公開範圍，白名單規則寫在各欄註解裡，加欄位前先讀。
+function buildPublicResult_() {
   // 前台食材/食譜頁的品牌篩選＋品牌介紹：改由「團購品牌資料庫」勾選「顯示於食材食譜=是」的品牌提供。
-  // ⚠️ 這是免登入公開範圍，只輸出「品牌名稱／品牌介紹／蝦皮連結」三欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
+  // ⚠️ 只輸出「品牌名稱／品牌介紹／蝦皮連結」三欄，其餘（LINE/Email/IG窗口、備註）不可外洩。
   // 「蝦皮連結」是刻意公開的欄位：它本來就是要給客人點的導購網址（沒開團時前台食材/食譜頁用它導流），
   // 與聯絡窗口那種內部資料性質不同；除了這三欄以外，任何新欄位一律不准加進來。
   const publicBrands = getBrandDbList_()
@@ -2367,7 +2476,7 @@ function doGet(e) {
     .filter(b => b.name && b.thumbUrl)
     .map(b => ({ '品牌名稱': b.name, '去背小圖': b.thumbUrl }));
 
-  const publicResult = {
+  return {
     brands: publicBrands,
     brandThumbs: publicBrandThumbs,
     ingredients: getMergedIngredientsAndProducts_(),
@@ -2376,10 +2485,31 @@ function doGet(e) {
     blocks: getPublicCustomBlocks_(),
     socialLinks: getSocialLinks_()
   };
+}
+
+function doGet(e) {
+  const scope = e && e.parameter ? e.parameter.scope : '';
+  const token = e && e.parameter ? e.parameter.token : '';
+
+  // 前台行事曆專用：回傳與 gviz 相同格式的活動資料（公開、免登入）
+  if (scope === 'calendar') {
+    return cachedJsonResult_(CACHE_KEY_CALENDAR, getEventsAsGviz_);
+  }
+
+  // 首頁（index.html）的自訂區塊＋社群連結專用輕量端點。
+  // 首頁本來是整包抓 scope=public，但它只用得到這兩樣，卻要害後端把品牌庫讀兩次、
+  // 再加食材／成品／食譜／開學清單——那是同時執行作業爆量的主因之一。
+  if (scope === 'blocks') {
+    return cachedJsonResult_(CACHE_KEY_BLOCKS, function () {
+      return { blocks: getPublicCustomBlocks_(), socialLinks: getSocialLinks_() };
+    });
+  }
 
   if (scope === 'public') {
-    return jsonResult_(publicResult);
+    return cachedJsonResult_(CACHE_KEY_PUBLIC, buildPublicResult_);
   }
+
+  const publicResult = buildPublicResult_();
 
   const user = getSessionUser_(token);
   if (!user) {
@@ -2469,10 +2599,17 @@ function doPost(e) {
 
   // 瀏覽／點擊統計是前台每次載入都會打的純計數：搶不到鎖就直接放棄這一筆，
   // 不要排隊，否則公開頁流量會把鎖的隊伍塞滿，連帶拖垮後台操作。
-  if (type === 'stat-view' || type === 'stat-click') {
+  // stat-batch 是 2026-07-31 加的批次版：前台把 1.5 秒內累積的統計併成一次送，
+  // 十幾次執行作業變一次。舊的單筆 stat-view／stat-click 保留，前台改版前後都收得到。
+  if (type === 'stat-view' || type === 'stat-click' || type === 'stat-batch') {
     const statLock = LockService.getScriptLock();
     if (!statLock.tryLock(3000)) return jsonResult_({ success: false, busy: true });
     try {
+      if (type === 'stat-batch') {
+        const rawItems = Array.isArray(body.items) ? body.items.slice(0, STAT_BATCH_MAX_ITEMS) : [];
+        if (!rawItems.length) return jsonResult_({ success: false, error: '缺少 items' });
+        return jsonResult_({ success: true, written: incrementStats_(rawItems) });
+      }
       const statKey = String(body.key || '').trim();
       if (!statKey) return jsonResult_({ success: false, error: '缺少 key' });
       return jsonResult_({ success: incrementStat_(statKey, type === 'stat-click' ? 'clicks' : 'views') });
@@ -3375,8 +3512,16 @@ function doPost(e) {
     return jsonResult_({ success: false, error: String(err) });
   } finally {
     try { lock.releaseLock(); } catch (e2) {}
+    // 後台只要動過資料就把公開端點的快取清掉，客人下一次載入就是新的，不必等 TTL。
+    // 寧可多清（最多就是下一個請求重讀一次試算表），也不要讓客人看到舊資料。
+    if (!STAT_READONLY_TYPES_RE.test(type)) {
+      invalidatePublicCache_();
+    }
   }
 }
+
+// 純查詢的動作不必清快取——後台開著清單頁會一直打這些，每次都清就等於沒有快取。
+const STAT_READONLY_TYPES_RE = /^(acct-list|brand-db-list|brand-db-lookup|vendor-db-list|perm-list|pnote-list|pr-item-list|image-list|image-folder-list|image-usage-check|stat-report|dir|file)$/;
 
 // ===== 任務系統 =====
 
@@ -3762,5 +3907,12 @@ function upsertPrStatus_(key, fields) {
 function jsonResult_(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// 已經是 JSON 字串時用這個（快取拿出來的東西不必 parse 完再 stringify 回去）
+function jsonTextResult_(jsonStr) {
+  return ContentService
+    .createTextOutput(jsonStr)
     .setMimeType(ContentService.MimeType.JSON);
 }

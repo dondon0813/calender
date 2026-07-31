@@ -3800,8 +3800,42 @@ function renderTaskUI() {
 loadData();
 // 注意：不在這裡重複呼叫 fetchMemos()——已登入時 session 還原分支、剛登入時 tryUnlock() 都各自呼叫過一次，
 // 這裡再呼叫等於同時打兩個一樣的請求給本來就慢的 Apps Script，會讓「剛登入」的空白等待更久。
-setInterval(loadData, 60000);
-setInterval(fetchMemos, 60000);
+// 自動更新（2026-07-31 改）：原本不管後台分頁有沒有在看，每 60 秒各打一次 loadData／fetchMemos。
+// 後台的 loadData 是最重的請求（一次撈任務、備忘錄、廠商、品牌、待辦、統計…），放著不看也照打，
+// 會跟前台流量一起把 Apps Script 的同時執行作業推到上限。
+// 改成：間隔 2 分鐘，且分頁被切走就停；切回來若超過一個間隔沒更新才補抓。
+const ADMIN_AUTO_REFRESH_MS = 2 * 60 * 1000;
+let adminAutoRefreshTimer = null;
+let adminLastRefreshAt = Date.now();
+
+function adminAutoRefreshTick() {
+  if (document.hidden) return; // 保險：有些瀏覽器不會觸發 visibilitychange
+  adminLastRefreshAt = Date.now();
+  loadData();
+  fetchMemos();
+}
+
+function startAdminAutoRefresh() {
+  if (adminAutoRefreshTimer) return;
+  adminAutoRefreshTimer = setInterval(adminAutoRefreshTick, ADMIN_AUTO_REFRESH_MS);
+}
+
+function stopAdminAutoRefresh() {
+  if (!adminAutoRefreshTimer) return;
+  clearInterval(adminAutoRefreshTimer);
+  adminAutoRefreshTimer = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopAdminAutoRefresh();
+  } else {
+    if (Date.now() - adminLastRefreshAt >= ADMIN_AUTO_REFRESH_MS) adminAutoRefreshTick();
+    startAdminAutoRefresh();
+  }
+});
+
+if (!document.hidden) startAdminAutoRefresh();
 
 // ===== 待辦事項 → 已拆到 todoList.js（載入順序在 admin.js 之前，勿改動順序） =====
 // ===== 圖片庫 → 已拆到 imageLibrary.js（載入順序在 admin.js 之前，勿改動順序） =====
