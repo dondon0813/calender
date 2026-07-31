@@ -336,6 +336,7 @@ const STICKER_STYLES = {
     label: '交通工具',
     emoji: '🚒',
     mode: 'sheet',
+    singleNameOnly: true,   // 車身只有一條位置，兩行會小到看不清楚 → 只收中文姓名
     sheet: 'images/name-stickers/vehicle-sheet-01.webp',
     // slots：姓名要寫上去的車身區塊。x/y/w/h 一律是「佔底圖寬高的比例（0~1）」，
     // 底圖將來換尺寸也不用重算；stroke 是該台車車身色再深一點（約 ×0.72）當文字外框色。
@@ -368,8 +369,19 @@ document.querySelectorAll('#nsStyleSelect .ns-style-card').forEach(card => {
     document.querySelectorAll('#nsStyleSelect .ns-style-card').forEach(c => {
       c.classList.toggle('active', c === card);
     });
+    applySingleNameOnly(nsSelectedStyle);
   });
 });
+
+// 只收一個姓名的款式（交通工具）要把英文欄位收起來並清空，
+// 不然使用者填了卻不會出現在成品上，會以為是壞掉
+function applySingleNameOnly(styleKey) {
+  const input = document.getElementById('nsEnglishNameInput');
+  if (!input) return;
+  const single = !!(STICKER_STYLES[styleKey] && STICKER_STYLES[styleKey].singleNameOnly);
+  input.style.display = single ? 'none' : '';
+  if (single) input.value = '';
+}
 
 function buildStickerImageSlots(images, slotCount) {
   // 洗牌後再輪迴填滿：格數少於圖案總數時，每次產生都能看到不同的組合
@@ -459,40 +471,20 @@ function drawStrokedText(ctx, text, cx, cy, size, strokeColor) {
   ctx.fillText(text, cx, cy);
 }
 
-function drawNameInSlot(ctx, slot, name, englishName, sheetW, sheetH) {
+// 一格車身寫一行姓名：字級先照車身高度給，再依寬度往下縮到塞得進去
+function drawNameInSlot(ctx, slot, name, sheetW, sheetH) {
   const boxX = slot.x * sheetW;
   const boxY = slot.y * sheetH;
   const boxW = slot.w * sheetW;
   const boxH = slot.h * sheetH;
-  const cx = boxX + boxW / 2;
-  const maxW = boxW * NS_SHEET_WIDTH_SAFETY;
-
-  if (!englishName) {
-    const size = fitCanvasFontSize(ctx, name, boxH * 0.88, maxW);
-    drawStrokedText(ctx, name, cx, boxY + boxH / 2, size, slot.stroke);
-    return;
-  }
-
-  // 中英文兩行：中文佔上面 6 成、英文 4 成，兩行各自量寬度，取比較小的比例一起縮，
-  // 兩行的大小比例才會固定，不會有的車中文大、有的車英文大
-  const zhMax = boxH * 0.52;
-  const enRatio = 0.62;
-  const zhSize = Math.min(
-    fitCanvasFontSize(ctx, name, zhMax, maxW),
-    Math.round(fitCanvasFontSize(ctx, englishName, zhMax * enRatio, maxW) / enRatio)
-  );
-  const enSize = Math.max(NS_SHEET_MIN_FONT, Math.round(zhSize * enRatio));
-  const gap = zhSize * 0.12;
-  const totalH = zhSize + gap + enSize;
-  const top = boxY + (boxH - totalH) / 2;
-  drawStrokedText(ctx, name, cx, top + zhSize / 2, zhSize, slot.stroke);
-  drawStrokedText(ctx, englishName, cx, top + zhSize + gap + enSize / 2, enSize, slot.stroke);
+  const size = fitCanvasFontSize(ctx, name, boxH * 0.88, boxW * NS_SHEET_WIDTH_SAFETY);
+  drawStrokedText(ctx, name, boxX + boxW / 2, boxY + boxH / 2, size, slot.stroke);
 }
 
-async function buildSheetStickerCanvas(styleKey, name, englishName) {
+async function buildSheetStickerCanvas(styleKey, name) {
   const style = STICKER_STYLES[styleKey];
   const sheet = await loadImageElement(style.sheet);
-  await ensureFontsForText(name + (englishName || ''));
+  await ensureFontsForText(name);
 
   // 直接用底圖原尺寸輸出（1800x1200＝6x4 明信片比例），不重新縮放，畫質不打折
   const canvas = document.createElement('canvas');
@@ -501,7 +493,7 @@ async function buildSheetStickerCanvas(styleKey, name, englishName) {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
   style.slots.forEach(slot => {
-    drawNameInSlot(ctx, slot, name, englishName, canvas.width, canvas.height);
+    drawNameInSlot(ctx, slot, name, canvas.width, canvas.height);
   });
   return canvas;
 }
@@ -756,7 +748,7 @@ async function generateNameStickerImage() {
 
       if (STICKER_STYLES[nsSelectedStyle].mode === 'sheet') {
         // 整張底圖直接畫，不需要 DOM 樣板，也不用載 html2canvas
-        finalCanvas = await buildSheetStickerCanvas(nsSelectedStyle, name, englishName);
+        finalCanvas = await buildSheetStickerCanvas(nsSelectedStyle, name);
       } else {
         await ensureHtml2Canvas();
         await buildNameStickerPoster(nsSelectedStyle, name, englishName);
