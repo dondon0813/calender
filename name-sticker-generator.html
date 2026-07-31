@@ -251,6 +251,11 @@
       <div class="ns-style-title">可愛動物</div>
       <div class="ns-style-desc">4款不同動物圖案</div>
     </button>
+    <button type="button" class="ns-style-card" data-style="vehicle">
+      <div class="ns-style-icon"><img src="images/name-stickers/vehicle-thumb-01.webp" alt="交通工具"></div>
+      <div class="ns-style-title">交通工具</div>
+      <div class="ns-style-desc">姓名直接寫在車身上</div>
+    </button>
   </div>
 
   <div class="ns-section-title" style="text-align:center;">Step 2・輸入姓名</div>
@@ -295,7 +300,13 @@ function ensureHtml2Canvas() {
   return html2canvasLoadPromise;
 }
 
-// ===== 姓名貼款式資料：喵星人 8 款、可愛動物 4 款；圖片數不足網格格數時輪迴重複 =====
+// ===== 姓名貼款式資料 =====
+// 兩種產生方式（mode）：
+//   grid （預設，喵星人／可愛動物）：白底 4x6 網格，每格「去背小圖＋姓名」，用 html2canvas 截圖。
+//   sheet（交通工具）：整張已排版好的底圖直接當成品，只把姓名畫到每台車的車身上。
+//     這款用 canvas 2D 直接畫，不經 html2canvas——白色字＋外框要靠 strokeText 才畫得出來
+//     （html2canvas 不支援 -webkit-text-stroke，text-shadow 模擬出來的外框也毛毛的），
+//     而且底圖本身已含品牌落款，不需要 DOM 樣板，順便省下 200KB 函式庫。
 const STICKER_STYLES = {
   cat: {
     label: '喵星人',
@@ -319,6 +330,29 @@ const STICKER_STYLES = {
       'images/name-stickers/animal-02.webp',
       'images/name-stickers/animal-03.webp',
       'images/name-stickers/animal-04.webp'
+    ]
+  },
+  vehicle: {
+    label: '交通工具',
+    emoji: '🚒',
+    mode: 'sheet',
+    sheet: 'images/name-stickers/vehicle-sheet-01.webp',
+    // slots：姓名要寫上去的車身區塊。x/y/w/h 一律是「佔底圖寬高的比例（0~1）」，
+    // 底圖將來換尺寸也不用重算；stroke 是該台車車身色再深一點（約 ×0.72）當文字外框色。
+    // 錐筒／STOP 牌／樹葉刻意留白不上字，版面才不會滿到沒有呼吸感。
+    slots: [
+      { x: 0.0620, y: 0.1470, w: 0.2340, h: 0.0630, stroke: '#6f7e8b' }, // 小巴士
+      { x: 0.5100, y: 0.0938, w: 0.1100, h: 0.0728, stroke: '#435e5a' }, // 砂石車車斗
+      { x: 0.8025, y: 0.1425, w: 0.1415, h: 0.0698, stroke: '#722c18' }, // 消防車（右上）
+      { x: 0.1225, y: 0.3511, w: 0.1050, h: 0.0803, stroke: '#722c18' }, // 消防車（左中）
+      { x: 0.4700, y: 0.4441, w: 0.0650, h: 0.0510, stroke: '#4d5539' }, // 挖土機引擎室
+      { x: 0.6075, y: 0.4126, w: 0.1175, h: 0.0488, stroke: '#2e4e52' }, // 藍綠小轎車
+      { x: 0.8160, y: 0.4201, w: 0.1330, h: 0.0465, stroke: '#806125' }, // 黃色轎車（右）
+      { x: 0.0425, y: 0.6227, w: 0.1475, h: 0.0450, stroke: '#806125' }, // 黃色轎車（左）
+      { x: 0.5575, y: 0.6962, w: 0.1425, h: 0.0503, stroke: '#17253d' }, // 警車（中右）
+      { x: 0.2600, y: 0.7539, w: 0.1550, h: 0.0525, stroke: '#792d21' }, // 飛機（中下）
+      { x: 0.0560, y: 0.8665, w: 0.1480, h: 0.0450, stroke: '#17253d' }, // 警車（左下）
+      { x: 0.7900, y: 0.8387, w: 0.1450, h: 0.0465, stroke: '#813f32' }  // 飛機（右下）
     ]
   }
 };
@@ -362,6 +396,114 @@ function preloadImage(src) {
     img.onerror = () => { clearTimeout(timer); finish({ ok: false }); };
     img.src = src;
   });
+}
+
+// ===== sheet 款（交通工具）：整張底圖 + 車身上字，canvas 2D 直接畫 =====
+
+const NS_SHEET_FONT = '"Baloo 2", "Huninn", "Noto Sans TC", sans-serif'; // 與 --font-display 同一組
+const NS_SHEET_FONT_WEIGHT = 800;
+const NS_SHEET_TEXT_FILL = '#ffffff';
+const NS_SHEET_STROKE_RATIO = 0.17;  // 外框粗細 ÷ 字級
+const NS_SHEET_WIDTH_SAFETY = 0.94;  // 字寬留一點邊，不要頂到車身邊緣
+const NS_SHEET_MIN_FONT = 8;
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('底圖載入失敗：' + src));
+    img.src = src;
+  });
+}
+
+// 自訂字體是照 unicode-range 切成很多小包的，只有「頁面上真的出現過的字」才會被下載。
+// 使用者輸入的姓名多半不在已下載的那幾包裡，canvas 又不像 DOM 會在字體到齊後自動重繪
+// ——不先把這幾個字要用到的字體包載進來就直接畫，會用系統預設字體畫上去且無聲無息。
+async function ensureFontsForText(text) {
+  if (!document.fonts || !document.fonts.load) return;
+  const families = ['"Baloo 2"', '"Huninn"', '"Noto Sans TC"'];
+  try {
+    await Promise.all(families.map(f =>
+      document.fonts.load(`${NS_SHEET_FONT_WEIGHT} 100px ${f}`, text).catch(() => {})
+    ));
+    await document.fonts.ready;
+  } catch (e) { /* 字體載入失敗就照現況畫，不擋住整個流程 */ }
+}
+
+function nsSheetFont(size) {
+  return `${NS_SHEET_FONT_WEIGHT} ${size}px ${NS_SHEET_FONT}`;
+}
+
+// 從 maxSize 開始往下縮，直到這行字塞得進 maxWidth
+function fitCanvasFontSize(ctx, text, maxSize, maxWidth) {
+  let size = Math.max(NS_SHEET_MIN_FONT, Math.round(maxSize));
+  while (size > NS_SHEET_MIN_FONT) {
+    ctx.font = nsSheetFont(size);
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 1;
+  }
+  return size;
+}
+
+function drawStrokedText(ctx, text, cx, cy, size, strokeColor) {
+  ctx.font = nsSheetFont(size);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.miterLimit = 2;
+  ctx.lineWidth = Math.max(2, size * NS_SHEET_STROKE_RATIO);
+  ctx.strokeStyle = strokeColor;
+  ctx.strokeText(text, cx, cy);   // 外框先畫，字身後蓋，筆畫才不會被外框吃掉一半
+  ctx.fillStyle = NS_SHEET_TEXT_FILL;
+  ctx.fillText(text, cx, cy);
+}
+
+function drawNameInSlot(ctx, slot, name, englishName, sheetW, sheetH) {
+  const boxX = slot.x * sheetW;
+  const boxY = slot.y * sheetH;
+  const boxW = slot.w * sheetW;
+  const boxH = slot.h * sheetH;
+  const cx = boxX + boxW / 2;
+  const maxW = boxW * NS_SHEET_WIDTH_SAFETY;
+
+  if (!englishName) {
+    const size = fitCanvasFontSize(ctx, name, boxH * 0.88, maxW);
+    drawStrokedText(ctx, name, cx, boxY + boxH / 2, size, slot.stroke);
+    return;
+  }
+
+  // 中英文兩行：中文佔上面 6 成、英文 4 成，兩行各自量寬度，取比較小的比例一起縮，
+  // 兩行的大小比例才會固定，不會有的車中文大、有的車英文大
+  const zhMax = boxH * 0.52;
+  const enRatio = 0.62;
+  const zhSize = Math.min(
+    fitCanvasFontSize(ctx, name, zhMax, maxW),
+    Math.round(fitCanvasFontSize(ctx, englishName, zhMax * enRatio, maxW) / enRatio)
+  );
+  const enSize = Math.max(NS_SHEET_MIN_FONT, Math.round(zhSize * enRatio));
+  const gap = zhSize * 0.12;
+  const totalH = zhSize + gap + enSize;
+  const top = boxY + (boxH - totalH) / 2;
+  drawStrokedText(ctx, name, cx, top + zhSize / 2, zhSize, slot.stroke);
+  drawStrokedText(ctx, englishName, cx, top + zhSize + gap + enSize / 2, enSize, slot.stroke);
+}
+
+async function buildSheetStickerCanvas(styleKey, name, englishName) {
+  const style = STICKER_STYLES[styleKey];
+  const sheet = await loadImageElement(style.sheet);
+  await ensureFontsForText(name + (englishName || ''));
+
+  // 直接用底圖原尺寸輸出（1800x1200＝6x4 明信片比例），不重新縮放，畫質不打折
+  const canvas = document.createElement('canvas');
+  canvas.width = sheet.naturalWidth || 1800;
+  canvas.height = sheet.naturalHeight || 1200;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(sheet, 0, 0, canvas.width, canvas.height);
+  style.slots.forEach(slot => {
+    drawNameInSlot(ctx, slot, name, englishName, canvas.width, canvas.height);
+  });
+  return canvas;
 }
 
 async function buildNameStickerPoster(styleKey, name, englishName) {
@@ -610,33 +752,40 @@ async function generateNameStickerImage() {
     btn.textContent = '圖片產生中…';
 
     await withWatchdog((async () => {
-      await ensureHtml2Canvas();
-      await buildNameStickerPoster(nsSelectedStyle, name, englishName);
+      let finalCanvas;
 
-      // 等字體 / 版面穩定
-      await new Promise(r => setTimeout(r, 150));
+      if (STICKER_STYLES[nsSelectedStyle].mode === 'sheet') {
+        // 整張底圖直接畫，不需要 DOM 樣板，也不用載 html2canvas
+        finalCanvas = await buildSheetStickerCanvas(nsSelectedStyle, name, englishName);
+      } else {
+        await ensureHtml2Canvas();
+        await buildNameStickerPoster(nsSelectedStyle, name, englishName);
 
-      const posterEl = document.getElementById('nsPoster');
-      const outputScale = 3;
-      const capturedCanvas = await captureInIsolatedFrame(posterEl, {
-        width: 576,
-        height: 384,
-        scale: outputScale,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        imageTimeout: 8000
-      });
+        // 等字體 / 版面穩定
+        await new Promise(r => setTimeout(r, 150));
 
-      // 6x4 明信片尺寸・橫式（576 x 384，跟樣板寬度一致）＊輸出倍率，白底
-      const targetW = 576 * outputScale;
-      const targetH = 384 * outputScale;
-      const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = targetW;
-      finalCanvas.height = targetH;
-      const ctx = finalCanvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, targetW, targetH);
-      ctx.drawImage(capturedCanvas, 0, 0, targetW, targetH);
+        const posterEl = document.getElementById('nsPoster');
+        const outputScale = 3;
+        const capturedCanvas = await captureInIsolatedFrame(posterEl, {
+          width: 576,
+          height: 384,
+          scale: outputScale,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          imageTimeout: 8000
+        });
+
+        // 6x4 明信片尺寸・橫式（576 x 384，跟樣板寬度一致）＊輸出倍率，白底
+        const targetW = 576 * outputScale;
+        const targetH = 384 * outputScale;
+        finalCanvas = document.createElement('canvas');
+        finalCanvas.width = targetW;
+        finalCanvas.height = targetH;
+        const ctx = finalCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetW, targetH);
+        ctx.drawImage(capturedCanvas, 0, 0, targetW, targetH);
+      }
 
       const blob = await canvasToBlobAsync(finalCanvas);
       if (!blob) {
