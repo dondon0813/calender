@@ -43,3 +43,10 @@
 根因：站點已掛自訂網域 sheridondon.com.tw，github.io 網址回 301＋162 bytes 的導向頁；curl 沒帶 `-L` 就永遠在 grep 那張導向頁。
 之後怎麼做：線上驗證一律用 `curl -sL https://sheridondon.com.tw/…`；指紋連 2 次回 0 時先 `curl -sI` 看狀態碼，301/302 就是打錯網址，不是還沒部署。
 波及：50 號檔 §2、10 號檔 §1、CLAUDE.md 速查已同步改網域。
+
+## L7 2026-07-31 CJK 字的上緣被 overflow:hidden 削掉，而且只有部分團看得出來
+情境：使用者回報行事曆產生器「列表模式文字跑掉」，附圖看不太出來是哪一種跑掉。
+錯誤：無（先問清楚是哪一種，再用瀏覽器實測確認，沒有憑截圖猜）。
+根因：`.list-row .name-line` 為了長名字收成「…」而設 `overflow:hidden`，那個裁切框的高度就等於行高。中文字的墨水比行高高約 2px，上緣就被削掉；純英文的行剛好在框內，所以「只有部分團」看得出來——行事曆的格子因為 `.chip` 有 padding 才逃過一劫。注意先前那個「補正字型的字框偏差」commit（把 `.name-line` 整個往下推 0.09em）**沒有修掉這個**：相對定位是連裁切框一起移動，墨水與裁切框的相對關係不變。
+之後怎麼做：(1) 只要一個元素同時有 `overflow:hidden` 和自訂 `line-height`，就要用 padding 撐大裁切框（配等量負 margin 就不影響版面高度）；(2) 這種「差幾 px」的視覺 bug 用眼睛看截圖會誤判，實測方法：canvas `measureText().actualBoundingBoxAscent/Descent` 量墨水，配一個 `vertical-align:baseline` 的零高度 inline-block 量基線，直接算墨水有沒有超出元素的裁切框——本次是靠這個才確認「改前 -2.5px、改後 +4.5px」。
+波及：驗證腳本（Playwright＋攔截 Apps Script 回應餵假資料）的做法記在 PR #17 說明裡，下次要驗產生器的視覺改動可以照抄。
