@@ -661,11 +661,21 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="ev-list" id="evList"></div>
       <div class="btn-row">
         <button class="btn" id="btnResetEv">清空本月微調</button>
+        <button class="btn" id="btnCopyNotes" data-pane="text">複製新打的備註</button>
       </div>
+      <p class="hint" data-pane="text">上面手打的備註只存在這台電腦、只算這個月。想讓某一句以後每個月都自動帶出來，按「複製新打的備註」再貼給 Claude，會寫進 <code>brand-notes.js</code> 的品牌庫（進版控，換電腦也在）。<span id="notesCopyState"></span></p>
     </fieldset>
 
     <fieldset data-pane="text">
       <legend>文案樣板</legend>
+      <div class="row">
+        <label>文案版本</label>
+        <div class="seg" id="segCapMode">
+          <button data-v="full" class="on">完整</button>
+          <button data-v="brief">精簡</button>
+        </div>
+      </div>
+      <p class="hint">「完整」＝每一團下面帶 👉🏻 小介紹；「精簡」＝只列日期與團名，不帶介紹（開頭、結尾、hashtag 兩種都有）。</p>
       <p class="hint">👉🏻 那行來自 <code>brand-notes.js</code> 的品牌備註，會自動比對團名。要改這個月的某一團，就在上面「本月團」的備註欄打字。</p>
       <div class="row"><label>開頭</label><textarea id="tCapIntro" rows="2"></textarea></div>
       <div class="row"><label>清單標題</label><input type="text" id="tCapListTitle"></div>
@@ -804,7 +814,8 @@ const DEFAULTS = {
   capIntro: '❤️ {月}月團購行事曆來囉 ❤️\n趕快來看看有沒有你們喜歡的團💕',
   capListTitle: '📅 {國字月}月團購行事曆',
   capOutro: '🎁 文末留言告訴我：\n這個月最期待哪一團？\n抽一位送神秘小禮物❤️',
-  capTags: '#育兒日記 #新手媽媽'
+  capTags: '#育兒日記 #新手媽媽',
+  capMode: 'full'           // 貼文版本：'full'＝每團帶 👉🏻 小介紹｜'brief'＝只列團名
 };
 
 // 列表模式的號碼圈配色（照 shared.css 的分類色盤循環）
@@ -1711,7 +1722,7 @@ function buildCaption() {
   groups.forEach((group, i) => {
     const ev = group[0];
     lines.push(`${circledNum(i + 1)}. ${fmtMD(ev.start)} - ${fmtMD(ev.displayEnd)} ${groupNames(group, 'list').join('＋')}`);
-    groupNotes(group).forEach(note => lines.push(`👉🏻 ${note}`));
+    if (S.capMode !== 'brief') groupNotes(group).forEach(note => lines.push(`👉🏻 ${note}`));
   });
 
   if (outro) lines.push('', outro);
@@ -1776,6 +1787,26 @@ async function copyCaption(e) {
   }
   btn.textContent = '已複製 ✓';
   setTimeout(() => btn.textContent = old, 1500);
+}
+
+/* 複製到剪貼簿：clipboard API 失敗（file:// 或沒授權）就退回隱藏 textarea＋execCommand */
+async function copyToClipboard(btn, text) {
+  const old = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+    document.body.removeChild(ta);
+    if (!ok) { btn.textContent = '複製失敗'; setTimeout(() => { btn.textContent = old; }, 2000); return; }
+  }
+  btn.textContent = '已複製 ✓';
+  setTimeout(() => { btn.textContent = old; }, 1500);
 }
 
 /* ============================================================
@@ -2119,6 +2150,7 @@ function renderAll() {
 
 function syncControls() {
   segSet('segMode', S.mode);
+  segSet('segCapMode', S.capMode || 'full');
   segSet('segSize', S.size);
   segSet('segCols', S.cols);
   segSet('segMonthOv', S.monthOverlay ? 'on' : 'off');
@@ -2150,6 +2182,8 @@ function init() {
   loadPresets();
   renderPresetList();
 
+  // 貼文版本：完整（帶 👉🏻 小介紹）／精簡（只列團名）
+  bindSeg('segCapMode', v => { S.capMode = v; renderCaption(); });
   bindSeg('segMode', v => { switchMode(v); });
   bindSeg('segSize', v => { S.size = v; });
   bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
@@ -2222,25 +2256,31 @@ function init() {
   });
 
   // 把目前設定複製成 JSON，貼給 Claude 就能寫進程式的初始值（換電腦也一樣）
-  document.getElementById('btnCopySettings').addEventListener('click', async e => {
-    const btn = e.currentTarget;
-    const old = btn.textContent;
-    const text = JSON.stringify(S, null, 2);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-      document.body.appendChild(ta);
-      ta.select();
-      let ok = false;
-      try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
-      document.body.removeChild(ta);
-      if (!ok) { btn.textContent = '複製失敗'; setTimeout(() => btn.textContent = old, 2000); return; }
+  document.getElementById('btnCopySettings').addEventListener('click', e => {
+    copyToClipboard(e.currentTarget, JSON.stringify(S, null, 2));
+  });
+
+  /* 這個月手打、而且跟品牌庫不一樣的備註，整理成可以直接貼進 brand-notes.js 的樣子。
+     keys 先照團名猜一個（品牌通常是「｜」或空白前面那段），貼過來我再確認。 */
+  document.getElementById('btnCopyNotes').addEventListener('click', e => {
+    const rows = [];
+    monthEvents().forEach(ev => {
+      const rec = EV_OVERRIDES[ev.id];
+      const note = rec && rec.note ? String(rec.note).trim() : '';
+      if (!note) return;
+      const name = plainName(displayName(ev, 'list'));
+      if (note === brandNoteFor(name) || note === brandNoteFor(ev.title)) return;   // 跟庫裡一樣就不用重貼
+      const brand = nameLines(displayName(ev, 'list'))[0] || plainName(ev.title);
+      const key = normKey(brand.split(/[\s　/／、]/)[0] || brand);
+      rows.push(`  { brand: '${brand.replace(/'/g, "\\'")}', keys: ['${key}'], note: '${note.replace(/'/g, "\\'")}' },`);
+    });
+    const state = document.getElementById('notesCopyState');
+    if (!rows.length) {
+      if (state) state.textContent = '（這個月沒有跟品牌庫不一樣的手打備註）';
+      return;
     }
-    btn.textContent = '已複製 ✓';
-    setTimeout(() => btn.textContent = old, 1500);
+    if (state) state.textContent = `（${rows.length} 句）`;
+    copyToClipboard(e.currentTarget, `// ${currentYear}/${currentMonth + 1} 手打的備註\n` + rows.join('\n'));
   });
   document.getElementById('btnSaveDefault').addEventListener('click', () => {
     saveUserDefaults();
