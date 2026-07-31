@@ -153,7 +153,24 @@ function segmentTitle(title) {
 // 之後遇到新品牌，請告訴 Claude 幫忙加進這個清單即可。
 const KNOWN_BRANDS = ['林貝兒', '小影霸', '台東初鹿', '永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
 
+/* 團名裡的「｜」＝在試算表自己指定的斷行點（例：Parakito｜防蚊用品）。
+   會斷行的地方照斷；橫排一行的地方（清單列、tooltip、彈窗標題）用 plainTitle() 換成空白。
+   編輯欄位與寫回後端的值一律用原文，不要在這裡把符號吃掉。 */
+const TITLE_SEP = /[｜|]/;
+function titleParts(t) {
+  return String(t || '').split(TITLE_SEP).map(s => s.trim()).filter(s => s !== '');
+}
+function plainTitle(t) { return titleParts(t).join(' '); }
+
 function wrapTitleLines(title, maxCharsPerLine) {
+  // 「｜」是最優先的斷行點
+  const byBar = titleParts(title);
+  if (byBar.length > 1) {
+    const lines = [];
+    byBar.forEach(part => { lines.push(...wrapSegment(part, maxCharsPerLine)); });
+    return lines;
+  }
+
   // 若品名裡有手動指定的斷行符號（/ 或 、），優先照這裡斷行
   const manualParts = title.split(/[\/、]/).map(s => s.trim()).filter(s => s !== '');
   if (manualParts.length > 1) {
@@ -203,7 +220,7 @@ function isFrozenEvent(ev) {
   if (cat !== '') {
     return cat.includes('冷凍');
   }
-  return FROZEN_KEYWORDS.some(k => ev.title.includes(k));
+  return FROZEN_KEYWORDS.some(k => titleParts(ev.title).join('').includes(k));
 }
 
 // 內部版：所有團購不論是否已開團，點擊都會打開後台彈窗（不受開團日期限制）
@@ -536,7 +553,7 @@ function renderAllMode() {
       });
       bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
       bar.style.gridRow = `${item.lane + 2}`;
-      bar.title = `${item.ev.title} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})（點擊查看內部資訊）`;
+      bar.title = `${plainTitle(item.ev.title)} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})（點擊查看內部資訊）`;
 
       if (gbNumber) {
         const badge = document.createElement('span');
@@ -559,7 +576,7 @@ function renderAllMode() {
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'ev-title';
-      titleSpan.textContent = item.ev.title;
+      titleSpan.textContent = plainTitle(item.ev.title);
       bar.appendChild(titleSpan);
 
       if (item.ev.tag) {
@@ -665,7 +682,7 @@ function renderSingleDayMode(mode) {
             if (calendarEditMode) openEventEditModal(ev);
             else openAdminModal(ev);
           });
-          bar.title = `${ev.title} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）` + (unpublished ? '　🔔 尚未確認顯示於前台' : '');
+          bar.title = `${plainTitle(ev.title)} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）` + (unpublished ? '　🔔 尚未確認顯示於前台' : '');
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
@@ -884,7 +901,7 @@ function renderGroupStatusList(targetId) {
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
-    nameEl.textContent = ev.title;
+    nameEl.textContent = plainTitle(ev.title);
     card.appendChild(nameEl);
 
     const dateEl = document.createElement('div');
@@ -1018,7 +1035,7 @@ function openAdminModal(ev) {
   const key = getMemoKey(ev);
 
   document.getElementById('adminModalBadge').textContent = `編號 ${ev.id}`;
-  document.getElementById('adminModalTitle').textContent = ev.title;
+  document.getElementById('adminModalTitle').textContent = plainTitle(ev.title);
   document.getElementById('adminModalMeta').textContent =
     `開團 ${fmtSingleDate(ev.start)}　結單 ${fmtSingleDate(ev.displayEnd)}` +
     (isFrozenEvent(ev) ? '　❄冷凍團' : '');
@@ -1269,7 +1286,7 @@ function syncPrStatusFromDispatch(taskName, extra) {
   const vendor = (extra['廠商'] || '').trim();
   if (!vendor || !allEvents.length) return Promise.resolve();
 
-  const matched = allEvents.filter(ev => ev.title && ev.title.indexOf(vendor) !== -1);
+  const matched = allEvents.filter(ev => ev.title && titleParts(ev.title).join('').indexOf(vendor) !== -1);
   if (!matched.length) return Promise.resolve();
 
   const todayStart = startOfDay(new Date());
@@ -1575,7 +1592,7 @@ function openCalEditDayPanel(date) {
 
       const nameEl = document.createElement('span');
       nameEl.className = 'cal-edit-day-row-name';
-      nameEl.textContent = ev.title;
+      nameEl.textContent = plainTitle(ev.title);
       row.appendChild(nameEl);
 
       if (ev.published === false) {
@@ -1880,7 +1897,7 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
 
 document.getElementById('evDeleteBtn').addEventListener('click', async () => {
   if (!eventEditCtx || eventEditCtx.isNew) return;
-  if (!confirm('確定要刪除「' + eventEditCtx.ev.title + '」這個活動嗎？刪除後就找不回來囉')) return;
+  if (!confirm('確定要刪除「' + plainTitle(eventEditCtx.ev.title) + '」這個活動嗎？刪除後就找不回來囉')) return;
   const btn = document.getElementById('evDeleteBtn');
   btn.disabled = true;
   setFormStatus('evEditStatus', '刪除中…', '');
@@ -2850,7 +2867,7 @@ function buildEventOptions_() {
   );
   return sorted.map(ev => {
     const key = getMemoKey(ev);
-    const label = `${ev.title}（開團 ${fmtSingleDate(ev.start)}）`;
+    const label = `${plainTitle(ev.title)}（開團 ${fmtSingleDate(ev.start)}）`;
     return `<option value="${escHtml(key)}">${escHtml(label)}</option>`;
   }).join('');
 }

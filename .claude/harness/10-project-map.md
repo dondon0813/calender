@@ -62,6 +62,7 @@ Google 試算表（兩份！）
 - 蝦皮導流連結有**兩層**（慣例：空白=預設、有填=覆寫）：①品牌層級＝後台「團購品牌資料庫」第 **N 欄（第14欄）蝦皮連結**（`getBrandDbList_()` 的 `shopeeUrl`，經 scope=public 給 recipes.html 的 `BRAND_SHOPEE`）；②食材層級＝「食材資料庫」／「成品資料庫」的「蝦皮連結」欄（`getMergedIngredientsAndProducts_()` 輸出，欄位依表頭名稱讀取，加在最後一欄即可）。食材彈窗有填就用食材的、空白退回品牌的。食譜彈窗的彙總清單由 `getRecipeBuyStatuses()` 組列：該品牌開團中就只出一行走團購連結（食材連結一律忽略，也因此 `handleBuyClick` 的「只有一個品牌開團中就直接跳轉」捷徑語意不變）；沒開團才把「有填自己連結的食材」各自拆成一行（`s.label`＝品牌・食材名，同網址只列一次），沒填的食材合併成品牌那一行。開團中一律導團購連結，兩層都不生效。開學清單走的是第三套：`開學清單` 分頁每列自己的「蝦皮連結」欄，與上述無關。
 - GET 帶 `token` → 完整後台資料（未登入回 public＋`unauthorized`）。
 - POST `{type: "..."}` → 見 §4；admin.js 統一經 `postTask()` 發送；`login`/`stat-view`/`stat-click` 免登入，其餘需 token。
+- **團名的「｜」＝指定斷行點**（2026-07-31 起）：團名寫成「品牌｜產品」（例 `Parakito｜防蚊`、`UBMOM｜水壺`）表示在這裡斷行；品牌名本身就含產品的（雪坊優格、韓爸米餅、美姬饅頭、禾流書團）不加。會斷行的地方照斷（index.html 的 `wrapTitleLines`／現正開團中卡片、admin.js 的 `wrapTitleLines`、calendar-poster.html 的 `nameLines`），橫排一行的地方（清單列、tooltip、彈窗標題、開團文案）用 `plainTitle()`／`plainName()` 換回空白。**寫回後端與編輯欄位一律用原文**，不要把符號吃掉。`/`、`、` 的既有語意是「一團多品項」，不要跟 ｜ 混用。歷史團名改寫用 `團名加斷行_一次性.gs`（只動開團日 2026/8/1 以後的列）。⚠ 部署順序：**先 push 前端**再改團名，否則客人會在前台看到裸的 ｜。
 - 行事曆欄位語意——**注意兩套索引**：Code.gs 的 `EVENT_COL`（定義在 Code.gs:1213 附近）是 **1-based**（MATCH_ITEMS=22、THUMB=23）；前端 gviz 回來的 row 陣列是 **0-based**（V 欄對應品項=`c[21]`、W 欄去背小圖=`c[22]`、X 欄折扣碼=`c[23]`）。搞混一格就會把折扣碼當小圖輸出。「空白=預設、有填=覆寫」是本專案通用慣例（V、W 欄皆然）。
 
 ## 4. Code.gs 端點目錄（Grep 錨點）
@@ -95,7 +96,7 @@ Google 試算表（兩份！）
 
 ## 6. 圖片資產規則與陷阱
 
-- `icons/`：開學清單/標籤頁專用圖示（.png+.webp 成對）。`images/tools/`：後台工具圖示。`images/recipes/`：食譜 UI 圖。`images/brands/`：品牌去背小圖，**檔名=品牌代號**（見該資料夾 README.md），由 GAS `updateBrandThumbs()` 寫網址進試算表。`images/Ingredients/`：食材照片，由試算表「圖片網址」欄動態載入。`images/name-stickers/`：姓名貼產生器素材（cat-01~08.webp 喵星人、animal-01~04.webp 可愛動物，皆去背透明底、長邊 300px），純前端靜態圖，不經 Code.gs。
+- `icons/`：開學清單/標籤頁專用圖示（.png+.webp 成對）。`images/tools/`：後台工具圖示。`images/recipes/`：食譜 UI 圖。`images/brands/`：品牌去背小圖，**檔名=品牌代號**（見該資料夾 README.md），由 GAS `updateBrandThumbs()` 寫網址進試算表。`images/Ingredients/`：食材照片，由試算表「圖片網址」欄動態載入。`images/name-stickers/`：姓名貼產生器素材（cat-01~08.webp 喵星人、animal-01~04.webp 可愛動物，皆去背透明底、長邊 300px），純前端靜態圖，不經 Code.gs。`images/calendar/`：行事曆產生器的月份標題圖（`title-01`～`title-12` 標準版，高 300px；壓扁長條版另存 `title-MM-slim`，高 222px，是**另一套來源檔**不是壓出來的；24 張已到齊），去背透明底，見該資料夾 README.md，來源 PNG 用 `tools/prep-calendar-title-images.py` 批次處理。
 - **陷阱 1**：食材/品牌圖在試算表存的是**絕對網址**（github.io 或外部 cloudimg）→ 本機預覽也是抓線上圖，離線會「版面正常但圖全破」，且 onerror 會換 emoji 備援，不易察覺。
 - **陷阱 2**：副檔名要跟實際檔案一致，`.png` 已大量移除只留 `.webp`；資料填錯副檔名＝線上 404。
 - **陷阱 3**：品牌名比對走 `normalizeBrandKey()`（轉小寫＋去空格，school-list.html）；品牌命名一律用「客人看得懂的名稱」（`B21pro` 不是「精臣」），原廠名寫品牌備註。

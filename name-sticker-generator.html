@@ -680,5 +680,27 @@ document.getElementById('nsEnglishNameInput').addEventListener('keydown', (e) =>
 });
 </script>
 
+<!-- 頁面瀏覽量統計：獨立區塊，不依賴本頁其他程式碼。key 白名單見 Code.gs STAT_KEY_WHITELIST_RE（頁面代號只能小寫英數，不能有 - 或 _） -->
+<script>
+(function sendNameStickerPageview() {
+  const STATS_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
+  const d = new Date();
+  const key = `page_namesticker_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const payload = JSON.stringify({ type: 'stat-view', key });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(STATS_BACKEND_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(STATS_BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
+})();
+</script>
+
 </body>
 </html>
