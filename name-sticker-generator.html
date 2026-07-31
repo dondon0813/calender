@@ -466,9 +466,21 @@ function drawStrokedText(ctx, text, cx, cy, size, strokeColor) {
   ctx.miterLimit = 2;
   ctx.lineWidth = Math.max(2, size * NS_SHEET_STROKE_RATIO);
   ctx.strokeStyle = strokeColor;
-  ctx.strokeText(text, cx, cy);   // 外框先畫，字身後蓋，筆畫才不會被外框吃掉一半
+  // textBaseline='middle' 對齊的是字體的 em 方框中線，不是筆畫的視覺中心——
+  // 圓體的中文字實際筆畫落在 em 方框偏下，直接照 em 中線畫，字會比框中心高約 18%
+  // （在 1800px 的圖上是 15px，肉眼看得出來）。改用實際筆畫上下緣重新置中。
+  const y = cy - inkCenterOffset(ctx, text);
+  ctx.strokeText(text, cx, y);   // 外框先畫，字身後蓋，筆畫才不會被外框吃掉一半
   ctx.fillStyle = NS_SHEET_TEXT_FILL;
-  ctx.fillText(text, cx, cy);
+  ctx.fillText(text, cx, y);
+}
+
+// 筆畫中心相對於基準點的位移（字體要先設好）。舊瀏覽器沒有這兩個量測值就回 0，
+// 頂多回到修正前的樣子，不會畫錯位置。
+function inkCenterOffset(ctx, text) {
+  const m = ctx.measureText(text);
+  if (typeof m.actualBoundingBoxAscent !== 'number' || typeof m.actualBoundingBoxDescent !== 'number') return 0;
+  return (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
 }
 
 // 一格車身寫一行姓名：字級先照車身高度給，再依寬度往下縮到塞得進去
