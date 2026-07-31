@@ -43,3 +43,10 @@
 根因：站點已掛自訂網域 sheridondon.com.tw，github.io 網址回 301＋162 bytes 的導向頁；curl 沒帶 `-L` 就永遠在 grep 那張導向頁。
 之後怎麼做：線上驗證一律用 `curl -sL https://sheridondon.com.tw/…`；指紋連 2 次回 0 時先 `curl -sI` 看狀態碼，301/302 就是打錯網址，不是還沒部署。
 波及：50 號檔 §2、10 號檔 §1、CLAUDE.md 速查已同步改網域。
+
+## L7 2026-07-31 CJK 字的上緣被 overflow:hidden 削掉，而且只有部分團看得出來
+情境：使用者回報行事曆產生器「列表模式文字跑掉」，附圖看不太出來是哪一種跑掉。
+錯誤：無（先問清楚是哪一種，再用瀏覽器實測確認，沒有憑截圖猜）。
+根因：`.list-row .name-line` 為了長名字收成「…」而設 `overflow:hidden`，那個裁切框的高度就等於行高（line-height:1.2）。中文字的墨水比 1.2em 高約 1.6px，上緣就被削掉；純英文的行剛好在框內，所以「只有部分團」看得出來——行事曆的格子因為 `.chip` 有 padding 才逃過一劫。
+之後怎麼做：(1) 只要一個元素同時有 `overflow:hidden` 和自訂 `line-height`，就要留 padding（配等量負 margin 可不影響版面高度）給字的墨水；(2) 這類「差幾 px」的視覺 bug 用眼睛看截圖會誤判，實測方法是 canvas `measureText().actualBoundingBoxAscent` 配一個 `vertical-align:baseline` 的零高度 inline-block 量基線，直接算墨水有沒有超出裁切框——腳本留在本次 PR 的說明裡。
+順帶：`autoFit()` 量寬度要量 `.name-line` 自己，量外層 `.name` 永遠以為塞得下（子元素自己是 overflow 容器，內部溢出不會反映到父層 scrollWidth），長團名因此會直接被截成「…」而不是縮字。
