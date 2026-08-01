@@ -32,21 +32,20 @@
     margin-bottom: 18px;
   }
 
-  /* 傳送門按鈕：底色刻意跟教學圖裡那顆綠色按鈕一致（色碼在 shared.css 的 :root） */
+  /* 傳送門按鈕：底色刻意跟教學圖裡那顆綠色按鈕一致（色碼在 shared.css 的 :root）。
+     不做滿版——用 inline-flex＋外層置中，寬度由文字撐出來。 */
+  .ibon-portal-wrap { text-align: center; }
   .ibon-portal-btn {
     background: var(--c-ibon-green);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 15px 18px;
-    font-size: 18px;
-    letter-spacing: 1px;
+    padding: 14px 40px;
+    font-size: 22px;
+    letter-spacing: 1.5px;
     box-shadow: var(--sh-float);
   }
   .ibon-portal-btn:hover { background: var(--c-ibon-green-dark); }
-  .ibon-portal-btn .ibon-portal-icon { font-size: 20px; }
 
   .ibon-portal-note {
     text-align: center;
@@ -57,7 +56,7 @@
   }
 
   @media (max-width: 420px) {
-    .ibon-portal-btn { font-size: 16.5px; padding: 14px 14px; }
+    .ibon-portal-btn { font-size: 20px; padding: 13px 30px; }
   }
 </style>
 </head>
@@ -83,9 +82,9 @@
          loading="lazy">
   </picture>
 
-  <a class="action-btn ibon-portal-btn" href="https://print.ibon.com.tw" target="_blank" rel="noopener noreferrer">
-    <span class="ibon-portal-icon">🚪</span>ibon 上傳傳送門
-  </a>
+  <div class="ibon-portal-wrap">
+    <a class="action-btn ibon-portal-btn" href="https://print.ibon.com.tw" target="_blank" rel="noopener noreferrer">ibon 上傳傳送門</a>
+  </div>
 
   <div class="ibon-portal-note">會在新分頁開啟 ibon 官方上傳網站<br>上傳後記得截圖列印碼與 QR Code 📷</div>
 
