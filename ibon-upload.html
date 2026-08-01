@@ -32,8 +32,9 @@
     margin-bottom: 18px;
   }
 
-  /* 傳送門按鈕 */
+  /* 傳送門按鈕：底色刻意跟教學圖裡那顆綠色按鈕一致（色碼在 shared.css 的 :root） */
   .ibon-portal-btn {
+    background: var(--c-ibon-green);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -44,6 +45,7 @@
     letter-spacing: 1px;
     box-shadow: var(--sh-float);
   }
+  .ibon-portal-btn:hover { background: var(--c-ibon-green-dark); }
   .ibon-portal-btn .ibon-portal-icon { font-size: 20px; }
 
   .ibon-portal-note {

@@ -66,6 +66,9 @@
   --c-mint-bg:      #E4F5DF;  /* 綠淡底 */
   --c-mint-border:  #B9E3AC;  /* 綠邊框 */
 
+  --c-ibon-green:      #72A576;  /* ibon 教學圖上的按鈕綠（取樣自圖片，按鈕要跟圖一致） */
+  --c-ibon-green-dark: #5F9163;  /* 同上 hover */
+
   --c-pink-deep:    #FF6F91;  /* 粉紅重點文字 */
   --c-pink-text:    #FFB4C2;  /* 粉文字 */
   --c-pink-bg:      #FFF0F3;  /* 粉淡底 */
