@@ -675,7 +675,9 @@ function renderSingleDayMode(mode) {
           const status = getEventStatus(ev);
           const unpublished = ev.published === false;
           const bar = document.createElement('div');
-          const catClass = unpublished ? 'cat-unpublished' : (frozen ? 'cat-frozen' : `cat-${status}`);
+          // 已結團的灰色優先於冷凍團藍色（跟前台 index.html 同一套規則）：冷凍標示只在團還沒結束時
+          // 才有意義，不然冷凍團結團後會永遠掛著藍色，在後台看起來像還在開團
+          const catClass = unpublished ? 'cat-unpublished' : ((frozen && status !== 'ended') ? 'cat-frozen' : `cat-${status}`);
           bar.className = `ebar ebar-wrap ${catClass} clickable`;
           bar.addEventListener('click', (e) => {
             e.stopPropagation();
