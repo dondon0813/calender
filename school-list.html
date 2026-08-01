@@ -1127,11 +1127,13 @@ async function loadCalendar() {
   CALENDAR_EVENTS = events;
 }
 
-// 品牌名比對前先正規化：轉小寫＋去掉空格。
+// 品牌名比對前先正規化：轉小寫＋去掉空格＋去掉標點符號。
 // 因為行事曆團名跟「品牌推薦」欄的寫法不一定一致，例如
 // 行事曆「B21 Pro/三麗鷗/標籤機」vs 品牌推薦「B21pro」，不正規化就永遠比對不到。
+// 標點也要去：品牌正式名稱帶符號時（「Wewee!」「Scoot&Ride」），團名多半不會把符號一起打進去
+// （團名寫「Wewee｜書包」），只去空格的話「wewee書包」不含「wewee!」，就會安靜地漏掉整個品牌。
 function normalizeBrandKey(s) {
-  return String(s || '').toLowerCase().replace(/\s+/g, '');
+  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
 }
 
 function getBrandStatus(brandName, itemName) {
