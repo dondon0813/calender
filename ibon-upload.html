@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 ibon 上傳</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* ibon-upload.html 專屬樣式。共用的 reset / 版面 / 返回鈕 / 標題 / 頁尾在 shared.css。 */
+  :root {
+    --wrap-max: 560px;
+    --title-size: 25px;
+    --title-rule-w: 60%;
+  }
+
+  .ibon-lead {
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--c-text-soft);
+    margin-bottom: 16px;
+  }
+
+  /* 教學圖：直式長圖，寬度吃滿容器 */
+  .ibon-guide {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--r-lg);
+    border: 2px solid var(--c-border-light);
+    background: var(--c-surface-3);
+    margin-bottom: 18px;
+  }
+
+  /* 傳送門按鈕：底色刻意跟教學圖裡那顆綠色按鈕一致（色碼在 shared.css 的 :root）。
+     不做滿版——用 inline-flex＋外層置中，寬度由文字撐出來。 */
+  .ibon-portal-wrap { text-align: center; }
+  .ibon-portal-btn {
+    background: var(--c-ibon-green);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 40px;
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    box-shadow: var(--sh-float);
+  }
+  .ibon-portal-btn:hover { background: var(--c-ibon-green-dark); }
+
+  .ibon-portal-note {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--c-muted);
+    margin-top: 10px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 420px) {
+    .ibon-portal-btn { font-size: 20px; padding: 13px 30px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="site-home-btn" href="recipes.html" title="回首頁" aria-label="回首頁">🏠</a>
+
+<div class="wrap">
+  <button class="back-btn" onclick="location.href='kids.html'">← 返回免費資源</button>
+
+  <div class="page-title-wrap">
+    <div class="page-title-badge">💗 雪莉與朵栗</div>
+    <div class="page-title">🖨️ ibon 上傳</div>
+  </div>
+
+  <div class="ibon-lead">照著下面的步驟，把圖片傳到 7-11 ibon 列印出來 🩷</div>
+
+  <!-- 教學圖：webp 為主，瀏覽器不支援時退回 jpg -->
+  <picture>
+    <source srcset="images/ibon/ibon-upload-guide.webp" type="image/webp">
+    <img class="ibon-guide" src="images/ibon/ibon-upload-guide.jpg"
+         alt="ibon 上傳傳送門列印教學：1 點擊上傳傳送門按鈕、2 新增檔案選擇圖片、3 勾選同意並確認上傳、4 截圖列印碼及 QR Code、5 至 7-11 ibon 機台選取件編號列印、6 掃描 QR Code 或輸入列印碼、7 照螢幕步驟操作、8 拿取繳費單付款"
+         loading="lazy">
+  </picture>
+
+  <div class="ibon-portal-wrap">
+    <a class="action-btn ibon-portal-btn" href="https://print.ibon.com.tw" target="_blank" rel="noopener noreferrer">ibon 上傳傳送門</a>
+  </div>
+
+  <div class="ibon-portal-note">會在新分頁開啟 ibon 官方上傳網站<br>上傳後記得截圖列印碼與 QR Code 📷</div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer">雪莉與朵栗 ♥</a></div>
+</div>
+
+</body>
+</html>

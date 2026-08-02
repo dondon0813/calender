@@ -1357,7 +1357,7 @@
     border: 1px solid #B8AC9C;
     color: #7A7166;
   }
-  /* 冷凍團：固定藍色，右下角淺色雪花浮水印 */
+  /* 冷凍團：藍色＋右下角淺色雪花浮水印。結團後不套這組、改吃 cat-ended 的灰（見 admin.js 的 catClass） */
   .ebar-wrap.cat-frozen {
     background-color: #E6F1FC;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
@@ -5256,7 +5256,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=11"></script>
+<script src="brandVendor.js?v=12"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
@@ -5264,7 +5264,7 @@
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=3"></script>
 <script src="accounting.js?v=14"></script>
-<script src="admin.js?v=68"></script>
+<script src="admin.js?v=71"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

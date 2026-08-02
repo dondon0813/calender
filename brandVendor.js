@@ -458,8 +458,9 @@ document.getElementById('vendorDetailEditBtn').addEventListener('click', () => {
 // ===== 品牌比對共用工具 =====
 // 行事曆標題多半是「品牌＋產品名」（例：林貝兒米餅、Jolly 推車），
 // 所以比對一律用「正規化後標題包含品牌名」的模糊比對，跟前台 school-list 同一套規則。
+// 標點一併去掉：品牌正式名稱帶符號（「Wewee!」「Scoot&Ride」）而團名沒打符號時，只去空格會比對不到。
 function bvNormBrandKey_(s) {
-  return String(s || '').toLowerCase().replace(/\s+/g, '');
+  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
 }
 
 // 找出標題裡包含的所有品牌（一團可對到多品牌，例：聯名團標題同時含兩個品牌名）。

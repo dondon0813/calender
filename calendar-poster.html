@@ -152,6 +152,9 @@ body {
   padding: 7px 8px;
   background: var(--c-surface-3);
 }
+/* 補位格的鄰月團：跟本月的團明顯分開，免得以為自己排錯月份 */
+.ev-sep { margin: 10px 0 4px; }
+.ev-item.ev-out { border-style: dashed; opacity: .92; }
 .ev-item .ev-head {
   display: flex; align-items: center; gap: 6px;
   font-size: 12px; color: var(--c-muted);
@@ -424,15 +427,17 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 /* 徽章：用 inline-flex 置中，不要靠 padding 硬喬——中文字的 ascent 比較高，
    line-height 1.25＋不對稱 padding 會讓字看起來黏在上緣 */
 .chip .chip-badge, .list-row .row-badge {
-  display: inline-flex;
-  align-items: center; justify-content: center;
-  /* 同樣的字型補正：上多留 0.2em、下少留，字才會在膠囊正中間（膠囊的 line-height 是 1，字框被壓縮，補正量比團名大） */
-  padding: calc(4px + 0.15em) 12px max(0px, calc(4px - 0.15em));
+  /* 原本是 inline-flex＋line-height:1＋不對稱 padding：字的墨水其實是「溢出」行框、
+     再靠 padding 硬喬回中間。桌機瀏覽器畫得出來，但 html2canvas 換個裝置重畫就會
+     整串往下掉、被膠囊切掉（她 iPhone 匯出的圖）。改成行框本來就裝得下整個墨水，
+     上下留白用 em，字級再怎麼變都成立。 */
+  display: inline-block;
+  padding: 0.26em 0.55em 0.16em;
   border-radius: 999px;
   background: var(--p-badge-bg);
   color: var(--p-badge-text);
   font-size: 20px; font-weight: 800;
-  line-height: 1;
+  line-height: 1.26;
   white-space: nowrap;
 }
 /* 徽章與團名的距離：行事曆模式是上下、列表模式是左右，都吃同一個設定。
@@ -463,9 +468,16 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .num {
   flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: center;
+  /* 不用 flex 置中：數字是文字，flex 的垂直置中是對「字框」不是對「墨水」，
+     而且 html2canvas 在不同裝置上重畫時容易跑掉（她 iPhone 匯出的圖就是歪的）。
+     改成「行高＝圓圈高＋水平置中」，再用 em 補掉字型上下不對稱的那一點點。 */
+  display: block; text-align: center;
   border-radius: 999px;
   color: #fff; font-family: var(--font-display); font-weight: 800;
+}
+.list-row .num span {
+  display: inline-block;
+  position: relative; top: 0.08em;   /* 字框上緣比墨水多、下緣多更多，往下推一點才是視覺置中 */
 }
 .list-row .sep {
   flex: 0 0 auto;
@@ -475,6 +487,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .range {
   flex: 0 0 auto;
+  text-align: center;    /* 欄寬照最長的日期算，短日期置中，左右各分一半空白比較不會忽寬忽窄 */
   white-space: nowrap;   /* 日期絕對不能折行（欄寬是量出來的，差 1px 就會斷成兩行） */
   font-family: var(--font-display); font-weight: 800;
   color: var(--p-month-color);
@@ -488,9 +501,14 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .name .name-line {             /* 同框的團一個品牌一行 */
   display: block; position: relative; top: calc(0.09em + var(--p-text-shift));
+  /* 這一行要 overflow:hidden，長團名才收得成「…」。但那個裁切框的高度預設剛好等於
+     行高，中文字的墨水比行高高約 2px，上緣就會被削掉；純英文的團剛好在框內，
+     所以「只有部分團」看得出來。用 padding 把裁切框撐大、再用等量負 margin 抵銷，
+     版面高度與行距都不變，字不會被切。 */
+  padding: 0.4em 0; margin: -0.4em 0;   /* 0.4em 是留給行距調很緊時的餘裕（她的預設 1.02 就很緊） */
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.list-row.hi { background: var(--p-hi-bg); border-color: var(--p-hi-border); }
+/* 列表模式不分冷凍/冷藏（使用者要求），所以沒有 .list-row.hi；藍底只出現在行事曆的格子 */
 </style>
 </head>
 <body>
@@ -637,17 +655,27 @@ body.pane-text  [data-pane="image"] { display: none !important; }
     </fieldset>
 
     <fieldset>
-      <legend>本月團（逐團微調）</legend>
-      <p class="hint" data-pane="image">改「顯示名稱」只影響這張圖，不會動到行事曆資料。留空＝用原本的活動名稱。<b>要在某個位置斷行就打「｜」</b>——例如想讓「安可堡泡泡」分成兩行，就填 <code>安可堡｜泡泡</code>。列表模式一律一行，｜ 會自動變回空白。</p>
-      <p class="hint" data-pane="text">這裡改的是貼文裡 👉🏻 那句，只影響這個月。留空＝用 brand-notes.js 的品牌備註。</p>
+      <legend>本月團（逐團微調 · <span id="evModeTag">行事曆</span>）</legend>
+      <p class="hint" data-pane="image">行事曆與列表<b>各調各的</b>（跟版面設定一樣）：上面切換版面，這裡就換成那個版面的設定——顯示名稱、冷凍/冷藏、同框、不顯示、徽章。改這裡只影響這張圖，不會動到行事曆資料。留空＝用原本的活動名稱。<b>要在某個位置斷行就打「｜」</b>——例如想讓「安可堡泡泡」分成兩行，就填 <code>安可堡｜泡泡</code>。列表模式一律一行，｜ 會自動變回空白。</p>
+      <p class="hint" data-pane="text">這裡改的是貼文裡 👉🏻 那句，只影響這個月，兩種版面共用。留空＝用 brand-notes.js 的品牌備註。貼文的團名與順序是看<b>列表</b>那一套微調。</p>
       <div class="ev-list" id="evList"></div>
       <div class="btn-row">
         <button class="btn" id="btnResetEv">清空本月微調</button>
+        <button class="btn" id="btnCopyNotes" data-pane="text">複製新打的備註</button>
       </div>
+      <p class="hint" data-pane="text">上面手打的備註只存在這台電腦、只算這個月。想讓某一句以後每個月都自動帶出來，按「複製新打的備註」再貼給 Claude，會寫進 <code>brand-notes.js</code> 的品牌庫（進版控，換電腦也在）。<span id="notesCopyState"></span></p>
     </fieldset>
 
     <fieldset data-pane="text">
       <legend>文案樣板</legend>
+      <div class="row">
+        <label>文案版本</label>
+        <div class="seg" id="segCapMode">
+          <button data-v="full" class="on">完整</button>
+          <button data-v="brief">精簡</button>
+        </div>
+      </div>
+      <p class="hint">「完整」＝每一團下面帶 👉🏻 小介紹；「精簡」＝只列日期與團名，不帶介紹（開頭、結尾、hashtag 兩種都有）。</p>
       <p class="hint">👉🏻 那行來自 <code>brand-notes.js</code> 的品牌備註，會自動比對團名。要改這個月的某一團，就在上面「本月團」的備註欄打字。</p>
       <div class="row"><label>開頭</label><textarea id="tCapIntro" rows="2"></textarea></div>
       <div class="row"><label>清單標題</label><input type="text" id="tCapListTitle"></div>
@@ -682,8 +710,10 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <legend>設定</legend>
       <div class="btn-row">
         <button class="btn primary" id="btnSaveDefault">存成我的預設</button>
+        <button class="btn" id="btnCopySettings">複製設定 JSON</button>
       </div>
       <p class="hint">調到滿意就按這個：以後「全部恢復預設」會回到這一版，不是回到我寫死的初始值。<span id="userDefState"></span></p>
+      <p class="hint">「我的預設」只存在這台電腦。要讓<b>每台電腦、清掉瀏覽器之後</b>都是這一版，按「複製設定 JSON」把內容貼給 Claude，寫進程式的初始值就好。</p>
       <div class="btn-row">
         <button class="btn" id="btnResetAll">全部恢復預設</button>
         <button class="btn" id="btnClearDefault">清除我的預設</button>
@@ -739,27 +769,43 @@ const PER_MODE_KEYS = ['size', 'insetT', 'insetB', 'insetL', 'insetR',
                        'fs', 'gap', 'radius', 'headH', 'headTop', 'dayTop', 'daySize',
                        'badgeGap', 'lineH', 'textShift', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
 
+/* 初始值＝使用者 2026-07-31 在產生器裡調好、按「複製設定 JSON」給我的那一版。
+   兩種版面各自的欄位放在 modes 裡，頂層那幾個是「目前版面（初始是行事曆）」的值，
+   跟 modes.calendar 一致。要再改就整組換掉，不要只改一邊。 */
 const DEFAULTS = {
-  modes: {},                // { calendar: {...}, list: {...} }：上面那些欄位的兩套值
+  modes: {                  // 兩套版面各自的 PER_MODE_KEYS
+    calendar: {
+      size: '4:5', insetT: 198, insetB: 106, insetL: 60, insetR: 60,
+      fs: 1.18, gap: 0, radius: 10, headH: 150, headTop: 50,
+      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0,
+      titleImg: 'on', monthOverlay: false, moX: 90, moY: 60, moS: 92
+    },
+    list: {
+      size: '4:5', insetT: 176, insetB: 105, insetL: 60, insetR: 60,
+      fs: 1, gap: 9, radius: 10, headH: 140, headTop: 38,
+      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0,
+      titleImg: 'on', monthOverlay: false, moX: 90, moY: 60, moS: 92
+    }
+  },
   pane: 'image',            // 'image'＝產生圖片｜'text'＝產生貼文
   mode: 'calendar',
   size: '4:5',
   cols: 5,
-  insetT: 250, insetB: 118, insetL: 60, insetR: 60,
+  insetT: 198, insetB: 106, insetL: 60, insetR: 60,
   titleImg: 'on',           // 'on'＝用 images/calendar 的月份標題圖；'off'＝用 CSS 仿版標題
-  headTop: 34,              // 標題距離頂端幾 px（可以是負的，把標題往上推出邊界）
+  headTop: 50,              // 標題距離頂端幾 px（可以是負的，把標題往上推出邊界）
   dayTop: 4, daySize: 22,   // 格子左上角日期數字的位置與大小（格子上方留白會自動跟著算）
-  lineH: 1.16,              // 團名的文字行距（多行時才看得出來）
+  lineH: 1.02,              // 團名的文字行距（多行時才看得出來）
   textShift: 0,             // 團名在框裡的上下微調（負的往上、正的往下；不影響版面配置）
-  badgeGap: 4,              // 徽章與團名的距離（行事曆是上下、列表是左右）
-  zoom: 0,                  // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
+  badgeGap: 1,              // 徽章與團名的距離（行事曆是上下、列表是左右）
+  zoom: 50,                 // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
-  fs: 1, gap: 10, radius: 14, headH: 190,
+  fs: 1.18, gap: 0, radius: 10, headH: 150,
   cOuter: '#FBE8D0', cPanel: '#FFF9F0',
   cCellBg: '#FFFDF9', cCellBorder: '#F2DFC2',
-  cChipBg: '#FBE1BC', cChipBorder: '#E8A54F', cChipText: '#8A5426',
+  cChipBg: '#F2E4D9', cChipBorder: '#DDA97E', cChipText: '#8A5426',
   cDate: '#A98A6B',
-  cHiBg: '#CFE1F7', cHiBorder: '#7FA9DE', cHiText: '#35598D',
+  cHiBg: '#E1EEFE', cHiBorder: '#7FA9DE', cHiText: '#35598D',
   cBadge: '#E8455E',
   cMonth: '#F2707E', cTitle: '#7A4A22',
   title1: '雪莉與朵栗', title2: '團購行事曆',
@@ -768,14 +814,27 @@ const DEFAULTS = {
   capIntro: '❤️ {月}月團購行事曆來囉 ❤️\n趕快來看看有沒有你們喜歡的團💕',
   capListTitle: '📅 {國字月}月團購行事曆',
   capOutro: '🎁 文末留言告訴我：\n這個月最期待哪一團？\n抽一位送神秘小禮物❤️',
-  capTags: '#育兒日記 #新手媽媽'
+  capTags: '#育兒日記 #新手媽媽',
+  capMode: 'full'           // 貼文版本：'full'＝每團帶 👉🏻 小介紹｜'brief'＝只列團名
 };
 
 // 列表模式的號碼圈配色（照 shared.css 的分類色盤循環）
 const NUM_COLORS = ['#FF8FA3', '#9ACB85', '#FFB37A', '#F0C36D', '#6FC8C2', '#7AAEEB', '#B79AE8'];
 
-let S = Object.assign({}, DEFAULTS);
-let EV_OVERRIDES = {};          // { [eventId]: {name, hi, badge, hidden} }
+/* modes 是巢狀物件，用 Object.assign 淺拷貝的話，切換版面時會直接改到 DEFAULTS
+   裡的那一份，「全部恢復預設」就回不到原本的初始值了。複製設定一律走這裡。 */
+function cloneSettings(src) {
+  const out = Object.assign({}, src);
+  if (src && src.modes) {
+    out.modes = {};
+    Object.keys(src.modes).forEach(m => { out.modes[m] = Object.assign({}, src.modes[m]); });
+  }
+  return out;
+}
+
+let S = cloneSettings(DEFAULTS);
+// { [eventId]: { note, calendar:{name,badge,hidden,mergePrev,cold?}, list:{同左} } }
+let EV_OVERRIDES = {};
 let ASSETS = { bg: '', photo: '' };
 let allEvents = [];
 let currentYear, currentMonth;
@@ -898,8 +957,52 @@ function monthEvents() {
     .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
 }
 
+/* 逐團微調跟版面設定一樣，行事曆與列表各記各的（格子窄要用短名、列表放得下用全名，
+   徽章、要不要藏、同不同框，兩種版面常常不一樣）。備註是貼文用的，跟版面無關，放最外層共用。
+
+   一筆長這樣：{ note:'', calendar:{name,badge,hidden,mergePrev,cold?}, list:{同左} }
+   舊資料是扁的一層，migrateOverrides() 會原封不動複製成兩套，之前調好的東西不會掉。 */
+const OV_MODES = ['calendar', 'list'];
+const OV_FIELDS = ['name', 'badge', 'hidden', 'mergePrev', 'cold'];
+const EMPTY_OV = {};
+
+function blankOv() { return { name: '', badge: '', hidden: false, mergePrev: false }; }
+function modeKey(mode) { return (mode || S.mode) === 'list' ? 'list' : 'calendar'; }
+
+function migrateOverrides() {
+  let changed = false;
+  Object.keys(EV_OVERRIDES).forEach(id => {
+    const rec = EV_OVERRIDES[id];
+    if (!rec || typeof rec !== 'object') { delete EV_OVERRIDES[id]; changed = true; return; }
+    if (rec.calendar && rec.list) return;              // 已經是新格式
+    changed = true;
+    const flat = blankOv();
+    flat.name = rec.name || '';
+    flat.badge = rec.badge || '';
+    flat.hidden = !!rec.hidden;
+    flat.mergePrev = !!rec.mergePrev;
+    if (typeof rec.cold === 'boolean') flat.cold = rec.cold;
+    rec.calendar = rec.calendar || Object.assign({}, flat);
+    rec.list     = rec.list     || Object.assign({}, flat);
+    rec.note = typeof rec.note === 'string' ? rec.note : '';
+    OV_FIELDS.forEach(k => delete rec[k]);
+  });
+  if (changed) saveEvents();   // 升級後的格式寫回去，下次就不用再搬一次
+}
+
+// 要寫入時用：沒有就建一筆
 function ovOf(id) {
-  return EV_OVERRIDES[id] || (EV_OVERRIDES[id] = { name: '', badge: '', hidden: false, note: '', mergePrev: false });
+  let rec = EV_OVERRIDES[id];
+  if (!rec) rec = EV_OVERRIDES[id] = { note: '' };
+  if (!rec.calendar) rec.calendar = blankOv();
+  if (!rec.list) rec.list = blankOv();
+  if (typeof rec.note !== 'string') rec.note = '';
+  return rec;
+}
+// 只是要讀的時候用：不要為了讀一個值就生出一堆空紀錄
+function ovRead(id, mode) {
+  const rec = EV_OVERRIDES[id];
+  return (rec && rec[modeKey(mode)]) || EMPTY_OV;
 }
 
 /* 合團：像 yookidoo + trixie 那種「行事曆分兩列、其實是同一團」的情形。
@@ -909,34 +1012,37 @@ function ovOf(id) {
 function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
-function visibleGroups() {
+function visibleGroups(mode) {
+  const mk = modeKey(mode);
   const groups = [];
   monthEvents().forEach(ev => {
-    if ((EV_OVERRIDES[ev.id] || {}).hidden) return;
+    if (ovRead(ev.id, mk).hidden) return;
     const prev = groups[groups.length - 1];
-    if ((EV_OVERRIDES[ev.id] || {}).mergePrev && prev && sameDay(prev[0].start, ev.start)) prev.push(ev);
+    if (ovRead(ev.id, mk).mergePrev && prev && sameDay(prev[0].start, ev.start)) prev.push(ev);
     else groups.push([ev]);
   });
   return groups;
 }
 // 面板用：這一團前面那個「還看得見」的團，用來標示會跟誰同框
-function prevVisibleEvent(ev) {
-  const evs = monthEvents().filter(e => !(EV_OVERRIDES[e.id] || {}).hidden);
+function prevVisibleEvent(ev, mode) {
+  const mk = modeKey(mode);
+  const evs = monthEvents().filter(e => !ovRead(e.id, mk).hidden);
   const i = evs.findIndex(e => e.id === ev.id);
   return i > 0 ? evs[i - 1] : null;
 }
 // 貼文／提醒用：一團一個字串，｜ 接回空格
-function groupNames(group) { return group.map(ev => plainName(displayName(ev))); }
+function groupNames(group, mode) { return group.map(ev => plainName(displayName(ev, mode))); }
 // 圖上用：一團可能兩行（｜），同框再串起來
-function groupLines(group) { return group.reduce((out, ev) => out.concat(nameLines(displayName(ev))), []); }
+function groupLines(group, mode) {
+  return group.reduce((out, ev) => out.concat(nameLines(displayName(ev, mode))), []);
+}
 function groupNotes(group) {
   const out = [];
   group.forEach(ev => { const n = noteOf(ev); if (n && out.indexOf(n) === -1) out.push(n); });
   return out;
 }
-function displayName(ev) {
-  const o = EV_OVERRIDES[ev.id];
-  return (o && o.name) ? o.name : ev.title;
+function displayName(ev, mode) {
+  return ovRead(ev.id, mode).name || ev.title;
 }
 
 /* 團名裡的「｜」＝她指定的斷行點（例：Parakito｜防蚊用品）。
@@ -958,9 +1064,9 @@ function autoCold(ev) {
   const flat = nameLines(ev.title).join('');
   return COLD_KEYWORDS.some(k => flat.indexOf(k) !== -1);
 }
-function isCold(ev) {
-  const o = EV_OVERRIDES[ev.id];
-  if (o && typeof o.cold === 'boolean') return o.cold;
+function isCold(ev, mode) {
+  const o = ovRead(ev.id, mode);
+  if (typeof o.cold === 'boolean') return o.cold;
   return autoCold(ev);
 }
 
@@ -984,7 +1090,8 @@ function brandNoteFor(title) {
 function noteOf(ev) {
   const o = EV_OVERRIDES[ev.id];
   if (o && o.note) return o.note;
-  return brandNoteFor(displayName(ev)) || brandNoteFor(ev.title);
+  // 備註是貼文用的，名字一律看「列表」那套（貼文本來就是一條一條列，跟列表同一種寫法）
+  return brandNoteFor(displayName(ev, 'list')) || brandNoteFor(ev.title);
 }
 
 /* ============================================================
@@ -1092,7 +1199,10 @@ function autoFit() {
     ranges.forEach(r => { r.style.width = ''; });
     let maxW = 0;
     ranges.forEach(r => { maxW = Math.max(maxW, r.offsetWidth); });
-    maxW += 2;   // offsetWidth 是整數會往下捨，多留 2px 免得最長的那個剛好被擠掉
+    // +2 是因為 offsetWidth 取整會往下捨；再加半個字寬，最長的那個日期才不會
+    // 幾乎貼著團名（日期長度差一位數就差很多，欄寬是照最長的那個算的）
+    const rangeFs = parseFloat(getComputedStyle(ranges[0]).fontSize) || 20;
+    maxW += 2 + Math.round(rangeFs * 0.45);
     ranges.forEach(r => { r.style.width = maxW + 'px'; });
   }
 
@@ -1124,7 +1234,7 @@ function autoFit() {
    標題要壓扁才留得下空間。其餘一律標準版，兩款都置中。 */
 function titleImgSrc() {
   const mm = String(currentMonth + 1).padStart(2, '0');
-  const slim = (S.mode === 'list' && visibleGroups().length > 24);
+  const slim = (S.mode === 'list' && visibleGroups('list').length > 24);
   return `images/calendar/title-${mm}${slim ? '-slim' : ''}.webp`;
 }
 
@@ -1191,7 +1301,10 @@ function colOf(dow, cols) {
   return (dow === 0 || dow === 6) ? null : dow - 1; // 1=一 → 0 … 5=五 → 4
 }
 
-function buildCalendar() {
+/* 行事曆的格子幾何：哪一列哪一格是哪一天、哪幾列要畫、哪些是前後月的補位格。
+   buildCalendar 畫圖用；逐團微調面板也用它找出「會被畫進補位格的鄰月團」，
+   兩邊算出來的一定一樣（以前是面板不知道有這些團，所以它們調不到）。 */
+function calendarGeometry() {
   const cols = S.cols;
   const first = new Date(currentYear, currentMonth, 1);
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -1216,54 +1329,10 @@ function buildCalendar() {
     cells[`${row}-${col}`] = { day, events: [] };
   }
 
-  // 把團放進「開團日」那一格（同框的團是一組，整組一起放）
-  movedFromWeekend = [];
-  visibleGroups().forEach(group => {
-    const ev = group[0];
-    let d = new Date(currentYear, currentMonth, ev.start.getDate());
-    let col = colOf(d.getDay(), cols);
-    if (col === null) {
-      // 週末開團：往前挪到最近的週五，並記下來提醒使用者
-      const back = d.getDay() === 6 ? 1 : 2;
-      const moved = new Date(currentYear, currentMonth, d.getDate() - back);
-      if (moved.getMonth() !== currentMonth) return;   // 挪出本月就不畫
-      movedFromWeekend.push({ name: groupNames(group).join('＋'), from: fmtMD(d), to: fmtMD(moved) });
-      d = moved;
-      col = colOf(d.getDay(), cols);
-    }
-    const row = Math.round((weekStartOf(d) - baseWeek) / 604800000);
-    const cell = cells[`${row}-${col}`];
-    if (cell) cell.events.push(group);
-  });
-
   // 第 row 列第 col 格是哪一天（baseWeek＝第 0 列第 0 格）
   function cellDateOf(row, col) {
     return new Date(baseWeek.getFullYear(), baseWeek.getMonth(), baseWeek.getDate() + row * 7 + col);
   }
-
-  // 月初月底補位格（前後月的日期）也要畫團：8 月的圖尾巴有 9/1～9/4，
-  // 那幾天開的團前台已經看得到了，圖上就不該是空格。
-  // 這些團不參與同框與逐團微調（那些是「本月」的設定），一團一框。
-  const outCells = {};   // key `${row}-${col}`
-  for (let row = 0; row <= maxRow; row++) {
-    for (let col = 0; col < cols; col++) {
-      if (cells[`${row}-${col}`]) continue;
-      const d = cellDateOf(row, col);
-      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) continue;
-      outCells[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] = { key: `${row}-${col}`, events: [] };
-    }
-  }
-  allEvents.forEach(ev => {
-    if ((EV_OVERRIDES[ev.id] || {}).hidden) return;
-    const s = ev.start;
-    const slot = outCells[`${s.getFullYear()}-${s.getMonth()}-${s.getDate()}`];
-    if (slot) slot.events.push([ev]);
-  });
-  const outByCell = {};
-  Object.keys(outCells).forEach(k => {
-    const slot = outCells[k];
-    if (slot.events.length) outByCell[slot.key] = slot.events;
-  });
   function isThisMonth(d) {
     return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
   }
@@ -1279,6 +1348,66 @@ function buildCalendar() {
     if (keep) rows.push(row);
   }
 
+  // 月初月底補位格（前後月的日期）：只算真的會畫出來的那幾列
+  const outCells = {};   // key `${y}-${m}-${d}` → { key: `${row}-${col}`, events: [] }
+  rows.forEach(row => {
+    for (let col = 0; col < cols; col++) {
+      if (cells[`${row}-${col}`]) continue;
+      const d = cellDateOf(row, col);
+      if (isThisMonth(d)) continue;
+      outCells[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] = { key: `${row}-${col}`, events: [] };
+    }
+  });
+
+  return { cols, cells, rows, baseWeek, weekStartOf, cellDateOf, isThisMonth, outCells };
+}
+
+/* 會被畫進補位格的鄰月團（例：8 月的圖尾巴那幾格是 9/1～9/4）。
+   這些團在圖上看得到，所以逐團微調也要列出來讓她改名／藏起來。 */
+function outMonthEvents() {
+  const { outCells } = calendarGeometry();
+  return allEvents
+    .filter(ev => outCells[`${ev.start.getFullYear()}-${ev.start.getMonth()}-${ev.start.getDate()}`])
+    .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
+}
+
+function buildCalendar() {
+  const { cols, cells, rows, baseWeek, weekStartOf, cellDateOf, isThisMonth, outCells } = calendarGeometry();
+
+  // 把團放進「開團日」那一格（同框的團是一組，整組一起放）
+  movedFromWeekend = [];
+  visibleGroups('calendar').forEach(group => {
+    const ev = group[0];
+    let d = new Date(currentYear, currentMonth, ev.start.getDate());
+    let col = colOf(d.getDay(), cols);
+    if (col === null) {
+      // 週末開團：往前挪到最近的週五，並記下來提醒使用者
+      const back = d.getDay() === 6 ? 1 : 2;
+      const moved = new Date(currentYear, currentMonth, d.getDate() - back);
+      if (moved.getMonth() !== currentMonth) return;   // 挪出本月就不畫
+      movedFromWeekend.push({ name: groupNames(group, 'calendar').join('＋'), from: fmtMD(d), to: fmtMD(moved) });
+      d = moved;
+      col = colOf(d.getDay(), cols);
+    }
+    const row = Math.round((weekStartOf(d) - baseWeek) / 604800000);
+    const cell = cells[`${row}-${col}`];
+    if (cell) cell.events.push(group);
+  });
+
+  // 月初月底補位格（前後月的日期）也要畫團：8 月的圖尾巴有 9/1～9/4，
+  // 那幾天開的團前台已經看得到了，圖上就不該是空格。
+  // 這些團不參與同框（一團一框），但逐團微調的名稱／徽章／藏起來都吃得到。
+  allEvents.forEach(ev => {
+    if (ovRead(ev.id, 'calendar').hidden) return;
+    const s = ev.start;
+    const slot = outCells[`${s.getFullYear()}-${s.getMonth()}-${s.getDate()}`];
+    if (slot) slot.events.push([ev]);
+  });
+  const outByCell = {};
+  Object.keys(outCells).forEach(k => {
+    const slot = outCells[k];
+    if (slot.events.length) outByCell[slot.key] = slot.events;
+  });
   const grid = document.createElement('div');
   grid.className = 'cal-grid' + (S.gap === 0 ? ' collapse' : '');
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -1314,14 +1443,14 @@ function buildCalendar() {
 function buildChip(group, siblings) {
   const chip = document.createElement('div');
   // 同框的團只要有一個是冷凍/冷藏，整框就上藍色
-  chip.className = 'chip' + (group.some(isCold) ? ' hi' : '');
+  chip.className = 'chip' + (group.some(ev => isCold(ev, 'calendar')) ? ' hi' : '');
 
   // 一格一團給大字，一格兩團縮到 0.78，三團以上再縮；同框多品牌再讓 autoFit 收尾
   const base = siblings <= 1 ? 30 : (siblings === 2 ? 25 : 20);
   chip.style.fontSize = Math.round(base * S.fs) + 'px';
 
   group.forEach(ev => {
-    nameLines(displayName(ev)).forEach(t => {
+    nameLines(displayName(ev, 'calendar')).forEach(t => {
       const name = document.createElement('span');
       name.className = 'chip-name';
       name.textContent = t;
@@ -1329,7 +1458,7 @@ function buildChip(group, siblings) {
     });
   });
 
-  const badge = group.map(ev => (EV_OVERRIDES[ev.id] || {}).badge).find(Boolean);
+  const badge = group.map(ev => ovRead(ev.id, 'calendar').badge).find(Boolean);
   if (badge) {
     const b = document.createElement('span');
     b.className = 'chip-badge';
@@ -1350,7 +1479,7 @@ function renderMoveWarn() {
 /* ---------- 列表模式 ---------- */
 
 function buildList() {
-  const groups = visibleGroups();
+  const groups = visibleGroups('list');
   const grid = document.createElement('div');
   grid.className = 'list-grid';
 
@@ -1366,7 +1495,7 @@ function buildList() {
   groups.forEach((group, i) => {
     const ev = group[0];
     const r = document.createElement('div');
-    r.className = 'list-row' + (group.some(isCold) ? ' hi' : '');
+    r.className = 'list-row';   // 列表模式不分冷凍/冷藏，一律同一個底色（行事曆才上藍底）
     r.style.height = rowH + 'px';
     r.style.fontSize = fs + 'px';
 
@@ -1375,9 +1504,12 @@ function buildList() {
     const numSize = Math.round(rowH * 0.62);
     num.style.width = numSize + 'px';
     num.style.height = numSize + 'px';
+    num.style.lineHeight = numSize + 'px';   // 行高＝圓圈高＝垂直置中（不靠 flex）
     num.style.fontSize = Math.round(numSize * 0.56) + 'px';
     num.style.background = NUM_COLORS[i % NUM_COLORS.length];
-    num.textContent = i + 1;
+    const numTxt = document.createElement('span');
+    numTxt.textContent = i + 1;
+    num.appendChild(numTxt);
     r.appendChild(num);
 
     const sep = document.createElement('div');
@@ -1395,12 +1527,12 @@ function buildList() {
     // （行事曆模式才需要斷行，那邊格子窄；這裡是橫的一長列，斷行反而醜。）
     const line = document.createElement('span');
     line.className = 'name-line';
-    line.textContent = groupNames(group).join('＋');
+    line.textContent = groupNames(group, 'list').join('＋');
     name.appendChild(line);
     r.appendChild(name);
 
     // 徽章（例：雪坊優格的「抽免單」）。原本只有行事曆模式會畫，列表模式漏掉了
-    const badge = group.map(e => (EV_OVERRIDES[e.id] || {}).badge).find(Boolean);
+    const badge = group.map(e => ovRead(e.id, 'list').badge).find(Boolean);
     if (badge) {
       const b = document.createElement('div');
       b.className = 'row-badge';
@@ -1440,83 +1572,112 @@ function fitScaler() {
    4. 控制面板
    ============================================================ */
 
+/* 這個面板編的是「目前選的版面」那一套微調：切到行事曆就是行事曆的，切到列表就是列表的。
+   （備註例外，它是貼文用的，兩邊共用同一格。）切換版面時會重畫這裡。 */
 function renderEvList() {
   const box = document.getElementById('evList');
   box.innerHTML = '';
+  const mk = modeKey(S.mode);
+  const tag = document.getElementById('evModeTag');
+  if (tag) tag.textContent = mk === 'list' ? '列表' : '行事曆';
   const evs = monthEvents();
-  if (!evs.length) {
+  // 月初月底補位格裡的鄰月團（只有行事曆版面畫得到它們）
+  const outs = mk === 'calendar' ? outMonthEvents() : [];
+  if (!evs.length && !outs.length) {
     box.innerHTML = '<p class="hint">這個月還沒有團購資料。</p>';
     return;
   }
-  evs.forEach(ev => {
-    const o = ovOf(ev.id);
-    const item = document.createElement('div');
-    item.className = 'ev-item' + (o.hidden ? ' hidden-ev' : '');
+  evs.forEach(ev => box.appendChild(buildEvItem(ev, mk, false)));
+  if (outs.length) {
+    const h = document.createElement('p');
+    h.className = 'hint ev-sep';
+    h.setAttribute('data-pane', 'image');
+    h.innerHTML = '↓ <b>補位格的團</b>（' + outs.map(ev => fmtMD(ev.start)).join('、') +
+                  '）：這幾天是下個月／上個月，但圖的月初月底那幾格畫得到，所以也能在這裡改名、加徽章或藏起來。' +
+                  '它們不參與「同框」，貼文也不會列進去。';
+    box.appendChild(h);
+    outs.forEach(ev => box.appendChild(buildEvItem(ev, mk, true)));
+  }
+}
 
-    const head = document.createElement('div');
-    head.className = 'ev-head';
-    head.innerHTML = `<span class="ev-date">${fmtMD(ev.start)}</span>` +
-                     `<span class="ev-orig">${escapeHtml(plainName(ev.title))}</span>`;
-    item.appendChild(head);
+/* 面板上的一個團。isOut＝月初月底補位格裡的鄰月團：它不進貼文（沒有備註欄）、
+   也不參與同框，其餘（顯示名稱、冷凍/冷藏、徽章、不顯示）跟本月的團一樣。 */
+function buildEvItem(ev, mk, isOut) {
+  const rec = ovOf(ev.id);     // 共用的（備註）
+  const o = rec[mk];           // 這個版面自己的（名稱、徽章、冷凍、同框、不顯示）
+  const item = document.createElement('div');
+  item.className = 'ev-item' + (o.hidden ? ' hidden-ev' : '') + (isOut ? ' ev-out' : '');
+  if (isOut) item.setAttribute('data-pane', 'image');
 
-    const nameIn = document.createElement('input');
-    nameIn.type = 'text';
-    nameIn.setAttribute('data-pane', 'image');
-    nameIn.placeholder = '顯示名稱（留空＝用原名；打｜可斷行）';
-    nameIn.value = o.name || '';
-    nameIn.addEventListener('input', () => {
-      o.name = nameIn.value; saveEvents(); renderPoster();
-      noteIn.placeholder = notePlaceholder(ev);
-      renderCaption();
-    });
-    item.appendChild(nameIn);
+  const head = document.createElement('div');
+  head.className = 'ev-head';
+  head.innerHTML = `<span class="ev-date">${fmtMD(ev.start)}</span>` +
+                   `<span class="ev-orig">${escapeHtml(plainName(ev.title))}</span>`;
+  item.appendChild(head);
 
-    // 貼文的 👉🏻 那行。留空＝用 brand-notes.js 的品牌備註（顯示在 placeholder）
-    const noteIn = document.createElement('input');
+  let noteIn = null;
+  const nameIn = document.createElement('input');
+  nameIn.type = 'text';
+  nameIn.setAttribute('data-pane', 'image');
+  nameIn.placeholder = (mk === 'list' ? '列表用的顯示名稱' : '行事曆用的顯示名稱') + '（留空＝用原名；打｜可斷行）';
+  nameIn.value = o.name || '';
+  nameIn.addEventListener('input', () => {
+    o.name = nameIn.value; saveEvents(); renderPoster();
+    if (noteIn) noteIn.placeholder = notePlaceholder(ev);
+    renderCaption();
+  });
+  item.appendChild(nameIn);
+
+  // 貼文的 👉🏻 那行。留空＝用 brand-notes.js 的品牌備註（顯示在 placeholder）
+  if (!isOut) {
+    noteIn = document.createElement('input');
     noteIn.type = 'text';
     noteIn.className = 'ev-note';
     noteIn.setAttribute('data-pane', 'text');
     noteIn.placeholder = notePlaceholder(ev);
-    noteIn.value = o.note || '';
-    noteIn.addEventListener('input', () => { o.note = noteIn.value; saveEvents(); renderCaption(); });
+    noteIn.value = rec.note || '';
+    noteIn.addEventListener('input', () => { rec.note = noteIn.value; saveEvents(); renderCaption(); });
     item.appendChild(noteIn);
+  }
 
-    const opts = document.createElement('div');
-    opts.className = 'ev-opts';
+  const opts = document.createElement('div');
+  opts.className = 'ev-opts';
 
-    // 合團：只有「前一團也是同一天開團」時才給勾（否則圖上根本不在同一格）
-    const prev = prevVisibleEvent(ev);
-    if (prev && sameDay(prev.start, ev.start)) {
-      const mergeWrap = mkCheck(`與「${plainName(displayName(prev))}」同框`, o.mergePrev, v => {
-        o.mergePrev = v; saveEvents(); renderAll();
-      });
-      mergeWrap.classList.add('ev-merge');
-      opts.appendChild(mergeWrap);
-    } else if (o.mergePrev) {
-      o.mergePrev = false;   // 前一團被隱藏或換月份後失效，順手清掉
-    }
+  // 合團：只有「前一團也是同一天開團」時才給勾（否則圖上根本不在同一格）
+  const prev = isOut ? null : prevVisibleEvent(ev, mk);
+  if (prev && sameDay(prev.start, ev.start)) {
+    const mergeWrap = mkCheck(`與「${plainName(displayName(prev, mk))}」同框`, o.mergePrev, v => {
+      o.mergePrev = v; saveEvents(); renderAll();
+    });
+    mergeWrap.classList.add('ev-merge');
+    opts.appendChild(mergeWrap);
+  } else if (o.mergePrev && !isOut) {
+    o.mergePrev = false;   // 前一團被隱藏或換月份後失效，順手清掉
+  }
 
-    // 冷凍/冷藏：預設照分類欄自動判斷，勾或取消就變成手動指定
-    const hiWrap = mkCheck('冷凍/冷藏', isCold(ev), v => { o.cold = v; saveEvents(); renderPoster(); });
+  // 冷凍/冷藏：預設照分類欄自動判斷，勾或取消就變成手動指定。
+  // 只有行事曆會上藍底，列表模式沒有這個視覺，就不要給一個按了沒反應的勾選格。
+  if (mk === 'calendar') {
+    const hiWrap = mkCheck('冷凍/冷藏', isCold(ev, mk), v => { o.cold = v; saveEvents(); renderPoster(); });
     hiWrap.setAttribute('data-pane', 'image');
     opts.appendChild(hiWrap);
-    opts.appendChild(mkCheck('不顯示', o.hidden, v => {
-      o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v); renderPoster(); renderCaption();
-    }));
+  }
+  opts.appendChild(mkCheck('不顯示', o.hidden, v => {
+    o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v); renderPoster(); renderCaption();
+  }));
 
-    const badgeWrap = document.createElement('label');
-    badgeWrap.setAttribute('data-pane', 'image');
-    const badgeIn = document.createElement('input');
-    badgeIn.type = 'text';
-    badgeIn.placeholder = '徽章';
-    badgeIn.value = o.badge || '';
-    badgeIn.addEventListener('input', () => { o.badge = badgeIn.value; saveEvents(); renderPoster(); });
-    badgeWrap.appendChild(badgeIn);
-    opts.appendChild(badgeWrap);
+  const badgeWrap = document.createElement('label');
+  badgeWrap.setAttribute('data-pane', 'image');
+  const badgeIn = document.createElement('input');
+  badgeIn.type = 'text';
+  badgeIn.placeholder = '徽章';
+  badgeIn.value = o.badge || '';
+  badgeIn.addEventListener('input', () => { o.badge = badgeIn.value; saveEvents(); renderPoster(); });
+  badgeWrap.appendChild(badgeIn);
+  opts.appendChild(badgeWrap);
 
-    item.appendChild(opts);
-    box.appendChild(item);
-  });
+  item.appendChild(opts);
+  return item;
 }
 
 /* ============================================================
@@ -1534,7 +1695,7 @@ function circledNum(n) {
 }
 
 function notePlaceholder(ev) {
-  const auto = brandNoteFor(displayName(ev)) || brandNoteFor(ev.title);
+  const auto = brandNoteFor(displayName(ev, 'list')) || brandNoteFor(ev.title);
   return auto ? `👉🏻 ${auto}（品牌備註，留空就用這句）` : '👉🏻 這個品牌還沒有備註，打一句就會用在貼文';
 }
 
@@ -1544,8 +1705,10 @@ function fillTokens(tpl) {
     .replace(/\{國字月\}/g, CN_MONTH[currentMonth] || String(currentMonth + 1));
 }
 
+/* 貼文一律吃「列表」那套逐團微調：貼文本來就是一條一條列出來，長度沒有格子限制，
+   跟列表版面同一種寫法。（升級時舊的微調會複製進兩套，所以不會突然掉字。） */
 function buildCaption() {
-  const groups = visibleGroups();
+  const groups = visibleGroups('list');
   const lines = [];
   const intro = fillTokens(S.capIntro).trim();
   const listTitle = fillTokens(S.capListTitle).trim();
@@ -1558,8 +1721,8 @@ function buildCaption() {
   // 同框＝同一團：一個編號、品牌用＋連，備註每個品牌各自一行（一樣的句子只留一行）
   groups.forEach((group, i) => {
     const ev = group[0];
-    lines.push(`${circledNum(i + 1)}. ${fmtMD(ev.start)} - ${fmtMD(ev.displayEnd)} ${groupNames(group).join('＋')}`);
-    groupNotes(group).forEach(note => lines.push(`👉🏻 ${note}`));
+    lines.push(`${circledNum(i + 1)}. ${fmtMD(ev.start)} - ${fmtMD(ev.displayEnd)} ${groupNames(group, 'list').join('＋')}`);
+    if (S.capMode !== 'brief') groupNotes(group).forEach(note => lines.push(`👉🏻 ${note}`));
   });
 
   if (outro) lines.push('', outro);
@@ -1599,13 +1762,13 @@ function renderCaption() {
   const box = document.getElementById('capOut');
   if (!box) return;
   box.value = buildCaption();
-  const groups = visibleGroups();
+  const groups = visibleGroups('list');
   const brands = groups.reduce((n, g) => n + g.length, 0);
   document.getElementById('capCount').textContent =
     `${currentMonth + 1} 月 · ${groups.length} 團` + (brands > groups.length ? `（${brands} 個品牌）` : '');
   const miss = monthEvents()
-    .filter(ev => !(EV_OVERRIDES[ev.id] || {}).hidden && !noteOf(ev))
-    .map(ev => plainName(displayName(ev)));
+    .filter(ev => !ovRead(ev.id, 'list').hidden && !noteOf(ev))
+    .map(ev => plainName(displayName(ev, 'list')));
   const warn = document.getElementById('capMissing');
   warn.textContent = miss.length ? `還沒有備註的團（${miss.length}）：${miss.join('、')}` : '';
   warn.style.display = miss.length ? 'block' : 'none';
@@ -1624,6 +1787,26 @@ async function copyCaption(e) {
   }
   btn.textContent = '已複製 ✓';
   setTimeout(() => btn.textContent = old, 1500);
+}
+
+/* 複製到剪貼簿：clipboard API 失敗（file:// 或沒授權）就退回隱藏 textarea＋execCommand */
+async function copyToClipboard(btn, text) {
+  const old = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+    document.body.removeChild(ta);
+    if (!ok) { btn.textContent = '複製失敗'; setTimeout(() => { btn.textContent = old; }, 2000); return; }
+  }
+  btn.textContent = '已複製 ✓';
+  setTimeout(() => { btn.textContent = old; }, 1500);
 }
 
 /* ============================================================
@@ -1668,17 +1851,29 @@ function renderPresetList(selectName) {
   if (selectName && PRESETS[selectName]) sel.value = selectName;
 }
 
-// 只存「真的有改過」的團，沒動過的不佔空間
+// 只存「真的有改過」的團，沒動過的不佔空間（行事曆／列表兩套都存）
+function ovModeTouched(o) {
+  return !!(o && (o.name || o.badge || o.hidden || o.mergePrev || typeof o.cold === 'boolean'));
+}
+function ovModeSnapshot(o) {
+  o = o || {};
+  return {
+    name: o.name || '', badge: o.badge || '',
+    cold: (typeof o.cold === 'boolean' ? o.cold : null),
+    hidden: !!o.hidden, mergePrev: !!o.mergePrev
+  };
+}
 function presetEvSnapshot() {
   const out = {};
   monthEvents().forEach(ev => {
-    const o = EV_OVERRIDES[ev.id];
-    if (!o) return;
-    if (!o.name && typeof o.cold !== 'boolean' && !o.badge && !o.hidden && !o.note && !o.mergePrev) return;
+    const rec = EV_OVERRIDES[ev.id];
+    if (!rec) return;
+    if (!ovModeTouched(rec.calendar) && !ovModeTouched(rec.list) && !rec.note) return;
     out[normKey(ev.title)] = {
       label: plainName(ev.title),          // 只是給人看的，比對不用它
-      name: o.name || '', cold: (typeof o.cold === 'boolean' ? o.cold : null), badge: o.badge || '',
-      hidden: !!o.hidden, note: o.note || '', mergePrev: !!o.mergePrev
+      note: rec.note || '',
+      calendar: ovModeSnapshot(rec.calendar),
+      list: ovModeSnapshot(rec.list)
     };
   });
   return out;
@@ -1702,7 +1897,7 @@ function applyPreset(name) {
   if (!p) { presetSay('請先選一個設定檔'); return; }
 
   // 用 DEFAULTS 打底，設定檔沒有的欄位回到預設值（避免舊設定檔缺欄位時殘留上一組的值）
-  S = Object.assign({}, effectiveDefaults(), p.settings || {});
+  S = cloneSettings(Object.assign(effectiveDefaults(), p.settings || {}));
   saveSettings();
   syncControls();
 
@@ -1713,13 +1908,18 @@ function applyPreset(name) {
     const src = p.evs[key];
     const ev = evs.find(e => normKey(e.title) === key);
     if (!ev) { miss.push(src.label || key); return; }
-    const o = ovOf(ev.id);
-    o.name = src.name || '';
-    if (typeof src.cold === 'boolean') o.cold = src.cold; else delete o.cold;
-    o.badge = src.badge || '';
-    o.hidden = !!src.hidden;
-    o.note = src.note || '';
-    o.mergePrev = !!src.mergePrev;
+    const rec = ovOf(ev.id);
+    rec.note = src.note || '';
+    // 舊設定檔只有一套（沒有 calendar/list），兩個版面都套上同一份
+    OV_MODES.forEach(m => {
+      const s2 = src[m] || src;
+      const o = rec[m];
+      o.name = s2.name || '';
+      if (typeof s2.cold === 'boolean') o.cold = s2.cold; else delete o.cold;
+      o.badge = s2.badge || '';
+      o.hidden = !!s2.hidden;
+      o.mergePrev = !!s2.mergePrev;
+    });
     hit++;
   });
   saveEvents();
@@ -1819,10 +2019,10 @@ function saveAssets() {
    （要讓別台電腦也是這一版的話，把設定值給我寫進 DEFAULTS。）*/
 let USER_DEFAULTS = null;
 function effectiveDefaults() {
-  return Object.assign({}, DEFAULTS, USER_DEFAULTS || {});
+  return cloneSettings(Object.assign({}, DEFAULTS, USER_DEFAULTS || {}));
 }
 function saveUserDefaults() {
-  USER_DEFAULTS = Object.assign({}, S);
+  USER_DEFAULTS = cloneSettings(S);
   try { localStorage.setItem(LS_USERDEF, JSON.stringify(USER_DEFAULTS)); } catch (e) {}
   renderUserDefState();
 }
@@ -1838,9 +2038,10 @@ function renderUserDefState() {
 
 function loadStored() {
   try { USER_DEFAULTS = JSON.parse(localStorage.getItem(LS_USERDEF) || 'null'); } catch (e) { USER_DEFAULTS = null; }
-  S = Object.assign({}, effectiveDefaults());
+  S = effectiveDefaults();
   try { Object.assign(S, JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}')); } catch (e) {}
   try { EV_OVERRIDES = JSON.parse(localStorage.getItem(LS_EVENTS) || '{}') || {}; } catch (e) {}
+  migrateOverrides();   // 舊的單一套微調 → 原封不動複製成行事曆／列表兩套
   try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(LS_ASSETS) || '{}')); } catch (e) {}
 }
 
@@ -1949,6 +2150,7 @@ function renderAll() {
 
 function syncControls() {
   segSet('segMode', S.mode);
+  segSet('segCapMode', S.capMode || 'full');
   segSet('segSize', S.size);
   segSet('segCols', S.cols);
   segSet('segMonthOv', S.monthOverlay ? 'on' : 'off');
@@ -1980,6 +2182,8 @@ function init() {
   loadPresets();
   renderPresetList();
 
+  // 貼文版本：完整（帶 👉🏻 小介紹）／精簡（只列團名）
+  bindSeg('segCapMode', v => { S.capMode = v; renderCaption(); });
   bindSeg('segMode', v => { switchMode(v); });
   bindSeg('segSize', v => { S.size = v; });
   bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
@@ -2051,6 +2255,33 @@ function init() {
     ASSETS.photo = ''; document.getElementById('filePhoto').value = ''; saveAssets(); renderPoster();
   });
 
+  // 把目前設定複製成 JSON，貼給 Claude 就能寫進程式的初始值（換電腦也一樣）
+  document.getElementById('btnCopySettings').addEventListener('click', e => {
+    copyToClipboard(e.currentTarget, JSON.stringify(S, null, 2));
+  });
+
+  /* 這個月手打、而且跟品牌庫不一樣的備註，整理成可以直接貼進 brand-notes.js 的樣子。
+     keys 先照團名猜一個（品牌通常是「｜」或空白前面那段），貼過來我再確認。 */
+  document.getElementById('btnCopyNotes').addEventListener('click', e => {
+    const rows = [];
+    monthEvents().forEach(ev => {
+      const rec = EV_OVERRIDES[ev.id];
+      const note = rec && rec.note ? String(rec.note).trim() : '';
+      if (!note) return;
+      const name = plainName(displayName(ev, 'list'));
+      if (note === brandNoteFor(name) || note === brandNoteFor(ev.title)) return;   // 跟庫裡一樣就不用重貼
+      const brand = nameLines(displayName(ev, 'list'))[0] || plainName(ev.title);
+      const key = normKey(brand.split(/[\s　/／、]/)[0] || brand);
+      rows.push(`  { brand: '${brand.replace(/'/g, "\\'")}', keys: ['${key}'], note: '${note.replace(/'/g, "\\'")}' },`);
+    });
+    const state = document.getElementById('notesCopyState');
+    if (!rows.length) {
+      if (state) state.textContent = '（這個月沒有跟品牌庫不一樣的手打備註）';
+      return;
+    }
+    if (state) state.textContent = `（${rows.length} 句）`;
+    copyToClipboard(e.currentTarget, `// ${currentYear}/${currentMonth + 1} 手打的備註\n` + rows.join('\n'));
+  });
   document.getElementById('btnSaveDefault').addEventListener('click', () => {
     saveUserDefaults();
     presetSay('已把現在的版面存成你的預設');
@@ -2092,7 +2323,7 @@ function init() {
   });
   document.getElementById('btnResetAll').addEventListener('click', () => {
     if (!confirm('所有版面設定都會恢復預設（逐團微調與圖片會保留），確定嗎？')) return;
-    S = Object.assign({}, effectiveDefaults());
+    S = effectiveDefaults();
     saveSettings(); syncControls(); renderPoster();
   });
 

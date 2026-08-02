@@ -758,7 +758,9 @@ function buildSocialIconRow() {
 async function loadCustomBlocks() {
   if (!STATS_BACKEND_URL) return;
   try {
-    const res = await fetch(STATS_BACKEND_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
+    // 只抓自訂區塊＋社群連結的輕量端點。
+    // 原本用的 scope=public 會害後端多讀品牌庫（兩次）＋食材＋成品＋食譜＋開學清單，首頁根本用不到。
+    const res = await fetch(STATS_BACKEND_URL + '?scope=blocks&t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
     SOCIAL_LINKS = data.socialLinks || {};
@@ -814,10 +816,17 @@ function getStatKey(ev) {
   return `${ev.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
 }
 
-function sendStat(key, field) {
-  if (!key || !STATS_BACKEND_URL) return;
-  const type = field === 'click' ? 'stat-click' : 'stat-view';
-  const payload = JSON.stringify({ type, key });
+// 統計送出（2026-07-31 改成批次）：原本一筆一個請求，客人往下滑過幾張團購卡就送幾次，
+// 每一筆都是獨立的 Apps Script 執行作業，還要排隊搶同一把鎖——這是同時執行作業爆量的最大來源。
+// 現在先進佇列，短暫等待期間累積的併成一次送（type: 'stat-batch'）。
+// 離開頁面／切到背景時會強制送出，所以不會漏記。
+const STAT_QUEUE = [];
+const STAT_FLUSH_DELAY_VIEW_MS = 1500;  // 瀏覽：滑動時會連續觸發，多等一下併得更多
+const STAT_FLUSH_DELAY_CLICK_MS = 300;  // 點擊：可能馬上跳頁，早點送
+const STAT_QUEUE_MAX = 50;              // 與後端 STAT_BATCH_MAX_ITEMS 對應，別超過
+let statFlushTimer = null;
+
+function postStatPayload(payload) {
   try {
     if (navigator.sendBeacon) {
       navigator.sendBeacon(STATS_BACKEND_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
@@ -830,6 +839,28 @@ function sendStat(key, field) {
       }).catch(() => {});
     }
   } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
+}
+
+function flushStats() {
+  if (statFlushTimer) { clearTimeout(statFlushTimer); statFlushTimer = null; }
+  if (!STAT_QUEUE.length) return;
+  const items = STAT_QUEUE.splice(0, STAT_QUEUE.length);
+  postStatPayload(JSON.stringify({ type: 'stat-batch', items: items }));
+}
+
+function sendStat(key, field) {
+  if (!key || !STATS_BACKEND_URL) return;
+  const isClick = field === 'click';
+  STAT_QUEUE.push({ key: key, field: isClick ? 'clicks' : 'views' });
+  if (STAT_QUEUE.length >= STAT_QUEUE_MAX) { flushStats(); return; }
+  if (isClick) {
+    // 點擊可能馬上跳頁：不管原本排程在多久之後，一律改成短延遲趕快送出
+    if (statFlushTimer) clearTimeout(statFlushTimer);
+    statFlushTimer = setTimeout(flushStats, STAT_FLUSH_DELAY_CLICK_MS);
+  } else if (!statFlushTimer) {
+    // 瀏覽用固定視窗，不是每來一筆就往後延——否則一直滑就一直不送
+    statFlushTimer = setTimeout(flushStats, STAT_FLUSH_DELAY_VIEW_MS);
+  }
 }
 
 function getStatObserver() {
@@ -1704,8 +1735,46 @@ document.getElementById('modeSelect').addEventListener('change', (e) => {
 
 loadCustomBlocks().then(() => { if (currentMode === 'list') render(); });
 loadData();
-setInterval(loadData, 60000);
-setInterval(loadCustomBlocks, 60000);
+
+// 自動更新（2026-07-31 改）：原本是不管有沒有人在看，每 60 秒硬打兩支後端 API。
+// 客人把分頁開著一小時＝120 次執行作業，是 Apps Script 同時執行作業逼近上限的主因之一。
+// 改成①間隔拉長到 5 分鐘 ②分頁被切走／縮到背景就停，切回來若超過一個間隔沒更新才補抓一次。
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+let autoRefreshTimer = null;
+let lastRefreshAt = Date.now();
+
+function refreshAll() {
+  lastRefreshAt = Date.now();
+  loadData();
+  loadCustomBlocks();
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) return;
+  autoRefreshTimer = setInterval(() => {
+    if (document.hidden) return; // 保險：有些瀏覽器不會觸發 visibilitychange
+    refreshAll();
+  }, AUTO_REFRESH_MS);
+}
+
+function stopAutoRefresh() {
+  if (!autoRefreshTimer) return;
+  clearInterval(autoRefreshTimer);
+  autoRefreshTimer = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopAutoRefresh();
+    flushStats(); // 離開前把還沒送出的統計送掉
+  } else {
+    if (Date.now() - lastRefreshAt >= AUTO_REFRESH_MS) refreshAll();
+    startAutoRefresh();
+  }
+});
+window.addEventListener('pagehide', flushStats);
+
+if (!document.hidden) startAutoRefresh();
 
 // 頁面瀏覽量統計：每次載入送一次，key 格式與 getStatKey 同款日期組法（本地時區、月/日不補零）
 (function sendIndexPageview() {
