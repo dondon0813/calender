@@ -664,6 +664,24 @@
     if (anyAgentConfigured()) closeSettings();
   });
 
+  // 「回後台」：後台是用 target="_blank" 另開這一頁的，所以原本那個後台分頁還活著。
+  // 這種情況直接關掉自己、把焦點還給後台分頁，後台就完全不用重載。
+  // 直接輸入網址進來（沒有 opener）時，才照一般連結導向 admin.html。
+  var backToAdminBtn = document.getElementById('backToAdminBtn');
+  if (backToAdminBtn){
+    backToAdminBtn.addEventListener('click', function(e){
+      var opener = null;
+      try { opener = (window.opener && !window.opener.closed) ? window.opener : null; } catch(err){}
+      if (!opener) return;   // 沒有來源分頁 → 讓 href 正常跳頁
+      e.preventDefault();
+      try { opener.focus(); } catch(err){}
+      window.close();
+      // close() 在部分瀏覽器會被擋掉（只准關「由腳本開啟」的視窗）。
+      // 沒關成功就退回一般跳頁，避免按鈕變成按了沒反應。
+      setTimeout(function(){ location.href = 'admin.html'; }, 300);
+    });
+  }
+
   function verifyAgentConnection(url, token){
     return fetch(buildUrl(url, { token: token, scope: 'status' }))
       .then(function(res){ return res.json(); })

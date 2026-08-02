@@ -3810,7 +3810,10 @@
   <div class="topbar">
     <span class="user-chip" id="userChip">👤</span>
     <div class="topbar-right">
-      <a class="mochi-btn" id="mochiOfficeBtn" href="office.html" title="前往麻糬指揮中心" style="display:none;">🐱<span class="mochi-btn-text">麻糬指揮中心</span></a>
+      <!-- 另開分頁：後台這頁很大、開機要跟 Apps Script 要一輪資料，跳走再回來要整個重載，很慢。
+           開新分頁後台就原封不動留著，切回去是瞬間的。（不加 rel="noopener"，
+           指揮中心的「回後台」要靠 window.opener 判斷自己是不是被另開的。） -->
+      <a class="mochi-btn" id="mochiOfficeBtn" href="office.html" target="_blank" title="前往麻糬指揮中心（另開分頁）" style="display:none;">🐱<span class="mochi-btn-text">麻糬指揮中心</span></a>
       <button class="home-btn" id="homeBtn" title="回到首頁" aria-label="回到首頁">🏠</button>
       <div class="menu-wrap">
         <button class="menu-btn" id="menuBtn" title="選單" aria-label="選單">
