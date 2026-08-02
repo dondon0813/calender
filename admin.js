@@ -1443,6 +1443,10 @@ function updatePermissionUI() {
 
   const permBtn = document.getElementById('settingsHubPermissionsBtn');
   if (permBtn) permBtn.style.display = isAdmin ? '' : 'none';
+
+  // 麻糬指揮中心：只有管理員（雪莉）看得到入口
+  const mochiBtn = document.getElementById('mochiOfficeBtn');
+  if (mochiBtn) mochiBtn.style.display = isAdmin ? '' : 'none';
 }
 
 async function tryUnlock() {

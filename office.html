@@ -85,6 +85,21 @@
     display:flex; align-items:center; justify-content:center;
   }
   .gear-btn:hover{ background: var(--c-bg-bottom, #FFF1E6); }
+  /* 回後台：跟指揮中心互相往返的入口 */
+  .back-btn{
+    flex-shrink:0;
+    display:flex; align-items:center; gap:5px;
+    height:32px; padding:0 12px; border-radius:999px;
+    background:#fff; border: 1px solid var(--c-border, #FFD3B6);
+    color: var(--c-brown, #b5755a);
+    font-size:11px; font-weight:800; text-decoration:none; white-space:nowrap;
+    box-shadow: var(--sh-float, 0 3px 10px rgba(0,0,0,.25));
+  }
+  .back-btn:hover{ background: var(--c-bg-bottom, #FFF1E6); }
+  @media (max-width: 640px){
+    .back-btn{ padding:0 10px; }
+    .back-btn .back-btn-text{ display:none; }
+  }
 
   /* ---------------- 主體版面 ---------------- */
   .office-layout{
@@ -382,6 +397,7 @@
     </div>
   </div>
   <div class="topbar-right">
+    <a class="back-btn" id="backToAdminBtn" href="admin.html" title="回到內部後台">◀<span class="back-btn-text">回後台</span></a>
     <div class="status-pill">
       <span class="status-dot offline" id="statusDot"></span>
       <span id="statusLabel">OFFLINE</span>
