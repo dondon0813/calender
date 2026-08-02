@@ -145,7 +145,6 @@ body {
   margin: 0 auto;
   background: var(--c-surface);
   border-radius: var(--r-xl);
-  border: 3px solid var(--c-border-light);
   padding: 18px 14px 26px;
   box-shadow: var(--sh-card);
 }
@@ -162,7 +161,7 @@ body {
   height: 44px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid var(--c-border);
+  border: 1px solid var(--c-border);
   color: var(--c-brown);
   font-size: 20px;
   display: flex;
@@ -185,7 +184,7 @@ body {
   font-weight: 700;
   font-size: 13px;
   border-radius: var(--r-pill);
-  border: 2px solid var(--c-border);
+  border: 1px solid var(--c-border);
   background: #fff;
   color: var(--c-brown);
   padding: 7px 14px;
@@ -313,7 +312,7 @@ body {
   position: relative;
   background: var(--c-surface);
   border-radius: var(--r-modal);
-  border: 3px solid var(--c-border-light);
+  border: 1.5px solid var(--c-border-light);
   padding: 24px 22px;
   max-width: 90%;
   width: 360px;
