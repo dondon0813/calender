@@ -4696,19 +4696,6 @@
   </div>
 </div>
 
-<!-- ===== 貼文文案產生結果浮動視窗（活動編輯彈窗的「產生貼文文案」按鈕跳出） ===== -->
-<div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closePostGenModal()">✕</button>
-    <h3>📝 貼文文案</h3>
-    <div class="task-form" style="margin:0; padding:0; background:none;">
-      <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
-      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;">📄 複製文案</button>
-      <div class="form-status" id="postGenStatus"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ===== 食譜貼文產生器浮動視窗 ===== -->
 <div class="modal-backdrop" id="recipePostModal" onclick="if(event.target===this) closeRecipePostModal()">
   <div class="modal-box" style="width:440px;">
@@ -4985,6 +4972,21 @@
       <!-- 只有比對到的品牌有存「貼文文案模板」才會顯示（brandVendor.js 的 evSyncPostGenBtn_） -->
       <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
       <div class="form-status" id="evEditStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 貼文文案產生結果浮動視窗（活動編輯彈窗的「產生貼文文案」按鈕跳出）。
+     必須排在 eventEditModal 之後：兩個 backdrop 同為 z-index 50，靠 DOM 順序疊層，
+     排前面會被活動編輯彈窗蓋住。 ===== -->
+<div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePostGenModal()">✕</button>
+    <h3>📝 貼文文案</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
+      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;">📄 複製文案</button>
+      <div class="form-status" id="postGenStatus"></div>
     </div>
   </div>
 </div>
