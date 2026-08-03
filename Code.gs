@@ -2615,6 +2615,7 @@ function buildPublicResult_() {
 }
 
 function doGet(e) {
+  REQ_CACHE_ = {}; // 防執行環境重用：每個請求一定從空快取開始
   const scope = e && e.parameter ? e.parameter.scope : '';
   const token = e && e.parameter ? e.parameter.token : '';
 
@@ -2711,6 +2712,7 @@ function handleLogin_(body) {
 const READONLY_POST_TYPES_RE = /^(acct-list|brand-db-list|brand-db-lookup|vendor-db-list|perm-list|pnote-list|pr-item-list|image-list|image-folder-list|image-usage-check|stat-report)$/;
 
 function doPost(e) {
+  REQ_CACHE_ = {}; // 防執行環境重用：每個請求一定從空快取開始
   let body;
   try {
     body = JSON.parse(e.postData.contents);
