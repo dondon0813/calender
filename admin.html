@@ -4696,6 +4696,19 @@
   </div>
 </div>
 
+<!-- ===== 貼文文案產生結果浮動視窗（活動編輯彈窗的「產生貼文文案」按鈕跳出） ===== -->
+<div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePostGenModal()">✕</button>
+    <h3>📝 貼文文案</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
+      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;">📄 複製文案</button>
+      <div class="form-status" id="postGenStatus"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 食譜貼文產生器浮動視窗 ===== -->
 <div class="modal-backdrop" id="recipePostModal" onclick="if(event.target===this) closeRecipePostModal()">
   <div class="modal-box" style="width:440px;">
@@ -4969,6 +4982,8 @@
         <button class="task-submit-btn" id="evSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="evDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
       </div>
+      <!-- 只有比對到的品牌有存「貼文文案模板」才會顯示（brandVendor.js 的 evSyncPostGenBtn_） -->
+      <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
       <div class="form-status" id="evEditStatus"></div>
     </div>
   </div>
@@ -5209,6 +5224,8 @@
       <textarea id="brandIntroInput" rows="3" placeholder="這個品牌的介紹文字…"></textarea>
       <label for="brandShopeeInput">蝦皮連結（沒開團的時候，前台食材／食譜頁的「前往購買」會用這個導去蝦皮；留空就不顯示蝦皮按鈕）</label>
       <input type="text" id="brandShopeeInput" placeholder="貼上這個品牌的蝦皮賣場／商品網址">
+      <label for="brandPostTemplateInput">貼文文案模板（存了之後，這個品牌的開團活動彈窗會多一顆「產生貼文文案」按鈕；{網址}、{開團日}、{結團日}、{團名} 會自動換成當團資料）</label>
+      <textarea id="brandPostTemplateInput" rows="8" placeholder="貼上這個品牌的開團貼文文案…&#10;可以用 {網址}、{開團日}、{結團日}、{團名} 當佔位符"></textarea>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="brandSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="brandDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -5283,7 +5300,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=12"></script>
+<script src="brandVendor.js?v=13"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
@@ -5291,7 +5308,7 @@
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=3"></script>
 <script src="accounting.js?v=14"></script>
-<script src="admin.js?v=72"></script>
+<script src="admin.js?v=73"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

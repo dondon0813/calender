@@ -1066,7 +1066,7 @@ function getBrandDbSheet_() {
     // O「分潤%」存純數字（10 = 10%）供排序／統計；P「分潤說明」存自由文字（例：滿萬 12%、首團不抽）
     // Q/R/S 合作狀態三欄：長期合作＝主力品牌；兩欄都空＝一般合作；已結束＝曾經合作過但現在沒了
     // （「曾經是長期合作、後來結束」是兩欄都填「是」，這樣歷史也留得住）
-    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結', '分潤%', '分潤說明', '長期合作', '已結束合作', '結束原因']);
+    sheet.appendRow(['id', '所屬廠商ID', '品牌名稱', '去背小圖', 'LINE窗口', 'Email窗口', 'IG窗口', '品牌備註', '建立時間', '更新時間', '顯示於食材食譜', '品牌介紹', '品牌圖片', '蝦皮連結', '分潤%', '分潤說明', '長期合作', '已結束合作', '結束原因', '貼文文案模板']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -1215,7 +1215,9 @@ function getBrandDbList_() {
         // 合作狀態：兩個旗標都是 false ＝ 一般合作
         longTerm: String(row[16] || '').trim() === '是',
         ended: String(row[17] || '').trim() === '是',
-        endReason: String(row[18] || '')
+        endReason: String(row[18] || ''),
+        // 開團貼文文案模板（{網址}/{開團日}/{結團日}/{團名} 佔位）。⚠️ 內部欄位，禁止進 scope=public
+        postTemplate: String(row[19] || '')
       });
     }
     return list;
@@ -1465,7 +1467,8 @@ function addBrandDb_(fields) {
     fields.commissionNote || '',
     fields.longTerm || '',
     fields.ended || '',
-    fields.endReason || ''
+    fields.endReason || '',
+    fields.postTemplate || ''
   ]);
   return id;
 }
@@ -1491,6 +1494,7 @@ function updateBrandDb_(id, fields) {
   setIf(17, fields.longTerm);
   setIf(18, fields.ended);
   setIf(19, fields.endReason);
+  setIf(20, fields.postTemplate);
   sheet.getRange(row, 10).setValue(new Date());
   return true;
 }
@@ -3058,7 +3062,8 @@ function doPost(e) {
         commissionNote: allows_('commission') ? String(body.commissionNote || '') : '',
         longTerm: body.longTerm ? '是' : '',
         ended: body.ended ? '是' : '',
-        endReason: String(body.endReason || '')
+        endReason: String(body.endReason || ''),
+        postTemplate: String(body.postTemplate || '')
       });
       return jsonResult_({ success: true, id: id });
     }
@@ -3087,6 +3092,7 @@ function doPost(e) {
       if (body.longTerm !== undefined) fields.longTerm = body.longTerm ? '是' : '';
       if (body.ended !== undefined) fields.ended = body.ended ? '是' : '';
       if (body.endReason !== undefined) fields.endReason = String(body.endReason);
+      if (body.postTemplate !== undefined) fields.postTemplate = String(body.postTemplate);
       const ok = updateBrandDb_(id, fields);
       return jsonResult_(ok ? { success: true } : { success: false, error: '找不到這個品牌' });
     }

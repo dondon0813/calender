@@ -330,6 +330,7 @@ function openBrandEditModal(brand) {
   document.getElementById('brandShowInRecipeInput').checked = brand ? !!brand.showInRecipe : false;
   document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
   document.getElementById('brandShopeeInput').value = brand ? (brand.shopeeUrl || '') : '';
+  document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
   document.getElementById('brandEditModal').classList.add('show');
 }
 function closeBrandEditModal() {
@@ -356,7 +357,9 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     note: document.getElementById('brandNoteInput').value.trim(),
     showInRecipe: document.getElementById('brandShowInRecipeInput').checked,
     intro: document.getElementById('brandIntroInput').value.trim(),
-    shopeeUrl: document.getElementById('brandShopeeInput').value.trim()
+    shopeeUrl: document.getElementById('brandShopeeInput').value.trim(),
+    // 只修頭尾空白，內文換行是貼文排版的一部分，不能動
+    postTemplate: document.getElementById('brandPostTemplateInput').value.trim()
   };
   const btn = document.getElementById('brandSaveBtn');
   btn.disabled = true;
@@ -590,6 +593,7 @@ function findGroupBuyDatesForBrand_(brand, excludeEventId) {
 }
 
 function renderEvBrandMatchInfo() {
+  evSyncPostGenBtn_();
   const box = document.getElementById('evBrandMatchInfo');
   if (!box) return;
   const title = document.getElementById('evTitleInput').value.trim();
@@ -636,3 +640,71 @@ document.getElementById('evTitleInput').addEventListener('input', () => {
   clearTimeout(window._evBrandMatchTimer);
   window._evBrandMatchTimer = setTimeout(renderEvBrandMatchInfo, 300);
 });
+
+// ===== 產生貼文文案（活動編輯彈窗最下方的按鈕）=====
+// 顯示條件：標題比對到的品牌至少一個有存「貼文文案模板」；都沒存就整顆藏起來。
+function evBrandsWithPostTemplate_() {
+  const titleEl = document.getElementById('evTitleInput');
+  const title = titleEl ? titleEl.value.trim() : '';
+  if (!title) return [];
+  return bvBrandsInTitle_(title).filter(b => String(b.postTemplate || '').trim());
+}
+
+function evSyncPostGenBtn_() {
+  const btn = document.getElementById('evPostGenBtn');
+  if (!btn) return;
+  btn.style.display = evBrandsWithPostTemplate_().length ? 'block' : 'none';
+}
+
+// 日期輸入框的 YYYY-MM-DD → 貼文用的 M/D（例：2026-08-04 → 8/4）
+function evPostDateLabel_(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim());
+  return m ? (parseInt(m[2], 10) + '/' + parseInt(m[3], 10)) : '';
+}
+
+function evGeneratePostCopy_() {
+  // 聯名團比對到多個品牌時，取第一個有存模板的（目前實務上一團一模板）
+  const brands = evBrandsWithPostTemplate_();
+  if (!brands.length) return '';
+  const url = document.getElementById('evUrlInput').value.trim();
+  const startLabel = evPostDateLabel_(document.getElementById('evStartDateInput').value);
+  const endLabel = evPostDateLabel_(document.getElementById('evEndDateInput').value);
+  const dateRange = startLabel && endLabel ? startLabel + ' ～ ' + endLabel : (startLabel || endLabel);
+  const title = plainTitle(document.getElementById('evTitleInput').value.trim());
+  let text = String(brands[0].postTemplate);
+  // 正式佔位符
+  text = text.split('{網址}').join(url)
+    .split('{開團日}').join(startLabel)
+    .split('{結團日}').join(endLabel)
+    .split('{團名}').join(title);
+  // 舊模板裡的人話佔位也吃得懂，直接貼既有文案不用先改成大括號
+  text = text.split('<<這邊填入當團網址>>').join(url)
+    .split('（放連結）').join(url)
+    .split('（放日期）～（放日期）').join(dateRange);
+  return text;
+}
+
+document.getElementById('evPostGenBtn').addEventListener('click', () => {
+  const text = evGeneratePostCopy_();
+  if (!text) return;
+  document.getElementById('postGenOutput').value = text;
+  setFormStatus('postGenStatus', '', '');
+  document.getElementById('postGenModal').classList.add('show');
+});
+
+document.getElementById('postGenCopyBtn').addEventListener('click', async () => {
+  const ta = document.getElementById('postGenOutput');
+  if (!ta.value) return;
+  try {
+    await navigator.clipboard.writeText(ta.value);
+  } catch (e) {
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+  }
+  setFormStatus('postGenStatus', '已複製到剪貼簿 ✓', 'ok');
+});
+
+function closePostGenModal() {
+  document.getElementById('postGenModal').classList.remove('show');
+}

@@ -1805,6 +1805,8 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
   document.getElementById('evBrandMatchInfo').style.display = 'none';
   document.getElementById('evBrandMatchInfo').innerHTML = '';
+  // 產生貼文文案按鈕：先藏，等品牌比對跑完（renderEvBrandMatchInfo 裡）再決定顯不顯示
+  document.getElementById('evPostGenBtn').style.display = 'none';
   if (!isNew) setTimeout(renderEvBrandMatchInfo, 0);
 
   // 每次打開都先收合「更多設定」，畫面維持乾淨
