@@ -30,6 +30,8 @@ const PR_ITEM_SHEET_NAME = '公關品清單';
 
 const SESSION_SHEET_NAME = 'Sessions';
 const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
+const SESSION_CACHE_PREFIX_ = 'sess_'; // getSessionUser_ 的 ScriptCache key 前綴
+const SESSION_CACHE_TTL_SEC_ = 300;    // 5 分鐘；遠短於 12 小時效期，過期判斷仍以存進快取的建立時間為準
 
 const PNOTE_FOLDER_SHEET_NAME = '個人備忘錄資料夾';
 const PNOTE_SHEET_NAME = '個人備忘錄內容';
@@ -334,6 +336,21 @@ function getMergedIngredientsAndProducts_() {
   return ingredientRows.concat(productRows);
 }
 
+// ===== 請求內記憶化（per-request memo cache）=====
+// GAS 每個請求都是全新的執行環境，這個頂層 var 只在單次 doGet/doPost 執行期間存活，
+// 拿來記住「這次請求已經讀過的整表資料」，同一請求內重複呼叫就不用再打一次試算表。
+// ⚠️ 回傳的是同一個參照：消費端不可就地修改（mutate）拿到的物件/陣列，只能讀取或另外複製後再改。
+var REQ_CACHE_ = {};
+function memo_(key, producer) {
+  if (!Object.prototype.hasOwnProperty.call(REQ_CACHE_, key)) {
+    REQ_CACHE_[key] = producer();
+  }
+  return REQ_CACHE_[key];
+}
+function memoClear_(key) {
+  delete REQ_CACHE_[key];
+}
+
 // ===== 登入 Session 管理 =====
 
 function getSessionSheet_() {
@@ -362,6 +379,17 @@ function createSession_(name) {
 
 function getSessionUser_(token) {
   if (!token) return null;
+  const cache = CacheService.getScriptCache();
+  const cacheKey = SESSION_CACHE_PREFIX_ + token;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    // 快取命中仍要照原本語意檢查 12 小時效期（用存進去的建立時間算，不是憑 TTL 命中就放行）
+    if (Date.now() - parsed.t <= SESSION_DURATION_MS) {
+      return parsed.n;
+    }
+    cache.remove(cacheKey); // 過期了，順手清掉，跳到下面走全表掃描（理論上也掃不到，因為清理過期 session 會刪列）
+  }
   const sheet = getSessionSheet_();
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
@@ -370,17 +398,22 @@ function getSessionUser_(token) {
       if (created instanceof Date && (Date.now() - created.getTime()) > SESSION_DURATION_MS) {
         return null;
       }
-      return String(data[i][1]);
+      const name = String(data[i][1]);
+      const createdMs = created instanceof Date ? created.getTime() : Date.now();
+      cache.put(cacheKey, JSON.stringify({ n: name, t: createdMs }), SESSION_CACHE_TTL_SEC_);
+      return name;
     }
   }
   return null;
 }
 
 function cleanupExpiredSessions_(sheet) {
+  const cache = CacheService.getScriptCache();
   const data = sheet.getDataRange().getValues();
   for (let i = data.length - 1; i >= 1; i--) {
     const created = data[i][2];
     if (created instanceof Date && (Date.now() - created.getTime()) > SESSION_DURATION_MS) {
+      cache.remove(SESSION_CACHE_PREFIX_ + String(data[i][0])); // 失效點①：session 列被清掉時同步清快取
       sheet.deleteRow(i + 1);
     }
   }
@@ -481,16 +514,20 @@ function getStaffSheet_() {
 }
 
 function getStaff_() {
-  const sheet = getStaffSheet_();
-  const data = sheet.getDataRange().getValues();
-  const staff = [];
-  for (let i = 1; i < data.length; i++) {
-    const name = String(data[i][STAFF_COL_NAME - 1] || '').trim();
-    const hash = String(data[i][STAFF_COL_HASH - 1] || '').trim();
-    const salt = String(data[i][STAFF_COL_SALT - 1] || '').trim();
-    if (name) staff.push({ name: name, hash: hash, salt: salt });
-  }
-  return staff;
+  // 同一請求內多處會呼叫（doGet 組裝結果、getAllPermissions_/getAllRoles_ 逐員工查權限…），
+  // 用 memo_ 記住這次請求已經讀過的員工名單，避免重複整表讀取。⚠️ 回傳共用參照，呼叫端不可 mutate。
+  return memo_('staff', function () {
+    const sheet = getStaffSheet_();
+    const data = sheet.getDataRange().getValues();
+    const staff = [];
+    for (let i = 1; i < data.length; i++) {
+      const name = String(data[i][STAFF_COL_NAME - 1] || '').trim();
+      const hash = String(data[i][STAFF_COL_HASH - 1] || '').trim();
+      const salt = String(data[i][STAFF_COL_SALT - 1] || '').trim();
+      if (name) staff.push({ name: name, hash: hash, salt: salt });
+    }
+    return staff;
+  });
 }
 
 // ===== 【新】管理員與員工權限 =====
@@ -527,34 +564,68 @@ function isAdmin_(name) {
 }
 
 function getStaffPermSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(STAFF_PERM_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(STAFF_PERM_SHEET_NAME);
-    sheet.appendRow(['姓名', STAFF_ROLE_LABEL].concat(PERM_DEFS.map(p => p.label)));
-    sheet.setFrozenRows(1);
-    return sheet;
-  }
-  // 舊表只有「姓名｜圖片庫權限」，這裡把缺的欄補上去（含角色欄），不動既有欄位順序
-  const header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(h => String(h).trim());
-  [STAFF_ROLE_LABEL].concat(PERM_DEFS.map(p => p.label)).forEach(label => {
-    if (header.indexOf(label) === -1) {
-      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(label);
-      header.push(label);
+  // 補欄檢查本身要讀表頭＋可能寫入，同一請求內只需要做一次：memo 的是「已經補過欄的 sheet handle」，
+  // 不是資料內容，所以快取 Sheet 物件參照本身沒有髒資料風險。
+  return memo_('staffPermSheet', function () {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(STAFF_PERM_SHEET_NAME);
+    if (!sheet) {
+      sheet = ss.insertSheet(STAFF_PERM_SHEET_NAME);
+      sheet.appendRow(['姓名', STAFF_ROLE_LABEL].concat(PERM_DEFS.map(p => p.label)));
+      sheet.setFrozenRows(1);
+      return sheet;
     }
+    // 舊表只有「姓名｜圖片庫權限」，這裡把缺的欄補上去（含角色欄），不動既有欄位順序
+    const header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(h => String(h).trim());
+    [STAFF_ROLE_LABEL].concat(PERM_DEFS.map(p => p.label)).forEach(label => {
+      if (header.indexOf(label) === -1) {
+        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(label);
+        header.push(label);
+      }
+    });
+    return sheet;
   });
-  return sheet;
+}
+
+// 【N+1 去除】原本 getStaffRole_ / getPermissionsFor_ 各自對每個人重讀一次「員工權限」整表。
+// 改成這裡一次整表讀完（header + 姓名→列 的對照表），同一請求內重複呼叫都吃這份快取；
+// getAllPermissions_ 因此從「每位員工各一次表格讀取」變成「全表只讀一次＋記憶體裡組資料」。
+// 寫入（setStaffRole_ / setPermission_）之後一定要 memoClear_('staffPermTable') 讓下一次讀取重新整表讀，
+// 否則同一請求內「先寫後讀」（例：perm-set-role 寫完馬上回傳最新權限）會讀到寫入前的舊快取。
+function getStaffPermTable_() {
+  return memo_('staffPermTable', function () {
+    const sheet = getStaffPermSheet_();
+    const data = sheet.getDataRange().getValues();
+    const header = (data[0] || []).map(h => String(h).trim());
+    const byName = {};
+    for (let i = 1; i < data.length; i++) {
+      const name = String(data[i][0] || '').trim();
+      if (name) byName[name] = data[i];
+    }
+    return { header: header, byName: byName };
+  });
+}
+
+function permsFromStaffPermRow_(header, row) {
+  const result = {};
+  PERM_DEFS.forEach(p => {
+    const colIdx = header.indexOf(p.label);
+    const val = (!row || colIdx === -1) ? '' : String(row[colIdx] || '').trim();
+    result[p.key] = val === '是';
+  });
+  return result;
 }
 
 function getStaffRole_(name) {
-  const sheet = getStaffPermSheet_();
-  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
-  const row = findStaffPermRow_(sheet, name);
-  const colIdx = header.indexOf(STAFF_ROLE_LABEL);
-  if (row === -1 || colIdx === -1) return '';
-  return String(sheet.getRange(row, colIdx + 1).getValue() || '').trim();
+  const table = getStaffPermTable_();
+  const colIdx = table.header.indexOf(STAFF_ROLE_LABEL);
+  const row = table.byName[name];
+  if (!row || colIdx === -1) return '';
+  return String(row[colIdx] || '').trim();
 }
 
+// 寫入路徑（setStaffRole_ / setPermission_）仍用這個：需要真正的列號才能 sheet.getRange(row, ...).setValue()，
+// 且寫入不是同一請求內會被重複呼叫 N 次的熱路徑，維持逐次即時讀取，不套用 getStaffPermTable_ 的記憶化。
 function findStaffPermRow_(sheet, name) {
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
@@ -564,37 +635,33 @@ function findStaffPermRow_(sheet, name) {
 }
 
 function getPermissionsFor_(name) {
-  const result = {};
   if (isAdmin_(name)) {
+    const result = {};
     PERM_DEFS.forEach(p => { result[p.key] = true; });
     return result;
   }
-  const sheet = getStaffPermSheet_();
-  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
-  const row = findStaffPermRow_(sheet, name);
-  PERM_DEFS.forEach(p => {
-    if (row === -1) { result[p.key] = false; return; }
-    const colIdx = header.indexOf(p.label);
-    const val = colIdx === -1 ? '' : String(sheet.getRange(row, colIdx + 1).getValue() || '').trim();
-    result[p.key] = val === '是';
-  });
-  return result;
+  const table = getStaffPermTable_();
+  return permsFromStaffPermRow_(table.header, table.byName[name]);
 }
 
 function getAllPermissions_() {
+  const table = getStaffPermTable_();
   const map = {};
   getStaff_().forEach(s => {
     if (isAdmin_(s.name)) return;
-    map[s.name] = getPermissionsFor_(s.name);
+    map[s.name] = permsFromStaffPermRow_(table.header, table.byName[s.name]);
   });
   return map;
 }
 
 function getAllRoles_() {
+  const table = getStaffPermTable_();
+  const roleIdx = table.header.indexOf(STAFF_ROLE_LABEL);
   const map = {};
   getStaff_().forEach(s => {
     if (isAdmin_(s.name)) return;
-    map[s.name] = getStaffRole_(s.name);
+    const row = table.byName[s.name];
+    map[s.name] = (!row || roleIdx === -1) ? '' : String(row[roleIdx] || '').trim();
   });
   return map;
 }
@@ -620,6 +687,7 @@ function setStaffRole_(name, role) {
     if (colIdx === -1) return;
     sheet.getRange(row, colIdx + 1).setValue(preset[p.key] ? '是' : '否');
   });
+  memoClear_('staffPermTable'); // 寫完要讓同一請求內接下來的 getPermissionsFor_/getStaffRole_ 讀到新值
   return true;
 }
 
@@ -637,6 +705,7 @@ function setPermission_(name, key, value) {
     row = sheet.getLastRow();
   }
   sheet.getRange(row, colIdx + 1).setValue(value ? '是' : '否');
+  memoClear_('staffPermTable'); // 同上：避免同一請求內後續讀到寫入前的舊快取
   return true;
 }
 
@@ -1116,37 +1185,41 @@ function normCommissionRate_(val) {
 }
 
 function getBrandDbList_() {
-  const sheet = getBrandDbSheet_();
-  const data = sheet.getDataRange().getValues();
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (!row[0]) continue;
-    list.push({
-      id: String(row[0]),
-      vendorIds: splitIds_(row[1]),
-      name: String(row[2] || ''),
-      thumbUrl: String(row[3] || ''),   // 去背小圖（品牌預設，行事曆該檔可覆寫）
-      lineContact: String(row[4] || ''),
-      emailContact: String(row[5] || ''),
-      igContact: String(row[6] || ''),
-      note: String(row[7] || ''),
-      created: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
-      updated: row[9] instanceof Date ? fmtDateTime_(row[9]) : String(row[9] || ''),
-      showInRecipe: String(row[10] || '').trim() === '是',
-      intro: String(row[11] || ''),
-      brandImageUrl: String(row[12] || ''),  // 品牌圖片（大合照／介紹頁用）
-      shopeeUrl: String(row[13] || ''),  // 蝦皮連結（沒開團時前台食材/食譜頁導流用；空白＝不顯示按鈕）
-      // 分潤：數字欄拿來排序／統計，說明欄放特殊條件；兩者都可留空。⚠️ 內部欄位，禁止進 scope=public
-      commissionRate: normCommissionRate_(row[14]),
-      commissionNote: String(row[15] || ''),
-      // 合作狀態：兩個旗標都是 false ＝ 一般合作
-      longTerm: String(row[16] || '').trim() === '是',
-      ended: String(row[17] || '').trim() === '是',
-      endReason: String(row[18] || '')
-    });
-  }
-  return list;
+  // buildPublicResult_ 同一請求內呼叫兩次＋getBrandDbListFor_ 再呼叫一次，用 memo_ 併成一次整表讀取。
+  // ⚠️ 回傳共用參照：stripCommission_ 等消費端一律回傳複本，不可就地刪改這裡的物件。
+  return memo_('brandDbList', function () {
+    const sheet = getBrandDbSheet_();
+    const data = sheet.getDataRange().getValues();
+    const list = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[0]) continue;
+      list.push({
+        id: String(row[0]),
+        vendorIds: splitIds_(row[1]),
+        name: String(row[2] || ''),
+        thumbUrl: String(row[3] || ''),   // 去背小圖（品牌預設，行事曆該檔可覆寫）
+        lineContact: String(row[4] || ''),
+        emailContact: String(row[5] || ''),
+        igContact: String(row[6] || ''),
+        note: String(row[7] || ''),
+        created: row[8] instanceof Date ? fmtDateTime_(row[8]) : String(row[8] || ''),
+        updated: row[9] instanceof Date ? fmtDateTime_(row[9]) : String(row[9] || ''),
+        showInRecipe: String(row[10] || '').trim() === '是',
+        intro: String(row[11] || ''),
+        brandImageUrl: String(row[12] || ''),  // 品牌圖片（大合照／介紹頁用）
+        shopeeUrl: String(row[13] || ''),  // 蝦皮連結（沒開團時前台食材/食譜頁導流用；空白＝不顯示按鈕）
+        // 分潤：數字欄拿來排序／統計，說明欄放特殊條件；兩者都可留空。⚠️ 內部欄位，禁止進 scope=public
+        commissionRate: normCommissionRate_(row[14]),
+        commissionNote: String(row[15] || ''),
+        // 合作狀態：兩個旗標都是 false ＝ 一般合作
+        longTerm: String(row[16] || '').trim() === '是',
+        ended: String(row[17] || '').trim() === '是',
+        endReason: String(row[18] || '')
+      });
+    }
+    return list;
+  });
 }
 
 // ⚠️ 分潤是商業機密：沒有 commission 權限的人，後端**直接不回傳這兩個欄位**，
