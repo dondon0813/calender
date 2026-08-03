@@ -1089,7 +1089,8 @@ function openAdminModal(ev) {
   memoEl.value = memoMap[key] || '';
   document.getElementById('memoStatus').textContent = '';
 
-  renderPrPanel(key);
+  // 產生貼文文案按鈕（公關品面板已搬到編輯彈窗，這裡換成放這顆按鈕）
+  syncPostGenBtnForEvent_(ev);
 
   document.getElementById('adminModal').classList.add('show');
 }
@@ -1805,9 +1806,11 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
   document.getElementById('evBrandMatchInfo').style.display = 'none';
   document.getElementById('evBrandMatchInfo').innerHTML = '';
-  // 產生貼文文案按鈕：先藏，等品牌比對跑完（renderEvBrandMatchInfo 裡）再決定顯不顯示
-  document.getElementById('evPostGenBtn').style.display = 'none';
   if (!isNew) setTimeout(renderEvBrandMatchInfo, 0);
+
+  // 公關品狀態面板：要有活動 id 才存得了，新增活動（還沒存檔）時整塊藏起來
+  document.getElementById('prPanel').style.display = isNew ? 'none' : '';
+  if (!isNew) renderPrPanel(getMemoKey(ev));
 
   // 每次打開都先收合「更多設定」，畫面維持乾淨
   document.getElementById('evMoreToggle').classList.remove('open');
@@ -2010,6 +2013,12 @@ document.getElementById('prToggleWrap').addEventListener('click', () => {
 });
 
 // ===== 公關品狀態面板事件 =====
+// 面板 2026-08-03 起掛在「編輯活動」彈窗裡：存檔對象優先取編輯中的活動，
+// 保留 currentModalEv 當備援（檢視彈窗的統計刷新等仍靠它，語意不變）
+function prPanelEvent_() {
+  if (eventEditCtx && !eventEditCtx.isNew && eventEditCtx.ev) return eventEditCtx.ev;
+  return currentModalEv;
+}
 // 面板收折
 document.getElementById('prPanelHead').addEventListener('click', () => {
   document.getElementById('prPanel').classList.toggle('open');
@@ -2017,8 +2026,9 @@ document.getElementById('prPanelHead').addEventListener('click', () => {
 
 // 狀態下拉變更 → 立即儲存＋切換欄位顯示
 document.getElementById('prStatusSelect').addEventListener('change', (e) => {
-  if (!currentModalEv) return;
-  const key = getMemoKey(currentModalEv);
+  const prEv = prPanelEvent_();
+  if (!prEv) return;
+  const key = getMemoKey(prEv);
   const status = e.target.value;
   const headChip = document.getElementById('prHeadChip');
   headChip.textContent = status;
@@ -2032,8 +2042,9 @@ document.getElementById('prUrlInput').addEventListener('input', () => {
   updatePrConditionalFields(document.getElementById('prStatusSelect').value);
 });
 function savePrUrl() {
-  if (!currentModalEv) return;
-  const key = getMemoKey(currentModalEv);
+  const prEv = prPanelEvent_();
+  if (!prEv) return;
+  const key = getMemoKey(prEv);
   savePrStatus(key, { url: document.getElementById('prUrlInput').value.trim() }, 'prUrlSaveMsg').catch(() => {});
 }
 document.getElementById('prUrlInput').addEventListener('blur', savePrUrl);
@@ -2046,8 +2057,9 @@ document.getElementById('prLocationSelect').addEventListener('change', (e) => {
     return;
   }
   document.getElementById('prLocationNewRow').classList.remove('show');
-  if (!currentModalEv) return;
-  const key = getMemoKey(currentModalEv);
+  const prEv = prPanelEvent_();
+  if (!prEv) return;
+  const key = getMemoKey(prEv);
   savePrStatus(key, { location: e.target.value }, 'prLocationSaveMsg').catch(() => {});
 });
 document.getElementById('prLocationNewBtn').addEventListener('click', async () => {
@@ -2060,8 +2072,9 @@ document.getElementById('prLocationNewBtn').addEventListener('click', async () =
     fillPrLocationSelect(document.getElementById('prLocationSelect'), name);
     document.getElementById('prLocationNewRow').classList.remove('show');
     input.value = '';
-    if (currentModalEv) {
-      const key = getMemoKey(currentModalEv);
+    const prEv = prPanelEvent_();
+    if (prEv) {
+      const key = getMemoKey(prEv);
       await savePrStatus(key, { location: name }, 'prLocationSaveMsg');
     }
   } catch (err) {

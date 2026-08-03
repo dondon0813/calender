@@ -4625,58 +4625,8 @@
       </div>
     </div>
 
-    <!-- 公關品狀態（可收折） -->
-    <div class="pr-panel" id="prPanel">
-      <div class="pr-panel-head" id="prPanelHead">
-        <span class="pr-head-left">
-          🎀 公關品狀態
-          <span class="pr-head-chip" id="prHeadChip">尚未選品</span>
-        </span>
-        <span class="pr-arrow">▼</span>
-      </div>
-      <div class="pr-panel-body">
-        <div class="pr-field">
-          <label for="prStatusSelect">目前狀態</label>
-          <select id="prStatusSelect"></select>
-          <span class="pr-save-status" id="prStatusSaveMsg"></span>
-        </div>
-
-        <!-- 選品中：出現前往選品按鈕／可選品項 -->
-        <div class="pr-field" id="prPickField" style="display:none;">
-          <label for="prUrlInput">選品網址（貼上後可點下方按鈕前往）</label>
-          <input type="text" id="prUrlInput" placeholder="貼上選品連結，或在備忘錄記下可選品項…">
-          <div class="pr-save-row">
-            <button class="pr-save-btn" id="prUrlSaveBtn">儲存</button>
-            <a class="pr-go-btn" id="prGoBtn" target="_blank" rel="noopener noreferrer" style="display:none;">🛒 前往選品</a>
-            <span class="pr-save-status" id="prUrlSaveMsg"></span>
-          </div>
-        </div>
-
-        <!-- 已收到／已拍攝：出現位置下拉 -->
-        <div class="pr-field" id="prLocationField" style="display:none;">
-          <label for="prLocationSelect">📦 位置</label>
-          <select id="prLocationSelect"></select>
-          <div class="newname-row" id="prLocationNewRow">
-            <input type="text" id="prLocationNewInput" placeholder="輸入新的位置選項…">
-            <button id="prLocationNewBtn">新增</button>
-          </div>
-          <div class="pr-save-row">
-            <span class="pr-save-status" id="prLocationSaveMsg"></span>
-          </div>
-        </div>
-
-        <!-- 這團的公關品明細（與「公關品狀態」頁、派遣任務共用同一份清單） -->
-        <div class="pr-field pri-inline-field" style="display:none;" data-pri-prefix="prEventItems">
-          <label>🎀 這團的公關品 <span class="pri-inline-count"></span></label>
-          <div class="pri-inline-list"></div>
-          <div class="pri-inline-add-row">
-            <input type="text" class="pri-inline-add-input" placeholder="輸入公關品名稱…">
-            <button class="pr-save-btn pri-inline-add-btn" type="button">＋ 新增</button>
-          </div>
-          <span class="pr-save-status pri-inline-msg"></span>
-        </div>
-      </div>
-    </div>
+    <!-- 產生貼文文案：比對到的品牌有存模板才顯示（brandVendor.js 的 syncPostGenBtnForEvent_） -->
+    <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:12px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
   </div>
 </div>
 
@@ -4969,24 +4919,59 @@
         <button class="task-submit-btn" id="evSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="evDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
       </div>
-      <!-- 只有比對到的品牌有存「貼文文案模板」才會顯示（brandVendor.js 的 evSyncPostGenBtn_） -->
-      <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
-      <div class="form-status" id="evEditStatus"></div>
-    </div>
-  </div>
-</div>
+      <!-- 公關品狀態（可收折）。新增活動（還沒存檔）時整塊隱藏——公關品狀態要有活動 id 才存得了 -->
+      <div class="pr-panel" id="prPanel">
+        <div class="pr-panel-head" id="prPanelHead">
+          <span class="pr-head-left">
+            🎀 公關品狀態
+            <span class="pr-head-chip" id="prHeadChip">尚未選品</span>
+          </span>
+          <span class="pr-arrow">▼</span>
+        </div>
+        <div class="pr-panel-body">
+          <div class="pr-field">
+            <label for="prStatusSelect">目前狀態</label>
+            <select id="prStatusSelect"></select>
+            <span class="pr-save-status" id="prStatusSaveMsg"></span>
+          </div>
 
-<!-- ===== 貼文文案產生結果浮動視窗（活動編輯彈窗的「產生貼文文案」按鈕跳出）。
-     必須排在 eventEditModal 之後：兩個 backdrop 同為 z-index 50，靠 DOM 順序疊層，
-     排前面會被活動編輯彈窗蓋住。 ===== -->
-<div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closePostGenModal()">✕</button>
-    <h3>📝 貼文文案</h3>
-    <div class="task-form" style="margin:0; padding:0; background:none;">
-      <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
-      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;">📄 複製文案</button>
-      <div class="form-status" id="postGenStatus"></div>
+          <!-- 選品中：出現前往選品按鈕／可選品項 -->
+          <div class="pr-field" id="prPickField" style="display:none;">
+            <label for="prUrlInput">選品網址（貼上後可點下方按鈕前往）</label>
+            <input type="text" id="prUrlInput" placeholder="貼上選品連結，或在備忘錄記下可選品項…">
+            <div class="pr-save-row">
+              <button class="pr-save-btn" id="prUrlSaveBtn">儲存</button>
+              <a class="pr-go-btn" id="prGoBtn" target="_blank" rel="noopener noreferrer" style="display:none;">🛒 前往選品</a>
+              <span class="pr-save-status" id="prUrlSaveMsg"></span>
+            </div>
+          </div>
+
+          <!-- 已收到／已拍攝：出現位置下拉 -->
+          <div class="pr-field" id="prLocationField" style="display:none;">
+            <label for="prLocationSelect">📦 位置</label>
+            <select id="prLocationSelect"></select>
+            <div class="newname-row" id="prLocationNewRow">
+              <input type="text" id="prLocationNewInput" placeholder="輸入新的位置選項…">
+              <button id="prLocationNewBtn">新增</button>
+            </div>
+            <div class="pr-save-row">
+              <span class="pr-save-status" id="prLocationSaveMsg"></span>
+            </div>
+          </div>
+
+          <!-- 這團的公關品明細（與「公關品狀態」頁、派遣任務共用同一份清單） -->
+          <div class="pr-field pri-inline-field" style="display:none;" data-pri-prefix="prEventItems">
+            <label>🎀 這團的公關品 <span class="pri-inline-count"></span></label>
+            <div class="pri-inline-list"></div>
+            <div class="pri-inline-add-row">
+              <input type="text" class="pri-inline-add-input" placeholder="輸入公關品名稱…">
+              <button class="pr-save-btn pri-inline-add-btn" type="button">＋ 新增</button>
+            </div>
+            <span class="pr-save-status pri-inline-msg"></span>
+          </div>
+        </div>
+      </div>
+      <div class="form-status" id="evEditStatus"></div>
     </div>
   </div>
 </div>
@@ -5273,6 +5258,8 @@
     </div>
 
     <button class="task-submit-btn" id="brandDetailEditBtn" style="margin-top:16px;">✏️ 編輯這個品牌</button>
+    <!-- 有存貼文文案模板、且有進行中/即將開的團才顯示（brandVendor.js 依 postTemplate + upcoming 判斷） -->
+    <button class="task-mini-btn" id="brandDetailPostGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
   </div>
 </div>
 
@@ -5299,10 +5286,25 @@
   </div>
 </div>
 
+<!-- ===== 貼文文案產生結果浮動視窗（活動檢視彈窗／品牌檢視彈窗的「產生貼文文案」按鈕跳出）。
+     必須是「最後一個 modal-backdrop」：所有 backdrop 同為 z-index 50，靠 DOM 順序疊層，
+     排在任何會開它的彈窗之前就會被蓋住。 ===== -->
+<div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePostGenModal()">✕</button>
+    <h3>📝 貼文文案</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #FFE3CC; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5a4a3f; resize:vertical;"></textarea>
+      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;">📄 複製文案</button>
+      <div class="form-status" id="postGenStatus"></div>
+    </div>
+  </div>
+</div>
+
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=13"></script>
+<script src="brandVendor.js?v=14"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
@@ -5310,7 +5312,7 @@
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=3"></script>
 <script src="accounting.js?v=14"></script>
-<script src="admin.js?v=73"></script>
+<script src="admin.js?v=74"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

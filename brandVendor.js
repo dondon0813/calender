@@ -565,6 +565,10 @@ function openBrandDetailModal(brand) {
   if (acctBox) acctBox.innerHTML = '';
   if (typeof renderBrandAcctSummary === 'function') renderBrandAcctSummary(brand.id);
 
+  // 產生貼文文案：有存模板、且有進行中/即將開的團才顯示（拿 upcoming[0] 的網址日期來套）
+  document.getElementById('brandDetailPostGenBtn').style.display =
+    String(brand.postTemplate || '').trim() && upcoming.length ? 'block' : 'none';
+
   document.getElementById('brandDetailModal').classList.add('show');
 }
 function closeBrandDetailModal() {
@@ -593,7 +597,6 @@ function findGroupBuyDatesForBrand_(brand, excludeEventId) {
 }
 
 function renderEvBrandMatchInfo() {
-  evSyncPostGenBtn_();
   const box = document.getElementById('evBrandMatchInfo');
   if (!box) return;
   const title = document.getElementById('evTitleInput').value.trim();
@@ -641,37 +644,28 @@ document.getElementById('evTitleInput').addEventListener('input', () => {
   window._evBrandMatchTimer = setTimeout(renderEvBrandMatchInfo, 300);
 });
 
-// ===== 產生貼文文案（活動編輯彈窗最下方的按鈕）=====
-// 顯示條件：標題比對到的品牌至少一個有存「貼文文案模板」；都沒存就整顆藏起來。
-function evBrandsWithPostTemplate_() {
-  const titleEl = document.getElementById('evTitleInput');
-  const title = titleEl ? titleEl.value.trim() : '';
+// ===== 產生貼文文案 =====
+// 按鈕有兩顆：活動「檢視」彈窗（#evPostGenBtn，在 adminModal 裡）與品牌檢視彈窗（#brandDetailPostGenBtn）。
+// 顯示條件：對應品牌有存「貼文文案模板」；品牌檢視那顆另外要求有進行中/即將開的團。
+
+function bvBrandsWithPostTemplate_(title) {
   if (!title) return [];
   return bvBrandsInTitle_(title).filter(b => String(b.postTemplate || '').trim());
 }
 
-function evSyncPostGenBtn_() {
-  const btn = document.getElementById('evPostGenBtn');
-  if (!btn) return;
-  btn.style.display = evBrandsWithPostTemplate_().length ? 'block' : 'none';
+// 貼文用日期：Date → M/D（例：8/4）
+function bvPostDateLabel_(d) {
+  return d instanceof Date && !isNaN(d) ? (d.getMonth() + 1) + '/' + d.getDate() : '';
 }
 
-// 日期輸入框的 YYYY-MM-DD → 貼文用的 M/D（例：2026-08-04 → 8/4）
-function evPostDateLabel_(ymd) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').trim());
-  return m ? (parseInt(m[2], 10) + '/' + parseInt(m[3], 10)) : '';
-}
-
-function evGeneratePostCopy_() {
-  // 聯名團比對到多個品牌時，取第一個有存模板的（目前實務上一團一模板）
-  const brands = evBrandsWithPostTemplate_();
-  if (!brands.length) return '';
-  const url = document.getElementById('evUrlInput').value.trim();
-  const startLabel = evPostDateLabel_(document.getElementById('evStartDateInput').value);
-  const endLabel = evPostDateLabel_(document.getElementById('evEndDateInput').value);
+// 把模板佔位符換成當團資料。brand 來自 brandDb，ev 是行事曆活動物件
+function bvBuildPostCopy_(brand, ev) {
+  const url = ev.url || '';
+  const startLabel = bvPostDateLabel_(ev.start);
+  const endLabel = bvPostDateLabel_(ev.displayEnd || ev.end);
   const dateRange = startLabel && endLabel ? startLabel + ' ～ ' + endLabel : (startLabel || endLabel);
-  const title = plainTitle(document.getElementById('evTitleInput').value.trim());
-  let text = String(brands[0].postTemplate);
+  const title = plainTitle(ev.title || '');
+  let text = String(brand.postTemplate);
   // 正式佔位符
   text = text.split('{網址}').join(url)
     .split('{開團日}').join(startLabel)
@@ -684,12 +678,35 @@ function evGeneratePostCopy_() {
   return text;
 }
 
-document.getElementById('evPostGenBtn').addEventListener('click', () => {
-  const text = evGeneratePostCopy_();
-  if (!text) return;
+function openPostGenModalWith_(text) {
   document.getElementById('postGenOutput').value = text;
   setFormStatus('postGenStatus', '', '');
   document.getElementById('postGenModal').classList.add('show');
+}
+
+// 活動檢視彈窗打開時由 openAdminModal 呼叫：比對到的品牌有存模板才顯示按鈕
+function syncPostGenBtnForEvent_(ev) {
+  const btn = document.getElementById('evPostGenBtn');
+  if (!btn) return;
+  btn.style.display = ev && bvBrandsWithPostTemplate_(ev.title).length ? 'block' : 'none';
+}
+
+document.getElementById('evPostGenBtn').addEventListener('click', () => {
+  const ev = currentModalEv;
+  if (!ev) return;
+  // 聯名團比對到多個品牌時，取第一個有存模板的（目前實務上一團一模板）
+  const brands = bvBrandsWithPostTemplate_(ev.title);
+  if (!brands.length) return;
+  openPostGenModalWith_(bvBuildPostCopy_(brands[0], ev));
+});
+
+document.getElementById('brandDetailPostGenBtn').addEventListener('click', () => {
+  const brand = brandDetailCtx;
+  if (!brand || !String(brand.postTemplate || '').trim()) return;
+  // upcoming 依開團日排序，進行中的團 displayEnd >= 今天所以也在裡面且排最前
+  const ev = getBrandGroupBuys_(brand).upcoming[0];
+  if (!ev) return;
+  openPostGenModalWith_(bvBuildPostCopy_(brand, ev));
 });
 
 document.getElementById('postGenCopyBtn').addEventListener('click', async () => {
