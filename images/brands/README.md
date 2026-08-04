@@ -22,7 +22,7 @@
 | `bonsons.webp` | Bonsons | 白色折疊推車 |
 | `bruno.webp` | Bruno | 白色電烤盤 |
 | `caroline.webp` | 卡蘿琳 | 紫白包裝益生菌盒 |
-| `cezi-giftbox.webp` | 冊子 | 中秋禮盒（月餅組） |
+| `cezi-giftbox.webp` | 冊子 | 中秋禮盒（七入月餅盒） |
 | `forest-noodle.webp` | 森林麵食 | 黃盒麵食＋木碗 |
 | `giiker.webp` | Giiker | 彩色數字方塊益智機 |
 | `hanba-rice.webp` | 韓爸米餅 | 黃色烤地瓜米餅袋 |
@@ -30,9 +30,10 @@
 | `horay.webp` | Horay | 黑色大容量購物袋 |
 | `jolly.webp` | Jolly | 白＋木色旋轉書櫃 |
 | `jpkr-giftbox.webp` | （日/韓中秋禮盒，行事曆W欄用） | 日韓中秋禮盒 |
-| `kigo.webp` | Kigo | 橘 logo＋米色兒童太陽眼鏡 |
+| `kigo.webp` | Kigo | 米色兒童太陽眼鏡 |
 | `lapo.webp` | Lapo | 紫白手持風扇 |
 | `lmg.webp` | LMG | 米色不沾湯鍋 |
+| `meiji-mantou.webp` | 美姬饅頭 | 黃色小雞造型饅頭 |
 | `momax.webp` | MOMAX | 白色防偷拍定位器 |
 | `nadle.webp` | Nadle | 黑白兒童腳踏車 |
 | `parakito.webp` | Parakito | 綠色防蚊掛片 |
