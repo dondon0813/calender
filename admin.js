@@ -1365,9 +1365,9 @@ async function fetchMemos() {
     if (data.unauthorized) {
       currentToken = null;
       currentUser = null;
-      sessionStorage.removeItem('admin_unlocked');
-      sessionStorage.removeItem('admin_user');
-      sessionStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_unlocked');
+      localStorage.removeItem('admin_user');
+      localStorage.removeItem('admin_token');
       document.getElementById('passwordGate').style.display = 'flex';
       document.getElementById('mainWrap').style.visibility = 'hidden';
       return;
@@ -1474,8 +1474,8 @@ async function tryUnlock() {
     if (input.value === FALLBACK_PASSWORD) {
       currentUser = nameValue || '雪莉';
       currentToken = null;
-      sessionStorage.setItem('admin_unlocked', '1');
-      sessionStorage.setItem('admin_user', currentUser);
+      localStorage.setItem('admin_unlocked', '1');
+      localStorage.setItem('admin_user', currentUser);
       document.getElementById('passwordGate').style.display = 'none';
       document.getElementById('mainWrap').style.visibility = 'visible';
       initAppUI();
@@ -1500,9 +1500,9 @@ async function tryUnlock() {
     if (result.success) {
       currentUser = result.name;
       currentToken = result.token;
-      sessionStorage.setItem('admin_unlocked', '1');
-      sessionStorage.setItem('admin_user', currentUser);
-      sessionStorage.setItem('admin_token', currentToken);
+      localStorage.setItem('admin_unlocked', '1');
+      localStorage.setItem('admin_user', currentUser);
+      localStorage.setItem('admin_token', currentToken);
       document.getElementById('passwordGate').style.display = 'none';
       document.getElementById('mainWrap').style.visibility = 'visible';
       switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
@@ -1527,9 +1527,17 @@ document.getElementById('gatePasswordInput').addEventListener('keydown', (e) => 
   if (e.key === 'Enter') tryUnlock();
 });
 
-if (sessionStorage.getItem('admin_unlocked') === '1') {
-  currentUser = sessionStorage.getItem('admin_user') || '雪莉';
-  currentToken = sessionStorage.getItem('admin_token') || null;
+// 登入狀態存 localStorage：iOS 加到主畫面的 App 每次關掉都會清空 sessionStorage，
+// 換成 localStorage 才能像 App 一樣保持登入（token 效期由後端 SESSION_DURATION_MS 控制）。
+// 舊版存在 sessionStorage 的登入狀態搬過來，讓已登入的人不用重登一次。
+if (localStorage.getItem('admin_unlocked') !== '1' && sessionStorage.getItem('admin_unlocked') === '1') {
+  localStorage.setItem('admin_unlocked', '1');
+  localStorage.setItem('admin_user', sessionStorage.getItem('admin_user') || '');
+  if (sessionStorage.getItem('admin_token')) localStorage.setItem('admin_token', sessionStorage.getItem('admin_token'));
+}
+if (localStorage.getItem('admin_unlocked') === '1') {
+  currentUser = localStorage.getItem('admin_user') || '雪莉';
+  currentToken = localStorage.getItem('admin_token') || null;
   document.getElementById('passwordGate').style.display = 'none';
   document.getElementById('mainWrap').style.visibility = 'visible';
   switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
@@ -2716,8 +2724,8 @@ async function postTask(payload) {
     // token 過期或未登入時，把使用者踢回登入畫面，而不是只顯示錯誤訊息
     if (result.needLogin) {
       currentToken = null;
-      sessionStorage.removeItem('admin_unlocked');
-      sessionStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_unlocked');
+      localStorage.removeItem('admin_token');
       document.getElementById('passwordGate').style.display = 'flex';
       document.getElementById('mainWrap').style.visibility = 'hidden';
     }

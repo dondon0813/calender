@@ -29,9 +29,9 @@ const PR_LOCATION_SHEET_NAME = '公關品位置清單';
 const PR_ITEM_SHEET_NAME = '公關品清單';
 
 const SESSION_SHEET_NAME = 'Sessions';
-const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 天：配合手機加到主畫面當 App 用，不必每天重登（2026-08-05 由 12 小時延長）
 const SESSION_CACHE_PREFIX_ = 'sess_'; // getSessionUser_ 的 ScriptCache key 前綴
-const SESSION_CACHE_TTL_SEC_ = 300;    // 5 分鐘；遠短於 12 小時效期，過期判斷仍以存進快取的建立時間為準
+const SESSION_CACHE_TTL_SEC_ = 300;    // 5 分鐘；遠短於 session 效期，過期判斷仍以存進快取的建立時間為準
 
 const PNOTE_FOLDER_SHEET_NAME = '個人備忘錄資料夾';
 const PNOTE_SHEET_NAME = '個人備忘錄內容';
