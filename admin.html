@@ -3478,6 +3478,123 @@
   }
 .tax-calc-box input:focus { outline: none; border-color: var(--c-primary); }
 
+  /* ===== 線上合約用印 ===== */
+  .cs-privacy-note {
+    font-size: 11px;
+    color: var(--c-muted);
+    margin: 0 0 14px;
+    line-height: 1.6;
+  }
+  .cs-toolbar, .cs-stamp-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .cs-file-name {
+    font-size: 12.5px;
+    color: var(--c-text-soft);
+    font-weight: 700;
+  }
+  .cs-stamp-hint {
+    font-size: 11.5px;
+    color: var(--c-text-soft);
+    width: 100%;
+  }
+  .cs-stamp-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+  }
+  .cs-stamp-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--r-md);
+    border: 2px solid transparent;
+  }
+  .cs-stamp-item.active { border-color: var(--c-primary); background: var(--c-bg-bottom); }
+  .cs-stamp-thumb-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--r-sm);
+    background: var(--c-input-bg);
+    border: 1px solid var(--c-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .cs-stamp-thumb-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .cs-stamp-name {
+    font-size: 10px;
+    color: var(--c-text-soft);
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cs-stamp-item label {
+    font-size: 10px;
+    color: var(--c-muted);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .cs-pages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    margin: 10px 0;
+  }
+  .cs-page {
+    position: relative;
+    border: 1px solid var(--c-border-light);
+    box-shadow: var(--sh-soft);
+    max-width: 100%;
+  }
+  .cs-page canvas { display: block; max-width: 100%; }
+  .cs-placed {
+    position: absolute;
+    cursor: move;
+    border: 1px dashed transparent;
+    touch-action: none;
+  }
+  .cs-placed.selected { border-color: var(--c-primary); }
+  .cs-placed img { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; }
+  .cs-placed-del, .cs-placed-resize {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    color: var(--c-text-invert);
+    font-size: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+  }
+  .cs-placed.selected .cs-placed-del,
+  .cs-placed.selected .cs-placed-resize { display: flex; }
+  .cs-placed-del { top: -10px; right: -10px; background: var(--c-danger); }
+  .cs-placed-resize { bottom: -10px; right: -10px; cursor: nwse-resize; background: var(--c-brown); }
+  .cs-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 16px;
+  }
+
   /* ===== 【新】自訂文字按鈕區塊（開團狀態清單新增的區塊） ===== */
   .cb-card {
     display: block;
@@ -4146,6 +4263,12 @@
         </div>
         <span class="tool-icon-label">計算機</span>
       </div>
+      <div class="tool-icon" id="toolIconContractSign" style="display:none;" onclick="switchView('contractSign')">
+        <div class="tool-icon-img-wrap">
+          <span class="tool-icon-fallback" style="display:flex;">🖋️</span>
+        </div>
+        <span class="tool-icon-label">合約用印</span>
+      </div>
     </div>
   </div>
 
@@ -4298,6 +4421,37 @@
       <input type="number" id="taxIncInput" placeholder="輸入含稅金額…" inputmode="decimal">
       <p style="font-size:11.5px; color:#a89888; margin:10px 0 0;">輸入任一欄位，另外兩欄會自動計算（四捨五入到整數元）。</p>
     </div>
+  </div>
+
+  <!-- ===== 線上合約用印（純前端，零後端；檔案與印章圖只留在瀏覽器記憶體） ===== -->
+  <div class="view" id="viewContractSign">
+    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
+    <h2 class="view-title">🖋️ 線上合約用印</h2>
+    <p class="cs-privacy-note">合約與印章圖只在你的裝置上處理，不會上傳到任何伺服器；離開或按「全部重來」即清除。</p>
+
+    <div class="cs-toolbar">
+      <input type="file" id="csContractInput" accept=".pdf,image/jpeg,image/png" style="display:none;" onchange="csHandleContractFile(this.files)">
+      <button class="task-mini-btn" onclick="document.getElementById('csContractInput').click()">📄 選擇合約檔</button>
+      <span class="cs-file-name" id="csContractName"></span>
+    </div>
+
+    <div class="cs-stamp-section">
+      <input type="file" id="csStampInput" accept="image/*" multiple style="display:none;" onchange="csHandleStampFiles(this.files)">
+      <button class="task-mini-btn" onclick="document.getElementById('csStampInput').click()">➕ 新增印章</button>
+      <div class="cs-stamp-hint">先點選印章，再點合約上要蓋的位置</div>
+      <div class="cs-stamp-list" id="csStampList"></div>
+    </div>
+
+    <div class="cs-pages" id="csPages"></div>
+
+    <div class="cs-action-row">
+      <button class="task-submit-btn" id="csExportPdfBtn" style="width:auto; margin:0; padding:11px 26px;" onclick="csExportPdf()">📥 下載 PDF</button>
+      <button class="task-submit-btn" id="csExportImgBtn" style="width:auto; margin:0; padding:11px 26px;" onclick="csExportImages()">🖼️ 存成圖片</button>
+      <button class="task-submit-btn" id="csShareBtn" style="width:auto; margin:0; padding:11px 26px;" onclick="csShareViaWebShare()">📤 分享（LINE等）</button>
+      <button class="task-mini-btn danger" onclick="csResetAll()">🗑 全部重來</button>
+    </div>
+
+    <div class="form-status" id="csStatus"></div>
   </div>
 
   <!-- ===== 報表統計 ===== -->
@@ -5312,7 +5466,9 @@
 <script src="tools.js?v=16"></script>
 <script src="report.js?v=3"></script>
 <script src="accounting.js?v=14"></script>
-<script src="admin.js?v=74"></script>
+<!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
+<script src="contractSign.js?v=1"></script>
+<script src="admin.js?v=75"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
