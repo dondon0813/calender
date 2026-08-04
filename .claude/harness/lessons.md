@@ -71,3 +71,9 @@
 根因：食材資料庫／成品／食譜／開學清單這幾張表**沒有任何 doPost 寫入型別**——雪莉是直接開試算表編輯的，程式完全攔不到那個動作。只靠「後台寫入時清快取」等於這幾張表永遠不會被清，改完前台看不到變化，使用者會以為壞掉。
 之後怎麼做：替任何資料加快取前，先問「這份資料除了程式寫入，還有沒有人手直接改試算表？」有的話 TTL 就是「人手改完到前台更新」的上限，不可以拉長（本專案設 90 秒）；要更即時就得裝 onChange 觸發器。另外「讀到一半有人存檔」的競態要用世代標記擋，否則舊資料會覆蓋掉剛清的快取。
 波及：無。
+
+## L11 2026-08-05 node 24 的 --check 不吃 .gs 副檔名
+情境：照 CLAUDE.md 速查跑 `node --check Code.gs` 做語法檢查。
+錯誤：`ERR_UNKNOWN_FILE_EXTENSION: Unknown file extension ".gs"`（node v24 的 ESM 格式偵測拒收非 .js/.mjs/.cjs 副檔名）。
+之後怎麼做：先把 Code.gs 複製成 scratchpad 裡的 .js 再 check：`cp Code.gs <scratchpad>/codegs-check.js && node --check <scratchpad>/codegs-check.js`。admin.js 等本來就是 .js 的不受影響。
+波及：CLAUDE.md 速查的「`node --check Code.gs`」字面上已不能直接跑，照本條處理即可。
