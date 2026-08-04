@@ -1622,7 +1622,37 @@ var BRAND_THUMB_MAP_ = {
   'Aribebe': 'aribebe.webp',
   '伯尼寢具': 'bernie.webp',
   'KOM': 'kom.webp',
-  '齒妍堂': 'lab52.webp'
+  '齒妍堂': 'lab52.webp',
+  '安可堡泡泡': 'ankebao.webp',
+  'B21pro': 'b21pro.webp',
+  'Bonsons': 'bonsons.webp',
+  'Bruno': 'bruno.webp',
+  '卡蘿琳': 'caroline.webp',
+  '冊子': 'cezi-giftbox.webp',
+  '森林麵食': 'forest-noodle.webp',
+  // ↓ 這四個品牌不在 2026-07 匯入清單裡，名稱是照行事曆團名猜的；
+  //   跑 updateBrandThumbs 後若 log 出現「找不到這些品牌」，改成資料庫裡的正確寫法再跑一次
+  'Giiker': 'giiker.webp',
+  'plantoys': 'plantoys.webp',
+  'ScienceBaby': 'sciencebaby.webp',
+  '小V': 'xiao-v.webp',
+  '韓爸米餅': 'hanba-rice.webp',
+  '禾流文創': 'heliu.webp',
+  'Horay': 'horay.webp',
+  'Jolly': 'jolly.webp',
+  'Kigo': 'kigo.webp',
+  'Lapo': 'lapo.webp',
+  'LMG': 'lmg.webp',
+  'MOMAX': 'momax.webp',
+  'Nadle': 'nadle.webp',
+  'Parakito': 'parakito.webp',
+  '森森星球': 'sensen.webp',
+  '雪坊優格': 'snow-factory.webp',
+  '台灣好車隊': 'taiwan-fleet.webp',
+  'trixie': 'trixie.webp',
+  '美姬饅頭': 'meiji-mantou.webp',
+  'Yookidoo': 'yookidoo.webp'
+  // jpkr-giftbox.webp（日/韓中秋禮盒）不是品牌，不進這張表；網址貼行事曆該檔的 W 欄「去背小圖」
 };
 
 function updateBrandThumbs() {
