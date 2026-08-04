@@ -44,7 +44,9 @@ Google 試算表（兩份！）
 | todoList.js | 429 | 待辦事項：分組清單/編輯彈窗/加入行事曆（todos/todoCategories 資料層在 admin.js，本檔只讀；同樣排在 admin.js 之前） | 🟢 |
 | customBlocks.js | 307 | 開團狀態清單的自訂區塊＋編輯視窗（customBlocks 資料層在 admin.js；renderGroupStatusList 本體留在 admin.js；同樣排在 admin.js 之前） | 🟢 |
 | tools.js | 665 | 工具箱三件套：開團文案/抽獎/食譜貼文產生器＋轉檔佔位（按鈕多為 admin.html inline onclick；同樣排在 admin.js 之前） | 🟢 |
-| report.js | ~330 | 報表統計頁：statsMap 前端聚合（rptCompute*/rptRender*/renderReportView；重新整理走 postTask stat-report；同樣排在 admin.js 之前） | 🟢 |
+| report.js | ~390 | 報表統計頁：statsMap 前端聚合（rptCompute*/rptRender*/renderReportView；重新整理走 postTask stat-report；同樣排在 admin.js 之前） | 🟢 |
+| accounting.js | ~1091 | 開團帳務頁（acct-* 端點的前端；同樣排在 admin.js 之前） | 🟡 |
+| contractSign.js | ~789 | 線上合約用印工具（**僅管理員**；純前端零後端：上傳合約 PDF/圖片＋印章照去白底→蓋章拖曳縮放→下載 PDF/逐頁存 JPG/Web Share 分享；pdf.js 渲染＋pdf-lib 匯出，lazy-load `vendor/pdfjs.min.js`+`pdfjs.worker.min.js`+`pdf-lib.min.js`；檔案只留瀏覽器記憶體；同樣排在 admin.js 之前） | 🟡 |
 | memo.js | 420 | 備忘錄樹狀模組（依賴 admin.js 的 postTask/currentUser） | 🟢 |
 | shared.css | 382 | 全站設計 tokens（:root 變數）＋共用元件 | 🟢 |
 | school-labels.html | 311 | 標籤機導購頁（獨立 LABELS_API_URL） | 🟢 |
@@ -52,7 +54,7 @@ Google 試算表（兩份！）
 | name-sticker-generator.html | ~855 | 免費資源／姓名貼產生器：輸入中文姓名（必填）＋英文姓名（選填，會疊第二行），產 6x4 明信片圖。**兩種產生方式（款式資料的 `mode`）**：`grid`＝喵星人(8款)/可愛動物(4款)，白底 4x6 網格「圖左名右」，用 html2canvas 截 DOM 樣板；`sheet`＝交通工具，整張已排版好的底圖當成品，用 canvas 2D 把姓名畫到 12 台車的車身上（白字＋深色外框），不載 html2canvas | 🟢 |
 | apps-script-*.md ×3 | - | **歷史部署說明**（已完成的部署步驟紀錄，非現況文件） | 🟢 |
 
-引用關係：admin.html → `prItems.js` → `brandVendor.js` → `imageLibrary.js` → `calculator.js` → `todoList.js` → `customBlocks.js` → `tools.js` → `admin.js` → `memo.js`（各帶 `?v=N`）＋html2canvas(本地 vendor/)；school-list.html → html2canvas；全部頁面 → shared.css。改 admin.js/memo.js/prItems.js 時**記得把 admin.html 裡對應的 `?v=` 版本號 +1**（快取破解）。
+引用關係：admin.html → `prItems.js` → `brandVendor.js` → `imageLibrary.js` → `calculator.js` → `todoList.js` → `customBlocks.js` → `tools.js` → `report.js` → `accounting.js` → `contractSign.js` → `admin.js` → `memo.js`（各帶 `?v=N`）＋html2canvas(本地 vendor/)；school-list.html → html2canvas；全部頁面 → shared.css。改 admin.js/memo.js/prItems.js 時**記得把 admin.html 裡對應的 `?v=` 版本號 +1**（快取破解）。
 **載入順序鐵律**：所有拆出模組（prItems / brandVendor / imageLibrary / calculator / todoList / customBlocks / tools）必須排在 admin.js **之前**——admin.js 開機還原分頁與資料載入後的重繪會同步呼叫模組函式（`loadPrItems()`、`renderBrandVendorView()`、`ilLoad()`、`appendCustomBlocksAdmin()`…），順序錯了整頁變磚。新拆模組若同樣被開機路徑呼叫，一律照此模式排在 admin.js 之前，且模組最外層只准「宣告＋DOM 事件掛載」，不准直接呼叫 admin.js 的函式。
 
 ## 3. 前端資料流速查
