@@ -3903,6 +3903,7 @@
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
     <button class="sn-item" data-view="imageLibrary" data-perm="imageLibrary">🖼️ 圖片庫</button>
     <button class="sn-item" data-view="convertTool">🔄 轉檔小工具</button>
+    <button class="sn-item" data-view="bgRemover">✂️ 圖片去背器</button>
     <button class="sn-item" data-view="calculator">🧮 計算機</button>
     <div class="sn-group-title">版面</div>
     <!-- 右欄的下拉選單在 #paneRight 裡面，右欄關閉時會一起消失，所以開關必須放在
@@ -4242,6 +4243,13 @@
         </div>
         <span class="tool-icon-label">轉檔<br>小工具</span>
       </div>
+      <div class="tool-icon" onclick="switchView('bgRemover')">
+        <div class="tool-icon-img-wrap">
+          <img src="images/tools/bgremover.webp" alt="圖片去背器" onerror="if(!this.dataset.f){this.dataset.f='1';this.src='images/tools/bgremover.png';}else{const w=this.parentElement; this.remove(); w.querySelector('.tool-icon-fallback').style.display='flex';}">
+          <span class="tool-icon-fallback" style="display:none;">✂️</span>
+        </div>
+        <span class="tool-icon-label">圖片<br>去背器</span>
+      </div>
       <div class="tool-icon" id="toolIconImageLibrary" data-perm="imageLibrary" onclick="switchView('imageLibrary')">
         <div class="tool-icon-img-wrap">
           <img src="images/tools/imagelib.webp" alt="圖片庫" onerror="if(!this.dataset.f){this.dataset.f='1';this.src='images/tools/imagelib.png';}else{const w=this.parentElement; this.remove(); w.querySelector('.tool-icon-fallback').style.display='flex';}">
@@ -4376,6 +4384,48 @@
       <button class="task-submit-btn" onclick="runConvertTool()">開始轉換</button>
       <div class="form-status" id="convertStatus"></div>
       <p style="text-align:center; font-size:12.5px; font-weight:800; color:#b5755a; margin:10px 0 0;">🚧 即將推出，敬請期待</p>
+    </div>
+  </div>
+
+  <!-- ===== 圖片去背器（AI 去背 → 裁邊 → 縮圖 → 轉WebP → 上傳；邏輯在 bgRemover.js） ===== -->
+  <div class="view" id="viewBgRemover">
+    <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
+    <h2 class="view-title">✂️ 圖片去背器</h2>
+    <div class="task-form">
+      <p style="font-size:12.5px; color:#8a7462; margin:0 0 10px; line-height:1.6;">
+        選好照片後會自動：<b>AI 去背 → 裁掉透明邊 → 縮圖 → 轉 WebP</b>，確認檔名就能直接上傳圖片庫。<br>
+        第一次使用要下載 AI 模型（約 40MB，只需一次）；圖片全程在自己的瀏覽器裡處理，不會外流。手機也能用，但去背速度較慢，建議用電腦。
+      </p>
+      <label for="bgrFileInput">選擇照片（可一次選多張）</label>
+      <input type="file" id="bgrFileInput" accept="image/*" multiple>
+      <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-top:8px;">
+        <div>
+          <label for="bgrFolderSelect" style="display:block;">上傳到哪個資料夾</label>
+          <select id="bgrFolderSelect">
+            <option value="images/Ingredients">食材圖（images/Ingredients）</option>
+            <option value="images/brands">品牌小圖（images/brands）</option>
+            <option value="images">其他（images）</option>
+          </select>
+        </div>
+        <div>
+          <label for="bgrSizeSelect" style="display:block;">輸出尺寸</label>
+          <select id="bgrSizeSelect">
+            <option value="400">長邊 400px（食材圖／品牌小圖）</option>
+            <option value="800">長邊 800px</option>
+            <option value="0">保留原尺寸</option>
+          </select>
+        </div>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#8a7462; margin-bottom:6px;">
+          <input type="checkbox" id="bgrRemoveToggle" checked> 自動去背（已去背的圖可取消勾選，只縮圖轉檔）
+        </label>
+      </div>
+      <div class="form-status" id="bgrEngineStatus"></div>
+    </div>
+    <div id="bgrList" style="margin-top:12px;"></div>
+    <div style="max-width:900px; margin:0 auto; text-align:center;">
+      <button class="task-mini-btn" style="border-color:#9ACB85; color:#5C9147; padding:8px 20px;" id="bgrUploadAllBtn">☁ 全部上傳</button>
+      <button class="task-mini-btn" style="padding:8px 20px;" id="bgrClearBtn">🧹 清空清單</button>
+      <div class="form-status" id="bgrUploadAllStatus"></div>
     </div>
   </div>
 
@@ -4634,6 +4684,7 @@
       <option value="lotteryTool">🎉 抽獎小幫手</option>
       <option value="imageLibrary">🖼️ 圖片庫</option>
       <option value="convertTool">🔄 轉檔小工具</option>
+      <option value="bgRemover">✂️ 圖片去背器</option>
       <option value="calculator">🧮 計算機</option>
     </select>
     <div id="paneRightEmpty">請選擇要在右側顯示的分頁</div>
@@ -5468,7 +5519,8 @@
 <script src="accounting.js?v=14"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=1"></script>
-<script src="admin.js?v=76"></script>
+<script src="bgRemover.js?v=1"></script>
+<script src="admin.js?v=78"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
