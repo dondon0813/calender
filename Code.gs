@@ -1573,21 +1573,28 @@ var BRAND_IMPORT_LIST_ = [
   { name: '日韓禮盒', vendorNames: ['匯盛'], note: '日/韓進口禮盒檔期團，每年中秋與過年都會開（2026-08-05 建檔）' }
 ];
 
+// 品牌名正規化比對 key：不分大小寫、去掉所有空白與標點符號。
+// 跟 school-list.html 的 normalizeBrandKey 同一套邏輯——試算表裡「Scoot & Ride」「wewee!」
+// 這類寫法差異都算同一個品牌，避免匯入重複建檔、小圖比對漏接。（漏接過一次：2026-08-06）
+function normBrandKey_(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
+}
+
 function importBrandsFromCalendar() {
   var existing = {};
-  getBrandDbList_().forEach(function (b) { existing[b.name.trim()] = b.id; });
+  getBrandDbList_().forEach(function (b) { existing[normBrandKey_(b.name)] = b.id; });
 
   var vendorByName = {};
-  getVendorDbList_().forEach(function (v) { vendorByName[v.name.trim()] = v.id; });
+  getVendorDbList_().forEach(function (v) { vendorByName[normBrandKey_(v.name)] = v.id; });
 
   var added = [], skipped = [], noVendor = [];
   BRAND_IMPORT_LIST_.forEach(function (item) {
     var name = item.name.trim();
-    if (existing[name]) { skipped.push(name); return; }
+    if (existing[normBrandKey_(name)]) { skipped.push(name); return; }
 
     var vendorIds = [];
     (item.vendorNames || []).forEach(function (vn) {
-      var vid = vendorByName[vn.trim()];
+      var vid = vendorByName[normBrandKey_(vn)];
       if (vid) vendorIds.push(vid);
       else noVendor.push(name + ' → ' + vn);
     });
@@ -1601,7 +1608,7 @@ function importBrandsFromCalendar() {
       thumbUrl: '',
       brandImageUrl: ''
     });
-    existing[name] = id;
+    existing[normBrandKey_(name)] = id;
     added.push(name);
   });
 
@@ -1631,8 +1638,8 @@ var BRAND_THUMB_MAP_ = {
   '卡蘿琳': 'caroline.webp',
   '冊子': 'cezi-giftbox.webp',
   '森林麵食': 'forest-noodle.webp',
-  // ↓ 這四個品牌不在 2026-07 匯入清單裡，名稱是照行事曆團名猜的；
-  //   跑 updateBrandThumbs 後若 log 出現「找不到這些品牌」，改成資料庫裡的正確寫法再跑一次
+  // ↓ 這幾個品牌不在 2026-07 匯入清單裡；比對已改用 normBrandKey_（不分大小寫/空白/標點），
+  //   跑 updateBrandThumbs 後若仍「找不到」，就是試算表裡的字真的不同（例如錯字），照表改一邊即可
   'Giiker': 'giiker.webp',
   'plantoys': 'plantoys.webp',
   'ScienceBaby': 'sciencebaby.webp',
@@ -1659,11 +1666,11 @@ var BRAND_THUMB_MAP_ = {
 function updateBrandThumbs() {
   var brands = getBrandDbList_();
   var byName = {};
-  brands.forEach(function (b) { byName[b.name.trim()] = b; });
+  brands.forEach(function (b) { byName[normBrandKey_(b.name)] = b; });
 
   var updated = [], missing = [], unchanged = [];
   Object.keys(BRAND_THUMB_MAP_).forEach(function (name) {
-    var brand = byName[name];
+    var brand = byName[normBrandKey_(name)];
     if (!brand) { missing.push(name); return; }
     var url = BRAND_THUMB_BASE_ + BRAND_THUMB_MAP_[name];
     if (brand.thumbUrl === url) { unchanged.push(name); return; }
