@@ -1569,7 +1569,8 @@ var BRAND_IMPORT_LIST_ = [
   { name: 'UBMOM' },
   { name: 'Nadle' },
   { name: '冊子' },
-  { name: '賽爸爸' }
+  { name: '賽爸爸' },
+  { name: '日韓禮盒', vendorNames: ['匯盛'], note: '日/韓進口禮盒檔期團，每年中秋與過年都會開（2026-08-05 建檔）' }
 ];
 
 function importBrandsFromCalendar() {
@@ -1651,8 +1652,8 @@ var BRAND_THUMB_MAP_ = {
   '台灣好車隊': 'taiwan-fleet.webp',
   'trixie': 'trixie.webp',
   '美姬饅頭': 'meiji-mantou.webp',
-  'Yookidoo': 'yookidoo.webp'
-  // jpkr-giftbox.webp（日/韓中秋禮盒）不是品牌，不進這張表；網址貼行事曆該檔的 W 欄「去背小圖」
+  'Yookidoo': 'yookidoo.webp',
+  '日韓禮盒': 'jpkr-giftbox.webp'
 };
 
 function updateBrandThumbs() {

@@ -29,7 +29,7 @@
 | `heliu.webp` | 禾流文創 | 小鼠梅西繪本 |
 | `horay.webp` | Horay | 黑色大容量購物袋 |
 | `jolly.webp` | Jolly | 白＋木色旋轉書櫃 |
-| `jpkr-giftbox.webp` | （日/韓中秋禮盒，行事曆W欄用） | 日韓中秋禮盒 |
+| `jpkr-giftbox.webp` | 日韓禮盒 | 日韓進口禮盒（中秋/過年檔期團） |
 | `kigo.webp` | Kigo | 米色兒童太陽眼鏡 |
 | `lapo.webp` | Lapo | 紫白手持風扇 |
 | `lmg.webp` | LMG | 米色不沾湯鍋 |
