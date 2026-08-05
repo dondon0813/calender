@@ -1512,7 +1512,7 @@ function deleteBrandDb_(id) {
 // 所以重跑不會產生重複列。執行後看「執行紀錄」會列出新增/略過的品牌。
 var BRAND_IMPORT_LIST_ = [
   { name: '年年姓名貼' },
-  { name: 'Scoot&Ride' },
+  { name: 'Scoot&Ride奧地利滑步車' },
   { name: 'Silipot' },
   { name: 'Yookidoo' },
   { name: 'trixie', note: '常與 Yookidoo 合團' },
@@ -1533,15 +1533,15 @@ var BRAND_IMPORT_LIST_ = [
   { name: '林貝兒' },
   { name: '伯尼寢具' },
   { name: 'Kolin' },
-  { name: '卡蘿琳', note: '益生菌與軟糖／Q凍分開兩檔開團' },
+  { name: '卡蘿琳益生菌', note: '益生菌與軟糖／Q凍分開兩檔開團' },
   { name: '寶可樂收袋', note: '原廠品牌：HARU' },
-  { name: 'Learning Resources' },
+  { name: '美國教育玩具', note: '原廠品牌：Learning Resources' },
   { name: 'ifind' },
   { name: 'Picaboo' },
   { name: '兔比媽咪' },
-  { name: 'recolte麗克特' },
+  { name: '麗克特', note: '原廠品牌：recolte' },
   { name: '齒妍堂' },
-  { name: '台東初鹿' },
+  { name: '台東初鹿保久乳' },
   { name: 'LMG' },
   { name: 'Wewee!' },
   { name: 'MOMAX', vendorNames: ['樂奎'], note: '防偷拍定位器' },
@@ -1635,15 +1635,15 @@ var BRAND_THUMB_MAP_ = {
   'B21pro': 'b21pro.webp',
   'Bonsons': 'bonsons.webp',
   'Bruno': 'bruno.webp',
-  '卡蘿琳': 'caroline.webp',
+  '卡蘿琳益生菌': 'caroline.webp',
   '冊子': 'cezi-giftbox.webp',
   '森林麵食': 'forest-noodle.webp',
   // ↓ 這幾個品牌不在 2026-07 匯入清單裡；比對已改用 normBrandKey_（不分大小寫/空白/標點），
   //   跑 updateBrandThumbs 後若仍「找不到」，就是試算表裡的字真的不同（例如錯字），照表改一邊即可
-  'Giiker': 'giiker.webp',
+  'Giiker learning kid': 'giiker.webp',
   'plantoys': 'plantoys.webp',
   'ScienceBaby': 'sciencebaby.webp',
-  '小V': 'xiao-v.webp',
+  '小v鬆餅機': 'xiao-v.webp',
   '韓爸米餅': 'hanba-rice.webp',
   '禾流文創': 'heliu.webp',
   'Horay': 'horay.webp',
@@ -1669,8 +1669,16 @@ function updateBrandThumbs() {
   brands.forEach(function (b) { byName[normBrandKey_(b.name)] = b; });
 
   var updated = [], missing = [], unchanged = [];
+  var allKeys = Object.keys(byName);
   Object.keys(BRAND_THUMB_MAP_).forEach(function (name) {
-    var brand = byName[normBrandKey_(name)];
+    var key = normBrandKey_(name);
+    var brand = byName[key];
+    if (!brand) {
+      // 備援：品牌資料庫慣用「品牌名＋品項」（例：小v鬆餅機、Giiker learning kid），
+      // 對應表若只寫品牌名，找「唯一一個包含此字串」的品牌；多於一個就不猜，照樣回報 missing
+      var hits = allKeys.filter(function (k) { return k.indexOf(key) !== -1; });
+      if (hits.length === 1) brand = byName[hits[0]];
+    }
     if (!brand) { missing.push(name); return; }
     var url = BRAND_THUMB_BASE_ + BRAND_THUMB_MAP_[name];
     if (brand.thumbUrl === url) { unchanged.push(name); return; }
