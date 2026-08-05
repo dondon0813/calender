@@ -1570,8 +1570,7 @@ var BRAND_IMPORT_LIST_ = [
   { name: 'Nadle' },
   { name: '冊子' },
   { name: '賽爸爸' },
-  { name: '日韓禮盒', vendorNames: ['匯盛'], note: '日/韓進口禮盒檔期團，每年中秋與過年都會開（2026-08-05 建檔）' },
-  { name: 'prepara', note: '保鮮盒（2026-08-06 補建檔，所屬廠商待後台補綁）' }
+  { name: '日韓禮盒', vendorNames: ['匯盛'], note: '日/韓進口禮盒檔期團，每年中秋與過年都會開（2026-08-05 建檔）' }
 ];
 
 // 品牌名正規化比對 key：不分大小寫、去掉所有空白與標點符號。
@@ -1665,11 +1664,90 @@ var BRAND_THUMB_MAP_ = {
   '麗克特': 'recolte.webp',
   'Mideer': 'mideer.webp',
   'Mongdies': 'mongdies.webp',
-  'prepara': 'prepara.webp',
+  'Prepara保鮮盒': 'prepara.webp',
   '台東初鹿保久乳': 'chulu.webp',
   '島嶼生吐司': 'island-toast.webp',
   '愛子伴桌': 'aizi.webp'
 };
+
+// ===== 品牌資料庫去重整合 =====
+// 名稱經 normBrandKey_ 正規化後相同的列視為重複（例：B158/B159 的 Prepara保鮮盒）。
+// 先跑 previewDedupeBrandDb() 看整合計畫（只印 log 不動資料），確認沒問題再跑 applyDedupeBrandDb()。
+// 合併規則：保留 id 最小的列；名稱取「最長」的寫法（品牌＋品項慣例）；分潤取最高；
+// 廠商 ID 取聯集；其他欄位保留者為主、空欄用重複列補；兩邊都有值且不同時保留者優先並記進 log。
+function previewDedupeBrandDb() { return dedupeBrandDb_(false); }
+function applyDedupeBrandDb() { return dedupeBrandDb_(true); }
+
+function dedupeBrandDb_(apply) {
+  var groups = {};
+  getBrandDbList_().forEach(function (b) {
+    var k = normBrandKey_(b.name);
+    if (!k) return;
+    (groups[k] = groups[k] || []).push(b);
+  });
+
+  var plans = [];
+  Object.keys(groups).forEach(function (k) {
+    var g = groups[k];
+    if (g.length < 2) return;
+    g.sort(function (a, b) { return a.id < b.id ? -1 : 1; });   // id 最小的當保留者
+    var keep = g[0], dups = g.slice(1);
+    var fields = {};
+    var logLines = [];
+
+    // 名稱：取最長寫法
+    var bestName = g.map(function (b) { return b.name; }).sort(function (a, b) { return b.length - a.length; })[0];
+    if (bestName !== keep.name) { fields.name = bestName; logLines.push('名稱改用「' + bestName + '」'); }
+
+    // 廠商聯集
+    var vset = {};
+    g.forEach(function (b) { b.vendorIds.forEach(function (v) { vset[v] = 1; }); });
+    var vunion = Object.keys(vset);
+    if (vunion.join(',') !== keep.vendorIds.join(',')) { fields.vendorIds = vunion; logLines.push('廠商=' + vunion.join(',')); }
+
+    // 分潤取最高；說明不同就併起來
+    var rates = g.map(function (b) { return parseFloat(b.commissionRate); }).filter(function (n) { return !isNaN(n); });
+    if (rates.length) {
+      var maxRate = Math.max.apply(null, rates);
+      if (String(maxRate) !== String(keep.commissionRate)) { fields.commissionRate = maxRate; logLines.push('分潤取高=' + maxRate); }
+    }
+    var cnotes = []; g.forEach(function (b) { if (b.commissionNote && cnotes.indexOf(b.commissionNote) === -1) cnotes.push(b.commissionNote); });
+    if (cnotes.length > 1 || (cnotes.length === 1 && cnotes[0] !== keep.commissionNote)) { fields.commissionNote = cnotes.join('｜'); }
+
+    // 文字欄位：保留者空才用重複列的值；兩邊不同就保留者優先（只記 log）
+    [['thumbUrl','去背小圖'],['lineContact','LINE'],['emailContact','Email'],['igContact','IG'],['note','備註'],
+     ['intro','介紹'],['brandImageUrl','品牌圖片'],['shopeeUrl','蝦皮'],['endReason','結束原因'],['postTemplate','文案模板']].forEach(function (fd) {
+      var key2 = fd[0];
+      if (keep[key2]) {
+        dups.forEach(function (d) { if (d[key2] && d[key2] !== keep[key2]) logLines.push('⚠ ' + fd[1] + ' 兩邊不同，保留 ' + keep.id + ' 的值'); });
+      } else {
+        var src = dups.filter(function (d) { return d[key2]; })[0];
+        if (src) { fields[key2] = src[key2]; logLines.push(fd[1] + ' 補自 ' + src.id); }
+      }
+    });
+
+    // 旗標：任一列為是就是（showInRecipe/longTerm/ended）
+    [['showInRecipe','showInRecipe'],['longTerm','longTerm'],['ended','ended']].forEach(function (fd) {
+      var any = g.some(function (b) { return b[fd[0]]; });
+      if (any && !keep[fd[0]]) { fields[fd[0]] = '是'; logLines.push(fd[0] + '=是（補自重複列）'); }
+    });
+
+    plans.push({ keepId: keep.id, keepName: fields.name || keep.name, deleteIds: dups.map(function (d) { return d.id; }), fields: fields, log: logLines });
+  });
+
+  if (!plans.length) { Logger.log('沒有發現重複品牌。'); return { merged: 0 }; }
+  plans.forEach(function (p) {
+    Logger.log((apply ? '【執行】' : '【預覽】') + ' 保留 ' + p.keepId + '「' + p.keepName + '」，刪除 ' + p.deleteIds.join('、') +
+      (p.log.length ? '；' + p.log.join('；') : ''));
+    if (apply) {
+      if (Object.keys(p.fields).length) updateBrandDb_(p.keepId, p.fields);
+      p.deleteIds.forEach(function (id) { deleteBrandDb_(id); });
+    }
+  });
+  if (apply) invalidatePublicCache_();
+  Logger.log((apply ? '整合完成' : '以上為預覽，確認後執行 applyDedupeBrandDb()') + '，共 ' + plans.length + ' 組重複。');
+  return { merged: plans.length };
+}
 
 function updateBrandThumbs() {
   var brands = getBrandDbList_();
