@@ -154,10 +154,11 @@
     gap: 10px 4px;
   }
   .ogb-items.ogb-grid5 .ogb-item { width: auto; }
+  /* 用固定 px 正方形（跟預設 .ogb-thumb 同一招），不要用 width:100%+aspect-ratio——
+     那個組合在 grid 欄位裡會被個別圖片的原始比例帶歪，長圖會被撐得超高 */
   .ogb-items.ogb-grid5 .ogb-thumb {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1 / 1;
+    width: 56px;
+    height: 56px;
   }
   .ogb-items.ogb-grid5 .ogb-thumb-fallback { font-size: 20px; }
   .ogb-items.ogb-grid5 .ogb-name { font-size: 10px; }
