@@ -1642,7 +1642,7 @@ var BRAND_THUMB_MAP_ = {
   //   跑 updateBrandThumbs 後若仍「找不到」，就是試算表裡的字真的不同（例如錯字），照表改一邊即可
   'Giiker learning kid': 'giiker.webp',
   'plantoys': 'plantoys.webp',
-  'ScienceBaby': 'sciencebaby.webp',
+  'SB磁力片': 'sciencebaby.webp',
   '小v鬆餅機': 'xiao-v.webp',
   '韓爸米餅': 'hanba-rice.webp',
   '禾流文創': 'heliu.webp',
