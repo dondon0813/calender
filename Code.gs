@@ -1660,7 +1660,14 @@ var BRAND_THUMB_MAP_ = {
   'trixie': 'trixie.webp',
   '美姬饅頭': 'meiji-mantou.webp',
   'Yookidoo': 'yookidoo.webp',
-  '日韓禮盒': 'jpkr-giftbox.webp'
+  '日韓禮盒': 'jpkr-giftbox.webp',
+  '麗克特': 'recolte.webp',
+  'Mideer': 'mideer.webp',
+  'Mongdies': 'mongdies.webp',
+  'prepara': 'prepara.webp',
+  '台東初鹿保久乳': 'chulu.webp',
+  '島嶼生吐司': 'island-toast.webp',
+  '愛子伴桌': 'aizi.webp'
 };
 
 function updateBrandThumbs() {

@@ -45,6 +45,13 @@
 | `trixie.webp` | trixie | 棕色小熊書包 |
 | `xiao-v.webp` | 小V | Vitantonio 鬆餅機 |
 | `yookidoo.webp` | Yookidoo | 紅白條紋戲水轉轉塔 |
+| `recolte.webp` | 麗克特 | 米色食物調理機 |
+| `mideer.webp` | Mideer | 紅色車車拼圖盒 |
+| `mongdies.webp` | Mongdies | 防曬乳＋防曬棒 |
+| `prepara.webp` | prepara | 透明保鮮盒 |
+| `chulu.webp` | 台東初鹿保久乳 | 白色牛奶利樂包 |
+| `island-toast.webp` | 島嶼生吐司 | 烤吐司兩片 |
+| `aizi.webp` | 愛子伴桌 | 小熊餐盤＋饅頭三顆 |
 
 ## 圖片建議
 
