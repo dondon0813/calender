@@ -237,6 +237,8 @@
     <div class="page-title">🏷️ 姓名貼產生器</div>
   </div>
 
+  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="sticker"></div>
+
   <div class="ns-subtitle">🌟 選款式、輸入姓名，馬上產生專屬姓名貼 🌟</div>
 
   <div class="ns-section-title" style="text-align:center;">Step 1・選擇款式</div>
@@ -854,6 +856,9 @@ document.getElementById('nsEnglishNameInput').addEventListener('keydown', (e) =>
   } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
 })();
 </script>
+
+<!-- 「現正開團中」置頂橫列：跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css） -->
+<script src="openGroupBuy.js?v=1"></script>
 
 </body>
 </html>

@@ -111,6 +111,8 @@
   <h1 class="page-title">開學用品標籤</h1>
   <div class="page-subtitle">可愛姓名標籤圖檔，一鍵全部帶回家 🎒</div>
 
+  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="labels"></div>
+
   <div class="section-head"><span class="section-title">⬇️ 下載標籤圖片</span></div>
   <div class="box">
     <p class="desc">點下面的按鈕，會把<b>所有標籤圖片</b><br>打包成一個壓縮檔下載到你的裝置喔！</p>
@@ -331,6 +333,9 @@ loadBuyLink();
   } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
 })();
 </script>
+
+<!-- 「現正開團中」置頂橫列：跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css） -->
+<script src="openGroupBuy.js?v=1"></script>
 
 </body>
 </html>

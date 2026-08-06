@@ -14,10 +14,6 @@
     --sl-card-bg: #FFEDE0; /* 開學用品卡片底色 */
     --sl-card-border: #FFD9BB; /* 卡片／A4項目／姓名貼輸入框 邊框色 */
     --sl-card-checked-bg: #EBF7E6; /* 卡片勾選後底色 */
-    --sl-ogb-bg: #FFF6F8; /* 現正開團中橫列底色 */
-    --sl-ogb-border: #FFD6E0; /* 現正開團中橫列邊框 */
-    --sl-ogb-price: #FFAFC2; /* 現正開團中價格文字色 */
-    --sl-ogb-end: #b9a99a; /* 現正開團中結束日文字色 */
   }
 
   .empty-state {
@@ -335,70 +331,6 @@
   @keyframes spPop {
     from { transform: scale(.3); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
-  }
-
-  /* ===== 現正開團中的開學用品品牌（最上方橫向捲動列）===== */
-  .ogb-bar {
-    background: var(--sl-ogb-bg);
-    border: 1px solid var(--sl-ogb-border);
-    border-radius: 14px;
-    padding: 10px 0 12px;
-    margin-bottom: 14px;
-  }
-  .ogb-title {
-    font-size: 12.5px;
-    font-weight: 900;
-    color: var(--c-pink-deep);
-    text-align: center;
-    margin-bottom: 8px;
-  }
-  /* 置中排列。用 wrap 而不是橫向捲動：品牌數量少時才置得漂亮，
-     數量多時自動換行，也不會有「捲動內容被切掉又沒有捲軸提示」的問題 */
-  .ogb-items {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px 6px;
-    padding: 0 10px 2px;
-  }
-  .ogb-item {
-    flex: 0 0 auto;
-    width: 80px;
-    text-decoration: none;
-    text-align: center;
-    color: inherit;
-  }
-  /* 直接用去背圖，不加白底框 */
-  .ogb-thumb {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .ogb-thumb img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-  /* 沒有去背小圖時的替代：顯示品牌名稱第一個字 */
-  .ogb-thumb-fallback {
-    font-size: 24px;
-    font-weight: 900;
-    color: var(--sl-ogb-price);
-  }
-  .ogb-name {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--c-text-soft);
-    line-height: 1.3;
-    word-break: break-word;
-  }
-  .ogb-end {
-    font-size: 10px;
-    color: var(--sl-ogb-end);
-    margin-top: 1px;
   }
 
   /* ===== 移除／還原品項 ===== */
@@ -835,7 +767,7 @@
     <img class="school-title-img" src="icons/title-header.webp" alt="開學用品清單 一起準備上學去" onerror="this.style.display='none';">
   </div>
   <div id="statusMsg" class="status-msg" style="display:none;">資料載入中…</div>
-  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;"></div>
+  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="school"></div>
   <div class="school-progress" id="schoolProgress"></div>
   <div id="schoolListContent"></div>
   <div class="empty-state" id="schoolListEmpty" style="display:none;">目前還沒有設定開學清單項目</div>
@@ -1217,113 +1149,7 @@ function restoreSchoolItem(id) {
   renderSchoolList();
 }
 
-// 最上方「現正開團中」：掃過目前顯示中的開學清單品項，收集正在開團的品牌推薦。
-// 小圖優先序：行事曆該檔 W 欄 > 品牌資料庫預設 > 品牌名稱第一個字。
-function getOpenSchoolBrands() {
-  const removedIds = getRemovedSchoolIds();
-  const seen = new Set();
-  const result = [];
-  SCHOOL_ITEMS.filter(it => !removedIds.has(it['編號'])).forEach(item => {
-    const brands = String(item['品牌推薦'] || '').split(/[|｜]/).map(s => s.trim()).filter(Boolean);
-    const itemName = String(item['項目名稱'] || '').trim();
-    brands.forEach(brand => {
-      if (seen.has(brand)) return;
-      const status = getBrandStatus(brand, itemName);
-      if (status.status !== 'open') return;
-      seen.add(brand);
-      result.push({
-        brand: brand,
-        url: status.url,
-        thumb: status.thumb || BRAND_THUMBS[normalizeBrandKey(brand)] || '',
-        end: status.end,
-        discountCode: status.discountCode || '',
-        discountDesc: status.discountDesc || '',
-        evKey: status.evKey || ''
-      });
-    });
-  });
-  return result;
-}
-
-function renderOpenGroupBuyBar() {
-  const bar = document.getElementById('openGroupBuyBar');
-  if (!bar) return;
-  const open = getOpenSchoolBrands();
-  bar.innerHTML = '';
-  if (!open.length) { bar.style.display = 'none'; return; }
-  bar.style.display = 'block';
-
-  const title = document.createElement('div');
-  title.className = 'ogb-title';
-  title.textContent = '🟢 現正開團中的開學用品';
-  bar.appendChild(title);
-
-  const scroll = document.createElement('div');
-  scroll.className = 'ogb-items';
-  open.forEach(o => {
-    // 有團購連結才做成可點的 a，沒有就用 div，避免產生 href="undefined" 的死連結
-    const canLink = isValidUrl(o.url);
-    const cell = document.createElement(canLink ? 'a' : 'div');
-    cell.className = 'ogb-item';
-    if (canLink) {
-      cell.href = o.url;
-      cell.target = '_blank';
-      cell.rel = 'noopener noreferrer';
-      // 有折扣碼：先攔下來跳折扣碼小視窗（小視窗裡再放前往下單按鈕）；保留 href 讓右鍵/新分頁仍可用
-      if (o.discountCode) {
-        cell.addEventListener('click', (e) => {
-          e.preventDefault();
-          openDiscountModal(o.brand, o.url, o.discountCode, o.discountDesc, o.evKey, 'schooltop');
-        });
-      } else if (o.evKey) {
-        // 沒有折扣碼：這裡點下去就是直接進團購網址，是真正的下單出口，統計點擊送在這裡
-        cell.addEventListener('click', () => { sendStat(o.evKey + '_src_schooltop', 'click'); });
-      }
-    }
-
-    const thumbBox = document.createElement('div');
-    thumbBox.className = 'ogb-thumb';
-    if (isValidUrl(o.thumb)) {
-      const img = document.createElement('img');
-      img.src = o.thumb;
-      img.alt = o.brand;
-      img.loading = 'lazy';
-      // 圖片掛掉時退回文字，不要留一個破圖框
-      img.onerror = function () {
-        thumbBox.innerHTML = '';
-        const fb = document.createElement('span');
-        fb.className = 'ogb-thumb-fallback';
-        fb.textContent = o.brand.charAt(0);
-        thumbBox.appendChild(fb);
-      };
-      thumbBox.appendChild(img);
-    } else {
-      const fb = document.createElement('span');
-      fb.className = 'ogb-thumb-fallback';
-      fb.textContent = o.brand.charAt(0);
-      thumbBox.appendChild(fb);
-    }
-    cell.appendChild(thumbBox);
-
-    const name = document.createElement('div');
-    name.className = 'ogb-name';
-    name.textContent = o.brand;
-    cell.appendChild(name);
-
-    if (o.end) {
-      const end = document.createElement('div');
-      end.className = 'ogb-end';
-      end.textContent = fmtSingleDate(o.end) + ' 收單';
-      cell.appendChild(end);
-    }
-
-    scroll.appendChild(cell);
-  });
-  bar.appendChild(scroll);
-}
-
 function renderSchoolList() {
-  renderOpenGroupBuyBar();
   const contentEl = document.getElementById('schoolListContent');
   const emptyEl = document.getElementById('schoolListEmpty');
   const progressEl = document.getElementById('schoolProgress');
@@ -2197,6 +2023,10 @@ loadAll();
   sendStat(`page_school_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, 'view');
 })();
 </script>
+
+<!-- 「現正開團中」置頂橫列邏輯已抽成跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css）；
+     取代原本只挑開學相關品牌的 getOpenSchoolBrands/renderOpenGroupBuyBar，改抓全站目前開團中的團購 -->
+<script src="openGroupBuy.js?v=1"></script>
 
 </body>
 </html>

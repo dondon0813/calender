@@ -1207,6 +1207,8 @@
       <div class="page-title">👶 育兒小幫手</div>
     </div>
 
+    <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="recipes"></div>
+
     <div style="text-align:center; margin: 4px 0 20px;">
       <a class="home-calendar-btn" href="index.html"><span class="home-calendar-dot"></span>📅 現正開團中</a>
     </div>
@@ -2781,6 +2783,9 @@ loadAll();
   sendStat(`page_recipes_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, 'view');
 })();
 </script>
+
+<!-- 「現正開團中」置頂橫列：跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css） -->
+<script src="openGroupBuy.js?v=1"></script>
 
 </body>
 </html>
