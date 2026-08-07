@@ -20,7 +20,7 @@ window.BRAND_NOTES = [
   { brand: '台東初鹿保久乳',           keys: ['初鹿'],                                 note: '1歲以上就可以直接取代奶粉！告別洗奶瓶！' },
   { brand: 'QUUT 玩水玩具',            keys: ['quut'],                                 note: '無接縫的玩水玩具、泳池' },
   { brand: 'Ariati 軟磁鐵',            keys: ['ariati'],                               note: '韓國爆紅學習軟磁鐵！盒裝外出超方便！' },
-  { brand: 'Lapo 製冷風扇',            keys: ['lapo'],                                 note: '2026強勢新品！可以夾推車+自轉！' },
+  { brand: 'Lapo 製冷風扇',            keys: ['lapo'],                                 note: '新款推車專屬底座！免綁繩直接夾，還會自動旋轉🔥' },
   { brand: 'Cova ai 風扇涼墊',         keys: ['cova'],                                 note: '2026最新！水冷功能的風扇涼墊' },
   { brand: '森林麵食',                 keys: ['森林麵食'],                             note: '常溫保存的寶寶蔬果麵' },
   { brand: 'Parakito 寶寶防蚊',        keys: ['parakito'],                             note: '成份天然的寶寶防蚊' },
