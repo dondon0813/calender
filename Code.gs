@@ -1728,6 +1728,80 @@ function importSensenPlanetFoods() {
   return { addedIng: addedIng, skippedIng: skippedIng, addedProd: addedProd, skippedProd: skippedProd };
 }
 
+// ===== 一次性：森森星球收尾——補食材圖片網址＋開「顯示於食材食譜」=====
+// importSensenPlanetFoods() 跑完之後的兩個手動步驟，改成腳本。冪等：圖片網址找不到對應
+// 名稱就跳過（不會誤寫別筆），品牌旗標已經是「是」就不重複寫。在 Apps Script 編輯器選
+// finishSensenPlanetSetup 按執行即可，重跑安全。
+var SENSEN_INGREDIENT_IMAGE_BASE_ = 'https://dondon0813.github.io/calender/images/Ingredients/';
+var SENSEN_INGREDIENT_IMAGE_MAP_ = {
+  '寶寶魚片-智利鮭魚': 'sensen-salmon-fillet.webp',
+  '寶寶魚絞肉-智利鮭魚': 'sensen-fish-mince.webp'
+};
+
+// 找出符合 matchFields（欄名→值，AND 條件）的第一列，回傳列號（1-indexed，含表頭），找不到回 -1
+function findRowIndexByHeaders_(sheet, matchFields) {
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(function (h) { return String(h).trim(); });
+  var idx = {};
+  headers.forEach(function (h, i) { idx[h] = i; });
+  for (var r = 1; r < data.length; r++) {
+    var match = true;
+    for (var key in matchFields) {
+      if (!(key in idx) || String(data[r][idx[key]]).trim() !== String(matchFields[key]).trim()) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return r + 1;
+  }
+  return -1;
+}
+
+// 依表頭名稱只更新指定欄位，其餘欄位不動（跟 appendRowByHeaders_ 同一套「不假設欄位順序」原則）
+function setRowFieldsByHeaders_(sheet, rowNum, fields) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
+  Object.keys(fields).forEach(function (key) {
+    var col = headers.indexOf(key);
+    if (col === -1) return;
+    sheet.getRange(rowNum, col + 1).setValue(fields[key]);
+  });
+}
+
+function finishSensenPlanetSetup() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ingSheet = ss.getSheetByName(INGREDIENT_DB_SHEET_NAME);
+  var imagesUpdated = [], imagesSkipped = [];
+
+  if (!ingSheet) {
+    Logger.log('⚠ 找不到「' + INGREDIENT_DB_SHEET_NAME + '」分頁');
+  } else {
+    Object.keys(SENSEN_INGREDIENT_IMAGE_MAP_).forEach(function (name) {
+      var row = findRowIndexByHeaders_(ingSheet, { '食材名稱': name, '品牌': SENSEN_BRAND_NAME_ });
+      if (row === -1) {
+        imagesSkipped.push(name + '（找不到這筆，可能還沒跑 importSensenPlanetFoods 或名稱對不上）');
+        return;
+      }
+      setRowFieldsByHeaders_(ingSheet, row, { '圖片網址': SENSEN_INGREDIENT_IMAGE_BASE_ + SENSEN_INGREDIENT_IMAGE_MAP_[name] });
+      imagesUpdated.push(name);
+    });
+  }
+
+  var brand = getBrandDbList_().find(function (b) { return normBrandKey_(b.name) === normBrandKey_(SENSEN_BRAND_NAME_); });
+  var brandNote;
+  if (!brand) {
+    brandNote = '找不到「森森星球」這個品牌，請確認「團購品牌資料庫」裡有沒有這筆';
+  } else if (brand.showInRecipe) {
+    brandNote = '「顯示於食材食譜」本來就是勾的，沒有改動';
+  } else {
+    updateBrandDb_(brand.id, { showInRecipe: '是' });
+    brandNote = '已把「顯示於食材食譜」設為是';
+  }
+
+  Logger.log('圖片網址已更新：' + (imagesUpdated.join('、') || '（無）') + (imagesSkipped.length ? '；找不到：' + imagesSkipped.join('、') : ''));
+  Logger.log('品牌顯示旗標：' + brandNote);
+  return { imagesUpdated: imagesUpdated, imagesSkipped: imagesSkipped, brandNote: brandNote };
+}
+
 // ===== 品牌去背小圖：把 GitHub 上的圖片網址寫進「團購品牌資料庫」的「去背小圖」欄 =====
 // 圖片放在 repo 的 images/brands/，push 之後執行 updateBrandThumbs() 即可，不必手動貼網址。
 // 要加新品牌圖片：把圖片放進 images/brands/、在下面這張表加一行、重新部署後再跑一次。
