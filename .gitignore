@@ -5,3 +5,6 @@ __pycache__/
 
 # 品牌小圖的原始素材暫存區（網路抓的雜圖，處理完成品才進 images/brands/）
 _incoming品牌圖/
+
+# 食譜手機拍照原始檔暫存區（處理完成品才進 images/recipes/、images/Ingredients/）
+_incoming食譜圖/
