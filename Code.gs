@@ -1618,6 +1618,116 @@ function importBrandsFromCalendar() {
   return { added: added, skipped: skipped, noVendor: noVendor };
 }
 
+// ===== 一次性：森森星球團購表單食材／成品匯入「食材資料庫」「成品資料庫」=====
+// 資料來源：https://forestplanet.my1shop.com/f2koge（2026-08-08 整理，已排除任選/組合/禮盒式的多品混搭，
+// 煎妮花聯名款不建檔）。在 Apps Script 編輯器選 importSensenPlanetFoods 按執行即可。
+// 以「名稱＋品牌」正規化比對，已存在就跳過，重跑不會產生重複列。分類/簡稱/成分/產地/保存期限/
+// 蝦皮連結留空，之後要用再自己去試算表補。執行後看「執行紀錄」會列出新增/略過的項目。
+var SENSEN_BRAND_NAME_ = '森森星球';
+
+var SENSEN_INGREDIENT_IMPORT_LIST_ = [
+  { name: '寶寶海菜', spec: '約6-10片/包' },
+  { name: '寶寶生凍魩仔魚', spec: '約6-10片/包' },
+  { name: '寶寶魚絞肉-智利鮭魚', spec: '約6-10片/包' },
+  { name: '寶寶魚片-智利鮭魚', spec: '約6-11片/包' },
+  { name: '寶寶魚片-台灣海鱺', spec: '約6-11片/包' },
+  { name: '寶寶魚片-龍虎石斑', spec: '約6-11片/包' },
+  { name: '寶寶魚片-金目鱸', spec: '約6-11片/包' },
+  { name: '寶寶魚湯-金目鱸魚湯', spec: '' }
+];
+
+var SENSEN_PRODUCT_IMPORT_LIST_ = [
+  // 可作食材＝是：不主動顯示在食材列表，但能被其他成品／食譜連結引用
+  { name: '寶寶水餃', spec: '220g/盒；口味：蔬菜豬肉／玉米雞肉／鮮蔬魚肉', canBeIngredient: true },
+  { name: '寶寶餛飩餃', spec: '140g/盒(約28顆)；口味：蔬菜豬肉／玉米雞肉', canBeIngredient: true },
+  { name: '寶寶烏龍麵', spec: '100g/包；口味：黃金南瓜／紫心蕃薯／竹山番薯／新鮮蔬菜／鮮紅蘿蔔／香濃芝麻', canBeIngredient: true },
+  { name: '低鈉寶寶燴料包', spec: '120g/包；口味：甘甜玉米豬肉／和風柴魚雞肉', canBeIngredient: true },
+  { name: '貝果', spec: '6入/盒(固定口味：原味麥香2/香濃芝麻2/藍莓果果2)，表單目前只有這個組合，沒有單賣', canBeIngredient: true },
+  // 一般顯示（純成品，不當食材用）
+  { name: '低鈉寶寶燉飯料理盒', spec: '180g/盒；口味：香蔬豆豆豬肉／奶香玉米鮭魚／香濃南瓜菇菇／蒜香鮮蝦海帶', canBeIngredient: false },
+  { name: '低鈉寶寶料理盒(烏龍麵系列)', spec: '單盒；口味：爽口海鮮／奶香豬肉／蕃茄紅醬／鮮雞蔬菜／濃郁南瓜雞', canBeIngredient: false },
+  { name: '寶寶饅頭', spec: '200g/包；系列：溫潤果實(堅果/桂圓/莓果)／穀粒濃感(黑米/紅藜麥/芝麻)／鮮蔬甜香(南瓜/蕃薯/紅蘿蔔)', canBeIngredient: false },
+  { name: '寶寶麵包', spec: '180g/包(6入/袋)；口味：鮮甜南瓜／清香紫薯(限量15包)／鮮蔬菠菜／鮮甜菜根／麥香原味', canBeIngredient: false }
+];
+
+// 依「實際表頭文字」寫入整列，不假設欄位順序——食材資料庫／成品資料庫是使用者手動維護的表，
+// 欄位順序不保證跟程式裡想的一樣，用表頭對應比硬寫 appendRow(陣列) 安全。
+function appendRowByHeaders_(sheet, fields) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
+  var row = headers.map(function (h) {
+    return Object.prototype.hasOwnProperty.call(fields, h) ? fields[h] : '';
+  });
+  sheet.appendRow(row);
+}
+
+// 從現有資料裡找目前用的 ID 前綴字母（例如 ING001 → 'ING'），沒有資料就用 fallback
+function detectIdPrefix_(sheet, fallback) {
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var m = /^([A-Za-z]+)\d+$/.exec(String(data[i][0] || ''));
+    if (m) return m[1];
+  }
+  return fallback;
+}
+
+function importSensenPlanetFoods() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ingSheet = ss.getSheetByName(INGREDIENT_DB_SHEET_NAME);
+  var prodSheet = ss.getSheetByName(PRODUCT_DB_SHEET_NAME);
+  if (!ingSheet || !prodSheet) {
+    Logger.log('⚠ 找不到「' + INGREDIENT_DB_SHEET_NAME + '」或「' + PRODUCT_DB_SHEET_NAME + '」分頁，請確認分頁名稱');
+    return;
+  }
+
+  var existingIng = {};
+  sheetRowsAsObjects_(INGREDIENT_DB_SHEET_NAME).forEach(function (r) {
+    existingIng[normBrandKey_(r['食材名稱']) + '|' + normBrandKey_(r['品牌'])] = true;
+  });
+  var existingProd = {};
+  sheetRowsAsObjects_(PRODUCT_DB_SHEET_NAME).forEach(function (r) {
+    existingProd[normBrandKey_(r['成品名稱']) + '|' + normBrandKey_(r['品牌'])] = true;
+  });
+
+  var ingPrefix = detectIdPrefix_(ingSheet, 'ING');
+  var prodPrefix = detectIdPrefix_(prodSheet, 'PRD');
+
+  var addedIng = [], skippedIng = [];
+  SENSEN_INGREDIENT_IMPORT_LIST_.forEach(function (item) {
+    var key = normBrandKey_(item.name) + '|' + normBrandKey_(SENSEN_BRAND_NAME_);
+    if (existingIng[key]) { skippedIng.push(item.name); return; }
+    var id = getNextDbId_(ingSheet, ingPrefix);
+    appendRowByHeaders_(ingSheet, {
+      '食材ID': id,
+      '食材名稱': item.name,
+      '品牌': SENSEN_BRAND_NAME_,
+      '內容物規格': item.spec || ''
+    });
+    existingIng[key] = true;
+    addedIng.push(item.name);
+  });
+
+  var addedProd = [], skippedProd = [];
+  SENSEN_PRODUCT_IMPORT_LIST_.forEach(function (item) {
+    var key = normBrandKey_(item.name) + '|' + normBrandKey_(SENSEN_BRAND_NAME_);
+    if (existingProd[key]) { skippedProd.push(item.name); return; }
+    var id = getNextDbId_(prodSheet, prodPrefix);
+    appendRowByHeaders_(prodSheet, {
+      '成品ID': id,
+      '成品名稱': item.name,
+      '品牌': SENSEN_BRAND_NAME_,
+      '內容物規格': item.spec || '',
+      '可作食材': item.canBeIngredient ? '是' : ''
+    });
+    existingProd[key] = true;
+    addedProd.push(item.name);
+  });
+
+  Logger.log('食材：新增 ' + addedIng.length + ' 個（' + addedIng.join('、') + '），略過 ' + skippedIng.length + ' 個（' + skippedIng.join('、') + '）');
+  Logger.log('成品：新增 ' + addedProd.length + ' 個（' + addedProd.join('、') + '），略過 ' + skippedProd.length + ' 個（' + skippedProd.join('、') + '）');
+  return { addedIng: addedIng, skippedIng: skippedIng, addedProd: addedProd, skippedProd: skippedProd };
+}
+
 // ===== 品牌去背小圖：把 GitHub 上的圖片網址寫進「團購品牌資料庫」的「去背小圖」欄 =====
 // 圖片放在 repo 的 images/brands/，push 之後執行 updateBrandThumbs() 即可，不必手動貼網址。
 // 要加新品牌圖片：把圖片放進 images/brands/、在下面這張表加一行、重新部署後再跑一次。
