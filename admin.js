@@ -1329,6 +1329,11 @@ function copyText(text, btnEl) {
   }
 }
 
+// 複製前台「現正開團中」頁面網址，方便分享給粉絲
+function copySiteUrl(btnEl) {
+  copyText(location.origin + '/index.html', btnEl);
+}
+
 function fallbackCopy(text, done) {
   const ta = document.createElement('textarea');
   ta.value = text;

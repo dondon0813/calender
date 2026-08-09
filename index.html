@@ -255,6 +255,22 @@
   .group-list {
     padding: 4px 2px 8px;
   }
+  .gs-copy-url-btn {
+    display: block;
+    margin: 0 auto 16px;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 20px;
+    background: var(--ix-active-title);
+    color: #fff;
+    font-family: var(--font-round);
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: var(--sh-soft);
+    transition: filter 0.12s ease;
+  }
+  .gs-copy-url-btn:hover { filter: brightness(1.08); }
   .gs-section-title {
     text-align: center;
     font-weight: 900;
@@ -1232,9 +1248,27 @@ function getRecentEndedEvents(limit) {
   return ended.slice(0, limit || 7);
 }
 
+// 【新】複製本頁網址按鈕，方便分享給粉絲直接看「現正開團中」
+function buildCopyUrlButton() {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'gs-copy-url-btn';
+  btn.textContent = '🔗 複製網址';
+  btn.addEventListener('click', () => {
+    const url = location.origin + location.pathname;
+    copyToClipboard(url).then(ok => {
+      btn.textContent = ok ? '已複製 ✓' : '請手動複製';
+      setTimeout(() => { btn.textContent = '🔗 複製網址'; }, 2000);
+    });
+  });
+  return btn;
+}
+
 function renderGroupList() {
   const listEl = document.getElementById('groupList');
   listEl.innerHTML = '';
+
+  listEl.appendChild(buildCopyUrlButton());
 
   // 【新】品牌社群連結列，放在整個清單最上方
   const socialRow = buildSocialIconRow();
@@ -1650,7 +1684,7 @@ function openGroupChoiceModal(ev) {
   orderBtn.onclick = () => {
     sendStat(baseKey + '_order', 'click');
     // 有折扣碼時，點「前往下單」順手幫使用者複製，貼到下單頁就能用（不擋跳轉）
-    if (code) copyDiscountCode(code).then(flashGcCopied);
+    if (code) copyToClipboard(code).then(flashGcCopied);
   };
 
   setupDiscountBlock(ev, code, baseKey);
@@ -1689,7 +1723,7 @@ function setupDiscountBlock(ev, code, baseKey) {
   codeBtn.classList.remove('copied');
   hint.textContent = '點擊複製';
   codeBtn.onclick = () => {
-    copyDiscountCode(code).then(ok => {
+    copyToClipboard(code).then(ok => {
       if (ok) sendStat(baseKey + '_code', 'click');
       flashGcCopied(ok);
     });
@@ -1699,7 +1733,7 @@ function setupDiscountBlock(ev, code, baseKey) {
 }
 
 // Apps Script 前台可能不是 https（或舊瀏覽器），navigator.clipboard 不一定存在，退回 execCommand
-function copyDiscountCode(code) {
+function copyToClipboard(code) {
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(code).then(() => true).catch(() => legacyCopy(code));
   }
