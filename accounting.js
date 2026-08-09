@@ -17,6 +17,10 @@ let acctCan = { revenue: false, commission: false, recon: false };
 let acctStatuses = ['未成團', '進行中', '待結算', '已請款', '已入帳'];
 // 對帳狀態白名單；後端沒回時用這組 fallback（跟 Code.gs 的 ACCT_RECON_STATUSES 保持逐字元一致）
 let acctReconStatuses = ['待回填', '待核對業績', '審稿中', '審稿完成(待發布)', '已發布', '待開發票', '待確認發票', '等待匯款', '待對帳'];
+// 雙流程各自的狀態（順序＝推進順序），拆開存是為了下拉選單依「這筆是團購還是業配」分開顯示，不要兩條線混在一起選
+const ACCT_RECON_GROUP_LINE = ['待回填', '待核對業績'];
+const ACCT_RECON_FEE_LINE = ['審稿中', '審稿完成(待發布)', '已發布'];
+const ACCT_RECON_SHARED_LINE = ['待開發票', '待確認發票', '等待匯款', '待對帳'];
 // 對帳狀態「下一階段」推進對照表：雙流程（開團／稿酬）在「待開發票」合流，不是照陣列順序推進。
 // 開團流程：待回填→待核對業績→（合流）；稿酬流程：審稿中→審稿完成(待發布)→已發布→（合流）；
 // 共用後段：待開發票→待確認發票→等待匯款→待對帳→''（完成，呼叫端 confirm 後才送空字串）。
@@ -488,6 +492,21 @@ function acctReconFindEvent_(r, eventIndex) {
   return evs.find(ev => startOfDay(ev.start) <= dd && dd <= startOfDay(ev.displayEnd)) || null;
 }
 
+// 這筆帳務的對帳狀態下拉該顯示哪一條線：優先看對應行事曆活動的「團購」開關
+// （isGroupBuy，跟活動編輯視窗那顆開關同一個欄位）；找不到對應活動（品牌改過名／
+// 事件被刪／歷史匯入資料）才退回看目前狀態本身屬於哪條線；兩邊都判斷不出來
+// （狀態本身在共用後段，事件又對不到）就顯示全部 9 個，不要卡住使用者選不到。
+function acctReconLineStatuses_(r, ev) {
+  let isGroupBuy = ev ? ev.isGroupBuy !== false : null;
+  if (isGroupBuy === null) {
+    if (ACCT_RECON_GROUP_LINE.includes(r.reconStatus)) isGroupBuy = true;
+    else if (ACCT_RECON_FEE_LINE.includes(r.reconStatus)) isGroupBuy = false;
+  }
+  if (isGroupBuy === true) return ACCT_RECON_GROUP_LINE.concat(ACCT_RECON_SHARED_LINE);
+  if (isGroupBuy === false) return ACCT_RECON_FEE_LINE.concat(ACCT_RECON_SHARED_LINE);
+  return acctReconStatuses;
+}
+
 // 判斷一筆帳務是不是「已結團」（＝對帳清單預設要不要顯示），刻意不用 r.status——
 // 那欄要人手動更新，常常忘記改，靠不住。順序：
 // ①比對到品牌對應的檔期 → 用檔期結束日（含延長，跟 getBrandGroupBuys_ 同一套 displayEnd）判斷；
@@ -570,6 +589,7 @@ function renderAcctRecon() {
     const warn = est !== null && commVal !== '' && Math.abs(acctNum(commVal) - est) > Math.max(est * 0.02, 5);
     const badgeGroup = acctReconBadgeGroup_(r.reconStatus);
     const isOpen = acctReconOpenIds.has(r.id);
+    const lineStatuses = acctReconLineStatuses_(r, acctReconFindEvent_(r, eventIndex));
 
     return `${monthBar}<div class="acct-recon-row${isOpen ? ' open' : ''}" data-id="${escHtml(r.id)}">
       <div class="acct-recon-summary">
@@ -583,7 +603,7 @@ function renderAcctRecon() {
         <div class="acct-recon-grid">
           <label>對帳狀態
             <select class="acct-recon-status">
-              ${acctReconStatuses.map(s => `<option value="${escHtml(s)}"${s === r.reconStatus ? ' selected' : ''}>${escHtml(s)}</option>`).join('')}
+              ${lineStatuses.map(s => `<option value="${escHtml(s)}"${s === r.reconStatus ? ' selected' : ''}>${escHtml(s)}</option>`).join('')}
             </select>
           </label>
           <label>銷售金額
