@@ -492,18 +492,21 @@ function acctReconFindEvent_(r, eventIndex) {
   return evs.find(ev => startOfDay(ev.start) <= dd && dd <= startOfDay(ev.displayEnd)) || null;
 }
 
-// 這筆帳務的對帳狀態下拉該顯示哪一條線：優先看對應行事曆活動的「團購」開關
-// （isGroupBuy，跟活動編輯視窗那顆開關同一個欄位）；找不到對應活動（品牌改過名／
-// 事件被刪／歷史匯入資料）才退回看目前狀態本身屬於哪條線；兩邊都判斷不出來
-// （狀態本身在共用後段，事件又對不到）就顯示全部 9 個，不要卡住使用者選不到。
+// 這筆帳務的對帳狀態下拉該顯示哪一條線：優先信任這筆紀錄「目前的狀態」本身屬於哪條線
+// （兩條線的狀態文字不重複，看現值就能百分之百判斷，不會跟畫面顯示的選項打架）。
+// 只有目前狀態落在「共用後段」、看不出原本是哪條線時，才用對應行事曆活動的「團購」
+// 開關（isGroupBuy）決定要搭配哪條線的前段；找不到對應活動就預設團購線，跟活動本身
+// 這個欄位留空時的預設值一致（見 admin.js 的 isGroupBuyRaw 判斷）。狀態不在白名單裡
+// 這種理論上不會發生的情況才顯示全部 9 個保底。
+// 鐵律：不管走哪個分支，回傳的陣列一定要含 r.reconStatus 本身，否則 <select> 會沒有
+// 任何 option 帶 selected，瀏覽器預設顯示第一項，畫面看起來狀態被清空、儲存還會真的洗掉資料。
 function acctReconLineStatuses_(r, ev) {
-  let isGroupBuy = ev ? ev.isGroupBuy !== false : null;
-  if (isGroupBuy === null) {
-    if (ACCT_RECON_GROUP_LINE.includes(r.reconStatus)) isGroupBuy = true;
-    else if (ACCT_RECON_FEE_LINE.includes(r.reconStatus)) isGroupBuy = false;
+  if (ACCT_RECON_GROUP_LINE.includes(r.reconStatus)) return ACCT_RECON_GROUP_LINE.concat(ACCT_RECON_SHARED_LINE);
+  if (ACCT_RECON_FEE_LINE.includes(r.reconStatus)) return ACCT_RECON_FEE_LINE.concat(ACCT_RECON_SHARED_LINE);
+  if (ACCT_RECON_SHARED_LINE.includes(r.reconStatus)) {
+    const isGroupBuy = ev ? ev.isGroupBuy !== false : true;
+    return (isGroupBuy ? ACCT_RECON_GROUP_LINE : ACCT_RECON_FEE_LINE).concat(ACCT_RECON_SHARED_LINE);
   }
-  if (isGroupBuy === true) return ACCT_RECON_GROUP_LINE.concat(ACCT_RECON_SHARED_LINE);
-  if (isGroupBuy === false) return ACCT_RECON_FEE_LINE.concat(ACCT_RECON_SHARED_LINE);
   return acctReconStatuses;
 }
 
