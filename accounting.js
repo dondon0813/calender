@@ -386,9 +386,23 @@ function renderAcctPrint() {
   const pendSum = pend.reduce((a, r) => a + acctNum(r.commission), 0);
   const money = v => acctCan.revenue ? acctMoney(v) : '－';
 
-  const months = acctMonthly(list);
+  const showMonthly = !scope.startsWith('M');
+  const months = showMonthly ? acctMonthly(list) : [];
   const brands = acctByBrand(list).slice(0, 20);
   const today = new Date().toISOString().slice(0, 10);
+
+  const monthlyHtml = showMonthly ? `
+    <h3>各月明細</h3>
+    <table class="acct-print-table">
+      <thead><tr><th>月份</th><th>團數</th><th>銷售金額</th><th>分潤</th><th>稿酬</th><th>未結算</th></tr></thead>
+      <tbody>${months.map(m => `<tr>
+        <td>${escHtml(m.ym)}</td><td>${m.teams}</td>
+        <td>${money(m.sales)}</td><td>${money(m.commission)}</td>
+        <td>${money(m.fee)}</td><td>${m.pend ? money(m.pend) : '－'}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr><th>合計</th><th>${teams}</th><th>${money(sales)}</th>
+        <th>${money(comm)}</th><th>${money(fee)}</th><th>${money(pendSum)}</th></tr></tfoot>
+    </table>` : '';
 
   box.innerHTML = `
     <div class="acct-print-head">
@@ -403,18 +417,7 @@ function renderAcctPrint() {
       <tr><th>收入合計</th><td class="strong">${money(comm + fee)}</td>
           <th>其中未結算</th><td>${money(pendSum)}（${pend.length} 團）</td></tr>
     </table>
-
-    <h3>各月明細</h3>
-    <table class="acct-print-table">
-      <thead><tr><th>月份</th><th>團數</th><th>銷售金額</th><th>分潤</th><th>稿酬</th><th>未結算</th></tr></thead>
-      <tbody>${months.map(m => `<tr>
-        <td>${escHtml(m.ym)}</td><td>${m.teams}</td>
-        <td>${money(m.sales)}</td><td>${money(m.commission)}</td>
-        <td>${money(m.fee)}</td><td>${m.pend ? money(m.pend) : '－'}</td></tr>`).join('')}
-      </tbody>
-      <tfoot><tr><th>合計</th><th>${teams}</th><th>${money(sales)}</th>
-        <th>${money(comm)}</th><th>${money(fee)}</th><th>${money(pendSum)}</th></tr></tfoot>
-    </table>
+    ${monthlyHtml}
 
     <h3>品牌排行（前 20）</h3>
     <table class="acct-print-table">
