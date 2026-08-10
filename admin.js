@@ -911,9 +911,15 @@ function renderGroupStatusList(targetId) {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
-    if (frozen || isToday) {
+    if (ev.tag || frozen || isToday) {
       const badges = document.createElement('div');
       badges.className = 'gs-badges';
+      if (ev.tag) {
+        const tagBadge = document.createElement('span');
+        tagBadge.className = 'gs-tag-badge';
+        tagBadge.textContent = ev.tag;
+        badges.appendChild(tagBadge);
+      }
       if (frozen) {
         const frozenBadge = document.createElement('span');
         frozenBadge.className = 'gs-frozen-badge';
