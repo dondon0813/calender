@@ -437,7 +437,8 @@ function render() {
   if (currentYear === undefined) return;
 
   const isList = currentMode === 'list';
-  document.getElementById('monthNum').textContent = isList ? '總覽' : (currentMonth + 1) + '月';
+  document.getElementById('monthNum').textContent = (currentMonth + 1) + '月';
+  document.getElementById('monthNum').style.display = isList ? 'none' : '';
   document.getElementById('monthSelect').style.display = isList ? 'none' : '';
   document.getElementById('weekdays').style.display = isList ? 'none' : '';
   document.getElementById('grid').style.display = isList ? 'none' : '';
