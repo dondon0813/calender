@@ -315,8 +315,6 @@
     font-size: 19px;
     font-weight: 700;
   }
-  /* 團名寫成「品牌｜產品」時，每段各佔一行（斷在哪由後台的團名決定） */
-  .gs-card-name .title-line { display: block; }
   .gs-card-date {
     font-size: 13px;
     opacity: 0.85;
@@ -995,17 +993,6 @@ function titleParts(t) {
   return String(t || '').split(TITLE_SEP).map(s => s.trim()).filter(s => s !== '');
 }
 function plainTitle(t) { return titleParts(t).join(' '); }
-function setTitleLines(el, t) {
-  const parts = titleParts(t);
-  el.textContent = '';
-  if (parts.length < 2) { el.textContent = parts[0] || ''; return; }
-  parts.forEach(p => {
-    const s = document.createElement('span');
-    s.className = 'title-line';
-    s.textContent = p;
-    el.appendChild(s);
-  });
-}
 
 function wrapTitleLines(title, maxCharsPerLine) {
   const byBar = titleParts(title);
@@ -1313,7 +1300,7 @@ function renderGroupList() {
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
-    setTitleLines(nameEl, ev.title);
+    nameEl.textContent = plainTitle(ev.title);
     card.appendChild(nameEl);
 
     const dateEl = document.createElement('div');
