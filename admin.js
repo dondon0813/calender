@@ -304,15 +304,31 @@ function buildSocialIconRow() {
   return row;
 }
 
+// 2026-08-12：員工偶爾反應行事曆讀取失敗，但後端執行紀錄查起來是健康的（無錯誤、多在數秒內完成），
+// 研判是手機連線/瀏覽器到 Google 伺服器途中偶發的短暫斷線，不是後端問題。加個輕量重試，
+// 短暫失敗時安靜重打，不要一次就把錯誤丟給使用者看。
+async function fetchCalendarWithRetry_(maxAttempts) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('網路錯誤 ' + res.status);
+      return await res.text();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxAttempts) await new Promise(resolve => setTimeout(resolve, 800 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
 async function loadData() {
   const statusEl = document.getElementById('status');
   statusEl.textContent = '資料載入中…';
   statusEl.classList.remove('error');
   try {
     // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
-    const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('網路錯誤 ' + res.status);
-    const text = await res.text();
+    const text = await fetchCalendarWithRetry_(3);
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
     const data = JSON.parse(jsonStr);
     const rows = data.table.rows;
