@@ -407,15 +407,29 @@ function getSessionUser_(token) {
   return null;
 }
 
+// 2026-08-12：原本用 sheet.deleteRow() 逐列刪，每一列都是一次獨立的試算表寫入 API 呼叫。
+// 效期從 12 小時延長為 30 天（2026-08-05）之後，過期列幾乎不會被清，直到某天一次要刪一大批——
+// 逐列刪這種批量會拖很久。改成整段讀出「留下來的列」，一次 clearContent + 一次 setValues 寫回。
 function cleanupExpiredSessions_(sheet) {
   const cache = CacheService.getScriptCache();
   const data = sheet.getDataRange().getValues();
-  for (let i = data.length - 1; i >= 1; i--) {
+  if (data.length <= 1) return;
+  const kept = [];
+  let hasExpired = false;
+  for (let i = 1; i < data.length; i++) {
     const created = data[i][2];
     if (created instanceof Date && (Date.now() - created.getTime()) > SESSION_DURATION_MS) {
+      hasExpired = true;
       cache.remove(SESSION_CACHE_PREFIX_ + String(data[i][0])); // 失效點①：session 列被清掉時同步清快取
-      sheet.deleteRow(i + 1);
+    } else {
+      kept.push(data[i]);
     }
+  }
+  if (!hasExpired) return; // 沒有過期列，不用動試算表（省一次寫入）
+  const numCols = data[0].length;
+  sheet.getRange(2, 1, data.length - 1, numCols).clearContent();
+  if (kept.length) {
+    sheet.getRange(2, 1, kept.length, numCols).setValues(kept);
   }
 }
 
@@ -921,10 +935,14 @@ function getTodoSheet_() {
     sheet = ss.insertSheet(TODO_SHEET_NAME);
     sheet.appendRow(['id', '主選項', '標題', '內容', '品牌', '合作階段', '團購開始日期', '團購結束日期', '月份', '重要程度', '已加入行事曆', '建立人', '建立時間', '更新時間']);
     sheet.setFrozenRows(1);
+    // 「月份」欄預先設成文字格式，避免打「2026-08」這種字串被試算表自動轉成日期。
+    // 2026-08-12：原本是每次讀取（getTodoSheet_ 每呼叫一次）都對整欄（到 maxRows）重設一次格式，
+    // 這是每次 doGet 都會發生的寫入操作，且範圍是「配置的最大列數」不是「實際資料列數」，很浪費。
+    // 已改成只在新建分頁時設一次，加新列/改月份欄時改由 addTodo_／updateTodo_ 針對那一格單獨設定。
+    try {
+      sheet.getRange(2, 9, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat('@');
+    } catch (fmtErr) { /* 格式設定失敗不影響主要功能，安靜略過 */ }
   }
-  try {
-    sheet.getRange(2, 9, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat('@');
-  } catch (fmtErr) { /* 格式設定失敗不影響主要功能，安靜略過 */ }
   return sheet;
 }
 
@@ -967,6 +985,8 @@ function addTodo_(fields, byName) {
   const sheet = getTodoSheet_();
   const id = 'D' + Date.now();
   const now = new Date();
+  // 只針對新這一列的「月份」格設文字格式，取代舊版每次讀取都重設整欄格式的做法。
+  try { sheet.getRange(sheet.getLastRow() + 1, 9, 1, 1).setNumberFormat('@'); } catch (fmtErr) { /* 略過 */ }
   sheet.appendRow([
     id,
     fields.category || '',
@@ -1002,7 +1022,11 @@ function updateTodo_(id, fields) {
   if (fields.stage !== undefined) sheet.getRange(row, TODO_COL.STAGE).setValue(fields.stage);
   if (fields.groupStart !== undefined) sheet.getRange(row, TODO_COL.GROUP_START).setValue(fields.groupStart);
   if (fields.groupEnd !== undefined) sheet.getRange(row, TODO_COL.GROUP_END).setValue(fields.groupEnd);
-  if (fields.month !== undefined) sheet.getRange(row, TODO_COL.MONTH).setValue(fields.month);
+  if (fields.month !== undefined) {
+    const monthCell = sheet.getRange(row, TODO_COL.MONTH);
+    try { monthCell.setNumberFormat('@'); } catch (fmtErr) { /* 略過 */ }
+    monthCell.setValue(fields.month);
+  }
   if (fields.priority !== undefined) sheet.getRange(row, TODO_COL.PRIORITY).setValue(fields.priority);
   if (fields.addedToCalendar !== undefined) sheet.getRange(row, TODO_COL.ADDED_TO_CALENDAR).setValue(fields.addedToCalendar ? '是' : '否');
   sheet.getRange(row, TODO_COL.UPDATED).setValue(new Date());
