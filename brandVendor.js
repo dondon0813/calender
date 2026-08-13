@@ -315,7 +315,6 @@ function openBrandEditModal(brand) {
   setFormStatus('brandEditStatus', '', '');
   fillVendorSelect(document.getElementById('brandVendorSelect'), brand ? brand.vendorIds : []);
   document.getElementById('brandNameInput').value = brand ? brand.name : '';
-  document.getElementById('brandAliasesInput').value = brand ? (brand.aliases || '') : '';
   document.getElementById('brandThumbInput').value = brand ? (brand.thumbUrl || '') : '';
   document.getElementById('brandBrandImageInput').value = brand ? (brand.brandImageUrl || '') : '';
   document.getElementById('brandLineInput').value = brand ? brand.lineContact : '';
@@ -344,7 +343,6 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
   const payload = {
     vendorIds: getSelectedVendorIds(document.getElementById('brandVendorSelect')),
     name,
-    aliases: document.getElementById('brandAliasesInput').value.trim(),
     thumbUrl: document.getElementById('brandThumbInput').value.trim(),
     brandImageUrl: document.getElementById('brandBrandImageInput').value.trim(),
     lineContact: document.getElementById('brandLineInput').value.trim(),
@@ -468,31 +466,22 @@ function bvNormBrandKey_(s) {
   return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
 }
 
-// 品牌名稱之外，「團名關鍵字」欄位也算數（逗號分隔可填多個）：品牌名稱是中英文合併、
-// 或團名慣用簡稱/描述、語序跟正式名稱不同時，光靠「品牌名稱整段連續出現在團名裡」比對不到，
-// 關鍵字讓比對只要求「某一個關鍵字整段出現」，不用整包名稱連在一起。
-function bvBrandKeys_(b) {
-  const keys = [bvNormBrandKey_(b.name)];
-  String(b.aliases || '').split(/[,，、]/).forEach(a => {
-    const k = bvNormBrandKey_(a);
-    if (k) keys.push(k);
-  });
-  return keys.filter(Boolean);
-}
-
 // 找出標題裡包含的所有品牌（一團可對到多品牌，例：聯名團標題同時含兩個品牌名）。
-// 若比對到的某品牌關鍵字是另一個比對到品牌關鍵字的一部分（例：B21 vs B21pro），只留長的那個，避免誤配。
+// 若比對到的某品牌名是另一個比對到品牌名的一部分（例：B21 vs B21pro），只留長的那個，避免誤配。
 function bvBrandsInTitle_(title) {
   const key = bvNormBrandKey_(title);
   if (!key) return [];
-  const hits = brandDb.map(b => {
-    const matched = bvBrandKeys_(b).filter(k => key.indexOf(k) !== -1);
-    if (!matched.length) return null;
-    return { b, bk: matched.reduce((a, c) => c.length > a.length ? c : a) };
-  }).filter(Boolean);
-  return hits.filter(h => {
-    return !hits.some(o => o.bk.length > h.bk.length && o.bk.indexOf(h.bk) !== -1);
-  }).map(h => h.b);
+  const matched = brandDb.filter(b => {
+    const bk = bvNormBrandKey_(b.name);
+    return bk && key.indexOf(bk) !== -1;
+  });
+  return matched.filter(b => {
+    const bk = bvNormBrandKey_(b.name);
+    return !matched.some(o => {
+      const ok = bvNormBrandKey_(o.name);
+      return ok.length > bk.length && ok.indexOf(bk) !== -1;
+    });
+  });
 }
 
 function bvEventMatchesBrand_(ev, brand) {
