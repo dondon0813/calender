@@ -678,11 +678,38 @@ function bvBuildPostCopy_(brand, ev) {
   return text;
 }
 
+let postGenCtx_ = null; // { brands, ev }：多品牌時記住候選清單，供切換選項重新產生文案
+
 function openPostGenModalWith_(text) {
+  postGenCtx_ = null;
+  document.getElementById('postGenBrandSelect').style.display = 'none';
   document.getElementById('postGenOutput').value = text;
   setFormStatus('postGenStatus', '', '');
   document.getElementById('postGenModal').classList.add('show');
 }
+
+// 聯名團比對到多個「有存模板」的品牌時，顯示下拉讓使用者自己選要用哪個品牌的文案
+function openPostGenModalForBrands_(brands, ev) {
+  const select = document.getElementById('postGenBrandSelect');
+  if (brands.length <= 1) {
+    openPostGenModalWith_(brands.length ? bvBuildPostCopy_(brands[0], ev) : '');
+    return;
+  }
+  postGenCtx_ = { brands, ev };
+  select.innerHTML = brands.map((b, i) => '<option value="' + i + '">' + escHtml(b.name) + '</option>').join('');
+  select.selectedIndex = 0;
+  select.style.display = 'block';
+  document.getElementById('postGenOutput').value = bvBuildPostCopy_(brands[0], ev);
+  setFormStatus('postGenStatus', '', '');
+  document.getElementById('postGenModal').classList.add('show');
+}
+
+document.getElementById('postGenBrandSelect').addEventListener('change', function () {
+  if (!postGenCtx_) return;
+  const brand = postGenCtx_.brands[Number(this.value)];
+  if (!brand) return;
+  document.getElementById('postGenOutput').value = bvBuildPostCopy_(brand, postGenCtx_.ev);
+});
 
 // 活動檢視彈窗打開時由 openAdminModal 呼叫：比對到的品牌有存模板才顯示按鈕
 function syncPostGenBtnForEvent_(ev) {
@@ -694,10 +721,9 @@ function syncPostGenBtnForEvent_(ev) {
 document.getElementById('evPostGenBtn').addEventListener('click', () => {
   const ev = currentModalEv;
   if (!ev) return;
-  // 聯名團比對到多個品牌時，取第一個有存模板的（目前實務上一團一模板）
   const brands = bvBrandsWithPostTemplate_(ev.title);
   if (!brands.length) return;
-  openPostGenModalWith_(bvBuildPostCopy_(brands[0], ev));
+  openPostGenModalForBrands_(brands, ev);
 });
 
 document.getElementById('brandDetailPostGenBtn').addEventListener('click', () => {
