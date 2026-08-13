@@ -5380,10 +5380,8 @@
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="brandVendorSelect">所屬廠商（可複選，按住 Ctrl／⌘ 點選；同品牌跟不同廠商開不同聯名款就選多家）</label>
       <select id="brandVendorSelect" multiple size="5"></select>
-      <label for="brandNameInput">品牌名稱（團名裡有出現這個名稱就會自動比對到；如果團名常用別的說法，可以在下面加關鍵字）</label>
+      <label for="brandNameInput">品牌名稱（要跟排行事曆的團名完全一致才會自動比對到）</label>
       <input type="text" id="brandNameInput" placeholder="例如：林貝兒">
-      <label for="brandAliasesInput">團名關鍵字（比對用，逗號分隔可填多個；團名裡只要有出現任一個關鍵字或品牌名稱就會抓到，不用整段連在一起——適合品牌名稱是中英文合併、或團名常用簡稱/描述的情況，可留空）</label>
-      <input type="text" id="brandAliasesInput" placeholder="例如：奧地利滑步車, 滑步車, Scoot&amp;Ride">
       <label for="brandThumbInput">去背小圖（行事曆／開學清單的小圖預設值，單一檔期要換圖可在該活動另外設定）</label>
       <input type="text" id="brandThumbInput" placeholder="貼上去背圖網址（建議正方形、透明背景 PNG/WebP）">
       <label for="brandBrandImageInput">品牌圖片（大合照／品牌介紹頁用）</label>
@@ -5516,7 +5514,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=16"></script>
+<script src="brandVendor.js?v=15"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
