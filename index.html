@@ -1600,7 +1600,7 @@ function renderSingleDayMode(mode) {
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
-          const lines = wrapTitleLines(ev.title, 4);
+          const lines = wrapTitleLines(ev.title, 5);
           lines.forEach((line, idx) => {
             if (idx > 0) titleSpan.appendChild(document.createElement('br'));
             titleSpan.appendChild(document.createTextNode(line));

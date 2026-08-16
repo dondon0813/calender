@@ -193,6 +193,14 @@ function wrapTitleLines(title, maxCharsPerLine) {
   return wrapSegment(title, maxCharsPerLine);
 }
 
+/* 英文字母、數字、半形符號視覺上只有中文字一半寬，算 0.5 格，
+   否則 Scoot&Ride 這種英文團名會被切成三行、& 自己一行 */
+function textWidth(str) {
+  let w = 0;
+  for (const ch of String(str)) w += ch.charCodeAt(0) < 0x2E80 ? 0.5 : 1;
+  return w;
+}
+
 function wrapSegment(text, maxCharsPerLine) {
   const words = segmentTitle(text);
   const lines = [];
@@ -200,7 +208,7 @@ function wrapSegment(text, maxCharsPerLine) {
   words.forEach(w => {
     if (current === '') {
       current = w;
-    } else if (current.length + w.length <= maxCharsPerLine) {
+    } else if (textWidth(current) + textWidth(w) <= maxCharsPerLine) {
       current += w;
     } else {
       lines.push(current);
@@ -705,7 +713,7 @@ function renderSingleDayMode(mode) {
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
-          const lines = wrapTitleLines(ev.title, 4);
+          const lines = wrapTitleLines(ev.title, 5);
           lines.forEach((line, idx) => {
             if (idx > 0) titleSpan.appendChild(document.createElement('br'));
             titleSpan.appendChild(document.createTextNode(line));
@@ -826,7 +834,7 @@ function renderWorkMode() {
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
-          const lines = wrapTitleLines(t.taskName || '', 4);
+          const lines = wrapTitleLines(t.taskName || '', 5);
           lines.forEach((line, idx) => {
             if (idx > 0) titleSpan.appendChild(document.createElement('br'));
             titleSpan.appendChild(document.createTextNode(line));
