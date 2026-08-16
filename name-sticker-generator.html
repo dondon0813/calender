@@ -838,7 +838,7 @@ document.getElementById('nsEnglishNameInput').addEventListener('keydown', (e) =>
 <!-- 頁面瀏覽量統計：獨立區塊，不依賴本頁其他程式碼。key 白名單見 Code.gs STAT_KEY_WHITELIST_RE（頁面代號只能小寫英數，不能有 - 或 _） -->
 <script>
 (function sendNameStickerPageview() {
-  const STATS_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
+  const STATS_BACKEND_URL = 'https://dondon-platform.vercel.app/api/legacy'; // 灰度切換 2026-08-17：計數改打新後端，回退＝revert 本 commit
   const d = new Date();
   const key = `page_namesticker_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const payload = JSON.stringify({ type: 'stat-view', key });
