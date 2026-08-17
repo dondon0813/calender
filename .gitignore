@@ -8,3 +8,6 @@ _incoming品牌圖/
 
 # 食譜手機拍照原始檔暫存區（處理完成品才進 images/recipes/、images/Ingredients/）
 _incoming食譜圖/
+
+# 本機測試工具（如 playwright）的暫時安裝，非本專案相依套件
+node_modules/
