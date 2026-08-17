@@ -328,6 +328,14 @@
   .badge.done{ background:#e3f3df; color:#3f8a4c; }
   .badge.pending{ background:#ffeede; color:#c17a3a; }
   .digest-card{ white-space:pre-wrap; font-size:13px; line-height:1.6; }
+  .digest-reply-btn{
+    display:inline-block; margin-top:10px; padding:6px 14px;
+    border:none; border-radius: var(--r-pill,999px); cursor:pointer;
+    background: var(--c-primary,#FF8FA3); color:#fff; font-size:12px; font-weight:800;
+    white-space:normal;
+  }
+  .digest-reply-btn:hover{ background: var(--c-primary-dark,#FF7391); }
+  .msg-bubble.digest{ border-left:3px solid var(--c-primary,#FF8FA3); }
   .empty-hint{ color: var(--c-muted,#a89888); font-size:13px; text-align:center; padding:20px 0; }
 
   /* 成本 */
@@ -893,7 +901,53 @@
     card.className = 'card digest-card';
     card.innerHTML = '<div class="section-label" style="margin:0 0 6px;">' + escapeHtml(digest.date || '') + '</div>' +
       '<div>' + escapeHtml(digest.text) + '</div>';
+    var btn = document.createElement('button');
+    btn.className = 'digest-reply-btn';
+    btn.textContent = '💬 到指揮台回覆這份摘要';
+    btn.addEventListener('click', function(){ goToChatWithDigest(idx); });
+    card.appendChild(btn);
     wrap.appendChild(card);
+  }
+
+  // 每日摘要同步塞進該助理的指揮台對話（同一份摘要一個 session 只塞一次），
+  // 這樣使用者可以一邊看摘要一邊直接下指令回信。
+  var DIGEST_MARK = '📬 每日信箱摘要（';
+  function digestMessageText(digest){
+    return DIGEST_MARK + (digest.date || '') + '）\n' + digest.text;
+  }
+  function injectDigestIntoChat(idx, digest){
+    if (!digest || !digest.text) return;
+    var a = agents[idx];
+    if (!a.chatHistory) return;
+    var text = digestMessageText(digest);
+    var hasSame = false;
+    var hasOld = false;
+    for (var i = 0; i < a.chatHistory.length; i++){
+      var c = String(a.chatHistory[i].content || '');
+      if (c === text) hasSame = true;
+      else if (c.indexOf(DIGEST_MARK) === 0) hasOld = true;
+    }
+    if (hasSame) return;
+    if (hasOld){
+      // 只保留最新一份摘要，避免跨日累積撐爆 sessionStorage 與每次送出的 history。
+      a.chatHistory = a.chatHistory.filter(function(m){
+        return String(m.content || '').indexOf(DIGEST_MARK) !== 0;
+      });
+    }
+    var msg = { role:'assistant', content: text };
+    a.chatHistory.push(msg);
+    saveHistory(idx, a.chatHistory);
+    if (activeChatIndex === idx){
+      if (hasOld) renderAllMessages(); else renderMessage(idx, msg);
+    }
+  }
+  function goToChatWithDigest(idx){
+    injectDigestIntoChat(idx, agents[idx].lastDigest);
+    document.querySelectorAll('.tab-btn').forEach(function(b){
+      if (b.getAttribute('data-tab') === 'chat') b.click();
+    });
+    setActiveChatIndex(idx);
+    chatInput.focus();
   }
 
   function updateTaskSectionVisibility(){
@@ -971,6 +1025,7 @@
     renderAgentDisplay(idx);
     renderSchedules(idx, a.schedules);
     renderDigest(idx, a.lastDigest);
+    injectDigestIntoChat(idx, a.lastDigest);
     renderUsage();
     updateTaskSectionVisibility();
     updateAgentSwitchLabels();
@@ -1059,7 +1114,7 @@
     var avatar = msg.role === 'user' ? '' : (msg.role === 'system' ? '⚠️' : EMOJI[idx]);
     row.innerHTML =
       (msg.role !== 'user' ? '<div class="msg-avatar">' + avatar + '</div>' : '') +
-      '<div class="msg-bubble">' + escapeHtml(msg.content) + '</div>';
+      '<div class="msg-bubble' + (String(msg.content).indexOf(DIGEST_MARK) === 0 ? ' digest' : '') + '">' + escapeHtml(msg.content) + '</div>';
     chatMessages.appendChild(row);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }

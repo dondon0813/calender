@@ -14,10 +14,12 @@
  *    另外還有兩筆「選填」的指令碼屬性，用來部署第二隻（或其他）助理時
  *    客製化名字與角色，不設定就維持預設值「麻糬／私人助理」：
  *      AGENT_NAME = 助理的名字，例如部署 Amanda 時設 Amanda
- *      AGENT_ROLE = 助理的角色描述，例如部署 Amanda 時設 工作助理
+ *      AGENT_ROLE = 助理的角色描述，例如部署 Amanda 時設 經紀人
  *    這兩筆只影響 status 回應的名字、system prompt 的自稱與角色描述、
  *    以及全新 setup() 時建立的資料庫試算表名稱；既有部署因為已經存有
  *    AGENT_SHEET_ID，不會受影響。
+ *    第三筆選填屬性，決定草稿信末尾的署名（不設定會自動用「名字｜雪莉與朵栗 角色」）：
+ *      AGENT_SIGNATURE = 例如 Amanda｜雪莉與朵栗 經紀人
  * 4. 在編輯器上方選取函式 setup，按「執行」一次（第一次會要求授權，
  *    同意即可）。這會自動建立一份叫「（名字）員工資料庫」的試算表
  *    （預設是「麻糬員工資料庫」，設定 AGENT_NAME 後會跟著改）。
@@ -43,6 +45,14 @@
  *   - 移至垃圾桶（trash_emails）——僅移到垃圾桶（30 天內可復原），
  *     絕非永久刪除；且必須在使用者於對話中明確同意「這一批具體郵件」
  *     之後才會呼叫，細節見 buildSystemPrompt_ 與工具說明。
+ *
+ * 【回信能力（只建草稿，不寄出）】
+ *   - create_reply_draft：針對既有信件建立「回覆」草稿（掛在原信串下、
+ *     收件人與 Re: 主旨自動帶入）。這是回信的預設方式。
+ *   - create_gmail_draft：建立全新的獨立草稿。只在使用者明確要求
+ *     「另起新信／寄新信」時才用。
+ *   兩者都會自動在信末加上署名（見 AGENT_SIGNATURE），草稿由使用者
+ *   自己在 Gmail 檢查後按送出。
  * 本檔嚴禁出現任何寄信（MailApp / GmailApp.sendEmail）或永久刪除信件的操作。
  */
 
@@ -66,7 +76,7 @@ var MAX_TOOL_ROUNDS = 6;
 
 // 助理身分（名字／角色）快取設定。可用 Script Properties 的
 // AGENT_NAME / AGENT_ROLE 覆蓋，未設定時預設「麻糬」／「私人助理」。
-var AGENT_IDENTITY_CACHE_KEY = 'mochi_agent_identity_v1';
+var AGENT_IDENTITY_CACHE_KEY = 'mochi_agent_identity_v2'; // v2：多了 signature 欄位
 var AGENT_IDENTITY_CACHE_TTL_SECONDS = 300;
 
 // 計價表（USD / 1M tokens）。務必與 MODEL 常數挑選的模型對齊。
@@ -89,19 +99,35 @@ function getAgentIdentity_() {
   var cached = cache.get(AGENT_IDENTITY_CACHE_KEY);
   if (cached) {
     try {
-      return JSON.parse(cached);
+      var parsed = JSON.parse(cached);
+      if (parsed && parsed.name && parsed.role && parsed.signature) {
+        return parsed;
+      }
     } catch (err) {
       // 快取內容壞掉就當作 cache miss，往下重新讀 Script Properties
     }
   }
 
   var props = PropertiesService.getScriptProperties();
+  var name = props.getProperty('AGENT_NAME') || '麻糬';
+  var role = props.getProperty('AGENT_ROLE') || '私人助理';
   var identity = {
-    name: props.getProperty('AGENT_NAME') || '麻糬',
-    role: props.getProperty('AGENT_ROLE') || '私人助理'
+    name: name,
+    role: role,
+    signature: props.getProperty('AGENT_SIGNATURE') || (name + '｜雪莉與朵栗 ' + role)
   };
   cache.put(AGENT_IDENTITY_CACHE_KEY, JSON.stringify(identity), AGENT_IDENTITY_CACHE_TTL_SECONDS);
   return identity;
+}
+
+// 草稿信末尾的署名區塊。內文若已含署名就不重複加。
+function appendSignature_(body) {
+  var sig = getAgentIdentity_().signature;
+  body = String(body || '');
+  if (body.indexOf(sig) !== -1) {
+    return body;
+  }
+  return body.replace(/\s+$/, '') + '\n\n' + sig;
 }
 
 // 助理自己的資料庫試算表名稱（僅供 setup() 建立全新試算表時使用）。
@@ -515,11 +541,21 @@ function buildSystemPrompt_() {
     '協助規劃團購行事曆相關事務，並回答雪莉交辦的各種指令。' +
     '說話語氣親切、簡短、口語化，像貼心的同事，不要長篇大論，也不要過度客套。' +
     '今天的日期是 ' + today + '（Asia/Taipei 時區）。' +
-    '你可以使用以下工具：搜尋信箱、讀取單封信件內文、建立 Gmail 草稿（僅建立草稿，' +
-    '絕對不會、也不能直接寄出信件）、封存信件、貼標籤、標記已讀、移至垃圾桶、' +
-    '查詢團購行事曆（唯讀）、查看最近一篇信箱摘要小記。' +
+    '你可以使用以下工具：搜尋信箱、讀取單封信件內文、針對既有信件建立「回覆」草稿、' +
+    '建立全新的信件草稿（兩者都只建立草稿，絕對不會、也不能直接寄出信件）、' +
+    '封存信件、貼標籤、標記已讀、移至垃圾桶、查詢團購行事曆（唯讀）、查看最近一篇信箱摘要小記。' +
     '需要資訊時主動使用工具，不需要每件小事都跟雪莉確認，盡量直接把事情完成，' +
     '完成後再簡短回報結果。' +
+    '【回信規則】只要是回應某一封既有的來信（廠商、客人、合作邀約…），一律優先用 ' +
+    'create_reply_draft 回覆原信串，讓對方在同一串對話裡收到；先用 search_gmail 找到那封信的 messageId，' +
+    '必要時用 read_email 讀完整內文再擬稿。只有在雪莉明確交代「另起新信」「寄一封新的」' +
+    '或對方本來就沒有來信時，才用 create_gmail_draft 建立獨立新信。' +
+    '擬稿時以「' + identity.name + '，雪莉的' + identity.role + '」的身分用第一人稱撰寫（例如：您好，我是雪莉的' +
+    identity.role + ' ' + identity.name + '…），語氣專業、有禮、直接，內容具體回應對方的問題；' +
+    '不確定的條件（價格、檔期、數量）先跟雪莉確認再寫進草稿。署名會由系統自動加在信末，你不用另外寫。' +
+    '草稿建好後簡短回報：回了誰、大意是什麼、提醒雪莉到 Gmail 草稿匣檢查後再寄出。' +
+    '如果雪莉是針對每日信箱摘要裡的某一封信下指令（例如「回第 3 封」），' +
+    '先用 search_gmail 依摘要提到的寄件人／主旨找出那封信，再建立回覆草稿。' +
     '整理信箱時請遵守：封存、貼標籤、標記已讀，可以在雪莉下達整理指令後直接執行，' +
     '不用每一封都先問過；但「刪除」（移至垃圾桶）必須分兩步進行——' +
     '第一步先用 search_gmail 找出候選信件，在回覆中逐封列出寄件人與主旨，' +
@@ -565,14 +601,27 @@ function getToolDefinitions_() {
       }
     },
     {
+      name: 'create_reply_draft',
+      description: '針對某一封既有信件建立「回覆」草稿：草稿掛在原信串底下，收件人與 Re: 主旨自動帶入，信末自動加署名。回應任何既有來信時預設都用這個工具。只會建立草稿，不會寄出。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          message_id: { type: 'string', description: '要回覆的信件 ID（由 search_gmail 回傳的 messageId）' },
+          body: { type: 'string', description: '回覆內文（純文字，不含署名）' },
+          reply_all: { type: 'boolean', description: '是否回覆所有人（含原信副本收件人），預設 false 只回寄件人' }
+        },
+        required: ['message_id', 'body']
+      }
+    },
+    {
       name: 'create_gmail_draft',
-      description: '在 Gmail 建立一封草稿信。只會建立草稿，不會寄出。',
+      description: '建立一封「全新的獨立」草稿信（不掛在任何既有信串下），信末自動加署名。只在使用者明確要求另起新信、或對方本來沒有來信時使用；回覆既有來信請改用 create_reply_draft。只會建立草稿，不會寄出。',
       input_schema: {
         type: 'object',
         properties: {
           to: { type: 'string', description: '收件人 email' },
           subject: { type: 'string', description: '信件主旨' },
-          body: { type: 'string', description: '信件內文（純文字）' }
+          body: { type: 'string', description: '信件內文（純文字，不含署名）' }
         },
         required: ['to', 'subject', 'body']
       }
@@ -676,6 +725,9 @@ function executeTool_(name, input) {
   if (name === 'read_email') {
     return toolReadEmail_(input);
   }
+  if (name === 'create_reply_draft') {
+    return toolCreateReplyDraft_(input);
+  }
   if (name === 'create_gmail_draft') {
     return toolCreateGmailDraft_(input);
   }
@@ -770,10 +822,41 @@ function toolCreateGmailDraft_(input) {
   }
 
   try {
-    GmailApp.createDraft(to, subject, body);
-    return '草稿已建立';
+    GmailApp.createDraft(to, subject, appendSignature_(body));
+    return '新信草稿已建立（尚未寄出，請雪莉到 Gmail 草稿匣檢查後送出）';
   } catch (err) {
     return '建立草稿失敗：' + String(err);
+  }
+}
+
+// 針對既有信件建立「回覆」草稿：掛在原信串下、收件人與 Re: 主旨自動帶入。
+// 只建草稿，絕不寄出。
+function toolCreateReplyDraft_(input) {
+  var messageId = input.message_id;
+  var body = input.body || '';
+
+  if (!messageId) {
+    return '缺少 message_id 參數，無法建立回覆草稿。';
+  }
+  if (!String(body).trim()) {
+    return '缺少 body 內文，無法建立回覆草稿。';
+  }
+
+  try {
+    var msg = GmailApp.getMessageById(messageId);
+    if (!msg) {
+      return '找不到這封信件。';
+    }
+    var finalBody = appendSignature_(body);
+    if (input.reply_all) {
+      msg.createDraftReplyAll(finalBody);
+    } else {
+      msg.createDraftReply(finalBody);
+    }
+    return '回覆草稿已建立（掛在「' + msg.getSubject() + '」原信串下、收件人 ' + msg.getFrom() +
+      '，尚未寄出，請雪莉到 Gmail 草稿匣檢查後送出）';
+  } catch (err) {
+    return '建立回覆草稿失敗：' + String(err);
   }
 }
 
@@ -991,10 +1074,33 @@ function runChat_(message, history) {
   for (var h = 0; h < history.length; h++) {
     var item = history[h];
     if (item && (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string') {
-      messages.push({ role: item.role, content: item.content });
+      var prev = messages.length ? messages[messages.length - 1] : null;
+      if (prev && prev.role === item.role) {
+        // 前端可能把「每日摘要」以 assistant 訊息塞進聊天紀錄，造成連續同角色；
+        // 合併成一則，確保 user/assistant 交替。
+        prev.content = prev.content + '\n\n' + item.content;
+      } else {
+        messages.push({ role: item.role, content: item.content });
+      }
     }
   }
-  messages.push({ role: 'user', content: String(message || '') });
+  // Messages API 規定第一則必須是 user：把開頭的 assistant（歡迎詞／摘要）併成一則
+  // user 前言保留下來，避免 400，也讓模型仍看得到摘要內容。
+  if (messages.length && messages[0].role !== 'user') {
+    var lead = messages.shift();
+    var preface = { role: 'user', content: '（先前對話中你（助理）說過：）\n' + lead.content };
+    if (messages.length && messages[0].role === 'user') {
+      messages[0].content = preface.content + '\n\n' + messages[0].content;
+    } else {
+      messages.unshift(preface);
+    }
+  }
+  var lastMsg = messages.length ? messages[messages.length - 1] : null;
+  if (lastMsg && lastMsg.role === 'user') {
+    lastMsg.content = lastMsg.content + '\n\n' + String(message || '');
+  } else {
+    messages.push({ role: 'user', content: String(message || '') });
+  }
 
   var totalInputTokens = 0;
   var totalOutputTokens = 0;
@@ -1113,8 +1219,11 @@ function dailyDigest() {
     var identity = getAgentIdentity_();
     var system =
       '你是' + identity.name + '，一隻擬人貓 AI 員工，是雪莉的' + identity.role + '。請根據以下今天的信件清單，' +
-      '用繁體中文寫一份簡短的每日信箱摘要：重要的信、需要處理的待辦事項要特別點出來；' +
-      '純廣告/行銷/電子報信件可以略過或用一句話帶過即可，不用逐封分析。' +
+      '用繁體中文寫一份簡短的每日信箱摘要。格式要求：' +
+      '（1）「需要雪莉處理／回覆」的信逐封條列並編號（1. 2. 3. …），每一條寫出寄件人、主旨、一句話重點、建議動作（回覆／確認／忽略）；' +
+      '（2）純廣告/行銷/電子報/系統通知用一句話帶過即可，不用逐封分析；' +
+      '（3）結尾提醒一句：想回哪一封，直接在指揮台跟我說編號或寄件人，我會擬好回覆草稿。' +
+      '寄件人與主旨請照原文寫，之後我要靠它們去搜尋那封信。' +
       '今天的日期是 ' + today + '（Asia/Taipei 時區）。';
 
     var messages = [
