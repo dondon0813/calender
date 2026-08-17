@@ -1628,7 +1628,7 @@ var SENSEN_BRAND_NAME_ = '森森星球';
 var SENSEN_INGREDIENT_IMPORT_LIST_ = [
   { name: '寶寶海菜', spec: '約6-10片/包' },
   { name: '寶寶生凍魩仔魚', spec: '約6-10片/包' },
-  { name: '寶寶魚絞肉-智利鮭魚', spec: '約6-10片/包' },
+  { name: '魚絞肉', spec: '約6-10片/包' },
   { name: '寶寶魚片-智利鮭魚', spec: '約6-11片/包' },
   { name: '寶寶魚片-台灣海鱺', spec: '約6-11片/包' },
   { name: '寶寶魚片-龍虎石斑', spec: '約6-11片/包' },
@@ -1735,7 +1735,7 @@ function importSensenPlanetFoods() {
 var SENSEN_INGREDIENT_IMAGE_BASE_ = 'https://dondon0813.github.io/calender/images/Ingredients/';
 var SENSEN_INGREDIENT_IMAGE_MAP_ = {
   '寶寶魚片-智利鮭魚': 'sensen-salmon-fillet.webp',
-  '寶寶魚絞肉-智利鮭魚': 'sensen-fish-mince.webp'
+  '魚絞肉': 'sensen-fish-mince.webp'
 };
 
 // 找出符合 matchFields（欄名→值，AND 條件）的第一列，回傳列號（1-indexed，含表頭），找不到回 -1
