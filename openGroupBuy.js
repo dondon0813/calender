@@ -73,14 +73,20 @@
   }
 
   // 小圖優先序：行事曆該檔 W 欄 > 品牌資料庫預設小圖（用標準化後的品牌名找是否為團名子字串）
+  // 「一團多品牌」合併團名（例如「Nadle腳踏車/Jolly電動扭扭車」）可能同時命中兩個品牌，
+  // 命中長度打平時不可用 Object.keys 的列舉順序硬選一個——那是試算表列順序，跟哪個品牌才是這次
+  // 主打完全無關，選錯就會把另一個不相關品牌的圖放上去。打平就視為無法判斷，寧可不顯示小圖，
+  // 也不要顯示錯的；真的要顯示就手動填行事曆該檔的 W 欄覆蓋掉。
   function resolveThumb(title, rowThumb) {
     if (isValidUrl(rowThumb)) return rowThumb;
     const key = normalizeBrandKey(title);
-    let best = '';
+    let best = '', bestLen = 0, tied = false;
     Object.keys(BRAND_THUMBS).forEach(bk => {
-      if (bk && key.includes(bk) && bk.length > best.length) best = bk;
+      if (!bk || !key.includes(bk)) return;
+      if (bk.length > bestLen) { best = bk; bestLen = bk.length; tied = false; }
+      else if (bk.length === bestLen) { tied = true; }
     });
-    return best ? BRAND_THUMBS[best] : '';
+    return (best && !tied) ? BRAND_THUMBS[best] : '';
   }
 
   function parseOpenEvents(calText) {
