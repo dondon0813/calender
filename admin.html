@@ -4381,8 +4381,8 @@
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
     <h2 class="view-title">🔄 轉檔小工具</h2>
     <div class="task-form">
-      <label for="convertFileInput">選擇檔案（PDF／Excel／JPG）</label>
-      <input type="file" id="convertFileInput" accept=".pdf,.xls,.xlsx,.jpg,.jpeg,.png">
+      <label for="convertFileInput">選擇檔案（Word／PDF／Excel／JPG）</label>
+      <input type="file" id="convertFileInput" accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png" onchange="convertOnFileChange()">
       <label for="convertTargetSelect">要轉成的格式</label>
       <select id="convertTargetSelect">
         <option value="pdf">PDF</option>
@@ -4391,7 +4391,7 @@
       </select>
       <button class="task-submit-btn" onclick="runConvertTool()">開始轉換</button>
       <div class="form-status" id="convertStatus"></div>
-      <p style="text-align:center; font-size:12.5px; font-weight:800; color:#b5755a; margin:10px 0 0;">🚧 即將推出，敬請期待</p>
+      <p style="text-align:center; font-size:12.5px; font-weight:800; color:#b5755a; margin:10px 0 0;" id="convertComingSoonHint">🚧 Word 轉 PDF 已可使用；其餘格式即將推出，敬請期待</p>
     </div>
   </div>
 
@@ -5524,7 +5524,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=1"></script>
-<script src="tools.js?v=16"></script>
+<script src="tools.js?v=17"></script>
 <script src="report.js?v=3"></script>
 <script src="accounting.js?v=14"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->

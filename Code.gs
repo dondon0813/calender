@@ -2825,6 +2825,52 @@ function githubDeleteFile_(path, sha, message) {
   return true;
 }
 
+// 用 Google 雲端硬碟把 Word（.doc/.docx）轉成 PDF：上傳時把目標 mimeType 指定成 Google文件，
+// Drive 收到可轉換格式的內容會自動轉檔，再用 export 匯出 PDF。
+// 用 DriveApp 是為了讓 Apps Script 自動偵測到需要雲端硬碟權限（第一次執行/部署會跳出新的授權視窗，同意即可）；
+// 實際上傳/匯出走原生 Drive REST API（ScriptApp.getOAuthToken() 同一組授權就能用，不需要另外開「進階Google服務」）。
+function convertWordToPdf_(filename, dataBase64) {
+  const ext = (String(filename).match(/\.(\w+)$/) || [, ''])[1].toLowerCase();
+  const sourceMime = ext === 'doc'
+    ? 'application/msword'
+    : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const token = ScriptApp.getOAuthToken();
+  const boundary = 'dondonConvertBoundary';
+  const metadata = { name: String(filename).replace(/\.\w+$/, ''), mimeType: MimeType.GOOGLE_DOCS };
+  const multipartBody =
+    '--' + boundary + '\r\n' +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Type: ' + sourceMime + '\r\n' +
+    'Content-Transfer-Encoding: base64\r\n\r\n' +
+    dataBase64 + '\r\n' +
+    '--' + boundary + '--';
+
+  const uploadResp = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'post',
+    contentType: 'multipart/related; boundary=' + boundary,
+    headers: { Authorization: 'Bearer ' + token },
+    payload: Utilities.newBlob(multipartBody).getBytes(),
+    muteHttpExceptions: true
+  });
+  const uploadJson = JSON.parse(uploadResp.getContentText() || '{}');
+  if (!uploadJson.id) throw new Error('上傳轉檔失敗：' + uploadResp.getContentText());
+  const fileId = uploadJson.id;
+
+  try {
+    const exportResp = UrlFetchApp.fetch(
+      'https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=application%2Fpdf',
+      { method: 'get', headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
+    );
+    if (exportResp.getResponseCode() !== 200) throw new Error('匯出PDF失敗：' + exportResp.getContentText());
+    return Utilities.base64Encode(exportResp.getBlob().getBytes());
+  } finally {
+    // 暫存的 Google文件一定要清掉，不管轉檔成功或失敗，避免佔用雲端硬碟空間
+    try { DriveApp.getFileById(fileId).setTrashed(true); } catch (cleanupErr) {}
+  }
+}
+
 const IMAGE_REF_SHEETS = [
   { sheet: INGREDIENT_DB_SHEET_NAME, cols: ['圖片網址'] },
   { sheet: PRODUCT_DB_SHEET_NAME, cols: ['圖片網址'] },
@@ -3905,6 +3951,19 @@ function doPost(e) {
         return jsonResult_({ success: true, path: fullPath, download_url: GITHUB_RAW_BASE + '/' + fullPath, overwritten: !!existing });
       } catch (err) {
         return jsonResult_({ success: false, error: String(err) });
+      }
+    }
+
+    if (type === 'convert-word-to-pdf') {
+      const filenameRaw = String(body.filename || '').trim();
+      const dataBase64 = String(body.dataBase64 || '');
+      if (!filenameRaw || !dataBase64) return jsonResult_({ success: false, error: '缺少檔案內容' });
+      if (!/\.(doc|docx)$/i.test(filenameRaw)) return jsonResult_({ success: false, error: '只接受 .doc / .docx 檔案' });
+      try {
+        const pdfBase64 = convertWordToPdf_(filenameRaw, dataBase64);
+        return jsonResult_({ success: true, filename: filenameRaw.replace(/\.docx?$/i, '') + '.pdf', dataBase64: pdfBase64 });
+      } catch (err) {
+        return jsonResult_({ success: false, error: '轉檔失敗：' + String(err) });
       }
     }
 

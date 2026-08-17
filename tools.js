@@ -246,15 +246,84 @@ function resetLottery() {
   renderLotteryWinnerList();
 }
 
-// ===== 轉檔小工具（介面先做好，實際轉檔之後再串接）=====
-function runConvertTool() {
+// ===== 轉檔小工具（Word→PDF 已串接 Code.gs 實際轉檔；其餘格式仍是介面佔位）=====
+function convertFileExt(file) {
+  const m = /\.(\w+)$/.exec(file.name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+
+// 選檔當下就把目標格式鎖成 PDF：Word 目前只支援轉 PDF，避免使用者選了 Excel/JPG 卻送出去才被打回票
+function convertOnFileChange() {
+  const fileInput = document.getElementById('convertFileInput');
+  const targetSelect = document.getElementById('convertTargetSelect');
+  const file = fileInput.files && fileInput.files[0];
+  const isWord = file && ['doc', 'docx'].includes(convertFileExt(file));
+  Array.from(targetSelect.options).forEach(opt => {
+    opt.disabled = isWord && opt.value !== 'pdf';
+  });
+  if (isWord) targetSelect.value = 'pdf';
+  setFormStatus('convertStatus', '', '');
+}
+
+async function runConvertTool() {
   const fileInput = document.getElementById('convertFileInput');
   const target = document.getElementById('convertTargetSelect').value;
   if (!fileInput.files || !fileInput.files.length) {
     setFormStatus('convertStatus', '請先選擇要轉換的檔案', 'error');
     return;
   }
-  setFormStatus('convertStatus', '轉檔功能尚未串接，之後可以在這裡接上轉檔服務（目前選擇的檔案：' + fileInput.files[0].name + ' → ' + target + '）', '');
+  const file = fileInput.files[0];
+  const ext = convertFileExt(file);
+  if (ext === 'doc' || ext === 'docx') {
+    if (target !== 'pdf') {
+      setFormStatus('convertStatus', 'Word 檔案目前只能轉成 PDF，請把「要轉成的格式」選 PDF', 'error');
+      return;
+    }
+    await convertRunWordToPdf(file);
+    return;
+  }
+  setFormStatus('convertStatus', '轉檔功能尚未串接，之後可以在這裡接上轉檔服務（目前選擇的檔案：' + file.name + ' → ' + target + '）', '');
+}
+
+function convertReadFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result.split(',')[1] || '');
+    reader.onerror = () => reject(new Error('讀取檔案失敗'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function convertDownloadBase64Pdf(dataBase64, filename) {
+  const binary = atob(dataBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function convertRunWordToPdf(file) {
+  const btn = document.querySelector('#viewConvertTool .task-submit-btn');
+  if (btn) btn.disabled = true;
+  setFormStatus('convertStatus', '轉檔中…（檔案較大時要等幾秒，請勿關閉頁面）', '');
+  try {
+    const dataBase64 = await convertReadFileAsBase64(file);
+    const result = await postTask({ type: 'convert-word-to-pdf', filename: file.name, dataBase64 });
+    const outFilename = result.filename || file.name.replace(/\.\w+$/, '') + '.pdf';
+    convertDownloadBase64Pdf(result.dataBase64, outFilename);
+    setFormStatus('convertStatus', '轉檔完成，已下載「' + outFilename + '」', 'ok');
+  } catch (err) {
+    setFormStatus('convertStatus', '轉檔失敗：' + err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ===== 食譜貼文產生器 =====
