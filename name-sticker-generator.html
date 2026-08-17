@@ -357,8 +357,12 @@ const STICKER_STYLES = {
     // 8 隻貓是同一套姿勢範本畫的（面向左、身體在右側），身體中段這塊比例
     // 在全部 8 張圖上都落在軀幹上（不會切到臉/腳/尾巴），所以共用同一組比例，
     // 不用像交通工具那樣每張圖各自訂位置
-    bodySlot: { x: 0.40, y: 0.48, w: 0.42, h: 0.24 },
-    textStroke: '#5a4a3f'   // 站上的深棕文字色（--c-text），白字＋這個外框在全部貓色上都看得清楚
+    bodySlot: { x: 0.32, y: 0.46, w: 0.46, h: 0.28 },
+    textStroke: '#5a4a3f',  // 站上的深棕文字色（--c-text），白字＋這個外框在全部貓色上都看得清楚
+    // 明信片底圖是橫式（576x384），4x6（直向較多格）比例跟底圖不搭、每隻貓被擠得瘦長；
+    // 改成 5x4（橫向較多格）才貼近底圖的橫式比例，貓也比較不會被壓扁
+    gridCols: 5,
+    gridRows: 4
   },
   vehicle: {
     label: '交通工具',
@@ -564,7 +568,11 @@ async function buildBodyGridStickerCanvas(styleKey, name) {
   const loadedList = await Promise.all(uniqueSrcs.map(src => loadImageElement(src)));
   const imageMap = new Map(uniqueSrcs.map((src, i) => [src, loadedList[i]]));
 
-  const slotOrder = buildStickerImageSlots(style.images, NS_GRID_COLS * NS_GRID_ROWS);
+  // 這款底圖是橫式明信片，格數也要照橫式比例排（預設仍是共用的 NS_GRID_COLS/ROWS，
+  // 但 cat2 用自己的 gridCols/gridRows，讓貓不會被直向的窄格壓扁）
+  const cols = style.gridCols || NS_GRID_COLS;
+  const rows = style.gridRows || NS_GRID_ROWS;
+  const slotOrder = buildStickerImageSlots(style.images, cols * rows);
 
   const canvas = document.createElement('canvas');
   canvas.width = NS_BODYGRID_W;
@@ -577,14 +585,14 @@ async function buildBodyGridStickerCanvas(styleKey, name) {
   const gridY0 = NS_BODYGRID_MARGIN;
   const gridW = NS_BODYGRID_W - NS_BODYGRID_MARGIN * 2;
   const gridH = NS_BODYGRID_H - NS_BODYGRID_MARGIN - NS_BODYGRID_FOOTER_H;
-  const cellW = gridW / NS_GRID_COLS;
-  const cellH = gridH / NS_GRID_ROWS;
+  const cellW = gridW / cols;
+  const cellH = gridH / rows;
 
   slotOrder.forEach((src, i) => {
     const img = imageMap.get(src);
     if (!img) return; // 單張圖片載入失敗就跳過那一格，不讓整張成品開天窗
-    const col = i % NS_GRID_COLS;
-    const row = Math.floor(i / NS_GRID_COLS);
+    const col = i % cols;
+    const row = Math.floor(i / cols);
     const cellX = gridX0 + col * cellW;
     const cellY = gridY0 + row * cellH;
     const boxX = cellX + NS_BODYGRID_CELL_PAD;
