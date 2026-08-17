@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>雪莉與朵栗 繪本後台</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* picture-books-admin.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
+  :root { --wrap-max: 1100px; }
+
+  /* ===== 登入畫面 ===== */
+  .pba-login-box {
+    max-width: 340px;
+    margin: 60px auto 0;
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border-light);
+    border-radius: var(--r-modal);
+    padding: 26px 22px;
+    box-shadow: var(--sh-card);
+  }
+  .pba-login-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--c-text);
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .pba-field { margin-bottom: 14px; }
+  .pba-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--c-muted);
+    margin-bottom: 5px;
+  }
+  .pba-field input[type="text"],
+  .pba-field input[type="password"],
+  .pba-field input[type="number"],
+  .pba-field textarea,
+  .pba-field select {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    background: var(--c-input-bg);
+    outline: none;
+    box-sizing: border-box;
+  }
+  .pba-field input:focus, .pba-field textarea:focus, .pba-field select:focus { border-color: var(--c-primary); }
+  .pba-field textarea { resize: vertical; min-height: 70px; font-family: var(--font-body); }
+  .pba-error { color: var(--c-danger); font-size: 12.5px; text-align: center; margin-top: 10px; min-height: 16px; }
+
+  .pba-full-btn {
+    width: 100%;
+    text-align: center;
+    font-weight: 800;
+    border: none;
+    border-radius: var(--r-pill);
+    background: var(--c-primary);
+    color: #fff;
+    cursor: pointer;
+    padding: 11px 12px;
+    font-size: 14px;
+    font-family: var(--font-round);
+  }
+  .pba-full-btn:hover { background: var(--c-primary-dark); }
+
+  /* ===== 主畫面 ===== */
+  .pba-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .pba-topbar-title { font-family: var(--font-round); font-weight: 800; font-size: 14px; color: var(--c-brown); }
+  .pba-logout-btn {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-brown);
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  .pba-logout-btn:hover { background: var(--c-bg-bottom); }
+
+  .pba-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  @media (min-width: 900px) {
+    .pba-layout { grid-template-columns: 320px 1fr; align-items: start; }
+  }
+
+  .pba-panel {
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border-light);
+    border-radius: var(--r-lg);
+    padding: 16px;
+  }
+  .pba-panel-title {
+    font-family: var(--font-round);
+    font-weight: 800;
+    font-size: 13.5px;
+    color: var(--c-text);
+    margin-bottom: 10px;
+  }
+
+  .pba-add-btn {
+    width: 100%;
+    font-weight: 800;
+    font-family: var(--font-round);
+    border: none;
+    border-radius: var(--r-pill);
+    background: var(--c-mint-text);
+    color: #fff;
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .pba-add-btn:hover { opacity: 0.9; }
+
+  .pba-book-list { max-height: 60vh; overflow-y: auto; }
+  .pba-book-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+  .pba-book-item:hover { background: var(--c-bg-bottom); }
+  .pba-book-item.active { background: var(--c-pink-bg); }
+  .pba-book-item-name { font-size: 13px; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pba-book-item-meta { font-size: 10.5px; color: var(--c-muted); flex: none; text-align: right; }
+  .pba-badge-draft { color: var(--c-orange-text); }
+  .pba-badge-pub { color: var(--c-mint-text); }
+  .pba-empty-list { text-align: center; color: var(--c-muted-light); font-size: 12.5px; padding: 20px 0; }
+
+  .pba-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pba-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--c-brown);
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    padding: 5px 10px 5px 8px;
+    cursor: pointer;
+  }
+  .pba-checkbox-item input { margin: 0; }
+
+  .pba-cover-preview-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .pba-cover-preview {
+    width: 72px; height: 96px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--c-bg-bottom);
+    border: 1px solid var(--c-border-light);
+    flex: none;
+  }
+  .pba-cover-preview.placeholder { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--c-placeholder); }
+
+  .pba-checkbox-inline { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--c-text); }
+
+  .pba-form-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .pba-btn {
+    flex: 1 1 auto;
+    font-weight: 800;
+    font-family: var(--font-round);
+    border: none;
+    border-radius: var(--r-pill);
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 13.5px;
+  }
+  .pba-btn-save { background: var(--c-primary); color: #fff; }
+  .pba-btn-save:hover { background: var(--c-primary-dark); }
+  .pba-btn-danger { background: var(--c-danger); color: #fff; }
+  .pba-btn-danger:hover { opacity: 0.9; }
+
+  .pba-section-divider { border: none; border-top: 1px dashed var(--c-line-2); margin: 22px 0 16px; }
+
+  .pba-material-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border-light);
+    border-radius: 12px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .pba-material-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--c-bg-bottom); flex: none; }
+  .pba-material-thumb.placeholder { display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--c-placeholder); }
+  .pba-material-info { flex: 1; min-width: 0; }
+  .pba-material-title { font-size: 12.5px; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pba-material-sub { font-size: 10.5px; color: var(--c-muted); }
+  .pba-material-actions { display: flex; gap: 6px; flex: none; }
+  .pba-mini-btn {
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--c-border);
+    background: #fff;
+    color: var(--c-brown);
+    border-radius: var(--r-pill);
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .pba-mini-btn:hover { background: var(--c-bg-bottom); }
+  .pba-mini-btn.danger { color: var(--c-danger); border-color: var(--c-danger); }
+
+  .pba-material-form {
+    border: 1px dashed var(--c-border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    display: none;
+  }
+  .pba-material-form.show { display: block; }
+  .pba-upload-status { font-size: 11.5px; color: var(--c-muted); margin-top: 4px; }
+
+  .pba-cat-manage-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--c-surface-2);
+    border-radius: 10px;
+    padding: 7px 10px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+  }
+  .pba-cat-add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .pba-cat-add-row input { flex: 1; }
+
+  /* ===== Toast ===== */
+  #pbaToast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--c-text);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: var(--r-pill);
+    box-shadow: var(--sh-modal);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  #pbaToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #pbaToast.error { background: var(--c-danger); }
+</style>
+</head>
+<body>
+
+<a class="site-home-btn" href="recipes.html" title="回首頁" aria-label="回首頁">🏠</a>
+
+<div class="wrap">
+  <div class="page-title-wrap">
+    <div class="page-title-badge">💗 雪莉與朵栗</div>
+    <div class="page-title">📚 繪本後台</div>
+  </div>
+
+  <!-- 登入畫面 -->
+  <div id="loginView">
+    <div class="pba-login-box">
+      <div class="pba-login-title">請先登入</div>
+      <form id="loginForm">
+        <div class="pba-field">
+          <label for="loginName">姓名</label>
+          <input type="text" id="loginName" autocomplete="username">
+        </div>
+        <div class="pba-field">
+          <label for="loginPassword">密碼</label>
+          <input type="password" id="loginPassword" autocomplete="current-password">
+        </div>
+        <button type="submit" class="pba-full-btn">登入</button>
+        <div class="pba-error" id="loginError"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 主畫面 -->
+  <div id="mainView" style="display:none;">
+    <div class="pba-topbar">
+      <div class="pba-topbar-title" id="pbaWelcome"></div>
+      <button class="pba-logout-btn" id="logoutBtn">登出</button>
+    </div>
+
+    <div class="pba-layout">
+      <!-- 左：書單 -->
+      <div class="pba-panel">
+        <button class="pba-add-btn" id="addBookBtn">＋ 新增繪本</button>
+        <div class="pba-field" style="margin-bottom:10px;">
+          <input type="text" id="bookSearchInput" placeholder="🔍 搜尋書名">
+        </div>
+        <div class="pba-book-list" id="bookList"></div>
+      </div>
+
+      <!-- 右：編輯表單 -->
+      <div class="pba-panel">
+        <div class="pba-panel-title" id="formTitle">新增繪本</div>
+        <form id="bookForm">
+          <div class="pba-field">
+            <label>書名 *</label>
+            <input type="text" id="fTitle">
+          </div>
+          <div class="pba-field">
+            <label>作者</label>
+            <input type="text" id="fAuthor">
+          </div>
+          <div class="pba-field">
+            <label>出版社</label>
+            <input type="text" id="fPublisher">
+          </div>
+          <div class="pba-field">
+            <label>介紹</label>
+            <textarea id="fDescription"></textarea>
+          </div>
+          <div class="pba-field">
+            <label>YouTube 網址</label>
+            <input type="text" id="fYoutube" placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div class="pba-field">
+            <label>蝦皮網址</label>
+            <input type="text" id="fShopee" placeholder="https://shopee.tw/...">
+          </div>
+          <div class="pba-field">
+            <label>品牌</label>
+            <select id="fBrand"><option value="">無</option></select>
+          </div>
+          <div class="pba-field">
+            <label>大分類</label>
+            <div class="pba-checkbox-group" id="fCategories"></div>
+          </div>
+          <div class="pba-field">
+            <label>類型</label>
+            <div class="pba-checkbox-group" id="fTypes"></div>
+          </div>
+          <div class="pba-field">
+            <label>排序（數字越小越前面）</label>
+            <input type="number" id="fSort" value="0">
+          </div>
+          <div class="pba-field">
+            <label class="pba-checkbox-inline"><input type="checkbox" id="fPublished"> 發布（公開頁可見）</label>
+          </div>
+          <div class="pba-field">
+            <label>封面圖</label>
+            <div class="pba-cover-preview-row">
+              <img id="fCoverPreview" class="pba-cover-preview" style="display:none;">
+              <div id="fCoverPreviewPh" class="pba-cover-preview placeholder">📖</div>
+              <input type="file" id="fCoverFile" accept="image/*">
+            </div>
+            <div class="pba-upload-status" id="fCoverUploadStatus"></div>
+            <input type="hidden" id="fCoverUrl">
+          </div>
+
+          <div class="pba-form-actions">
+            <button type="submit" class="pba-btn pba-btn-save">儲存</button>
+            <button type="button" class="pba-btn pba-btn-danger" id="deleteBookBtn" style="display:none;">刪除這本書</button>
+          </div>
+        </form>
+
+        <hr class="pba-section-divider">
+
+        <!-- 延伸教材 -->
+        <div id="materialsSection">
+          <div class="pba-panel-title">延伸教材</div>
+          <div id="materialsNeedSaveHint" class="pba-empty-list">請先儲存這本書，才能新增延伸教材</div>
+          <div id="materialsBody" style="display:none;">
+            <div id="materialList"></div>
+            <button type="button" class="pba-mini-btn" id="addMaterialBtn">＋ 新增教材</button>
+
+            <div class="pba-material-form" id="materialForm">
+              <div class="pba-field">
+                <label>標題</label>
+                <input type="text" id="mTitle">
+              </div>
+              <div class="pba-field">
+                <label>介紹</label>
+                <textarea id="mDescription"></textarea>
+              </div>
+              <div class="pba-field">
+                <label>縮圖</label>
+                <div class="pba-cover-preview-row">
+                  <img id="mThumbPreview" class="pba-material-thumb" style="display:none; width:56px; height:56px;">
+                  <div id="mThumbPreviewPh" class="pba-material-thumb placeholder" style="width:56px; height:56px;">📄</div>
+                  <input type="file" id="mThumbFile" accept="image/*">
+                </div>
+                <div class="pba-upload-status" id="mThumbUploadStatus"></div>
+                <input type="hidden" id="mThumbUrl">
+              </div>
+              <div class="pba-field">
+                <label>原始檔案（上限 50MB）</label>
+                <input type="file" id="mFileInput">
+                <div class="pba-upload-status" id="mFileUploadStatus"></div>
+                <input type="hidden" id="mFileUrl">
+                <input type="hidden" id="mFileName">
+                <input type="hidden" id="mFileSize">
+              </div>
+              <div class="pba-form-actions">
+                <button type="button" class="pba-btn pba-btn-save" id="saveMaterialBtn">儲存教材</button>
+                <button type="button" class="pba-mini-btn" id="cancelMaterialBtn">取消</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="pba-section-divider">
+
+        <!-- 大分類管理 -->
+        <div>
+          <div class="pba-panel-title">大分類清單管理</div>
+          <div id="categoryManageList"></div>
+          <div class="pba-cat-add-row">
+            <input type="text" id="newCategoryInput" placeholder="新增分類名稱">
+            <button type="button" class="pba-mini-btn" id="addCategoryBtn">新增</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<div id="pbaToast"></div>
+
+<script>
+const BOOKS_API_URL = 'https://dondon-platform.vercel.app/api/books';
+const LEGACY_API_URL = 'https://dondon-platform.vercel.app/api/legacy';
+const TOKEN_KEY = 'booksAdminToken';
+const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
+
+let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
+let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
+let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
+
+// ===== Toast =====
+let toastTimer = null;
+function showToast(msg, isError) {
+  const el = document.getElementById('pbaToast');
+  el.textContent = msg;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ===== token / 登入狀態 =====
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+function showLogin(msg) {
+  clearToken();
+  document.getElementById('mainView').style.display = 'none';
+  document.getElementById('loginView').style.display = 'block';
+  document.getElementById('loginError').textContent = msg || '';
+}
+
+function showMain(name) {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'block';
+  document.getElementById('pbaWelcome').textContent = name ? `👋 ${name}，你好` : '';
+}
+
+// ===== API 呼叫 =====
+async function apiPost(type, extra) {
+  const body = Object.assign({ type, token: getToken() }, extra || {});
+  const res = await fetch(BOOKS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data && data.needLogin) {
+    showLogin('請重新登入');
+    throw new Error(data.error || '請重新登入');
+  }
+  return data;
+}
+
+async function loadPackage() {
+  const token = getToken();
+  const res = await fetch(`${BOOKS_API_URL}?all=1&token=${encodeURIComponent(token)}`, { cache: 'no-store' });
+  const data = await res.json();
+  if (!data || data.success !== true) {
+    showLogin(data && data.error ? data.error : '請重新登入');
+    return null;
+  }
+  // token 失效時後端會靜默降級成公開包（adminView=false），要當成未登入處理
+  if (data.adminView !== true) {
+    showLogin('登入已逾時，請重新登入');
+    return null;
+  }
+  return data;
+}
+
+// ===== 登入 / 登出 =====
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('loginName').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  document.getElementById('loginError').textContent = '';
+  try {
+    const res = await fetch(LEGACY_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'login', name, password })
+    });
+    const data = await res.json();
+    if (!data || data.success !== true) {
+      document.getElementById('loginError').textContent = (data && data.error) || '登入失敗';
+      return;
+    }
+    setToken(data.token);
+    document.getElementById('loginPassword').value = '';
+    await bootMain(data.name);
+  } catch (err) {
+    document.getElementById('loginError').textContent = '登入失敗，請確認網路連線';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  showLogin('');
+});
+
+async function bootMain(name) {
+  const pkg = await loadPackage();
+  if (!pkg) return;
+  PACKAGE_DATA = pkg;
+  showMain(name || '');
+  renderBookList();
+  renderBrandOptions();
+  renderCategoryCheckboxes();
+  renderTypeCheckboxes();
+  renderCategoryManageList();
+  resetForm();
+}
+
+// ===== 書單（左欄） =====
+function renderBookList() {
+  const listEl = document.getElementById('bookList');
+  listEl.innerHTML = '';
+  const term = (document.getElementById('bookSearchInput').value || '').trim().toLowerCase();
+  const books = (PACKAGE_DATA.books || []).filter(b => !term || (b.title || '').toLowerCase().includes(term));
+  if (!books.length) {
+    listEl.innerHTML = '<div class="pba-empty-list">沒有符合的繪本</div>';
+    return;
+  }
+  books.forEach(b => {
+    const item = document.createElement('div');
+    item.className = 'pba-book-item' + (CURRENT_BOOK && CURRENT_BOOK.id === b.id ? ' active' : '');
+    item.addEventListener('click', () => selectBook(b));
+
+    const name = document.createElement('div');
+    name.className = 'pba-book-item-name';
+    name.textContent = b.title;
+    item.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'pba-book-item-meta';
+    meta.innerHTML = `<span class="${b.is_published ? 'pba-badge-pub' : 'pba-badge-draft'}">${b.is_published ? '已發布' : '草稿'}</span><br>教材 ${(b.materials || []).length}`;
+    item.appendChild(meta);
+
+    listEl.appendChild(item);
+  });
+}
+
+document.getElementById('bookSearchInput').addEventListener('input', renderBookList);
+
+// ===== 表單：品牌 / 大分類 / 類型 選項渲染 =====
+function renderBrandOptions() {
+  const sel = document.getElementById('fBrand');
+  sel.innerHTML = '<option value="">無</option>';
+  (PACKAGE_DATA.brands || []).forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = b.name;
+    sel.appendChild(opt);
+  });
+}
+
+function renderCategoryCheckboxes() {
+  const wrap = document.getElementById('fCategories');
+  wrap.innerHTML = '';
+  (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).forEach(c => {
+    const label = document.createElement('label');
+    label.className = 'pba-checkbox-item';
+    label.innerHTML = `<input type="checkbox" value="${escapeAttr(c.name)}"> ${escapeHtml(c.name)}`;
+    wrap.appendChild(label);
+  });
+}
+
+function renderTypeCheckboxes() {
+  const wrap = document.getElementById('fTypes');
+  wrap.innerHTML = '';
+  (PACKAGE_DATA.types || []).forEach(t => {
+    const label = document.createElement('label');
+    label.className = 'pba-checkbox-item';
+    label.innerHTML = `<input type="checkbox" value="${escapeAttr(t)}"> ${escapeHtml(t)}`;
+    wrap.appendChild(label);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+function getCheckedValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`)).map(el => el.value);
+}
+function setCheckedValues(containerId, values) {
+  const set = new Set(values || []);
+  document.querySelectorAll(`#${containerId} input[type=checkbox]`).forEach(el => {
+    el.checked = set.has(el.value);
+  });
+}
+
+// ===== 選書 / 新增書 =====
+function selectBook(book) {
+  CURRENT_BOOK = book;
+  renderBookList();
+  fillForm(book);
+  renderMaterialsSection(book);
+}
+
+function resetForm() {
+  CURRENT_BOOK = null;
+  renderBookList();
+  fillForm(null);
+  renderMaterialsSection(null);
+}
+
+document.getElementById('addBookBtn').addEventListener('click', resetForm);
+
+function fillForm(book) {
+  document.getElementById('formTitle').textContent = book ? '編輯繪本' : '新增繪本';
+  document.getElementById('fTitle').value = book ? book.title || '' : '';
+  document.getElementById('fAuthor').value = book ? book.author || '' : '';
+  document.getElementById('fPublisher').value = book ? book.publisher || '' : '';
+  document.getElementById('fDescription').value = book ? book.description || '' : '';
+  document.getElementById('fYoutube').value = book ? book.youtube_url || '' : '';
+  document.getElementById('fShopee').value = book ? book.shopee_url || '' : '';
+  document.getElementById('fBrand').value = book && book.brand_id ? book.brand_id : '';
+  setCheckedValues('fCategories', book ? book.categories || [] : []);
+  setCheckedValues('fTypes', book ? book.types || [] : []);
+  document.getElementById('fSort').value = book ? (book.sort || 0) : 0;
+  document.getElementById('fPublished').checked = book ? !!book.is_published : false;
+
+  const coverUrl = book ? book.cover_url || '' : '';
+  document.getElementById('fCoverUrl').value = coverUrl;
+  setCoverPreview(coverUrl);
+  document.getElementById('fCoverUploadStatus').textContent = '';
+  document.getElementById('fCoverFile').value = '';
+
+  document.getElementById('deleteBookBtn').style.display = book ? 'inline-block' : 'none';
+}
+
+function setCoverPreview(url) {
+  const img = document.getElementById('fCoverPreview');
+  const ph = document.getElementById('fCoverPreviewPh');
+  if (url) {
+    img.src = url;
+    img.style.display = 'block';
+    ph.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    ph.style.display = 'flex';
+  }
+}
+
+// ===== 圖片：canvas 縮圖 + 轉 base64 =====
+function resizeImageToBase64(file, maxSide) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('讀取檔案失敗'));
+    reader.onload = () => { img.src = reader.result; };
+    img.onerror = () => reject(new Error('圖片格式錯誤'));
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxSide || h > maxSide) {
+        if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
+        else { w = Math.round(w * maxSide / h); h = maxSide; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const mime = 'image/webp';
+      let dataUrl;
+      try { dataUrl = canvas.toDataURL(mime, 0.85); } catch (e) { dataUrl = ''; }
+      if (!dataUrl || dataUrl.indexOf('data:image/webp') !== 0) {
+        dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      }
+      const ext = dataUrl.indexOf('image/webp') !== -1 ? 'webp' : 'jpg';
+      const base64 = dataUrl.split(',')[1];
+      resolve({ base64, ext });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImageField(file, maxSide, kind, statusElId, previewSetFn, hiddenInputId) {
+  const statusEl = document.getElementById(statusElId);
+  statusEl.textContent = '上傳中…';
+  try {
+    const { base64, ext } = await resizeImageToBase64(file, maxSide);
+    const filename = `${kind}-${Date.now()}.${ext}`;
+    const res = await apiPost('book-image-upload', { filename, dataBase64: base64, kind });
+    if (!res || res.success !== true) {
+      statusEl.textContent = '上傳失敗：' + ((res && res.error) || '未知錯誤');
+      showToast('圖片上傳失敗', true);
+      return;
+    }
+    document.getElementById(hiddenInputId).value = res.download_url;
+    previewSetFn(res.download_url);
+    statusEl.textContent = '上傳完成';
+    showToast('圖片上傳完成');
+  } catch (err) {
+    statusEl.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
+    showToast('圖片上傳失敗', true);
+  }
+}
+
+document.getElementById('fCoverFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  uploadImageField(file, 1200, 'cover', 'fCoverUploadStatus', setCoverPreview, 'fCoverUrl');
+});
+
+// ===== 儲存 / 刪除 書籍 =====
+document.getElementById('bookForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { showToast('請輸入書名', true); return; }
+
+  const payload = {
+    title,
+    author: document.getElementById('fAuthor').value.trim(),
+    publisher: document.getElementById('fPublisher').value.trim(),
+    description: document.getElementById('fDescription').value,
+    youtube_url: document.getElementById('fYoutube').value.trim(),
+    shopee_url: document.getElementById('fShopee').value.trim(),
+    brand_id: document.getElementById('fBrand').value || null,
+    categories: getCheckedValues('fCategories'),
+    types: getCheckedValues('fTypes'),
+    sort: Number(document.getElementById('fSort').value) || 0,
+    is_published: document.getElementById('fPublished').checked,
+    cover_url: document.getElementById('fCoverUrl').value.trim()
+  };
+  if (CURRENT_BOOK) payload.id = CURRENT_BOOK.id;
+
+  try {
+    const res = await apiPost('book-upsert', payload);
+    if (!res || res.success !== true) {
+      showToast('儲存失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast('已儲存');
+    const pkg = await loadPackage();
+    if (!pkg) return;
+    PACKAGE_DATA = pkg;
+    const saved = (PACKAGE_DATA.books || []).find(b => b.id === res.book.id) || res.book;
+    CURRENT_BOOK = saved;
+    renderBookList();
+    fillForm(saved);
+    renderMaterialsSection(saved);
+  } catch (err) {
+    // needLogin 已在 apiPost 內處理，這裡不用重複提示
+  }
+});
+
+document.getElementById('deleteBookBtn').addEventListener('click', async () => {
+  if (!CURRENT_BOOK) return;
+  if (!confirm(`確定要刪除《${CURRENT_BOOK.title}》嗎？此動作無法復原。`)) return;
+  try {
+    const res = await apiPost('book-delete', { id: CURRENT_BOOK.id });
+    if (!res || res.success !== true) {
+      showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast('已刪除');
+    const pkg = await loadPackage();
+    if (!pkg) return;
+    PACKAGE_DATA = pkg;
+    resetForm();
+  } catch (err) { /* needLogin 已處理 */ }
+});
+
+// ===== 延伸教材 =====
+function renderMaterialsSection(book) {
+  const hint = document.getElementById('materialsNeedSaveHint');
+  const body = document.getElementById('materialsBody');
+  closeMaterialForm();
+  if (!book) {
+    hint.style.display = 'block';
+    body.style.display = 'none';
+    return;
+  }
+  hint.style.display = 'none';
+  body.style.display = 'block';
+  renderMaterialList(book.materials || []);
+}
+
+function renderMaterialList(materials) {
+  const listEl = document.getElementById('materialList');
+  listEl.innerHTML = '';
+  if (!materials.length) {
+    listEl.innerHTML = '<div class="pba-empty-list">還沒有教材</div>';
+    return;
+  }
+  materials.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'pba-material-item';
+
+    if (m.thumb_url) {
+      const img = document.createElement('img');
+      img.className = 'pba-material-thumb';
+      img.src = m.thumb_url;
+      item.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pba-material-thumb placeholder';
+      ph.textContent = '📄';
+      item.appendChild(ph);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'pba-material-info';
+    const title = document.createElement('div');
+    title.className = 'pba-material-title';
+    title.textContent = m.title || '未命名教材';
+    info.appendChild(title);
+    const sub = document.createElement('div');
+    sub.className = 'pba-material-sub';
+    sub.textContent = `${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)}`;
+    info.appendChild(sub);
+    item.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'pba-material-actions';
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'pba-mini-btn';
+    editBtn.textContent = '編輯';
+    editBtn.addEventListener('click', () => openMaterialForm(m));
+    actions.appendChild(editBtn);
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pba-mini-btn danger';
+    delBtn.textContent = '刪除';
+    delBtn.addEventListener('click', () => deleteMaterial(m));
+    actions.appendChild(delBtn);
+    item.appendChild(actions);
+
+    listEl.appendChild(item);
+  });
+}
+
+function formatBytes(n) {
+  if (!n) return '0 KB';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+document.getElementById('addMaterialBtn').addEventListener('click', () => openMaterialForm(null));
+document.getElementById('cancelMaterialBtn').addEventListener('click', closeMaterialForm);
+
+function openMaterialForm(material) {
+  materialFormEditingId = material ? material.id : null;
+  document.getElementById('materialForm').classList.add('show');
+  document.getElementById('mTitle').value = material ? material.title || '' : '';
+  document.getElementById('mDescription').value = material ? material.description || '' : '';
+  document.getElementById('mThumbUrl').value = material ? material.thumb_url || '' : '';
+  document.getElementById('mFileUrl').value = material ? material.file_url || '' : '';
+  document.getElementById('mFileName').value = material ? material.file_name || '' : '';
+  document.getElementById('mFileSize').value = material ? material.file_size || 0 : 0;
+  setMaterialThumbPreview(material ? material.thumb_url || '' : '');
+  document.getElementById('mThumbUploadStatus').textContent = '';
+  document.getElementById('mFileUploadStatus').textContent = material && material.file_name ? `已上傳：${material.file_name}` : '';
+  document.getElementById('mThumbFile').value = '';
+  document.getElementById('mFileInput').value = '';
+}
+
+function closeMaterialForm() {
+  materialFormEditingId = null;
+  const form = document.getElementById('materialForm');
+  if (form) form.classList.remove('show');
+}
+
+function setMaterialThumbPreview(url) {
+  const img = document.getElementById('mThumbPreview');
+  const ph = document.getElementById('mThumbPreviewPh');
+  if (url) { img.src = url; img.style.display = 'block'; ph.style.display = 'none'; }
+  else { img.style.display = 'none'; ph.style.display = 'flex'; }
+}
+
+document.getElementById('mThumbFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  uploadImageField(file, 600, 'thumb', 'mThumbUploadStatus', setMaterialThumbPreview, 'mThumbUrl');
+});
+
+document.getElementById('mFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('mFileUploadStatus');
+  if (file.size > MAX_MATERIAL_BYTES) {
+    statusEl.textContent = '檔案超過 50MB 上限，請換一個檔案';
+    showToast('檔案超過 50MB 上限', true);
+    e.target.value = '';
+    return;
+  }
+  if (!CURRENT_BOOK) {
+    statusEl.textContent = '請先儲存書籍再上傳教材檔案';
+    showToast('請先儲存書籍', true);
+    e.target.value = '';
+    return;
+  }
+  statusEl.textContent = '上傳中…';
+  try {
+    const urlRes = await apiPost('material-upload-url', { book_id: CURRENT_BOOK.id, file_name: file.name });
+    if (!urlRes || urlRes.success !== true) {
+      statusEl.textContent = '取得上傳網址失敗：' + ((urlRes && urlRes.error) || '未知錯誤');
+      showToast('教材上傳失敗', true);
+      return;
+    }
+    const putRes = await fetch(urlRes.signedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!putRes.ok) {
+      statusEl.textContent = '檔案上傳失敗（' + putRes.status + '）';
+      showToast('教材上傳失敗', true);
+      return;
+    }
+    document.getElementById('mFileUrl').value = urlRes.publicUrl;
+    document.getElementById('mFileName').value = file.name;
+    document.getElementById('mFileSize').value = file.size;
+    statusEl.textContent = `上傳完成：${file.name}（${formatBytes(file.size)}）`;
+    showToast('教材檔案上傳完成');
+  } catch (err) {
+    statusEl.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
+    showToast('教材上傳失敗', true);
+  }
+});
+
+document.getElementById('saveMaterialBtn').addEventListener('click', async () => {
+  if (!CURRENT_BOOK) { showToast('請先儲存書籍', true); return; }
+  const title = document.getElementById('mTitle').value.trim();
+  if (!title) { showToast('請輸入教材標題', true); return; }
+  const payload = {
+    book_id: CURRENT_BOOK.id,
+    title,
+    description: document.getElementById('mDescription').value,
+    thumb_url: document.getElementById('mThumbUrl').value.trim(),
+    file_url: document.getElementById('mFileUrl').value.trim(),
+    file_name: document.getElementById('mFileName').value,
+    file_size: Number(document.getElementById('mFileSize').value) || 0,
+    sort: 0
+  };
+  if (materialFormEditingId) payload.id = materialFormEditingId;
+
+  try {
+    const res = await apiPost('material-upsert', payload);
+    if (!res || res.success !== true) {
+      showToast('儲存教材失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast('教材已儲存');
+    await refreshCurrentBookAfterMaterialChange();
+    closeMaterialForm();
+  } catch (err) { /* needLogin 已處理 */ }
+});
+
+async function deleteMaterial(material) {
+  if (!confirm(`確定要刪除教材《${material.title || '未命名'}》嗎？`)) return;
+  try {
+    const res = await apiPost('material-delete', { id: material.id });
+    if (!res || res.success !== true) {
+      showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast('已刪除教材');
+    await refreshCurrentBookAfterMaterialChange();
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
+async function refreshCurrentBookAfterMaterialChange() {
+  const pkg = await loadPackage();
+  if (!pkg) return;
+  PACKAGE_DATA = pkg;
+  const refreshed = (PACKAGE_DATA.books || []).find(b => CURRENT_BOOK && b.id === CURRENT_BOOK.id);
+  if (refreshed) {
+    CURRENT_BOOK = refreshed;
+    renderMaterialList(refreshed.materials || []);
+  }
+  renderBookList();
+}
+
+// ===== 大分類清單管理 =====
+function renderCategoryManageList() {
+  const el = document.getElementById('categoryManageList');
+  el.innerHTML = '';
+  const categories = (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  if (!categories.length) {
+    el.innerHTML = '<div class="pba-empty-list">還沒有分類</div>';
+    return;
+  }
+  categories.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'pba-cat-manage-row';
+    const name = document.createElement('span');
+    name.textContent = c.name;
+    row.appendChild(name);
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pba-mini-btn danger';
+    delBtn.textContent = '刪除';
+    delBtn.addEventListener('click', () => deleteCategory(c.name));
+    row.appendChild(delBtn);
+    el.appendChild(row);
+  });
+}
+
+document.getElementById('addCategoryBtn').addEventListener('click', async () => {
+  const input = document.getElementById('newCategoryInput');
+  const name = input.value.trim();
+  if (!name) { showToast('請輸入分類名稱', true); return; }
+  try {
+    const res = await apiPost('book-category-add', { name });
+    if (!res || res.success !== true) {
+      showToast('新增失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    input.value = '';
+    showToast('分類已新增');
+    await refreshCategoriesOnly();
+  } catch (err) { /* needLogin 已處理 */ }
+});
+
+async function deleteCategory(name) {
+  if (!confirm(`確定要刪除分類「${name}」嗎？`)) return;
+  try {
+    const res = await apiPost('book-category-delete', { name });
+    if (!res || res.success !== true) {
+      showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast('分類已刪除');
+    await refreshCategoriesOnly();
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
+async function refreshCategoriesOnly() {
+  const pkg = await loadPackage();
+  if (!pkg) return;
+  PACKAGE_DATA = pkg;
+  renderCategoryManageList();
+  const prevChecked = getCheckedValues('fCategories');
+  renderCategoryCheckboxes();
+  setCheckedValues('fCategories', prevChecked);
+}
+
+// ===== 啟動 =====
+(async function init() {
+  const token = getToken();
+  if (!token) { showLogin(''); return; }
+  const pkg = await loadPackage();
+  if (!pkg) return;
+  PACKAGE_DATA = pkg;
+  showMain('');
+  renderBookList();
+  renderBrandOptions();
+  renderCategoryCheckboxes();
+  renderTypeCheckboxes();
+  renderCategoryManageList();
+  resetForm();
+})();
+</script>
+
+</body>
+</html>

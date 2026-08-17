@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>雪莉與朵栗 繪本館</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* picture-books.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
+
+  .pb-search-row { margin-bottom: 14px; }
+  .pb-search-input {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    padding: 10px 16px;
+    background: #fff;
+    outline: none;
+  }
+  .pb-search-input::placeholder { color: var(--c-placeholder); }
+  .pb-search-input:focus { border-color: var(--c-primary); }
+
+  .filter-section { margin-bottom: 14px; }
+  .filter-label {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--c-muted);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--c-border);
+    background: #fff;
+    color: var(--c-brown);
+    padding: 6px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+
+  .pb-count {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--c-muted);
+    margin: 14px 0 10px;
+  }
+
+  .status-msg { text-align: center; color: var(--c-muted-light); font-size: 12px; padding: 30px 0; }
+  .status-msg.error { color: var(--c-danger); }
+  .empty-state { text-align: center; color: var(--c-muted-light); font-size: 13px; padding: 40px 0; }
+
+  .pb-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (min-width: 640px) { .pb-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 900px) { .pb-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 1200px) { .pb-grid { grid-template-columns: repeat(5, 1fr); } }
+
+  .pb-card {
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border-light);
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 3px 8px rgba(230,160,120,0.12);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .pb-card:hover { transform: translateY(-3px); box-shadow: 0 10px 18px rgba(230,160,120,0.25); }
+  .pb-card-cover {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    background: var(--c-bg-bottom);
+    display: block;
+  }
+  .pb-card-cover.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    color: var(--c-placeholder);
+  }
+  .pb-card-body { padding: 8px 9px 10px; }
+  .pb-card-title {
+    font-family: var(--font-round);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--c-text);
+    line-height: 1.35;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pb-card-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+  .mini-tag {
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: var(--r-pill);
+    padding: 2px 8px;
+    background: var(--c-mint-bg);
+    color: var(--c-mint-text);
+  }
+
+  /* ===== Modal ===== */
+  .modal-backdrop { padding: 16px; }
+  .modal-box.pb-modal-box {
+    padding: 22px 20px 24px;
+    max-width: 92%;
+    width: 420px;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .rc-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: var(--c-primary);
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .pb-cover-wrap {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: var(--c-bg-bottom);
+  }
+  .pb-cover-wrap img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; }
+  .pb-cover-wrap.placeholder {
+    aspect-ratio: 3 / 4;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; color: var(--c-placeholder);
+  }
+  .rc-title { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--c-text); margin: 0 0 4px; }
+  .pb-subline { font-size: 12.5px; color: var(--c-text-soft); margin-bottom: 10px; }
+  .pb-tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+  .pb-tag { font-size: 11px; font-weight: 700; border-radius: var(--r-pill); padding: 3px 10px; }
+  .pb-tag-cat { background: var(--c-purple-bg); color: var(--c-purple-text); }
+  .pb-tag-type { background: var(--c-mint-bg); color: var(--c-mint-text); }
+
+  .rc-tip-box {
+    background: var(--c-orange-bg);
+    border: 1px dashed var(--c-orange-dash-2);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .rc-tip-title { font-size: 12.5px; font-weight: 800; color: var(--rcp-oil-text, var(--c-orange-text)); margin-bottom: 6px; }
+  .rc-tip-text { font-size: 13px; color: var(--c-text); line-height: 1.7; white-space: pre-wrap; }
+
+  .pb-yt-wrap {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: #000;
+    aspect-ratio: 16 / 9;
+    cursor: pointer;
+  }
+  .pb-yt-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pb-yt-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .pb-yt-play {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pb-yt-play span {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    color: var(--c-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  }
+
+  .modal-actions { display: flex; gap: 8px; margin-top: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+  .action-btn { text-align: center; text-decoration: none; font-weight: 800; border: none; border-radius: var(--r-pill); background: var(--c-primary); color: #fff; cursor: pointer; flex: 1 1 auto; font-size: 13.5px; padding: 11px 12px; }
+  .action-btn:hover { background: var(--c-primary-dark); }
+  .action-btn-alt { background: var(--c-cat-4); }
+  .action-btn-alt:hover { background: #5F97DB; }
+  .pb-next-date { font-size: 12.5px; color: var(--c-text-soft); text-align: center; margin-bottom: 10px; }
+
+  .pb-materials-toggle {
+    width: 100%;
+    text-align: center;
+    font-family: var(--font-round);
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--c-brown);
+    background: var(--c-orange-bg-2);
+    border: none;
+    border-radius: var(--r-pill);
+    padding: 10px 12px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .pb-materials-panel { display: none; margin-top: 12px; }
+  .pb-materials-panel.show { display: block; }
+  .pb-material-item {
+    display: flex;
+    gap: 10px;
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border-light);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .pb-material-thumb {
+    width: 56px; height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--c-bg-bottom);
+    flex: none;
+  }
+  .pb-material-thumb.placeholder { display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--c-placeholder); }
+  .pb-material-body { flex: 1; min-width: 0; }
+  .pb-material-title { font-family: var(--font-round); font-weight: 700; font-size: 13px; color: var(--c-text); margin-bottom: 3px; }
+  .pb-material-desc { font-size: 11.5px; color: var(--c-text-soft); line-height: 1.5; white-space: pre-wrap; margin-bottom: 6px; }
+  .pb-material-dl {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--c-mint-text);
+    border-radius: var(--r-pill);
+    padding: 5px 12px;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<a class="site-home-btn" href="recipes.html" title="回首頁" aria-label="回首頁">🏠</a>
+
+<div class="wrap">
+  <div class="page-title-wrap">
+    <div class="page-title-badge">💗 雪莉與朵栗</div>
+    <div class="page-title">📚 繪本館</div>
+  </div>
+
+  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="books"></div>
+
+  <div id="statusMsg" class="status-msg">資料載入中…</div>
+
+  <div id="pbContent" style="display:none;">
+    <div class="pb-search-row">
+      <input type="text" id="pbSearchInput" class="pb-search-input" placeholder="🔍 搜尋書名或作者...">
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-label">大分類</div>
+      <div class="filter-chips" id="pbCatChips"></div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">品牌</div>
+      <div class="filter-chips" id="pbBrandChips"></div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">類型</div>
+      <div class="filter-chips" id="pbTypeChips"></div>
+    </div>
+
+    <div class="pb-count" id="pbCount">共 0 本</div>
+    <div class="pb-grid" id="pbGrid"></div>
+    <div class="empty-state" id="pbEmpty" style="display:none;">這個篩選條件下沒有找到繪本</div>
+  </div>
+
+  <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none;">雪莉與朵栗 ♥</a></div>
+</div>
+
+<!-- 繪本彈窗 -->
+<div class="modal-backdrop" id="bookModal" onclick="if(event.target===this) closeBookModal()">
+  <div class="modal-box pb-modal-box">
+    <button class="rc-close-btn" onclick="closeBookModal()">✕</button>
+
+    <div class="pb-cover-wrap" id="pbModalCoverWrap">
+      <img id="pbModalCover" src="" alt="">
+    </div>
+
+    <h2 class="rc-title" id="pbModalTitle"></h2>
+    <div class="pb-subline" id="pbModalSubline"></div>
+    <div class="pb-tag-row" id="pbModalTags"></div>
+
+    <div class="rc-tip-box" id="pbModalDescBox" style="display:none;">
+      <div class="rc-tip-title">📝 內容介紹</div>
+      <div class="rc-tip-text" id="pbModalDesc"></div>
+    </div>
+
+    <div class="pb-yt-wrap" id="pbYtWrap" style="display:none;">
+      <img id="pbYtThumb" src="" alt="YouTube 影片">
+      <div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>
+    </div>
+
+    <div id="pbPurchaseSection"></div>
+
+    <button class="pb-materials-toggle" id="pbMaterialsToggle" style="display:none;">📎 延伸教材</button>
+    <div class="pb-materials-panel" id="pbMaterialsPanel"></div>
+
+    <div class="rc-footer" style="text-align:center; margin-top:16px; font-size:11px; color:var(--c-muted-light);">🩷 雪莉與朵栗・@dondon0813 🩷</div>
+  </div>
+</div>
+
+<!-- 「現正開團中」置頂橫列邏輯已抽成跨頁共用的 openGroupBuy.js -->
+<script src="openGroupBuy.js?v=1"></script>
+
+<!-- 頁面瀏覽量統計 -->
+<script>
+(function sendBooksPageview() {
+  const STATS_BACKEND_URL = 'https://dondon-platform.vercel.app/api/legacy';
+  const d = new Date();
+  const key = `page_books_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const payload = JSON.stringify({ type: 'stat-view', key });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(STATS_BACKEND_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(STATS_BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
+})();
+</script>
+
+<script>
+const BOOKS_API_URL = 'https://dondon-platform.vercel.app/api/books';
+
+let ALL_BOOKS = [];
+let ALL_CATEGORIES = [];
+let ALL_TYPES = [];
+let USED_BRANDS = [];
+
+// 三組篩選狀態：null 代表選「全部」，Set 代表已選的一個以上具體選項
+let selCats = null;
+let selBrands = null;
+let selTypes = null;
+let searchTerm = '';
+
+// ===== 載入資料 =====
+async function loadBooks() {
+  const statusEl = document.getElementById('statusMsg');
+  try {
+    const res = await fetch(BOOKS_API_URL, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data || data.success !== true) throw new Error((data && data.error) || '載入失敗');
+
+    ALL_BOOKS = data.books || [];
+    ALL_CATEGORIES = (data.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+    ALL_TYPES = data.types || [];
+
+    const brandIdsUsed = new Set(ALL_BOOKS.map(b => b.brand_id).filter(Boolean));
+    USED_BRANDS = (data.brands || []).filter(b => brandIdsUsed.has(b.id));
+
+    statusEl.style.display = 'none';
+    document.getElementById('pbContent').style.display = 'block';
+
+    renderChips();
+    renderGrid();
+    handleHashOpen();
+  } catch (err) {
+    statusEl.textContent = '繪本資料載入失敗，請稍後再試 🙏';
+    statusEl.classList.add('error');
+    console.error('繪本載入失敗', err);
+  }
+}
+
+// ===== 篩選 chips =====
+function buildChipGroup(containerId, options, selectedSet, onToggle) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const allChip = document.createElement('button');
+  allChip.type = 'button';
+  allChip.className = 'chip' + (selectedSet === null ? ' active' : '');
+  allChip.textContent = '全部';
+  allChip.addEventListener('click', () => onToggle(null));
+  el.appendChild(allChip);
+
+  options.forEach(opt => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (selectedSet && selectedSet.has(opt) ? ' active' : '');
+    chip.textContent = opt;
+    chip.addEventListener('click', () => onToggle(opt));
+    el.appendChild(chip);
+  });
+}
+
+function toggleSelection(current, value, setter) {
+  // value === null -> 點「全部」，清空選擇
+  if (value === null) { setter(null); renderChips(); renderGrid(); return; }
+  const next = current ? new Set(current) : new Set();
+  if (next.has(value)) next.delete(value); else next.add(value);
+  setter(next.size ? next : null);
+  renderChips();
+  renderGrid();
+}
+
+function renderChips() {
+  buildChipGroup('pbCatChips', ALL_CATEGORIES.map(c => c.name), selCats,
+    v => toggleSelection(selCats, v, s => { selCats = s; }));
+  buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
+    v => toggleSelection(selBrands, v, s => { selBrands = s; }));
+  buildChipGroup('pbTypeChips', ALL_TYPES.slice(), selTypes,
+    v => toggleSelection(selTypes, v, s => { selTypes = s; }));
+}
+
+// ===== 篩選邏輯 =====
+function matchesFilters(book) {
+  if (searchTerm) {
+    const hay = `${book.title || ''} ${book.author || ''}`.toLowerCase();
+    if (!hay.includes(searchTerm)) return false;
+  }
+  if (selCats) {
+    const cats = book.categories || [];
+    if (!cats.some(c => selCats.has(c))) return false;
+  }
+  if (selBrands) {
+    if (!book.brand_name || !selBrands.has(book.brand_name)) return false;
+  }
+  if (selTypes) {
+    const types = book.types || [];
+    if (!types.some(t => selTypes.has(t))) return false;
+  }
+  return true;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('pbGrid');
+  const empty = document.getElementById('pbEmpty');
+  const list = ALL_BOOKS.filter(matchesFilters);
+  document.getElementById('pbCount').textContent = `共 ${list.length} 本`;
+  grid.innerHTML = '';
+  if (!list.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.forEach(book => {
+    const card = document.createElement('div');
+    card.className = 'pb-card';
+    card.addEventListener('click', () => openBookModal(book));
+
+    if (book.cover_url) {
+      const img = document.createElement('img');
+      img.className = 'pb-card-cover';
+      img.src = book.cover_url;
+      img.alt = book.title;
+      img.loading = 'lazy';
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pb-card-cover placeholder';
+      ph.textContent = '📖';
+      card.appendChild(ph);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'pb-card-body';
+    const title = document.createElement('div');
+    title.className = 'pb-card-title';
+    title.textContent = book.title;
+    body.appendChild(title);
+
+    const tags = document.createElement('div');
+    tags.className = 'pb-card-tags';
+    (book.types || []).forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'mini-tag';
+      tag.textContent = t;
+      tags.appendChild(tag);
+    });
+    body.appendChild(tags);
+
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+}
+
+// ===== YouTube 網址解析 =====
+function parseYoutubeId(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(String(url).trim());
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || '';
+    if (host.indexOf('youtube.com') !== -1) {
+      if (u.pathname === '/watch') return u.searchParams.get('v') || '';
+      const m = u.pathname.match(/^\/(shorts|embed)\/([^/?]+)/);
+      if (m) return m[2];
+    }
+  } catch (e) { /* 網址格式不對，當作沒有影片 */ }
+  return '';
+}
+
+// ===== 購買區塊 =====
+function renderPurchaseSection(book) {
+  const wrap = document.getElementById('pbPurchaseSection');
+  wrap.innerHTML = '';
+  const p = book.purchase || { status: 'none' };
+  const shopeeUrl = book.shopee_url || '';
+
+  if (p.status === 'open') {
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const btn = document.createElement('a');
+    btn.className = 'action-btn';
+    btn.href = p.url;
+    btn.target = '_blank';
+    btn.rel = 'noopener noreferrer';
+    btn.textContent = '🛒 前往購買';
+    actions.appendChild(btn);
+    wrap.appendChild(actions);
+    return;
+  }
+
+  if (p.status === 'upcoming') {
+    const next = document.createElement('div');
+    next.className = 'pb-next-date';
+    const d = new Date(p.nextDate + 'T00:00:00');
+    next.textContent = isNaN(d) ? `下次開團 ${p.nextDate}` : `📅 下次開團 ${d.getMonth() + 1}/${d.getDate()}`;
+    wrap.appendChild(next);
+    if (shopeeUrl) {
+      const actions = document.createElement('div');
+      actions.className = 'modal-actions';
+      const btn = document.createElement('a');
+      btn.className = 'action-btn action-btn-alt';
+      btn.href = shopeeUrl;
+      btn.target = '_blank';
+      btn.rel = 'noopener noreferrer';
+      btn.textContent = '🛍 蝦皮購買';
+      actions.appendChild(btn);
+      wrap.appendChild(actions);
+    }
+    return;
+  }
+
+  // 'ended' / 'none'：只在有蝦皮連結時顯示
+  if (shopeeUrl) {
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const btn = document.createElement('a');
+    btn.className = 'action-btn action-btn-alt';
+    btn.href = shopeeUrl;
+    btn.target = '_blank';
+    btn.rel = 'noopener noreferrer';
+    btn.textContent = '🛍 蝦皮購買';
+    actions.appendChild(btn);
+    wrap.appendChild(actions);
+  }
+}
+
+// ===== 延伸教材面板 =====
+function renderMaterials(book) {
+  const toggle = document.getElementById('pbMaterialsToggle');
+  const panel = document.getElementById('pbMaterialsPanel');
+  panel.innerHTML = '';
+  panel.classList.remove('show');
+  toggle.onclick = null;
+
+  const materials = book.materials || [];
+  if (!materials.length) {
+    toggle.style.display = 'none';
+    return;
+  }
+  toggle.style.display = 'block';
+  toggle.textContent = `📎 延伸教材（${materials.length}）`;
+
+  materials.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'pb-material-item';
+
+    if (m.thumb_url) {
+      const img = document.createElement('img');
+      img.className = 'pb-material-thumb';
+      img.src = m.thumb_url;
+      img.alt = m.title || '';
+      item.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pb-material-thumb placeholder';
+      ph.textContent = '📄';
+      item.appendChild(ph);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'pb-material-body';
+    const title = document.createElement('div');
+    title.className = 'pb-material-title';
+    title.textContent = m.title || '未命名教材';
+    body.appendChild(title);
+
+    if (m.description) {
+      const desc = document.createElement('div');
+      desc.className = 'pb-material-desc';
+      desc.textContent = m.description;
+      body.appendChild(desc);
+    }
+
+    if (m.file_url) {
+      const dl = document.createElement('a');
+      dl.className = 'pb-material-dl';
+      dl.href = m.file_url;
+      dl.download = m.file_name || '';
+      dl.target = '_blank';
+      dl.rel = 'noopener noreferrer';
+      dl.textContent = '⬇ 下載此教材';
+      body.appendChild(dl);
+    }
+
+    item.appendChild(body);
+    panel.appendChild(item);
+  });
+
+  toggle.onclick = () => panel.classList.toggle('show');
+}
+
+// ===== Modal 開關 =====
+function openBookModal(book) {
+  document.getElementById('pbModalTitle').textContent = book.title;
+
+  const subParts = [];
+  if (book.author) subParts.push(book.author);
+  if (book.publisher) subParts.push(book.publisher);
+  document.getElementById('pbModalSubline').textContent = subParts.join(' ・ ');
+
+  const coverWrap = document.getElementById('pbModalCoverWrap');
+  const coverImg = document.getElementById('pbModalCover');
+  if (book.cover_url) {
+    coverWrap.classList.remove('placeholder');
+    coverImg.style.display = 'block';
+    coverImg.src = book.cover_url;
+    coverImg.alt = book.title;
+  } else {
+    coverWrap.classList.add('placeholder');
+    coverImg.style.display = 'none';
+    coverWrap.textContent = '📖';
+  }
+
+  const tagsEl = document.getElementById('pbModalTags');
+  tagsEl.innerHTML = '';
+  (book.categories || []).forEach(c => {
+    const t = document.createElement('span');
+    t.className = 'pb-tag pb-tag-cat';
+    t.textContent = c;
+    tagsEl.appendChild(t);
+  });
+  (book.types || []).forEach(t => {
+    const el = document.createElement('span');
+    el.className = 'pb-tag pb-tag-type';
+    el.textContent = t;
+    tagsEl.appendChild(el);
+  });
+
+  const descBox = document.getElementById('pbModalDescBox');
+  if (book.description) {
+    descBox.style.display = 'block';
+    document.getElementById('pbModalDesc').textContent = book.description;
+  } else {
+    descBox.style.display = 'none';
+  }
+
+  const ytWrap = document.getElementById('pbYtWrap');
+  const ytId = parseYoutubeId(book.youtube_url);
+  if (ytId) {
+    ytWrap.style.display = 'block';
+    ytWrap.innerHTML = `<img id="pbYtThumb" src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg" alt="YouTube 影片"><div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>`;
+    ytWrap.onclick = function () {
+      ytWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" title="YouTube 影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+      ytWrap.onclick = null;
+    };
+  } else {
+    ytWrap.style.display = 'none';
+    ytWrap.onclick = null;
+  }
+
+  renderPurchaseSection(book);
+  renderMaterials(book);
+
+  document.getElementById('bookModal').classList.add('show');
+  history.replaceState(null, '', '#book=' + encodeURIComponent(book.id));
+}
+
+function closeBookModal() {
+  document.getElementById('bookModal').classList.remove('show');
+  const url = location.pathname + location.search;
+  history.replaceState(null, '', url);
+}
+
+function handleHashOpen() {
+  const m = /^#book=(.+)$/.exec(location.hash);
+  if (!m) return;
+  const id = decodeURIComponent(m[1]);
+  const book = ALL_BOOKS.find(b => b.id === id);
+  if (book) openBookModal(book);
+}
+
+document.getElementById('pbSearchInput').addEventListener('input', (e) => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderGrid();
+});
+
+window.addEventListener('hashchange', handleHashOpen);
+
+loadBooks();
+</script>
+
+</body>
+</html>
