@@ -1,13 +1,15 @@
 // ===================================================================
-// contractSign.js — 線上合約用印小工具（純前端，零後端）
+// contractSign.js — 線上合約用印小工具（幾乎純前端，唯一例外見下）
 //
-// 用途：上傳合約檔（PDF 或 JPG/PNG）→ 上傳自己拍的印章照片 → 在頁面上點位置
+// 用途：上傳合約檔（PDF／Word／JPG/PNG）→ 上傳自己拍的印章照片 → 在頁面上點位置
 // 蓋章、可拖曳/縮放/刪除 → 匯出蓋好章的 PDF／JPG 下載，或用系統分享面板
 // （手機可直接傳 LINE）。
 //
-// 鐵律：合約檔與印章圖只留在瀏覽器記憶體（Uint8Array / dataURL / DOM），不呼叫
-// 任何 fetch／XHR，不寫入 Code.gs、不落地到任何試算表。按「全部重來」或離開
-// 頁面即可讓瀏覽器回收這些資料。
+// 鐵律：合約檔與印章圖只留在瀏覽器記憶體（Uint8Array / dataURL / DOM），不落地到
+// 任何試算表。**唯一例外**：上傳 Word（.doc/.docx）時，因為瀏覽器沒辦法直接
+// 讀 Word 格式，會呼叫 Code.gs 的 convert-word-to-pdf（跟轉檔小工具共用）先轉成
+// PDF——這一步檔案內容會暫時經過 Google 雲端硬碟轉檔（轉完立即刪除暫存檔），
+// 之後才回到「零後端」的原則。PDF／JPG/PNG 合約完全不受影響，仍然全程留在瀏覽器。
 //
 // 載入順序鐵律：本檔必須在 admin.html 裡排在 admin.js「之前」（見 10 號檔 §2）。
 // 本檔最外層只有「宣告」，不得在最外層直接呼叫 admin.js 的函式或掛 DOM
@@ -120,12 +122,24 @@ function csBytesToBase64(bytes) {
   return btoa(binary);
 }
 
-function csDataUrlToBytes(dataUrl) {
-  const base64 = dataUrl.split(',')[1] || '';
+function csBase64ToBytes(base64) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+function csDataUrlToBytes(dataUrl) {
+  return csBase64ToBytes(dataUrl.split(',')[1] || '');
+}
+
+// Word（.doc/.docx）本身沒辦法直接渲染，先送去後端（Code.gs 的 convert-word-to-pdf，
+// 跟轉檔小工具共用同一支）轉成 PDF，拿回來的 bytes 直接餵給既有的 csLoadPdfContract
+async function csConvertWordToPdfBytes(file) {
+  const dataUrl = await csReadFileAsDataUrl(file);
+  const dataBase64 = dataUrl.split(',')[1] || '';
+  const result = await postTask({ type: 'convert-word-to-pdf', filename: file.name, dataBase64 });
+  return csBase64ToBytes(result.dataBase64);
 }
 
 function csDelay(ms) {
@@ -169,12 +183,11 @@ async function csHandleContractFile(files) {
 
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     const isImg = /^image\/(jpeg|png)$/.test(file.type) || /\.(jpe?g|png)$/i.test(file.name);
-    if (!isPdf && !isImg) {
-      setFormStatus('csStatus', '只支援 PDF 或 JPG/PNG 檔案，請重新選擇', 'error');
+    const isWord = /\.docx?$/i.test(file.name);
+    if (!isPdf && !isImg && !isWord) {
+      setFormStatus('csStatus', '只支援 PDF、Word（.doc/.docx）或 JPG/PNG 檔案，請重新選擇', 'error');
       return;
     }
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
 
     // 換合約前先清空上一份的頁面 DOM 與已蓋章紀錄（印章資產本身保留，方便換檔重蓋）
     document.getElementById('csPages').innerHTML = '';
@@ -182,9 +195,15 @@ async function csHandleContractFile(files) {
     csSelectedPlacedId = null;
     csContract = null;
 
-    if (isPdf) {
+    if (isWord) {
+      setFormStatus('csStatus', 'Word 轉檔中…（請稍候）', '');
+      const pdfBytes = await csConvertWordToPdfBytes(file);
+      await csLoadPdfContract(pdfBytes, file.name.replace(/\.docx?$/i, '.pdf'));
+    } else if (isPdf) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
       await csLoadPdfContract(bytes, file.name);
     } else {
+      const bytes = new Uint8Array(await file.arrayBuffer());
       const mimeType = file.type === 'image/png' || (!file.type && /\.png$/i.test(file.name))
         ? 'image/png' : 'image/jpeg';
       await csLoadImageContract(bytes, file.name, mimeType);
