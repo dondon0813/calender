@@ -256,7 +256,7 @@
     <button type="button" class="ns-style-card" data-style="cat2">
       <div class="ns-style-icon"><img src="images/name-stickers/cat2-06.webp" alt="喵星人Ⅱ"></div>
       <div class="ns-style-title">喵星人Ⅱ</div>
-      <div class="ns-style-desc">8款不同貓咪圖案</div>
+      <div class="ns-style-desc">姓名直接寫在貓咪身上</div>
     </button>
     <button type="button" class="ns-style-card" data-style="vehicle">
       <div class="ns-style-icon"><img src="images/name-stickers/vehicle-thumb-01.webp" alt="交通工具"></div>
@@ -342,6 +342,8 @@ const STICKER_STYLES = {
   cat2: {
     label: '喵星人Ⅱ',
     emoji: '🐱',
+    mode: 'bodygrid',
+    singleNameOnly: true,   // 名字要疊畫在貓咪身體裡，位置窄，兩行會擠不下 → 只收中文姓名
     images: [
       'images/name-stickers/cat2-01.webp',
       'images/name-stickers/cat2-02.webp',
@@ -351,7 +353,12 @@ const STICKER_STYLES = {
       'images/name-stickers/cat2-06.webp',
       'images/name-stickers/cat2-07.webp',
       'images/name-stickers/cat2-08.webp'
-    ]
+    ],
+    // 8 隻貓是同一套姿勢範本畫的（面向左、身體在右側），身體中段這塊比例
+    // 在全部 8 張圖上都落在軀幹上（不會切到臉/腳/尾巴），所以共用同一組比例，
+    // 不用像交通工具那樣每張圖各自訂位置
+    bodySlot: { x: 0.40, y: 0.48, w: 0.42, h: 0.24 },
+    textStroke: '#5a4a3f'   // 站上的深棕文字色（--c-text），白字＋這個外框在全部貓色上都看得清楚
   },
   vehicle: {
     label: '交通工具',
@@ -528,6 +535,97 @@ async function buildSheetStickerCanvas(styleKey, name) {
   style.slots.forEach(slot => {
     drawNameInSlot(ctx, slot, name, canvas.width, canvas.height);
   });
+  return canvas;
+}
+
+// ===== bodygrid 款（喵星人Ⅱ）：白底 4x6 網格，但姓名疊畫在每隻貓身體裡，
+// 不是圖旁邊另起一行 —— 跟 sheet 款一樣用 canvas 2D 直接畫，才有白字＋外框
+// 可以在任何貓色上都看得清楚（html2canvas 畫不出這種外框效果，見 sheet 款註解）=====
+
+const NS_BODYGRID_W = 1728;   // 576 * 3，跟 grid 款輸出解析度一致
+const NS_BODYGRID_H = 1152;   // 384 * 3
+const NS_BODYGRID_MARGIN = 48;
+const NS_BODYGRID_FOOTER_H = 42;
+const NS_BODYGRID_CELL_PAD = 10;
+
+function drawBodyGridFooter(ctx) {
+  ctx.font = `700 27px "Noto Sans TC", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#b5755a'; // --c-brown
+  ctx.fillText('雪莉與朵栗免費分享製作 IG @dondon0813', NS_BODYGRID_W / 2, NS_BODYGRID_H - 18);
+}
+
+async function buildBodyGridStickerCanvas(styleKey, name) {
+  const style = STICKER_STYLES[styleKey];
+  await ensureFontsForText(name);
+
+  const uniqueSrcs = Array.from(new Set(style.images));
+  const loadedList = await Promise.all(uniqueSrcs.map(src => loadImageElement(src)));
+  const imageMap = new Map(uniqueSrcs.map((src, i) => [src, loadedList[i]]));
+
+  const slotOrder = buildStickerImageSlots(style.images, NS_GRID_COLS * NS_GRID_ROWS);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = NS_BODYGRID_W;
+  canvas.height = NS_BODYGRID_H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const gridX0 = NS_BODYGRID_MARGIN;
+  const gridY0 = NS_BODYGRID_MARGIN;
+  const gridW = NS_BODYGRID_W - NS_BODYGRID_MARGIN * 2;
+  const gridH = NS_BODYGRID_H - NS_BODYGRID_MARGIN - NS_BODYGRID_FOOTER_H;
+  const cellW = gridW / NS_GRID_COLS;
+  const cellH = gridH / NS_GRID_ROWS;
+
+  slotOrder.forEach((src, i) => {
+    const img = imageMap.get(src);
+    if (!img) return; // 單張圖片載入失敗就跳過那一格，不讓整張成品開天窗
+    const col = i % NS_GRID_COLS;
+    const row = Math.floor(i / NS_GRID_COLS);
+    const cellX = gridX0 + col * cellW;
+    const cellY = gridY0 + row * cellH;
+    const boxX = cellX + NS_BODYGRID_CELL_PAD;
+    const boxY = cellY + NS_BODYGRID_CELL_PAD;
+    const boxW = cellW - NS_BODYGRID_CELL_PAD * 2;
+    const boxH = cellH - NS_BODYGRID_CELL_PAD * 2;
+
+    const imgAspect = img.naturalWidth / img.naturalHeight;
+    const boxAspect = boxW / boxH;
+    let drawW, drawH;
+    if (imgAspect > boxAspect) {
+      drawW = boxW;
+      drawH = boxW / imgAspect;
+    } else {
+      drawH = boxH;
+      drawW = boxH * imgAspect;
+    }
+    const drawX = boxX + (boxW - drawW) / 2;
+    const drawY = boxY + (boxH - drawH) / 2;
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+    const slot = style.bodySlot;
+    const fakeSlot = {
+      x: drawX / NS_BODYGRID_W,
+      y: drawY / NS_BODYGRID_H,
+      w: drawW / NS_BODYGRID_W,
+      h: drawH / NS_BODYGRID_H
+    };
+    // bodySlot 是相對「這張貓圖自己」的比例，換算成相對「整張成品畫布」的比例，
+    // 才能沿用 drawNameInSlot（它本來是給 sheet 款、以整張底圖為基準設計的）
+    const absSlot = {
+      x: fakeSlot.x + slot.x * fakeSlot.w,
+      y: fakeSlot.y + slot.y * fakeSlot.h,
+      w: slot.w * fakeSlot.w,
+      h: slot.h * fakeSlot.h,
+      stroke: style.textStroke
+    };
+    drawNameInSlot(ctx, absSlot, name, NS_BODYGRID_W, NS_BODYGRID_H);
+  });
+
+  drawBodyGridFooter(ctx);
   return canvas;
 }
 
@@ -782,6 +880,9 @@ async function generateNameStickerImage() {
       if (STICKER_STYLES[nsSelectedStyle].mode === 'sheet') {
         // 整張底圖直接畫，不需要 DOM 樣板，也不用載 html2canvas
         finalCanvas = await buildSheetStickerCanvas(nsSelectedStyle, name);
+      } else if (STICKER_STYLES[nsSelectedStyle].mode === 'bodygrid') {
+        // 姓名疊畫在貓咪身體裡，同樣不經 html2canvas，直接 canvas 2D 畫整張成品
+        finalCanvas = await buildBodyGridStickerCanvas(nsSelectedStyle, name);
       } else {
         await ensureHtml2Canvas();
         await buildNameStickerPoster(nsSelectedStyle, name, englishName);
