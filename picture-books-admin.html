@@ -373,8 +373,9 @@
             <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
               <label for="fCoverRemoveBg">去背方式</label>
               <select id="fCoverRemoveBg">
-                <option value="solid" selected>去背：實心（書本，預設）</option>
-                <option value="ai">去背：純 AI（不規則物）</option>
+                <option value="removebg" selected>去背：remove.bg（Canva 同款，預設）</option>
+                <option value="solid">去背：實心（免費）</option>
+                <option value="ai">去背：純 AI（免費）</option>
                 <option value="none">不去背</option>
               </select>
             </div>
@@ -418,8 +419,9 @@
                 <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
                   <label for="mThumbRemoveBg">去背方式</label>
                   <select id="mThumbRemoveBg">
-                    <option value="solid" selected>去背：實心（書本，預設）</option>
-                    <option value="ai">去背：純 AI（不規則物）</option>
+                    <option value="removebg" selected>去背：remove.bg（Canva 同款，預設）</option>
+                    <option value="solid">去背：實心（免費）</option>
+                    <option value="ai">去背：純 AI（免費）</option>
                     <option value="none">不去背</option>
                   </select>
                 </div>
@@ -503,13 +505,22 @@ function showMain(name) {
 }
 
 // ===== API 呼叫 =====
-async function apiPost(type, extra) {
+// timeoutMs 為選填（沒有共用逾時機制，之前所有呼叫都不帶逾時、行為不變；book-bg-remove 呼叫會帶 30 秒）。
+async function apiPost(type, extra, timeoutMs) {
   const body = Object.assign({ type, token: getToken() }, extra || {});
-  const res = await fetch(BOOKS_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  const controller = timeoutMs ? new AbortController() : null;
+  const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  let res;
+  try {
+    res = await fetch(BOOKS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller ? controller.signal : undefined
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   const data = await res.json();
   if (data && data.needLogin) {
     showLogin('請重新登入');
@@ -693,7 +704,7 @@ function fillForm(book) {
   setCoverPreview(coverUrl);
   document.getElementById('fCoverUploadStatus').textContent = '';
   document.getElementById('fCoverFile').value = '';
-  document.getElementById('fCoverRemoveBg').value = 'solid';
+  document.getElementById('fCoverRemoveBg').value = 'removebg';
   pbiClearPending('fCoverPending');
 
   document.getElementById('deleteBookBtn').style.display = book ? 'inline-block' : 'none';
@@ -968,7 +979,7 @@ async function pbiSolidFromAi(file, aiBitmap, maxDim) {
 }
 
 // 選檔後的處理：去背（依 mode）→ 裁邊 → 縮圖，回傳 { canvas, effectiveMode }。
-// mode: 'solid'（實心，AI 找外框、框內全保留原圖像素）｜'ai'（純 AI 去背，照 AI 結果的透明區）｜'none'（不去背，只縮圖轉檔，不裁邊）。
+// mode: 'removebg'（呼叫 remove.bg API 去背）｜'solid'（實心，AI 找外框、框內全保留原圖像素）｜'ai'（純 AI 去背，照 AI 結果的透明區）｜'none'（不去背，只縮圖轉檔，不裁邊）。
 async function pbiProcessFile(file, maxDim, mode, statusElId) {
   const statusEl = document.getElementById(statusElId);
   statusEl.style.cssText = ''; // 清掉上一輪成功時套用的醒目樣式，避免殘留到這一輪的處理中文字
@@ -980,6 +991,10 @@ async function pbiProcessFile(file, maxDim, mode, statusElId) {
       if (bitmap.close) bitmap.close();
       statusEl.textContent = '';
       return { canvas, effectiveMode: 'none' };
+    }
+
+    if (mode === 'removebg') {
+      return await pbiRemoveBgViaApi(file, maxDim, statusElId);
     }
 
     const engine = await pbiLoadEngine();
@@ -1049,10 +1064,61 @@ function pbiClearPending(containerId) {
 
 // effectiveMode → 上傳成功狀態文字裡的括號註記
 function pbiRemoveBgLabel(effectiveMode) {
+  if (effectiveMode === 'removebg') return 'remove.bg 去背';
   if (effectiveMode === 'solid') return '實心去背';
   if (effectiveMode === 'solid-fallback-ai') return '已去背（實心失敗，改純 AI）';
   if (effectiveMode === 'ai') return '已去背';
   return '未去背';
+}
+
+// ===== remove.bg 去背（第三方 API，見 lib/books/bgremove.ts / POST book-bg-remove）=====
+
+// 判斷 canvas 是否含有效透明像素（門檻比照 pbiTrimAndScale 的 alpha>10），決定送給 remove.bg 的來源圖用 PNG 還是 JPEG。
+function pbiCanvasHasAlpha(canvas) {
+  const ctx = canvas.getContext('2d');
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] <= 250) return true;
+  }
+  return false;
+}
+
+// base64（remove.bg 回傳的 PNG）→ ImageBitmap
+async function pbiBase64ToBitmap(base64, mime) {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const blob = new Blob([bytes], { type: mime || 'image/png' });
+  return await createImageBitmap(blob);
+}
+
+// remove.bg 去背主流程：原檔縮到最長邊 1200（不去背、不裁邊）→ 轉 base64（有透明用 PNG，否則 JPEG）
+// → 呼叫 book-bg-remove → 回來的透明 PNG 照舊流程裁邊＋縮到 maxDim。失敗（含逾時/例外）直接往外拋，
+// 由呼叫方（pbiHandleUpload）決定要不要退回 solid。
+async function pbiRemoveBgViaApi(file, maxDim, statusElId) {
+  const statusEl = document.getElementById(statusElId);
+  statusEl.style.cssText = '';
+  statusEl.textContent = 'remove.bg 去背中…';
+
+  const srcBitmap = await createImageBitmap(file);
+  const srcCanvas = pbiTrimAndScale(srcBitmap, 1200, false);
+  if (srcBitmap.close) srcBitmap.close();
+
+  const hasAlpha = pbiCanvasHasAlpha(srcCanvas);
+  const reqMime = hasAlpha ? 'image/png' : 'image/jpeg';
+  const reqDataUrl = srcCanvas.toDataURL(reqMime, hasAlpha ? undefined : 0.92);
+  const reqBase64 = reqDataUrl.split(',')[1];
+
+  const res = await apiPost('book-bg-remove', { dataBase64: reqBase64, mime: reqMime, size: 'preview' }, 30000);
+  if (!res || res.success !== true) {
+    throw new Error((res && res.error) || 'remove.bg 去背失敗');
+  }
+
+  const outBitmap = await pbiBase64ToBitmap(res.dataBase64, res.mime || 'image/png');
+  const canvas = pbiTrimAndScale(outBitmap, maxDim, true);
+  if (outBitmap.close) outBitmap.close();
+  statusEl.textContent = '';
+  return { canvas, effectiveMode: 'removebg' };
 }
 
 // 處理完成後自動呼叫：轉檔 → 呼叫 book-image-upload → 網址加 ?v=timestamp 避免 CDN 快取舊圖。
@@ -1092,7 +1158,7 @@ async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewS
 // 開始時捕捉世代序號 myGen；處理完成、準備顯示預覽、準備上傳前都要核對序號沒變，換書/換教材/重選都會讓舊結果作廢。
 async function pbiHandleUpload(opts) {
   const { file, maxDim, kind, removeBgCheckboxId, statusElId, pendingContainerId, previewSetFn, hiddenInputId, fileInputId, buildFilename } = opts;
-  const mode = document.getElementById(removeBgCheckboxId).value; // 'solid' | 'ai' | 'none'
+  const mode = document.getElementById(removeBgCheckboxId).value; // 'removebg' | 'solid' | 'ai' | 'none'
   const statusEl = document.getElementById(statusElId);
   const fileInput = document.getElementById(fileInputId);
   const myGen = pbiBumpGen(pendingContainerId);
@@ -1112,23 +1178,38 @@ async function pbiHandleUpload(opts) {
     pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, myGen, effectiveMode); // 處理完成即自動上傳，不再等使用者確認
   };
 
+  // remove.bg 失敗（或 solid 接手後又失敗）時，最終退回「不去背」的既有邏輯，抽出來給兩個分支共用。
+  const fallbackToNone = async (reasonErr) => {
+    showToast('去背失敗，這張先以原圖上傳（下一張會再嘗試去背）：' + (reasonErr && reasonErr.message ? reasonErr.message : '未知錯誤'), true, 8000);
+    try {
+      const result2 = await pbiProcessFile(file, maxDim, 'none', statusElId);
+      showResult(result2.canvas, result2.effectiveMode);
+    } catch (err2) {
+      if (pbiCurrentGen(pendingContainerId) === myGen) {
+        statusEl.textContent = '';
+        showToast('處理失敗：' + (err2 && err2.message ? err2.message : '未知錯誤'), true);
+        fileInput.value = '';
+      }
+    }
+  };
+
   try {
     const { canvas, effectiveMode } = await pbiProcessFile(file, maxDim, mode, statusElId);
     showResult(canvas, effectiveMode);
   } catch (err) {
-    if (mode !== 'none') {
-      // 引擎本身失敗（如模型下載失敗）只影響這一次：select 保持原選項不動，下一張還是會照使用者設定嘗試去背
-      showToast('去背失敗，這張先以原圖上傳（下一張會再嘗試去背）：' + (err && err.message ? err.message : '未知錯誤'), true, 8000);
+    if (mode === 'removebg') {
+      // remove.bg 失敗（額度用完/金鑰錯誤/逾時等）：select 保持原選項不動，改走 solid 流程救這一張
+      showToast('remove.bg 去背失敗，改用實心模式：' + (err && err.message ? err.message : '未知錯誤'), true, 8000);
       try {
-        const result2 = await pbiProcessFile(file, maxDim, 'none', statusElId);
+        const result2 = await pbiProcessFile(file, maxDim, 'solid', statusElId);
         showResult(result2.canvas, result2.effectiveMode);
       } catch (err2) {
-        if (pbiCurrentGen(pendingContainerId) === myGen) {
-          statusEl.textContent = '';
-          showToast('處理失敗：' + (err2 && err2.message ? err2.message : '未知錯誤'), true);
-          fileInput.value = '';
-        }
+        // solid 也失敗，照既有退路退回「不去背」
+        await fallbackToNone(err2);
       }
+    } else if (mode !== 'none') {
+      // 引擎本身失敗（如模型下載失敗）只影響這一次：select 保持原選項不動，下一張還是會照使用者設定嘗試去背
+      await fallbackToNone(err);
     } else {
       if (pbiCurrentGen(pendingContainerId) === myGen) {
         statusEl.textContent = '';
@@ -1311,7 +1392,7 @@ function openMaterialForm(material) {
   document.getElementById('mFileUploadStatus').textContent = material && material.file_name ? `已上傳：${material.file_name}` : '';
   document.getElementById('mThumbFile').value = '';
   document.getElementById('mFileInput').value = '';
-  document.getElementById('mThumbRemoveBg').value = 'solid';
+  document.getElementById('mThumbRemoveBg').value = 'removebg';
   pbiClearPending('mThumbPending');
 }
 
@@ -1319,7 +1400,7 @@ function closeMaterialForm() {
   materialFormEditingId = null;
   const form = document.getElementById('materialForm');
   if (form) form.classList.remove('show');
-  document.getElementById('mThumbRemoveBg').value = 'solid';
+  document.getElementById('mThumbRemoveBg').value = 'removebg';
   pbiClearPending('mThumbPending');
 }
 
