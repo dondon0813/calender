@@ -348,7 +348,7 @@
             <select id="fBrand"><option value="">無</option></select>
           </div>
           <div class="pba-field">
-            <label>大分類</label>
+            <label>年齡與主題</label>
             <div class="pba-checkbox-group" id="fCategories"></div>
           </div>
           <div class="pba-field">
@@ -426,12 +426,12 @@
 
         <hr class="pba-section-divider">
 
-        <!-- 大分類管理 -->
+        <!-- 年齡與主題管理 -->
         <div>
-          <div class="pba-panel-title">大分類清單管理</div>
+          <div class="pba-panel-title">年齡與主題清單管理</div>
           <div id="categoryManageList"></div>
           <div class="pba-cat-add-row">
-            <input type="text" id="newCategoryInput" placeholder="新增分類名稱">
+            <input type="text" id="newCategoryInput" placeholder="新增年齡與主題名稱">
             <button type="button" class="pba-mini-btn" id="addCategoryBtn">新增</button>
           </div>
         </div>
@@ -588,7 +588,7 @@ function renderBookList() {
 
 document.getElementById('bookSearchInput').addEventListener('input', renderBookList);
 
-// ===== 表單：品牌 / 大分類 / 類型 選項渲染 =====
+// ===== 表單：品牌 / 年齡與主題 / 類型 選項渲染 =====
 function renderBrandOptions() {
   const sel = document.getElementById('fBrand');
   sel.innerHTML = '<option value="">無</option>';
@@ -1021,13 +1021,13 @@ async function refreshCurrentBookAfterMaterialChange() {
   renderBookList();
 }
 
-// ===== 大分類清單管理 =====
+// ===== 年齡與主題清單管理 =====
 function renderCategoryManageList() {
   const el = document.getElementById('categoryManageList');
   el.innerHTML = '';
   const categories = (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
   if (!categories.length) {
-    el.innerHTML = '<div class="pba-empty-list">還沒有分類</div>';
+    el.innerHTML = '<div class="pba-empty-list">還沒有年齡與主題</div>';
     return;
   }
   categories.forEach(c => {
@@ -1049,7 +1049,7 @@ function renderCategoryManageList() {
 document.getElementById('addCategoryBtn').addEventListener('click', async () => {
   const input = document.getElementById('newCategoryInput');
   const name = input.value.trim();
-  if (!name) { showToast('請輸入分類名稱', true); return; }
+  if (!name) { showToast('請輸入年齡與主題名稱', true); return; }
   try {
     const res = await apiPost('book-category-add', { name });
     if (!res || res.success !== true) {
@@ -1057,20 +1057,20 @@ document.getElementById('addCategoryBtn').addEventListener('click', async () => 
       return;
     }
     input.value = '';
-    showToast('分類已新增');
+    showToast('年齡與主題已新增');
     await refreshCategoriesOnly();
   } catch (err) { /* needLogin 已處理 */ }
 });
 
 async function deleteCategory(name) {
-  if (!confirm(`確定要刪除分類「${name}」嗎？`)) return;
+  if (!confirm(`確定要刪除年齡與主題「${name}」嗎？`)) return;
   try {
     const res = await apiPost('book-category-delete', { name });
     if (!res || res.success !== true) {
       showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
       return;
     }
-    showToast('分類已刪除');
+    showToast('年齡與主題已刪除');
     await refreshCategoriesOnly();
   } catch (err) { /* needLogin 已處理 */ }
 }

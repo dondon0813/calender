@@ -268,7 +268,7 @@
     </div>
 
     <div class="filter-section">
-      <div class="filter-label">大分類</div>
+      <div class="filter-label">年齡與主題</div>
       <div class="filter-chips" id="pbCatChips"></div>
     </div>
     <div class="filter-section">
@@ -353,7 +353,7 @@ let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
 let USED_BRANDS = [];
 
-// 三組篩選狀態：null 代表選「全部」，Set 代表已選的一個以上具體選項
+// 三組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
 let selCats = null;
 let selBrands = null;
 let selTypes = null;
@@ -408,12 +408,15 @@ function buildChipGroup(containerId, options, selectedSet, onToggle) {
   });
 }
 
+// 組內單選互斥：點某顆＝只選它（自動取消同組其他）；再點同一顆已選中的，或點「全部」＝回到「全部」
 function toggleSelection(current, value, setter) {
   // value === null -> 點「全部」，清空選擇
   if (value === null) { setter(null); renderChips(); renderGrid(); return; }
-  const next = current ? new Set(current) : new Set();
-  if (next.has(value)) next.delete(value); else next.add(value);
-  setter(next.size ? next : null);
+  if (current && current.has(value) && current.size === 1) {
+    setter(null);
+  } else {
+    setter(new Set([value]));
+  }
   renderChips();
   renderGrid();
 }
