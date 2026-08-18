@@ -698,7 +698,7 @@ function setCoverPreview(url) {
 }
 
 // ===== AI 去背（沿用 bgRemover.js 的引擎與純函式，前綴改 pbi 避免以後兩檔同頁時撞名）=====
-// 流程比照 bgRemover.js 的 bgrProcessItem：AI 去背 → 裁透明邊 → 縮圖 → 轉 WebP → 顯示待確認預覽 → 使用者按確定才真的上傳。
+// 流程比照 bgRemover.js 的 bgrProcessItem：AI 去背 → 裁透明邊 → 縮圖 → 轉 WebP → 顯示預覽 → 處理完成即自動上傳（不再等使用者按確定，避免漏按導致存到舊圖）。
 const PBI_ENGINE_URL = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm';
 const PBI_MODEL = 'isnet_quint8';
 const PBI_WEBP_QUALITY = 0.92;
@@ -814,6 +814,7 @@ function pbiTrimAndScale(bitmap, maxDim, doTrim) {
 // 選檔後的處理：去背（可選）→ 裁邊 → 縮圖，回傳處理完的 canvas。doRemove=false 時只縮圖轉檔，不裁邊。
 async function pbiProcessFile(file, maxDim, doRemove, statusElId) {
   const statusEl = document.getElementById(statusElId);
+  statusEl.style.cssText = ''; // 清掉上一輪成功時套用的醒目樣式，避免殘留到這一輪的處理中文字
   statusEl.textContent = doRemove ? '處理中…（第一次會下載約 40MB 模型）' : '處理中…';
   try {
     let bitmap;
@@ -841,7 +842,7 @@ async function pbiProcessFile(file, maxDim, doRemove, statusElId) {
   }
 }
 
-// 在指定容器顯示「處理後預覽（棋盤格底）＋確定上傳／重選」，按確定才真的呼叫上傳。
+// 在指定容器顯示「處理後預覽（棋盤格底）＋重選」。上傳由呼叫方（pbiHandleUpload）在顯示後自動觸發，這裡只負責畫面。
 function pbiShowPendingPreview(containerId, canvas, handlers) {
   const wrap = document.getElementById(containerId);
   wrap.innerHTML = '';
@@ -865,24 +866,11 @@ function pbiShowPendingPreview(containerId, canvas, handlers) {
 
   const btnRow = document.createElement('div');
   btnRow.style.cssText = 'display:flex; gap:8px; margin-top:6px;';
-  const confirmBtn = document.createElement('button');
-  confirmBtn.type = 'button';
-  confirmBtn.className = 'pba-mini-btn';
-  confirmBtn.textContent = '確定上傳';
   const resetBtn = document.createElement('button');
   resetBtn.type = 'button';
   resetBtn.className = 'pba-mini-btn';
   resetBtn.textContent = '重選';
-  confirmBtn.addEventListener('click', () => {
-    confirmBtn.disabled = true;
-    resetBtn.disabled = true;
-    Promise.resolve(handlers.onConfirm()).finally(() => {
-      confirmBtn.disabled = false;
-      resetBtn.disabled = false;
-    });
-  });
   resetBtn.addEventListener('click', handlers.onReset);
-  btnRow.appendChild(confirmBtn);
   btnRow.appendChild(resetBtn);
   wrap.appendChild(btnRow);
 }
@@ -892,11 +880,13 @@ function pbiClearPending(containerId) {
   pbiResetContainer(containerId);
 }
 
-// 上傳確認後的 canvas：轉檔 → 呼叫 book-image-upload → 網址加 ?v=timestamp 避免 CDN 快取舊圖。
-// gen：呼叫方（pbiHandleUpload）捕捉的序號，若上傳前／上傳中序號已經變了（使用者切走），就整段放棄，不寫回欄位。
+// 處理完成後自動呼叫：轉檔 → 呼叫 book-image-upload → 網址加 ?v=timestamp 避免 CDN 快取舊圖。
+// gen：呼叫方（pbiHandleUpload）捕捉的序號，若呼叫前／上傳中序號已經變了（使用者切走或重選），就整段放棄，不寫回欄位。
+// 成功後刻意不清空預覽容器：保留棋盤格縮圖＋重選鈕，只把狀態文字換成醒目提示，讓使用者看得到「已上傳」再去按儲存。
 async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, gen) {
-  if (pbiCurrentGen(pendingContainerId) !== gen) return; // 按下確定時已經不是目前這筆
+  if (pbiCurrentGen(pendingContainerId) !== gen) return; // 呼叫時已經不是目前這筆（使用者已重選或切走）
   const statusEl = document.getElementById(statusElId);
+  statusEl.style.cssText = '';
   statusEl.textContent = '上傳中…';
   try {
     const enc = pbiEncodeCanvas(canvas);
@@ -904,6 +894,7 @@ async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewS
     const res = await apiPost('book-image-upload', { filename, dataBase64: enc.base64, kind });
     if (pbiCurrentGen(pendingContainerId) !== gen) return; // 上傳過程中使用者切走了，結果作廢，不寫回欄位
     if (!res || res.success !== true) {
+      pbiResetContainer(pendingContainerId); // 上傳失敗，預覽清空，避免使用者誤以為已經上傳成功
       statusEl.textContent = '上傳失敗：' + ((res && res.error) || '未知錯誤');
       showToast('圖片上傳失敗', true);
       return;
@@ -911,11 +902,12 @@ async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewS
     const finalUrl = res.download_url + (res.download_url.indexOf('?') === -1 ? '?v=' : '&v=') + Date.now();
     document.getElementById(hiddenInputId).value = finalUrl;
     previewSetFn(finalUrl);
-    statusEl.textContent = '上傳完成';
+    statusEl.style.cssText = 'color:#1b7a3d; font-weight:700;';
+    statusEl.textContent = '✅ 圖片已上傳，記得按下方「儲存」';
     showToast('圖片上傳完成');
-    pbiClearPending(pendingContainerId);
   } catch (err) {
     if (pbiCurrentGen(pendingContainerId) !== gen) return;
+    pbiResetContainer(pendingContainerId); // 上傳失敗，預覽清空，避免使用者誤以為已經上傳成功
     statusEl.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
     showToast('圖片上傳失敗', true);
   }
@@ -935,13 +927,14 @@ async function pbiHandleUpload(opts) {
   const showResult = (canvas) => {
     if (pbiCurrentGen(pendingContainerId) !== myGen) return; // 處理完時已經不是目前這筆（切走了或又選了新檔），丟棄不顯示
     pbiShowPendingPreview(pendingContainerId, canvas, {
-      onConfirm: () => pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, myGen),
       onReset: () => {
         pbiClearPending(pendingContainerId);
         fileInput.value = '';
+        statusEl.style.cssText = '';
         statusEl.textContent = '';
       }
     });
+    pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, myGen); // 處理完成即自動上傳，不再等使用者確認
   };
 
   try {
