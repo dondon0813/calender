@@ -247,6 +247,7 @@
   .pb-material-body { flex: 1; min-width: 0; }
   .pb-material-title { font-family: var(--font-round); font-weight: 700; font-size: 13px; color: var(--c-text); margin-bottom: 3px; }
   .pb-material-desc { font-size: 11.5px; color: var(--c-text-soft); line-height: 1.5; white-space: pre-wrap; margin-bottom: 6px; }
+  .pb-material-print-size { font-size: 11.5px; color: var(--c-text-soft); line-height: 1.5; margin-bottom: 6px; }
   .pb-material-dl {
     display: inline-block;
     font-size: 11.5px;
@@ -636,6 +637,13 @@ function renderMaterials(book) {
       body.appendChild(desc);
     }
 
+    if (m.print_size) {
+      const printSize = document.createElement('div');
+      printSize.className = 'pb-material-print-size';
+      printSize.textContent = `📐 建議列印尺寸：${m.print_size}`;
+      body.appendChild(printSize);
+    }
+
     if (m.file_url) {
       const dl = document.createElement('a');
       dl.className = 'pb-material-dl';
@@ -665,15 +673,26 @@ function openBookModal(book) {
 
   const coverWrap = document.getElementById('pbModalCoverWrap');
   const coverImg = document.getElementById('pbModalCover');
+  // 占位 emoji 用獨立節點，不能用 textContent 覆寫（會把 <img> 從 DOM 移除，之後每本書的 modal 都會壞）
+  let coverPh = document.getElementById('pbModalCoverPh');
+  if (!coverPh) {
+    coverPh = document.createElement('span');
+    coverPh.id = 'pbModalCoverPh';
+    coverPh.textContent = '📖';
+    coverPh.style.display = 'none';
+    coverWrap.appendChild(coverPh);
+  }
   if (book.cover_url) {
     coverWrap.classList.remove('placeholder');
+    coverPh.style.display = 'none';
     coverImg.style.display = 'block';
     coverImg.src = book.cover_url;
     coverImg.alt = book.title;
   } else {
     coverWrap.classList.add('placeholder');
     coverImg.style.display = 'none';
-    coverWrap.textContent = '📖';
+    coverImg.removeAttribute('src');
+    coverPh.style.display = 'block';
   }
 
   const tagsEl = document.getElementById('pbModalTags');

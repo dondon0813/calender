@@ -413,6 +413,10 @@
                 <textarea id="mDescription"></textarea>
               </div>
               <div class="pba-field">
+                <label>建議尺寸</label>
+                <input type="text" id="mPrintSize" placeholder="例：A4 直式、A3 橫式、10×15cm 相片紙" maxlength="60">
+              </div>
+              <div class="pba-field">
                 <label>縮圖</label>
                 <div class="pba-cover-preview-row">
                   <img id="mThumbPreview" class="pba-material-thumb" style="display:none; width:56px; height:56px;">
@@ -1351,7 +1355,8 @@ function renderMaterialList(materials) {
     info.appendChild(title);
     const sub = document.createElement('div');
     sub.className = 'pba-material-sub';
-    sub.textContent = `${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)}`;
+    const printSizePrefix = m.print_size ? `建議尺寸：${m.print_size} ・ ` : '';
+    sub.textContent = `${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)}`;
     info.appendChild(sub);
     item.appendChild(info);
 
@@ -1389,6 +1394,7 @@ function openMaterialForm(material) {
   document.getElementById('materialForm').classList.add('show');
   document.getElementById('mTitle').value = material ? material.title || '' : '';
   document.getElementById('mDescription').value = material ? material.description || '' : '';
+  document.getElementById('mPrintSize').value = material ? material.print_size || '' : '';
   document.getElementById('mThumbUrl').value = material ? material.thumb_url || '' : '';
   document.getElementById('mFileUrl').value = material ? material.file_url || '' : '';
   document.getElementById('mFileName').value = material ? material.file_name || '' : '';
@@ -1494,6 +1500,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     book_id: CURRENT_BOOK.id,
     title,
     description: document.getElementById('mDescription').value,
+    print_size: document.getElementById('mPrintSize').value.trim(),
     thumb_url: document.getElementById('mThumbUrl').value.trim(),
     file_url: document.getElementById('mFileUrl').value.trim(),
     file_name: document.getElementById('mFileName').value,
