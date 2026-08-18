@@ -461,13 +461,13 @@ let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（n
 
 // ===== Toast =====
 let toastTimer = null;
-function showToast(msg, isError) {
+function showToast(msg, isError, durationMs) {
   const el = document.getElementById('pbaToast');
   el.textContent = msg;
   el.classList.toggle('error', !!isError);
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  toastTimer = setTimeout(() => el.classList.remove('show'), durationMs || 2600);
 }
 
 // ===== token / 登入狀態 =====
@@ -554,6 +554,7 @@ async function bootMain(name) {
   if (!pkg) return;
   PACKAGE_DATA = pkg;
   showMain(name || '');
+  pbiLoadEngine().catch(() => {}); // 進主畫面就背景預載去背引擎，降低第一次選檔時失敗機率
   renderBookList();
   renderBrandOptions();
   renderCategoryCheckboxes();
@@ -883,7 +884,7 @@ function pbiClearPending(containerId) {
 // 處理完成後自動呼叫：轉檔 → 呼叫 book-image-upload → 網址加 ?v=timestamp 避免 CDN 快取舊圖。
 // gen：呼叫方（pbiHandleUpload）捕捉的序號，若呼叫前／上傳中序號已經變了（使用者切走或重選），就整段放棄，不寫回欄位。
 // 成功後刻意不清空預覽容器：保留棋盤格縮圖＋重選鈕，只把狀態文字換成醒目提示，讓使用者看得到「已上傳」再去按儲存。
-async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, gen) {
+async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, gen, usedRemoveBg) {
   if (pbiCurrentGen(pendingContainerId) !== gen) return; // 呼叫時已經不是目前這筆（使用者已重選或切走）
   const statusEl = document.getElementById(statusElId);
   statusEl.style.cssText = '';
@@ -903,7 +904,7 @@ async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewS
     document.getElementById(hiddenInputId).value = finalUrl;
     previewSetFn(finalUrl);
     statusEl.style.cssText = 'color:#1b7a3d; font-weight:700;';
-    statusEl.textContent = '✅ 圖片已上傳，記得按下方「儲存」';
+    statusEl.textContent = '✅ 圖片已上傳（' + (usedRemoveBg ? '已去背' : '未去背') + '），記得按下方「儲存」';
     showToast('圖片上傳完成');
   } catch (err) {
     if (pbiCurrentGen(pendingContainerId) !== gen) return;
@@ -924,7 +925,7 @@ async function pbiHandleUpload(opts) {
   pbiResetContainer(pendingContainerId); // 蓋掉畫面上舊的待確認預覽（如果還在）
   pbiSetBusy(pendingContainerId, fileInput, 1);
 
-  const showResult = (canvas) => {
+  const showResult = (canvas, usedRemoveBg) => {
     if (pbiCurrentGen(pendingContainerId) !== myGen) return; // 處理完時已經不是目前這筆（切走了或又選了新檔），丟棄不顯示
     pbiShowPendingPreview(pendingContainerId, canvas, {
       onReset: () => {
@@ -934,19 +935,19 @@ async function pbiHandleUpload(opts) {
         statusEl.textContent = '';
       }
     });
-    pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, myGen); // 處理完成即自動上傳，不再等使用者確認
+    pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, myGen, usedRemoveBg); // 處理完成即自動上傳，不再等使用者確認
   };
 
   try {
     const canvas = await pbiProcessFile(file, maxDim, doRemove, statusElId);
-    showResult(canvas);
+    showResult(canvas, doRemove);
   } catch (err) {
     if (doRemove) {
-      showToast('去背失敗，改用不去背直接上傳：' + (err && err.message ? err.message : '未知錯誤'), true);
-      document.getElementById(removeBgCheckboxId).checked = false;
+      // 去背失敗只影響這一次：checkbox 保持勾選，不去動它，下一張還是會照使用者設定嘗試去背
+      showToast('去背失敗，這張先以原圖上傳（下一張會再嘗試去背）：' + (err && err.message ? err.message : '未知錯誤'), true, 8000);
       try {
         const canvas2 = await pbiProcessFile(file, maxDim, false, statusElId);
-        showResult(canvas2);
+        showResult(canvas2, false);
       } catch (err2) {
         if (pbiCurrentGen(pendingContainerId) === myGen) {
           statusEl.textContent = '';
@@ -1348,6 +1349,7 @@ async function refreshCategoriesOnly() {
   if (!pkg) return;
   PACKAGE_DATA = pkg;
   showMain('');
+  pbiLoadEngine().catch(() => {}); // 進主畫面就背景預載去背引擎，降低第一次選檔時失敗機率
   renderBookList();
   renderBrandOptions();
   renderCategoryCheckboxes();
