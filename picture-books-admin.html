@@ -369,6 +369,8 @@
               <div id="fCoverPreviewPh" class="pba-cover-preview placeholder">📖</div>
               <input type="file" id="fCoverFile" accept="image/*">
             </div>
+            <label class="pba-checkbox-inline" style="margin-top:6px;"><input type="checkbox" id="fCoverRemoveBg" checked> AI 去背</label>
+            <div id="fCoverPending" class="pbi-pending" style="display:none;"></div>
             <div class="pba-upload-status" id="fCoverUploadStatus"></div>
             <input type="hidden" id="fCoverUrl">
           </div>
@@ -405,6 +407,8 @@
                   <div id="mThumbPreviewPh" class="pba-material-thumb placeholder" style="width:56px; height:56px;">📄</div>
                   <input type="file" id="mThumbFile" accept="image/*">
                 </div>
+                <label class="pba-checkbox-inline" style="margin-top:6px;"><input type="checkbox" id="mThumbRemoveBg" checked> AI 去背</label>
+                <div id="mThumbPending" class="pbi-pending" style="display:none;"></div>
                 <div class="pba-upload-status" id="mThumbUploadStatus"></div>
                 <input type="hidden" id="mThumbUrl">
               </div>
@@ -673,6 +677,8 @@ function fillForm(book) {
   setCoverPreview(coverUrl);
   document.getElementById('fCoverUploadStatus').textContent = '';
   document.getElementById('fCoverFile').value = '';
+  document.getElementById('fCoverRemoveBg').checked = true;
+  pbiClearPending('fCoverPending');
 
   document.getElementById('deleteBookBtn').style.display = book ? 'inline-block' : 'none';
 }
@@ -690,64 +696,298 @@ function setCoverPreview(url) {
   }
 }
 
-// ===== 圖片：canvas 縮圖 + 轉 base64 =====
-function resizeImageToBase64(file, maxSide) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('讀取檔案失敗'));
-    reader.onload = () => { img.src = reader.result; };
-    img.onerror = () => reject(new Error('圖片格式錯誤'));
-    img.onload = () => {
-      let w = img.naturalWidth, h = img.naturalHeight;
-      if (w > maxSide || h > maxSide) {
-        if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
-        else { w = Math.round(w * maxSide / h); h = maxSide; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      const mime = 'image/webp';
-      let dataUrl;
-      try { dataUrl = canvas.toDataURL(mime, 0.85); } catch (e) { dataUrl = ''; }
-      if (!dataUrl || dataUrl.indexOf('data:image/webp') !== 0) {
-        dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      }
-      const ext = dataUrl.indexOf('image/webp') !== -1 ? 'webp' : 'jpg';
-      const base64 = dataUrl.split(',')[1];
-      resolve({ base64, ext });
-    };
-    reader.readAsDataURL(file);
-  });
+// ===== AI 去背（沿用 bgRemover.js 的引擎與純函式，前綴改 pbi 避免以後兩檔同頁時撞名）=====
+// 流程比照 bgRemover.js 的 bgrProcessItem：AI 去背 → 裁透明邊 → 縮圖 → 轉 WebP → 顯示待確認預覽 → 使用者按確定才真的上傳。
+const PBI_ENGINE_URL = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm';
+const PBI_MODEL = 'isnet_quint8';
+const PBI_WEBP_QUALITY = 0.92;
+// 透明格棋盤底，讓人一眼看出「這塊真的是透明的」（抄自 bgRemover.js 的 BGR_CHECKER_BG）
+const PBI_CHECKER_BG = 'background:repeating-conic-gradient(#e8e2da 0% 25%, #faf7f2 0% 50%) 0 0/16px 16px; border-radius:10px;';
+
+let pbiEnginePromise = null; // 去背引擎只載一次
+let pbiWebpChecked = false;
+let pbiWebpOk = false;
+
+// ===== 世代序號：避免處理中途切換書籍/教材造成圖片寫錯欄位 =====
+// 每個待確認容器（fCoverPending / mThumbPending）各自維護一個序號。開始處理、重新選檔、
+// 換書/換教材（pbiClearPending 被呼叫）都會讓序號前進；處理完成或準備寫回欄位前都要核對
+// 「當初捕捉的序號 === 目前序號」，不符就丟棄結果（不顯示預覽、不上傳、不寫欄位）。
+const pbiGen = {};
+function pbiBumpGen(containerId) {
+  pbiGen[containerId] = (pbiGen[containerId] || 0) + 1;
+  return pbiGen[containerId];
+}
+function pbiCurrentGen(containerId) {
+  return pbiGen[containerId] || 0;
 }
 
-async function uploadImageField(file, maxSide, kind, statusElId, previewSetFn, hiddenInputId) {
+// 處理中把對應的 file input 鎖住（disabled），避免使用者在還沒顯示待確認預覽前又選一次；
+// 用計數器而非布林值，這樣同一個容器同時有兩段處理在跑時，要等全部跑完才解鎖。
+const pbiBusyCount = {};
+function pbiSetBusy(containerId, fileInput, delta) {
+  pbiBusyCount[containerId] = Math.max(0, (pbiBusyCount[containerId] || 0) + delta);
+  fileInput.disabled = pbiBusyCount[containerId] > 0;
+}
+
+function pbiResetContainer(containerId) {
+  const wrap = document.getElementById(containerId);
+  wrap.style.display = 'none';
+  wrap.innerHTML = '';
+}
+
+// 跟 bgRemover.js 一樣的做法：實測瀏覽器能不能真的輸出 WebP（iPhone Safari 會偷偷退回 PNG）
+function pbiCheckWebp() {
+  if (pbiWebpChecked) return pbiWebpOk;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  pbiWebpOk = canvas.toDataURL('image/webp', 0.8).indexOf('data:image/webp') === 0;
+  pbiWebpChecked = true;
+  return pbiWebpOk;
+}
+
+function pbiEncodeCanvas(canvas) {
+  const isWebp = pbiCheckWebp();
+  const mime = isWebp ? 'image/webp' : 'image/jpeg';
+  const dataUrl = canvas.toDataURL(mime, isWebp ? PBI_WEBP_QUALITY : 0.9);
+  return { base64: dataUrl.split(',')[1], dataUrl: dataUrl, ext: isWebp ? '.webp' : '.jpg' };
+}
+
+// 去背引擎載入（只跑一次；失敗要把 promise 清掉，下次點才會重試而不是永遠卡在壞掉的 promise）
+function pbiLoadEngine() {
+  if (!pbiEnginePromise) {
+    pbiEnginePromise = import(PBI_ENGINE_URL).catch((err) => {
+      pbiEnginePromise = null;
+      throw new Error('去背引擎載入失敗（請確認網路正常後再試一次）：' + err.message);
+    });
+  }
+  return pbiEnginePromise;
+}
+
+// 把去背結果裁掉四周透明邊、縮到指定長邊。maxDim 為 0 表示保留原尺寸。
+function pbiTrimAndScale(bitmap, maxDim, doTrim) {
+  const src = document.createElement('canvas');
+  src.width = bitmap.width;
+  src.height = bitmap.height;
+  const sctx = src.getContext('2d');
+  sctx.drawImage(bitmap, 0, 0);
+
+  let box = { left: 0, top: 0, width: src.width, height: src.height };
+  if (doTrim) {
+    const data = sctx.getImageData(0, 0, src.width, src.height).data;
+    let minX = src.width, minY = src.height, maxX = -1, maxY = -1;
+    for (let y = 0; y < src.height; y++) {
+      for (let x = 0; x < src.width; x++) {
+        if (data[(y * src.width + x) * 4 + 3] > 10) { // alpha 門檻：忽略幾乎全透明的雜點
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX >= minX) { // 全透明（去背失敗）就不裁，保留原圖讓人看得出有問題
+      const pad = Math.max(4, Math.round(Math.max(maxX - minX, maxY - minY) * 0.02));
+      box.left = Math.max(0, minX - pad);
+      box.top = Math.max(0, minY - pad);
+      box.width = Math.min(src.width, maxX + pad + 1) - box.left;
+      box.height = Math.min(src.height, maxY + pad + 1) - box.top;
+    }
+  }
+
+  let outW = box.width, outH = box.height;
+  if (maxDim > 0 && Math.max(outW, outH) > maxDim) {
+    const scale = maxDim / Math.max(outW, outH);
+    outW = Math.max(1, Math.round(outW * scale));
+    outH = Math.max(1, Math.round(outH * scale));
+  }
+  const out = document.createElement('canvas');
+  out.width = outW;
+  out.height = outH;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(src, box.left, box.top, box.width, box.height, 0, 0, outW, outH);
+  return out;
+}
+
+// 選檔後的處理：去背（可選）→ 裁邊 → 縮圖，回傳處理完的 canvas。doRemove=false 時只縮圖轉檔，不裁邊。
+async function pbiProcessFile(file, maxDim, doRemove, statusElId) {
+  const statusEl = document.getElementById(statusElId);
+  statusEl.textContent = doRemove ? '處理中…（第一次會下載約 40MB 模型）' : '處理中…';
+  try {
+    let bitmap;
+    if (doRemove) {
+      const engine = await pbiLoadEngine();
+      const outBlob = await engine.removeBackground(file, {
+        model: PBI_MODEL,
+        progress: (key, cur, tot) => {
+          if (String(key).indexOf('fetch:') !== 0 || !tot) return;
+          const pct = Math.min(100, Math.round((cur / tot) * 100));
+          statusEl.textContent = '首次使用需下載 AI 模型（約 40MB，只需一次）… ' + pct + '%';
+        }
+      });
+      bitmap = await createImageBitmap(outBlob);
+    } else {
+      bitmap = await createImageBitmap(file);
+    }
+    const canvas = pbiTrimAndScale(bitmap, maxDim, doRemove);
+    if (bitmap.close) bitmap.close();
+    statusEl.textContent = '';
+    return canvas;
+  } catch (err) {
+    statusEl.textContent = '';
+    throw err;
+  }
+}
+
+// 在指定容器顯示「處理後預覽（棋盤格底）＋確定上傳／重選」，按確定才真的呼叫上傳。
+function pbiShowPendingPreview(containerId, canvas, handlers) {
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  wrap.style.display = 'block';
+
+  const previewBox = document.createElement('div');
+  previewBox.style.cssText = 'display:inline-block; ' + PBI_CHECKER_BG;
+  const scale = Math.min(1, 120 / Math.max(canvas.width, canvas.height));
+  const view = document.createElement('canvas');
+  view.width = Math.max(1, Math.round(canvas.width * scale));
+  view.height = Math.max(1, Math.round(canvas.height * scale));
+  view.getContext('2d').drawImage(canvas, 0, 0, view.width, view.height);
+  view.style.cssText = 'display:block; max-width:120px; max-height:120px; border-radius:10px;';
+  previewBox.appendChild(view);
+  wrap.appendChild(previewBox);
+
+  const dims = document.createElement('div');
+  dims.style.cssText = 'font-size:11px; color:var(--c-muted); margin-top:2px;';
+  dims.textContent = canvas.width + '×' + canvas.height;
+  wrap.appendChild(dims);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex; gap:8px; margin-top:6px;';
+  const confirmBtn = document.createElement('button');
+  confirmBtn.type = 'button';
+  confirmBtn.className = 'pba-mini-btn';
+  confirmBtn.textContent = '確定上傳';
+  const resetBtn = document.createElement('button');
+  resetBtn.type = 'button';
+  resetBtn.className = 'pba-mini-btn';
+  resetBtn.textContent = '重選';
+  confirmBtn.addEventListener('click', () => {
+    confirmBtn.disabled = true;
+    resetBtn.disabled = true;
+    Promise.resolve(handlers.onConfirm()).finally(() => {
+      confirmBtn.disabled = false;
+      resetBtn.disabled = false;
+    });
+  });
+  resetBtn.addEventListener('click', handlers.onReset);
+  btnRow.appendChild(confirmBtn);
+  btnRow.appendChild(resetBtn);
+  wrap.appendChild(btnRow);
+}
+
+function pbiClearPending(containerId) {
+  pbiBumpGen(containerId); // 換書/換教材/使用者重選都要讓舊的處理結果失效
+  pbiResetContainer(containerId);
+}
+
+// 上傳確認後的 canvas：轉檔 → 呼叫 book-image-upload → 網址加 ?v=timestamp 避免 CDN 快取舊圖。
+// gen：呼叫方（pbiHandleUpload）捕捉的序號，若上傳前／上傳中序號已經變了（使用者切走），就整段放棄，不寫回欄位。
+async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, gen) {
+  if (pbiCurrentGen(pendingContainerId) !== gen) return; // 按下確定時已經不是目前這筆
   const statusEl = document.getElementById(statusElId);
   statusEl.textContent = '上傳中…';
   try {
-    const { base64, ext } = await resizeImageToBase64(file, maxSide);
-    const filename = `${kind}-${Date.now()}.${ext}`;
-    const res = await apiPost('book-image-upload', { filename, dataBase64: base64, kind });
+    const enc = pbiEncodeCanvas(canvas);
+    const filename = buildFilename(enc.ext);
+    const res = await apiPost('book-image-upload', { filename, dataBase64: enc.base64, kind });
+    if (pbiCurrentGen(pendingContainerId) !== gen) return; // 上傳過程中使用者切走了，結果作廢，不寫回欄位
     if (!res || res.success !== true) {
       statusEl.textContent = '上傳失敗：' + ((res && res.error) || '未知錯誤');
       showToast('圖片上傳失敗', true);
       return;
     }
-    document.getElementById(hiddenInputId).value = res.download_url;
-    previewSetFn(res.download_url);
+    const finalUrl = res.download_url + (res.download_url.indexOf('?') === -1 ? '?v=' : '&v=') + Date.now();
+    document.getElementById(hiddenInputId).value = finalUrl;
+    previewSetFn(finalUrl);
     statusEl.textContent = '上傳完成';
     showToast('圖片上傳完成');
+    pbiClearPending(pendingContainerId);
   } catch (err) {
+    if (pbiCurrentGen(pendingContainerId) !== gen) return;
     statusEl.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
     showToast('圖片上傳失敗', true);
+  }
+}
+
+// 選檔的總流程：處理（去背可選）→ 顯示待確認預覽。去背失敗時 toast 提示，並自動退回「不去背」重跑一次。
+// 開始時捕捉世代序號 myGen；處理完成、準備顯示預覽、準備上傳前都要核對序號沒變，換書/換教材/重選都會讓舊結果作廢。
+async function pbiHandleUpload(opts) {
+  const { file, maxDim, kind, removeBgCheckboxId, statusElId, pendingContainerId, previewSetFn, hiddenInputId, fileInputId, buildFilename } = opts;
+  const doRemove = document.getElementById(removeBgCheckboxId).checked;
+  const statusEl = document.getElementById(statusElId);
+  const fileInput = document.getElementById(fileInputId);
+  const myGen = pbiBumpGen(pendingContainerId);
+  pbiResetContainer(pendingContainerId); // 蓋掉畫面上舊的待確認預覽（如果還在）
+  pbiSetBusy(pendingContainerId, fileInput, 1);
+
+  const showResult = (canvas) => {
+    if (pbiCurrentGen(pendingContainerId) !== myGen) return; // 處理完時已經不是目前這筆（切走了或又選了新檔），丟棄不顯示
+    pbiShowPendingPreview(pendingContainerId, canvas, {
+      onConfirm: () => pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewSetFn, hiddenInputId, pendingContainerId, myGen),
+      onReset: () => {
+        pbiClearPending(pendingContainerId);
+        fileInput.value = '';
+        statusEl.textContent = '';
+      }
+    });
+  };
+
+  try {
+    const canvas = await pbiProcessFile(file, maxDim, doRemove, statusElId);
+    showResult(canvas);
+  } catch (err) {
+    if (doRemove) {
+      showToast('去背失敗，改用不去背直接上傳：' + (err && err.message ? err.message : '未知錯誤'), true);
+      document.getElementById(removeBgCheckboxId).checked = false;
+      try {
+        const canvas2 = await pbiProcessFile(file, maxDim, false, statusElId);
+        showResult(canvas2);
+      } catch (err2) {
+        if (pbiCurrentGen(pendingContainerId) === myGen) {
+          statusEl.textContent = '';
+          showToast('處理失敗：' + (err2 && err2.message ? err2.message : '未知錯誤'), true);
+          fileInput.value = '';
+        }
+      }
+    } else {
+      if (pbiCurrentGen(pendingContainerId) === myGen) {
+        statusEl.textContent = '';
+        showToast('處理失敗：' + (err && err.message ? err.message : '未知錯誤'), true);
+        fileInput.value = '';
+      }
+    }
+  } finally {
+    pbiSetBusy(pendingContainerId, fileInput, -1);
   }
 }
 
 document.getElementById('fCoverFile').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  uploadImageField(file, 1200, 'cover', 'fCoverUploadStatus', setCoverPreview, 'fCoverUrl');
+  const bookId = CURRENT_BOOK ? CURRENT_BOOK.id : ('new-' + Date.now());
+  pbiHandleUpload({
+    file,
+    maxDim: 800,
+    kind: 'cover',
+    removeBgCheckboxId: 'fCoverRemoveBg',
+    statusElId: 'fCoverUploadStatus',
+    pendingContainerId: 'fCoverPending',
+    previewSetFn: setCoverPreview,
+    hiddenInputId: 'fCoverUrl',
+    fileInputId: 'fCoverFile',
+    buildFilename: (ext) => `cover-${bookId}${ext}`
+  });
 });
 
 // ===== 儲存 / 刪除 書籍 =====
@@ -902,12 +1142,15 @@ function openMaterialForm(material) {
   document.getElementById('mFileUploadStatus').textContent = material && material.file_name ? `已上傳：${material.file_name}` : '';
   document.getElementById('mThumbFile').value = '';
   document.getElementById('mFileInput').value = '';
+  document.getElementById('mThumbRemoveBg').checked = true;
+  pbiClearPending('mThumbPending');
 }
 
 function closeMaterialForm() {
   materialFormEditingId = null;
   const form = document.getElementById('materialForm');
   if (form) form.classList.remove('show');
+  pbiClearPending('mThumbPending');
 }
 
 function setMaterialThumbPreview(url) {
@@ -920,7 +1163,25 @@ function setMaterialThumbPreview(url) {
 document.getElementById('mThumbFile').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  uploadImageField(file, 600, 'thumb', 'mThumbUploadStatus', setMaterialThumbPreview, 'mThumbUrl');
+  if (!CURRENT_BOOK) {
+    showToast('請先儲存書籍再上傳教材縮圖', true);
+    e.target.value = '';
+    return;
+  }
+  const bookId = CURRENT_BOOK.id;
+  const matId = materialFormEditingId || Date.now();
+  pbiHandleUpload({
+    file,
+    maxDim: 600,
+    kind: 'thumb',
+    removeBgCheckboxId: 'mThumbRemoveBg',
+    statusElId: 'mThumbUploadStatus',
+    pendingContainerId: 'mThumbPending',
+    previewSetFn: setMaterialThumbPreview,
+    hiddenInputId: 'mThumbUrl',
+    fileInputId: 'mThumbFile',
+    buildFilename: (ext) => `thumb-${bookId}-${matId}${ext}`
+  });
 });
 
 document.getElementById('mFileInput').addEventListener('change', async (e) => {
