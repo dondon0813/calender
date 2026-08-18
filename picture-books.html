@@ -264,7 +264,7 @@
 
   <div id="pbContent" style="display:none;">
     <div class="pb-search-row">
-      <input type="text" id="pbSearchInput" class="pb-search-input" placeholder="🔍 搜尋書名或作者...">
+      <input type="text" id="pbSearchInput" class="pb-search-input" placeholder="🔍 搜尋書名...">
     </div>
 
     <div class="filter-section">
@@ -363,7 +363,9 @@ let searchTerm = '';
 async function loadBooks() {
   const statusEl = document.getElementById('statusMsg');
   try {
-    const res = await fetch(BOOKS_API_URL, { cache: 'no-store' });
+    // 每 20 秒換一次快取鍵：CDN 仍能合併同一時段的請求，但後台存檔後最多 20 秒前台就看得到
+    const bucket = Math.floor(Date.now() / 20000);
+    const res = await fetch(`${BOOKS_API_URL}?v=${bucket}`, { cache: 'no-store' });
     const data = await res.json();
     if (!data || data.success !== true) throw new Error((data && data.error) || '載入失敗');
 
