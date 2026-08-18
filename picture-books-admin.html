@@ -373,10 +373,10 @@
             <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
               <label for="fCoverRemoveBg">去背方式</label>
               <select id="fCoverRemoveBg">
-                <option value="removebg" selected>去背：remove.bg（Canva 同款，預設）</option>
+                <option value="removebg">去背：remove.bg（Canva 同款）</option>
                 <option value="solid">去背：實心（免費）</option>
                 <option value="ai">去背：純 AI（免費）</option>
-                <option value="none">不去背</option>
+                <option value="none" selected>不去背（先原圖上傳，之後由 Claude 批次去背，預設）</option>
               </select>
             </div>
             <div id="fCoverPending" class="pbi-pending" style="display:none;"></div>
@@ -419,10 +419,10 @@
                 <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
                   <label for="mThumbRemoveBg">去背方式</label>
                   <select id="mThumbRemoveBg">
-                    <option value="removebg" selected>去背：remove.bg（Canva 同款，預設）</option>
+                    <option value="removebg">去背：remove.bg（Canva 同款）</option>
                     <option value="solid">去背：實心（免費）</option>
                     <option value="ai">去背：純 AI（免費）</option>
-                    <option value="none">不去背</option>
+                    <option value="none" selected>不去背（先原圖上傳，之後由 Claude 批次去背，預設）</option>
                   </select>
                 </div>
                 <div id="mThumbPending" class="pbi-pending" style="display:none;"></div>
@@ -704,7 +704,7 @@ function fillForm(book) {
   setCoverPreview(coverUrl);
   document.getElementById('fCoverUploadStatus').textContent = '';
   document.getElementById('fCoverFile').value = '';
-  document.getElementById('fCoverRemoveBg').value = 'removebg';
+  document.getElementById('fCoverRemoveBg').value = 'none';
   pbiClearPending('fCoverPending');
 
   document.getElementById('deleteBookBtn').style.display = book ? 'inline-block' : 'none';
@@ -1392,7 +1392,7 @@ function openMaterialForm(material) {
   document.getElementById('mFileUploadStatus').textContent = material && material.file_name ? `已上傳：${material.file_name}` : '';
   document.getElementById('mThumbFile').value = '';
   document.getElementById('mFileInput').value = '';
-  document.getElementById('mThumbRemoveBg').value = 'removebg';
+  document.getElementById('mThumbRemoveBg').value = 'none';
   pbiClearPending('mThumbPending');
 }
 
@@ -1400,7 +1400,7 @@ function closeMaterialForm() {
   materialFormEditingId = null;
   const form = document.getElementById('materialForm');
   if (form) form.classList.remove('show');
-  document.getElementById('mThumbRemoveBg').value = 'removebg';
+  document.getElementById('mThumbRemoveBg').value = 'none';
   pbiClearPending('mThumbPending');
 }
 
