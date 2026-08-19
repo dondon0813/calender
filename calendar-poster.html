@@ -750,7 +750,8 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 <script src="vendor/html2canvas.min.js"></script>
 <script src="brand-notes.js"></script>
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+// 步驟5正式切換（2026-08-20）：改打新後端，回退＝revert 本 commit
+const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
 
 const SIZES = {
   '4:5':  { w: 1080, h: 1350 },
