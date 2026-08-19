@@ -8,8 +8,8 @@ if ('serviceWorker' in navigator) {
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-// 請把 Google Apps Script 部署後的網址貼在這裡（步驟看聊天室裡的說明）
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+// 步驟5正式切換（2026-08-20）：改打新後端（Next.js/Supabase，dondon-platform），回退＝revert 本 commit
+const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
 // 在完成 Apps Script 設定前，先用這組密碼；設定好後密碼改用試算表管理，這組就不會再用到
 const FALLBACK_PASSWORD = "0000";
 let currentToken = null; // 登入後從後端拿到的通行證，之後每次呼叫後端都要帶著它  
