@@ -1840,7 +1840,11 @@ var BRAND_THUMB_MAP_ = {
   'KOM': 'kom.webp',
   '齒妍堂': 'lab52.webp',
   '安可堡泡泡': 'ankebao.webp',
-  'B21pro': 'b21pro.webp',
+  // 品牌資料庫的正式登記名稱由 'B21pro' 改為 'B21'（2026-08-19）：實際團名慣用「B21」不加 pro，
+  // 前台 openGroupBuy.js 的 resolveThumb() 靠「品牌名是否為團名子字串」自動配圖，登記成 B21pro
+  // 永遠比對不到只寫「B21」的團名。改這裡的 key 只是讓 updateBrandThumbs() 認得改名後的品牌列；
+  // 「團購品牌資料庫」試算表裡的品牌名稱要請使用者手動把 B21pro 改成 B21，本 session 連不到即時試算表。
+  'B21': 'b21pro.webp',
   'Bonsons': 'bonsons.webp',
   'Bruno': 'bruno.webp',
   '卡蘿琳益生菌': 'caroline.webp',
