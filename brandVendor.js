@@ -489,9 +489,12 @@ function bvEventMatchesBrand_(ev, brand) {
 }
 
 // ===== 【新】品牌資料檢視（唯讀）：非編輯模式點品牌，顯示資料＋所屬廠商＋未來／過去的開團 =====
+// 過去開團＝行事曆比對到的團＋帳務裡有這個品牌、但行事曆已經找不到對應檔期的團（見 accounting.js 的 acctPastGroupBuysForBrand_）。
 function getBrandGroupBuys_(brand) {
   const todayStart = startOfDay(new Date());
-  const matched = allEvents.filter(ev => bvEventMatchesBrand_(ev, brand));
+  const calendarMatches = allEvents.filter(ev => bvEventMatchesBrand_(ev, brand));
+  const acctOnly = typeof acctPastGroupBuysForBrand_ === 'function' ? acctPastGroupBuysForBrand_(brand, calendarMatches) : [];
+  const matched = calendarMatches.concat(acctOnly);
   const upcoming = matched.filter(ev => startOfDay(ev.displayEnd) >= todayStart).sort((a, b) => a.start - b.start);
   const past = matched.filter(ev => startOfDay(ev.displayEnd) < todayStart).sort((a, b) => b.start - a.start);
   return { upcoming, past };
@@ -499,15 +502,49 @@ function getBrandGroupBuys_(brand) {
 function renderBrandGroupBuyRow_(ev) {
   const row = document.createElement('div');
   row.className = 'cal-edit-day-row';
+  const dateLabel = isSameDate(ev.start, ev.displayEnd) ? fmtSingleDate(ev.start) : (fmtSingleDate(ev.start) + '－' + fmtSingleDate(ev.displayEnd));
+  // 帳務補進來的團沒有真正的行事曆事件可以點開編輯，只標示來源，不掛點擊
+  const tag = ev.fromAccounting ? '　<span style="opacity:.6;">（僅帳務紀錄，行事曆已無此團）</span>' : '';
   row.innerHTML =
     `<span class="cal-edit-day-swatch" style="background:${ev.color || '#7AAEEB'};"></span>` +
-    `<span class="cal-edit-day-row-name">${fmtSingleDate(ev.start)}－${fmtSingleDate(ev.displayEnd)}　${escHtml(ev.title)}</span>`;
-  row.addEventListener('click', () => {
-    closeBrandDetailModal();
-    if (brandVendorEditMode) openEventEditModal(ev);
-    else openAdminModal(ev);
-  });
+    `<span class="cal-edit-day-row-name">${dateLabel}　${escHtml(ev.title)}${tag}</span>`;
+  if (!ev.fromAccounting) {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => {
+      closeBrandDetailModal();
+      if (brandVendorEditMode) openEventEditModal(ev);
+      else openAdminModal(ev);
+    });
+  }
   return row;
+}
+
+// 畫「即將開團」「過去開團」兩個清單；抽成函式是因為帳務資料可能是非同步補到的，
+// 要能在同一個品牌還開著時重畫一次（見 openBrandDetailModal）。回傳 upcoming 供貼文文案按鈕判斷。
+function bvRenderBrandGroupBuyLists_(brand) {
+  const { upcoming, past } = getBrandGroupBuys_(brand);
+
+  const upcomingEl = document.getElementById('brandDetailUpcomingList');
+  upcomingEl.innerHTML = '';
+  if (!upcoming.length) {
+    upcomingEl.innerHTML = '<div class="task-empty">目前沒有排定中的開團</div>';
+  } else {
+    upcoming.forEach(ev => upcomingEl.appendChild(renderBrandGroupBuyRow_(ev)));
+  }
+
+  document.getElementById('brandDetailPastCount').textContent = past.length;
+  const pastEl = document.getElementById('brandDetailPastList');
+  pastEl.innerHTML = '';
+  if (!past.length) {
+    pastEl.innerHTML = '<div class="task-empty">還沒有過去的開團紀錄</div>';
+  } else {
+    past.forEach(ev => pastEl.appendChild(renderBrandGroupBuyRow_(ev)));
+  }
+
+  document.getElementById('brandDetailPostGenBtn').style.display =
+    String(brand.postTemplate || '').trim() && upcoming.length ? 'block' : 'none';
+
+  return upcoming;
 }
 
 let brandDetailCtx = null;
@@ -537,24 +574,8 @@ function openBrandDetailModal(brand) {
   if (brand.note) lines.push(`<div><b>備註：</b>${escHtml(brand.note)}</div>`);
   document.getElementById('brandDetailBody').innerHTML = lines.join('');
 
-  const { upcoming, past } = getBrandGroupBuys_(brand);
+  bvRenderBrandGroupBuyLists_(brand);
 
-  const upcomingEl = document.getElementById('brandDetailUpcomingList');
-  upcomingEl.innerHTML = '';
-  if (!upcoming.length) {
-    upcomingEl.innerHTML = '<div class="task-empty">目前沒有排定中的開團</div>';
-  } else {
-    upcoming.forEach(ev => upcomingEl.appendChild(renderBrandGroupBuyRow_(ev)));
-  }
-
-  document.getElementById('brandDetailPastCount').textContent = past.length;
-  const pastEl = document.getElementById('brandDetailPastList');
-  pastEl.innerHTML = '';
-  if (!past.length) {
-    pastEl.innerHTML = '<div class="task-empty">還沒有過去的開團紀錄</div>';
-  } else {
-    past.forEach(ev => pastEl.appendChild(renderBrandGroupBuyRow_(ev)));
-  }
   // 每次打開都先收合「過去的團」，畫面維持乾淨
   document.getElementById('brandDetailPastToggle').classList.remove('open');
   document.getElementById('brandDetailPastBody').style.display = 'none';
@@ -564,10 +585,13 @@ function openBrandDetailModal(brand) {
   const acctBox = document.getElementById('brandDetailAcct');
   if (acctBox) acctBox.innerHTML = '';
   if (typeof renderBrandAcctSummary === 'function') renderBrandAcctSummary(brand.id);
-
-  // 產生貼文文案：有存模板、且有進行中/即將開的團才顯示（拿 upcoming[0] 的網址日期來套）
-  document.getElementById('brandDetailPostGenBtn').style.display =
-    String(brand.postTemplate || '').trim() && upcoming.length ? 'block' : 'none';
+  // 過去開團清單也依賴帳務資料（acctPastGroupBuysForBrand_）：第一次開帳務可能還沒載入過，
+  // 這裡沒資料就先用行事曆比對到的畫，帳務拉回來後同一個品牌還開著就重畫一次補上。
+  if (typeof loadAccounting === 'function' && !acctLoaded) {
+    loadAccounting().then(() => {
+      if (brandDetailCtx && brandDetailCtx.id === brand.id) bvRenderBrandGroupBuyLists_(brand);
+    }).catch(() => {});
+  }
 
   document.getElementById('brandDetailModal').classList.add('show');
 }
@@ -589,9 +613,12 @@ document.getElementById('brandDetailPastToggle').addEventListener('click', () =>
 });
 
 // ===== 【新】排行事曆時：團名跟品牌資料庫模糊比對（標題包含品牌名），自動帶出參考資訊 =====
+// 過去開團＝行事曆比對到的團＋帳務裡有這個品牌、但行事曆已經找不到對應檔期的團
+// （行事曆表是活表，團開完常被清掉；帳務才是永久紀錄。見 accounting.js 的 acctPastGroupBuysForBrand_）。
 function findGroupBuyDatesForBrand_(brand, excludeEventId) {
-  return allEvents
-    .filter(ev => ev.id !== excludeEventId && bvEventMatchesBrand_(ev, brand))
+  const calendarMatches = allEvents.filter(ev => ev.id !== excludeEventId && bvEventMatchesBrand_(ev, brand));
+  const acctOnly = typeof acctPastGroupBuysForBrand_ === 'function' ? acctPastGroupBuysForBrand_(brand, calendarMatches) : [];
+  return calendarMatches.concat(acctOnly)
     .sort((a, b) => b.start - a.start)
     .slice(0, 8);
 }
@@ -606,6 +633,12 @@ function renderEvBrandMatchInfo() {
   // 一團可比對到多個品牌（聯名團），每個品牌各出一個資訊區塊
   const matchedBrands = bvBrandsInTitle_(title);
   if (!matchedBrands.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  // 帳務資料可能這個 session 還沒載過（要開過帳務分頁或品牌檢視彈窗才會拉），
+  // 沒資料時「過去開團」會先漏掉帳務補的那些團，拉回來後同一個標題還在就重畫一次。
+  if (typeof loadAccounting === 'function' && !acctLoaded) {
+    loadAccounting().then(renderEvBrandMatchInfo).catch(() => {});
+  }
 
   const blocks = matchedBrands.map(brand => {
     const vendors = (brand.vendorIds || []).map(vid => vendorDb.find(v => v.id === vid)).filter(Boolean);
@@ -628,9 +661,13 @@ function renderEvBrandMatchInfo() {
     if (brand.note) lines.push('品牌備註：' + brand.note);
     if (lines.length) html += lines.map(l => escHtml(l)).join('<br>');
     if (pastDates.length) {
-      // 同品牌不同產品會分團開，所以日期後面帶團名才分得出是哪一團
+      // 同品牌不同產品會分團開，所以日期後面帶團名才分得出是哪一團；
+      // 帳務補的團沒有結束日、只有單一日期，且標註來源避免跟行事曆團搞混
       html += '<div style="margin-top:6px;">🗓 過去開團：' +
-        pastDates.map(ev => fmtSingleDate(ev.start) + '–' + fmtSingleDate(ev.displayEnd) + '（' + escHtml(ev.title) + '）').join('、') + '</div>';
+        pastDates.map(ev => {
+          const dateLabel = isSameDate(ev.start, ev.displayEnd) ? fmtSingleDate(ev.start) : (fmtSingleDate(ev.start) + '–' + fmtSingleDate(ev.displayEnd));
+          return dateLabel + '（' + escHtml(ev.title) + (ev.fromAccounting ? '・帳務紀錄' : '') + '）';
+        }).join('、') + '</div>';
     }
     return html;
   });

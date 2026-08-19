@@ -488,6 +488,29 @@ function acctReconFindEvent_(r, eventIndex) {
   return evs.find(ev => startOfDay(ev.start) <= dd && dd <= startOfDay(ev.displayEnd)) || null;
 }
 
+// ===== 品牌過去開團：把「行事曆已經抓不到、但帳務還留著」的團一併補進來 =====
+// 背景：行事曆表是排期用的活表，團開完常被清掉；帳務才是永久紀錄。品牌比對以前只掃
+// 行事曆（靠標題模糊比對品牌名），行事曆列一旦刪掉，品牌資料庫明明連得到、帳務也查得到
+// 的團就從「過去開團」消失。帳務用 brandId 直接關聯品牌，比標題模糊比對可靠，直接拿來補。
+// matchedCalendarEvents 是呼叫端已經比對到的行事曆事件——日期落在其中某團檔期內的帳務
+// 紀錄，代表是同一團（行事曆版本資訊更完整：有結束日、折扣碼等），不重複列。
+function acctPastGroupBuysForBrand_(brand, matchedCalendarEvents) {
+  if (!brand || typeof acctData === 'undefined' || !Array.isArray(acctData)) return [];
+  if (typeof parseDateStr !== 'function' || typeof startOfDay !== 'function') return [];
+  return acctData
+    .filter(r => r.brandId === brand.id && r.date)
+    .map(r => {
+      const d = parseDateStr(r.date);
+      if (!d) return null;
+      const dd = startOfDay(d);
+      const coveredByCalendar = (matchedCalendarEvents || []).some(ev =>
+        startOfDay(ev.start) <= dd && dd <= startOfDay(ev.displayEnd));
+      if (coveredByCalendar) return null;
+      return { id: 'acct-' + r.id, start: dd, displayEnd: dd, title: r.rawName || brand.name, color: '#c9c9c9', fromAccounting: true };
+    })
+    .filter(Boolean);
+}
+
 // 判斷一筆帳務是不是「已結團」（＝對帳清單預設要不要顯示），刻意不用 r.status——
 // 那欄要人手動更新，常常忘記改，靠不住。順序：
 // ①比對到品牌對應的檔期 → 用檔期結束日（含延長，跟 getBrandGroupBuys_ 同一套 displayEnd）判斷；
