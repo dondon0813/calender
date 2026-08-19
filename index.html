@@ -784,11 +784,11 @@ function buildSocialIconRow() {
 }
 
 async function loadCustomBlocks() {
-  if (!STATS_BACKEND_URL) return;
+  if (!READ_BACKEND_URL) return;
   try {
     // 只抓自訂區塊＋社群連結的輕量端點。
     // 原本用的 scope=public 會害後端多讀品牌庫（兩次）＋食材＋成品＋食譜＋開學清單，首頁根本用不到。
-    const res = await fetch(STATS_BACKEND_URL + '?scope=blocks&t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch(READ_BACKEND_URL + '?scope=blocks&t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
     SOCIAL_LINKS = data.socialLinks || {};
@@ -835,6 +835,11 @@ function appendCustomBlocks(listEl, position) {
     .forEach(b => listEl.appendChild(buildCustomBlockEl(b)));
 }
 
+// 讀取（行事曆／自訂區塊）暫時留在舊後端：新資料庫的業務資料只在步驟2匯入時同步過一次，
+// 後台 admin.html 尚未切換仍持續寫入舊試算表，讀取若切新後端會看到過期快照（2026-08-19 發現，見 CLAUDE.md）。
+// 待步驟5「增量匯入」＋後台一併切換後，READ_BACKEND_URL 才能改成新後端。
+const READ_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
+// 寫入（瀏覽/點擊計數）灰度切換到新後端：純統計資料，不影響業務資料一致性。
 const STATS_BACKEND_URL = 'https://dondon-platform.vercel.app/api/legacy';
 const sentViewKeys = new Set();
 let statObserver = null;
@@ -1114,7 +1119,7 @@ async function loadData() {
   statusEl.classList.remove('error');
   try {
     // 改走 Apps Script（scope=calendar 回傳與 gviz 相同格式），試算表就能設為私人、不必公開可讀
-    const res = await fetch(STATS_BACKEND_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch(READ_BACKEND_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('網路錯誤 ' + res.status);
     const text = await res.text();
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
