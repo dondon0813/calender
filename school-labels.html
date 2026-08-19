@@ -143,7 +143,8 @@ const DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1Qtqb4YISXPYyFm
    3. 不在團購期間 → 用後台「開學用品」分頁裡標籤機的蝦皮連結 */
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+// 步驟5正式切換（2026-08-20）：改打新後端，回退＝revert 本 commit（LABELS_API_URL 是另一支獨立後端，不受影響）
+const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
 const BUY_KEYWORD = "b21";
 const ITEM_KEYWORDS = ["標籤機", "b21"];
 const CALENDAR_URL = "https://dondon0813.github.io/calender/";
@@ -315,7 +316,7 @@ loadBuyLink();
 <!-- 頁面瀏覽量統計：獨立區塊，不依賴本頁其他程式碼。key 白名單見 Code.gs STAT_KEY_WHITELIST_RE（頁面代號只能小寫英數，不能有 - 或 _） -->
 <script>
 (function sendSchoolLabelsPageview() {
-  const STATS_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
+  const STATS_BACKEND_URL = 'https://dondon-platform.vercel.app/api/legacy';
   const d = new Date();
   const key = `page_schoollabels_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   const payload = JSON.stringify({ type: 'stat-view', key });
