@@ -7,7 +7,8 @@
 // 沒填就預設 'ogbtop'；style 見 shared.css 的 .ogb-* 規則。
 // 簡化版：不做折扣碼小視窗（school-list.html 舊版有，這裡沒有），有折扣碼就直接把碼顯示在橫列上。
 (function () {
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec';
+  // 步驟5正式切換（2026-08-20）：改打新後端，回退＝revert 本 commit
+  const APPS_SCRIPT_URL = 'https://dondon-platform.vercel.app/api/legacy';
   const bar = document.getElementById('openGroupBuyBar');
   if (!bar) return;
   const SRC_CODE = (bar.dataset.src || '').replace(/[^a-z0-9]/g, '') || 'ogbtop';
