@@ -12,7 +12,8 @@ const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx
 const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
 // 在完成 Apps Script 設定前，先用這組密碼；設定好後密碼改用試算表管理，這組就不會再用到
 const FALLBACK_PASSWORD = "0000";
-let currentToken = null; // 登入後從後端拿到的通行證，之後每次呼叫後端都要帶著它  
+let currentToken = null; // 登入後從後端拿到的通行證，之後每次呼叫後端都要帶著它
+let isViewOnlyMode = false; // 主管理員「以員工身分檢視」的唯讀分頁：token 存 sessionStorage（分頁隔離），不動 localStorage 的真登入態
 
 let memoMap = {}; // { key: 備忘錄內容 }
 let urlMap = {}; // { key: 後台網址 }
@@ -1399,6 +1400,11 @@ async function fetchMemos() {
 
     // 未登入或登入逾時：後端只會回傳公開資料，把使用者踢回登入畫面
     if (data.unauthorized) {
+      if (isViewOnlyMode) {
+        // 唯讀檢視 token 過期：只清這個分頁的檢視狀態，不能連帶登出這分頁 localStorage 裡雪莉自己的登入態
+        exitViewAs();
+        return;
+      }
       currentToken = null;
       currentUser = null;
       localStorage.removeItem('admin_unlocked');
@@ -1408,6 +1414,7 @@ async function fetchMemos() {
       document.getElementById('mainWrap').style.visibility = 'hidden';
       return;
     }
+    if (isViewOnlyMode && data.currentUser) currentUser = data.currentUser;
 
     memoMap = data.memos || {};
     urlMap = data.urls || {};
@@ -1563,25 +1570,70 @@ document.getElementById('gatePasswordInput').addEventListener('keydown', (e) => 
   if (e.key === 'Enter') tryUnlock();
 });
 
-// 登入狀態存 localStorage：iOS 加到主畫面的 App 每次關掉都會清空 sessionStorage，
-// 換成 localStorage 才能像 App 一樣保持登入（token 效期由後端 SESSION_DURATION_MS 控制）。
-// 舊版存在 sessionStorage 的登入狀態搬過來，讓已登入的人不用重登一次。
-if (localStorage.getItem('admin_unlocked') !== '1' && sessionStorage.getItem('admin_unlocked') === '1') {
-  localStorage.setItem('admin_unlocked', '1');
-  localStorage.setItem('admin_user', sessionStorage.getItem('admin_user') || '');
-  if (sessionStorage.getItem('admin_token')) localStorage.setItem('admin_token', sessionStorage.getItem('admin_token'));
+// 「以員工身分檢視」：主管理員從員工權限管理點「以此身分檢視」開出來的唯讀分頁。
+// token 走 sessionStorage（分頁各自獨立），刻意不碰 localStorage，避免覆蓋同分頁原本雪莉的登入態。
+function exitViewAs() {
+  sessionStorage.removeItem('view_as_token');
+  sessionStorage.removeItem('view_as_name');
+  sessionStorage.removeItem('view_as_role');
+  location.href = 'admin.html';
 }
-if (localStorage.getItem('admin_unlocked') === '1') {
-  currentUser = localStorage.getItem('admin_user') || '雪莉';
-  currentToken = localStorage.getItem('admin_token') || null;
+
+function showViewAsBanner(name, role) {
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#7c3aed;color:#fff;padding:8px 16px;' +
+    'font-size:14px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;';
+  const label = document.createElement('span');
+  label.textContent = `🔒 唯讀檢視中：${name} 的後台視角${role ? '（' + role + '）' : ''}`;
+  const btn = document.createElement('button');
+  btn.textContent = '返回管理員';
+  btn.style.cssText = 'background:#fff;color:#7c3aed;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;';
+  btn.addEventListener('click', exitViewAs);
+  bar.appendChild(label);
+  bar.appendChild(btn);
+  document.body.insertBefore(bar, document.body.firstChild);
+}
+
+const viewAsParam = new URLSearchParams(location.search).get('viewAsToken');
+if (viewAsParam) {
+  sessionStorage.setItem('view_as_token', viewAsParam);
+  sessionStorage.setItem('view_as_name', new URLSearchParams(location.search).get('viewAsName') || '');
+  sessionStorage.setItem('view_as_role', new URLSearchParams(location.search).get('viewAsRole') || '');
+  history.replaceState(null, '', location.pathname); // 拿掉網址上的 token，避免分享/重整外洩
+}
+const viewAsToken = sessionStorage.getItem('view_as_token');
+
+if (viewAsToken) {
+  isViewOnlyMode = true;
+  currentToken = viewAsToken;
+  currentUser = sessionStorage.getItem('view_as_name') || null;
   document.getElementById('passwordGate').style.display = 'none';
   document.getElementById('mainWrap').style.visibility = 'visible';
-  switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
-  initAppUI(); // 同上：先把介面接起來，再去要資料
-  // 重新用 token 跟後端要一次資料，順便確認 token 沒過期；失敗不可中斷介面
+  switchView('home');
+  initAppUI();
+  showViewAsBanner(sessionStorage.getItem('view_as_name') || '', sessionStorage.getItem('view_as_role') || '');
   fetchMemos().catch(e => console.error('fetchMemos 失敗，介面仍可操作', e));
 } else {
-  document.getElementById('gatePasswordInput').focus();
+  // 登入狀態存 localStorage：iOS 加到主畫面的 App 每次關掉都會清空 sessionStorage，
+  // 換成 localStorage 才能像 App 一樣保持登入（token 效期由後端 SESSION_DURATION_MS 控制）。
+  // 舊版存在 sessionStorage 的登入狀態搬過來，讓已登入的人不用重登一次。
+  if (localStorage.getItem('admin_unlocked') !== '1' && sessionStorage.getItem('admin_unlocked') === '1') {
+    localStorage.setItem('admin_unlocked', '1');
+    localStorage.setItem('admin_user', sessionStorage.getItem('admin_user') || '');
+    if (sessionStorage.getItem('admin_token')) localStorage.setItem('admin_token', sessionStorage.getItem('admin_token'));
+  }
+  if (localStorage.getItem('admin_unlocked') === '1') {
+    currentUser = localStorage.getItem('admin_user') || '雪莉';
+    currentToken = localStorage.getItem('admin_token') || null;
+    document.getElementById('passwordGate').style.display = 'none';
+    document.getElementById('mainWrap').style.visibility = 'visible';
+    switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
+    initAppUI(); // 同上：先把介面接起來，再去要資料
+    // 重新用 token 跟後端要一次資料，順便確認 token 沒過期；失敗不可中斷介面
+    fetchMemos().catch(e => console.error('fetchMemos 失敗，介面仍可操作', e));
+  } else {
+    document.getElementById('gatePasswordInput').focus();
+  }
 }
 document.getElementById('refreshBtn').addEventListener('click', loadData);
 
@@ -2591,6 +2643,14 @@ function renderPermissionsList(staffNames, permissions) {
     roleSel.value = permRoles[name] || '';
     roleSel.addEventListener('change', () => applyRole(name, roleSel.value, roleSel));
     head.appendChild(roleSel);
+
+    const viewAsBtn = document.createElement('button');
+    viewAsBtn.type = 'button';
+    viewAsBtn.className = 'perm-view-as-btn';
+    viewAsBtn.textContent = '以此身分檢視（唯讀）';
+    viewAsBtn.addEventListener('click', () => startViewAs(name));
+    head.appendChild(viewAsBtn);
+
     card.appendChild(head);
 
     const grid = document.createElement('div');
@@ -2627,6 +2687,22 @@ function renderPermissionsList(staffNames, permissions) {
     card.appendChild(grid);
     box.appendChild(card);
   });
+}
+
+// 開一個新分頁，用該員工的視角唯讀檢視後台（後端 view-as-start：1小時內有效，只能看不能改）
+async function startViewAs(name) {
+  if (!confirm(`以「${name}」的身分唯讀檢視後台？（1小時內有效，開新分頁、不影響你目前的登入）`)) return;
+  try {
+    const result = await postTask({ type: 'view-as-start', targetName: name });
+    const params = new URLSearchParams({
+      viewAsToken: result.token,
+      viewAsName: result.name || name,
+      viewAsRole: result.role || ''
+    });
+    window.open('admin.html?' + params.toString(), '_blank');
+  } catch (err) {
+    alert('開啟檢視失敗：' + err.message);
+  }
 }
 
 // 選角色 → 後端把整組預設寫進試算表，回傳實際結果後再重畫這張卡的開關
@@ -2760,6 +2836,10 @@ async function postTask(payload) {
   if (!result.success) {
     // token 過期或未登入時，把使用者踢回登入畫面，而不是只顯示錯誤訊息
     if (result.needLogin) {
+      if (isViewOnlyMode) {
+        exitViewAs();
+        return result;
+      }
       currentToken = null;
       localStorage.removeItem('admin_unlocked');
       localStorage.removeItem('admin_token');
