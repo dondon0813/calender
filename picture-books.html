@@ -129,6 +129,8 @@
   /* ===== Modal ===== */
   .modal-backdrop { padding: 16px; }
   .modal-box.pb-modal-box {
+    background: #fff;
+    border: none;
     padding: 22px 20px 24px;
     max-width: 92%;
     width: 420px;
@@ -249,28 +251,108 @@
   .pb-lightbox-inner {
     position: relative;
     background: #fff;
-    border-radius: 12px;
-    padding: 8px;
-    line-height: 0;
-  }
-  .pb-lightbox-inner img {
-    display: block;
+    border-radius: 20px;
+    width: 380px;
     max-width: 92vw;
     max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .pb-lb-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    color: var(--c-text);
+    font-size: 13px;
+    cursor: pointer;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .pb-lb-imgwrap {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 60vh;
+    overflow: hidden;
+  }
+  .pb-lb-imgwrap img {
+    display: block;
+    width: 100%;
+    max-height: 60vh;
     object-fit: contain;
-    border-radius: 8px;
   }
-  .pb-lightbox .rc-close-btn {
-    top: -12px;
-    right: -12px;
+  .pb-lb-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px 4px;
   }
+  .pb-lb-icons { display: flex; align-items: center; gap: 16px; }
+  .pb-lb-icon {
+    display: flex;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--c-text-soft);
+  }
+  .pb-lb-icon svg { width: 22px; height: 22px; display: block; }
+  .pb-lb-icon:hover { color: var(--c-text); }
+  .pb-lb-icon.liked { color: var(--c-primary); }
+  .pb-lb-icon.liked svg { fill: currentColor; }
+  .pb-lb-download {
+    display: inline-block;
+    text-decoration: none;
+    font-family: var(--font-round);
+    font-weight: 800;
+    font-size: 13.5px;
+    color: #fff;
+    background: var(--c-mint-text);
+    border-radius: var(--r-pill);
+    padding: 9px 24px;
+  }
+  .pb-lb-download:hover { background: #4c7a3a; }
+  .pb-lb-title {
+    padding: 2px 16px 16px;
+    font-family: var(--font-round);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+  }
+
+  #pbToast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--c-text);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: var(--r-pill);
+    box-shadow: var(--sh-modal);
+    z-index: 210;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  #pbToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   .pb-material-card {
     display: flex;
     flex-direction: column;
     min-width: 0;
     background: #fff;
-    border: 1px solid var(--c-border-light);
+    border: none;
     border-radius: 16px;
     overflow: hidden;
     transition: transform .15s ease, box-shadow .15s ease;
@@ -286,15 +368,6 @@
     display: block;
     border-radius: 14px 14px 0 0;
     cursor: zoom-in;
-  }
-  .pb-material-card-img:not(.placeholder)::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border-radius: 14px 14px 0 0;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
-    background: rgba(0,0,0,0.035);
   }
   .pb-material-card-img.placeholder {
     aspect-ratio: 4 / 3;
@@ -426,10 +499,23 @@
 <!-- 教材大圖檢視 -->
 <div class="pb-lightbox" id="pbLightbox" onclick="if(event.target===this) closeLightbox()">
   <div class="pb-lightbox-inner">
-    <button class="rc-close-btn" onclick="closeLightbox()">✕</button>
-    <img id="pbLightboxImg" src="" alt="">
+    <button class="pb-lb-close" onclick="closeLightbox()">✕</button>
+    <div class="pb-lb-imgwrap">
+      <img id="pbLightboxImg" src="" alt="">
+    </div>
+    <div class="pb-lb-actions">
+      <div class="pb-lb-icons">
+        <button type="button" class="pb-lb-icon" id="pbLbLikeBtn" onclick="togglePbLike(this)" title="喜歡" aria-label="喜歡"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+        <button type="button" class="pb-lb-icon" id="pbLbCommentBtn" style="display:none;" title="留言" aria-label="留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>
+        <button type="button" class="pb-lb-icon" onclick="sharePbBook()" title="分享" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
+      </div>
+      <a class="pb-lb-download" id="pbLightboxDownload" href="#" download target="_blank" rel="noopener noreferrer">下載</a>
+    </div>
+    <div class="pb-lb-title" id="pbLightboxTitle"></div>
   </div>
 </div>
+
+<div id="pbToast"></div>
 
 <!-- 「現正開團中」置頂橫列邏輯已抽成跨頁共用的 openGroupBuy.js -->
 <script src="openGroupBuy.js?v=1"></script>
@@ -463,6 +549,7 @@ let ALL_BOOKS = [];
 let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
 let USED_BRANDS = [];
+let CURRENT_BOOK = null; // 目前開著的繪本浮動視窗，教材大圖的分享按鈕要用
 
 // 三組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
 let selCats = null;
@@ -716,7 +803,7 @@ function renderMaterials(book) {
       img.src = m.thumb_url;
       img.alt = m.title || '';
       img.loading = 'lazy';
-      img.addEventListener('click', () => openLightbox(m.thumb_url, m.title || ''));
+      img.addEventListener('click', () => openLightbox(m));
       imgWrap.appendChild(img);
     } else {
       imgWrap.classList.add('placeholder');
@@ -765,6 +852,7 @@ function renderMaterials(book) {
 
 // ===== Modal 開關 =====
 function openBookModal(book) {
+  CURRENT_BOOK = book;
   document.getElementById('pbModalTitle').textContent = book.title;
 
   const subParts = [];
@@ -847,15 +935,56 @@ function closeBookModal() {
 }
 
 // ===== 教材大圖檢視 =====
-function openLightbox(url, alt) {
+function openLightbox(m) {
   const img = document.getElementById('pbLightboxImg');
-  img.src = url;
-  img.alt = alt || '';
+  img.src = m.thumb_url;
+  img.alt = m.title || '';
+  document.getElementById('pbLightboxTitle').textContent = m.title || '';
+
+  const dl = document.getElementById('pbLightboxDownload');
+  dl.href = m.file_url || m.thumb_url;
+  dl.download = m.file_name || '';
+
+  document.getElementById('pbLbLikeBtn').classList.remove('liked');
+
   document.getElementById('pbLightbox').classList.add('show');
 }
 
 function closeLightbox() {
   document.getElementById('pbLightbox').classList.remove('show');
+}
+
+// 目前沒有後端可以存讚，先做成單純的畫面互動（重整就重置），之後真的要留存再接 API。
+function togglePbLike(btn) {
+  btn.classList.toggle('liked');
+}
+
+// 分享＝分享這本繪本的介紹網址（帶 #book= 深連結，開啟時會自動跳出這本書的浮動視窗）。
+function sharePbBook() {
+  if (!CURRENT_BOOK) return;
+  const url = location.origin + location.pathname + '#book=' + encodeURIComponent(CURRENT_BOOK.id);
+  if (navigator.share) {
+    navigator.share({ title: CURRENT_BOOK.title, url }).catch(() => {});
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => showPbToast('已複製繪本連結')).catch(() => promptShareUrl(url));
+  } else {
+    promptShareUrl(url);
+  }
+}
+
+function promptShareUrl(url) {
+  window.prompt('複製這個連結：', url);
+}
+
+let pbToastTimer = null;
+function showPbToast(msg) {
+  const el = document.getElementById('pbToast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(pbToastTimer);
+  pbToastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 document.addEventListener('keydown', (e) => {
