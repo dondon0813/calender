@@ -251,81 +251,31 @@
   .pb-lightbox-inner {
     position: relative;
     background: #fff;
-    border-radius: 20px;
-    width: 380px;
+    border-radius: 16px;
+    padding: 8px;
+    line-height: 0;
+  }
+  .pb-lightbox-inner img {
+    display: block;
     max-width: 92vw;
     max-height: 88vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    object-fit: contain;
+    border-radius: 10px;
   }
   .pb-lb-close {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: -12px;
+    right: -12px;
     width: 30px;
     height: 30px;
     border-radius: 50%;
     border: none;
-    background: rgba(255,255,255,0.85);
-    color: var(--c-text);
+    background: var(--c-primary);
+    color: #fff;
     font-size: 13px;
     cursor: pointer;
     z-index: 2;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
-  .pb-lb-imgwrap {
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-height: 60vh;
-    overflow: hidden;
-  }
-  .pb-lb-imgwrap img {
-    display: block;
-    width: 100%;
-    max-height: 60vh;
-    object-fit: contain;
-  }
-  .pb-lb-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 14px 16px 4px;
-  }
-  .pb-lb-icons { display: flex; align-items: center; gap: 16px; }
-  .pb-lb-icon {
-    display: flex;
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 4px;
-    color: var(--c-text-soft);
-  }
-  .pb-lb-icon svg { width: 22px; height: 22px; display: block; }
-  .pb-lb-icon:hover { color: var(--c-text); }
-  .pb-lb-icon.liked { color: var(--c-primary); }
-  .pb-lb-icon.liked svg { fill: currentColor; }
-  .pb-lb-download {
-    display: inline-block;
-    text-decoration: none;
-    font-family: var(--font-round);
-    font-weight: 800;
-    font-size: 13.5px;
-    color: #fff;
-    background: var(--c-mint-text);
-    border-radius: var(--r-pill);
-    padding: 9px 24px;
-  }
-  .pb-lb-download:hover { background: #4c7a3a; }
-  .pb-lb-title {
-    padding: 2px 16px 16px;
-    font-family: var(--font-round);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--c-text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
 
   #pbToast {
@@ -386,7 +336,10 @@
     gap: 5px;
     padding: 10px 12px 12px;
   }
+  .pb-material-card-titlerow { display: flex; align-items: flex-start; gap: 6px; }
   .pb-material-card-title {
+    flex: 1;
+    min-width: 0;
     font-family: var(--font-round);
     font-weight: 700;
     font-size: 13px;
@@ -397,30 +350,59 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .pb-material-card-desc {
+  .pb-mat-more {
+    flex: none;
+    border: none;
+    background: none;
+    padding: 0;
+    margin-top: 1px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-text-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .pb-mat-more:hover { color: var(--c-text); }
+  .pb-mat-desc {
+    display: none;
+    margin-top: 4px;
     font-size: 11.5px;
     color: var(--c-text-soft);
     line-height: 1.5;
     white-space: pre-wrap;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
-  .pb-material-card-size { font-size: 11px; color: var(--c-text-soft); }
-  .pb-material-dl {
-    display: block;
-    width: 100%;
-    box-sizing: border-box;
-    margin-top: auto;
-    text-align: center;
-    font-size: 11.5px;
+  .pb-mat-desc.show { display: block; }
+  .pb-mat-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .pb-mat-icons { display: flex; align-items: center; gap: 8px; }
+  .pb-mat-icon {
+    display: flex;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 3px;
+    color: var(--c-text-soft);
+  }
+  .pb-mat-icon svg { width: 18px; height: 18px; display: block; }
+  .pb-mat-icon:hover { color: var(--c-text); }
+  .pb-mat-icon.liked { color: var(--c-primary); }
+  .pb-mat-icon.liked svg { fill: currentColor; }
+  .pb-mat-download {
+    display: inline-block;
+    text-decoration: none;
+    font-family: var(--font-round);
     font-weight: 800;
+    font-size: 11.5px;
     color: #fff;
     background: var(--c-mint-text);
     border-radius: var(--r-pill);
-    padding: 7px 12px;
-    text-decoration: none;
+    padding: 7px 16px;
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -496,22 +478,11 @@
   </div>
 </div>
 
-<!-- 教材大圖檢視 -->
+<!-- 教材大圖檢視（純看大圖，讚／分享／下載都在卡片上，這裡不重複） -->
 <div class="pb-lightbox" id="pbLightbox" onclick="if(event.target===this) closeLightbox()">
   <div class="pb-lightbox-inner">
     <button class="pb-lb-close" onclick="closeLightbox()">✕</button>
-    <div class="pb-lb-imgwrap">
-      <img id="pbLightboxImg" src="" alt="">
-    </div>
-    <div class="pb-lb-actions">
-      <div class="pb-lb-icons">
-        <button type="button" class="pb-lb-icon" id="pbLbLikeBtn" onclick="togglePbLike(this)" title="喜歡" aria-label="喜歡"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-        <button type="button" class="pb-lb-icon" id="pbLbCommentBtn" style="display:none;" title="留言" aria-label="留言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>
-        <button type="button" class="pb-lb-icon" onclick="sharePbBook()" title="分享" aria-label="分享"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
-      </div>
-      <a class="pb-lb-download" id="pbLightboxDownload" href="#" download target="_blank" rel="noopener noreferrer">下載</a>
-    </div>
-    <div class="pb-lb-title" id="pbLightboxTitle"></div>
+    <img id="pbLightboxImg" src="" alt="">
   </div>
 </div>
 
@@ -813,34 +784,84 @@ function renderMaterials(book) {
 
     const body = document.createElement('div');
     body.className = 'pb-material-card-body';
-    const title = document.createElement('div');
-    title.className = 'pb-material-card-title';
-    title.textContent = m.title || '未命名教材';
-    body.appendChild(title);
 
-    if (m.description) {
-      const desc = document.createElement('div');
-      desc.className = 'pb-material-card-desc';
-      desc.textContent = m.description;
-      body.appendChild(desc);
-    }
+    const actions = document.createElement('div');
+    actions.className = 'pb-mat-actions';
 
-    if (m.print_size) {
-      const printSize = document.createElement('div');
-      printSize.className = 'pb-material-card-size';
-      printSize.textContent = `📐 ${m.print_size}`;
-      body.appendChild(printSize);
-    }
+    const icons = document.createElement('div');
+    icons.className = 'pb-mat-icons';
 
-    if (m.file_url) {
+    const likeBtn = document.createElement('button');
+    likeBtn.type = 'button';
+    likeBtn.className = 'pb-mat-icon';
+    likeBtn.title = '喜歡';
+    likeBtn.setAttribute('aria-label', '喜歡');
+    likeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    // 目前沒有後端可以存讚，先做成單純的畫面互動（重整就重置），之後真的要留存再接 API。
+    likeBtn.addEventListener('click', () => likeBtn.classList.toggle('liked'));
+    icons.appendChild(likeBtn);
+
+    const commentBtn = document.createElement('button');
+    commentBtn.type = 'button';
+    commentBtn.className = 'pb-mat-icon';
+    commentBtn.style.display = 'none'; // 先藏起來，之後要顯示留言功能再拿掉這行
+    commentBtn.title = '留言';
+    commentBtn.setAttribute('aria-label', '留言');
+    commentBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+    icons.appendChild(commentBtn);
+
+    const shareBtn = document.createElement('button');
+    shareBtn.type = 'button';
+    shareBtn.className = 'pb-mat-icon';
+    shareBtn.title = '分享';
+    shareBtn.setAttribute('aria-label', '分享');
+    shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+    shareBtn.addEventListener('click', sharePbBook);
+    icons.appendChild(shareBtn);
+
+    actions.appendChild(icons);
+
+    if (m.file_url || m.thumb_url) {
       const dl = document.createElement('a');
-      dl.className = 'pb-material-dl';
-      dl.href = m.file_url;
+      dl.className = 'pb-mat-download';
+      dl.href = m.file_url || m.thumb_url;
       dl.download = m.file_name || '';
       dl.target = '_blank';
       dl.rel = 'noopener noreferrer';
-      dl.textContent = '⬇ 下載此教材';
-      body.appendChild(dl);
+      dl.textContent = '下載';
+      actions.appendChild(dl);
+    }
+
+    body.appendChild(actions);
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'pb-material-card-titlerow';
+
+    const title = document.createElement('div');
+    title.className = 'pb-material-card-title';
+    title.textContent = m.title || '未命名教材';
+    titleRow.appendChild(title);
+
+    if (m.description) {
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'pb-mat-more';
+      moreBtn.textContent = '更多';
+      titleRow.appendChild(moreBtn);
+
+      const desc = document.createElement('div');
+      desc.className = 'pb-mat-desc';
+      desc.textContent = m.description;
+
+      moreBtn.addEventListener('click', () => {
+        const show = desc.classList.toggle('show');
+        moreBtn.textContent = show ? '收起' : '更多';
+      });
+
+      body.appendChild(titleRow);
+      body.appendChild(desc);
+    } else {
+      body.appendChild(titleRow);
     }
 
     card.appendChild(body);
@@ -939,24 +960,11 @@ function openLightbox(m) {
   const img = document.getElementById('pbLightboxImg');
   img.src = m.thumb_url;
   img.alt = m.title || '';
-  document.getElementById('pbLightboxTitle').textContent = m.title || '';
-
-  const dl = document.getElementById('pbLightboxDownload');
-  dl.href = m.file_url || m.thumb_url;
-  dl.download = m.file_name || '';
-
-  document.getElementById('pbLbLikeBtn').classList.remove('liked');
-
   document.getElementById('pbLightbox').classList.add('show');
 }
 
 function closeLightbox() {
   document.getElementById('pbLightbox').classList.remove('show');
-}
-
-// 目前沒有後端可以存讚，先做成單純的畫面互動（重整就重置），之後真的要留存再接 API。
-function togglePbLike(btn) {
-  btn.classList.toggle('liked');
 }
 
 // 分享＝分享這本繪本的介紹網址（帶 #book= 深連結，開啟時會自動跳出這本書的浮動視窗）。
