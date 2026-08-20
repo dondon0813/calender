@@ -3873,6 +3873,210 @@
     font-size: 13px;
     padding: 20px 10px;
   }
+
+  /* ===== 繪本後台（books.js）===== */
+  .pba-field { margin-bottom: 14px; }
+  .pba-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--c-muted);
+    margin-bottom: 5px;
+  }
+  .pba-field input[type="text"],
+  .pba-field input[type="password"],
+  .pba-field input[type="number"],
+  .pba-field textarea,
+  .pba-field select {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    background: var(--c-input-bg);
+    outline: none;
+    box-sizing: border-box;
+  }
+  .pba-field input:focus, .pba-field textarea:focus, .pba-field select:focus { border-color: var(--c-primary); }
+  .pba-field textarea { resize: vertical; min-height: 70px; font-family: var(--font-body); }
+
+  .pba-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  @media (min-width: 900px) {
+    .pba-layout { grid-template-columns: 320px 1fr; align-items: start; }
+  }
+
+  .pba-panel {
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border-light);
+    border-radius: var(--r-lg);
+    padding: 16px;
+  }
+  .pba-panel-title {
+    font-family: var(--font-round);
+    font-weight: 800;
+    font-size: 13.5px;
+    color: var(--c-text);
+    margin-bottom: 10px;
+  }
+
+  .pba-add-btn {
+    width: 100%;
+    font-weight: 800;
+    font-family: var(--font-round);
+    border: none;
+    border-radius: var(--r-pill);
+    background: var(--c-mint-text);
+    color: #fff;
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .pba-add-btn:hover { opacity: 0.9; }
+
+  .pba-book-list { max-height: 60vh; overflow-y: auto; }
+  .pba-book-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+  .pba-book-item:hover { background: var(--c-bg-bottom); }
+  .pba-book-item.active { background: var(--c-pink-bg); }
+  .pba-book-item-name { font-size: 13px; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pba-book-item-meta { font-size: 10.5px; color: var(--c-muted); flex: none; text-align: right; }
+  .pba-badge-draft { color: var(--c-orange-text); }
+  .pba-badge-pub { color: var(--c-mint-text); }
+  .pba-empty-list { text-align: center; color: var(--c-muted-light); font-size: 12.5px; padding: 20px 0; }
+
+  .pba-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pba-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--c-brown);
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    padding: 5px 10px 5px 8px;
+    cursor: pointer;
+  }
+  .pba-checkbox-item input { margin: 0; }
+
+  .pba-cover-preview-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .pba-cover-preview {
+    width: 72px; height: 96px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--c-bg-bottom);
+    border: 1px solid var(--c-border-light);
+    flex: none;
+  }
+  .pba-cover-preview.placeholder { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--c-placeholder); }
+
+  .pba-checkbox-inline { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--c-text); }
+
+  .pba-form-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .pba-btn {
+    flex: 1 1 auto;
+    font-weight: 800;
+    font-family: var(--font-round);
+    border: none;
+    border-radius: var(--r-pill);
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 13.5px;
+  }
+  .pba-btn-save { background: var(--c-primary); color: #fff; }
+  .pba-btn-save:hover { background: var(--c-primary-dark); }
+  .pba-btn-danger { background: var(--c-danger); color: #fff; }
+  .pba-btn-danger:hover { opacity: 0.9; }
+
+  .pba-section-divider { border: none; border-top: 1px dashed var(--c-line-2); margin: 22px 0 16px; }
+
+  .pba-material-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border-light);
+    border-radius: 12px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .pba-material-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--c-bg-bottom); flex: none; }
+  .pba-material-thumb.placeholder { display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--c-placeholder); }
+  .pba-material-info { flex: 1; min-width: 0; }
+  .pba-material-title { font-size: 12.5px; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pba-material-sub { font-size: 10.5px; color: var(--c-muted); }
+  .pba-material-actions { display: flex; gap: 6px; flex: none; }
+  .pba-mini-btn {
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--c-border);
+    background: #fff;
+    color: var(--c-brown);
+    border-radius: var(--r-pill);
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .pba-mini-btn:hover { background: var(--c-bg-bottom); }
+  .pba-mini-btn.danger { color: var(--c-danger); border-color: var(--c-danger); }
+
+  .pba-material-form {
+    border: 1px dashed var(--c-border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    display: none;
+  }
+  .pba-material-form.show { display: block; }
+  .pba-upload-status { font-size: 11.5px; color: var(--c-muted); margin-top: 4px; }
+
+  .pba-cat-manage-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--c-surface-2);
+    border-radius: 10px;
+    padding: 7px 10px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+  }
+  .pba-cat-add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .pba-cat-add-row input { flex: 1; }
+
+  #pbaToast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--c-text);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: var(--r-pill);
+    box-shadow: var(--sh-modal);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  #pbaToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #pbaToast.error { background: var(--c-danger); }
 </style>
 </head>
 <body>
@@ -3905,7 +4109,7 @@
     <button class="sn-item" data-view="brandVendor">🏢 品牌廠商</button>
     <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
     <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
-    <a class="sn-item" href="picture-books-admin.html" data-perm="bookEdit" style="text-decoration:none;">📚 繪本後台</a>
+    <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -3956,7 +4160,7 @@
           <button class="menu-item" data-view="brandVendor">🏢 品牌廠商</button>
           <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
           <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
-          <a class="menu-item" href="picture-books-admin.html" data-perm="bookEdit" style="text-decoration:none;">📚 繪本後台</a>
+          <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -4674,6 +4878,180 @@
     <span class="legend-item"><span class="legend-dot" style="background:#DFF2D8; border: 1px solid #9ACB85;"></span>尚未確認顯示</span>
   </div>
   </div><!-- /viewCalendar -->
+
+  <!-- ===== 繪本後台（books.js；前身是獨立頁面 picture-books-admin.html，2026-08-20 併入原生分頁）===== -->
+  <div class="view" id="viewBooks">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">📚 繪本後台</h2>
+      <button class="task-mini-btn" id="booksRefreshBtn">🔄 重新整理</button>
+    </div>
+
+    <div class="pba-layout">
+      <!-- 左：書單 -->
+      <div class="pba-panel">
+        <button class="pba-add-btn" id="addBookBtn">＋ 新增繪本</button>
+        <div class="pba-field" style="margin-bottom:10px;">
+          <input type="text" id="bookSearchInput" placeholder="🔍 搜尋書名">
+        </div>
+        <div class="pba-book-list" id="bookList"></div>
+      </div>
+
+      <!-- 右：編輯表單 -->
+      <div class="pba-panel">
+        <div class="pba-panel-title" id="formTitle">新增繪本</div>
+        <form id="bookForm">
+          <div class="pba-field">
+            <label>書名 *</label>
+            <input type="text" id="fTitle">
+          </div>
+          <!-- 作者欄位停用（雪莉 2026-08-18：不用打）；保留隱藏 input 讓既有 JS 與 API 欄位不用改 -->
+          <div class="pba-field" style="display:none">
+            <label>作者</label>
+            <input type="text" id="fAuthor">
+          </div>
+          <div class="pba-field">
+            <label>出版社</label>
+            <input type="text" id="fPublisher">
+          </div>
+          <div class="pba-field">
+            <label>介紹</label>
+            <textarea id="fDescription"></textarea>
+          </div>
+          <div class="pba-field">
+            <label>YouTube 網址</label>
+            <input type="text" id="fYoutube" placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div class="pba-field">
+            <label>蝦皮網址</label>
+            <input type="text" id="fShopee" placeholder="https://shopee.tw/...">
+          </div>
+          <div class="pba-field">
+            <label>品牌</label>
+            <select id="fBrand"><option value="">無</option></select>
+          </div>
+          <div class="pba-field">
+            <label>年齡與主題</label>
+            <div class="pba-checkbox-group" id="fCategories"></div>
+          </div>
+          <div class="pba-field">
+            <label>類型</label>
+            <div class="pba-checkbox-group" id="fTypes"></div>
+          </div>
+          <div class="pba-field">
+            <label>排序（數字越小越前面）</label>
+            <input type="number" id="fSort" value="0">
+          </div>
+          <div class="pba-field">
+            <label class="pba-checkbox-inline"><input type="checkbox" id="fPublished"> 發布（公開頁可見）</label>
+          </div>
+          <div class="pba-field">
+            <label>封面圖</label>
+            <div class="pba-cover-preview-row">
+              <img id="fCoverPreview" class="pba-cover-preview" style="display:none;">
+              <div id="fCoverPreviewPh" class="pba-cover-preview placeholder">📖</div>
+              <input type="file" id="fCoverFile" accept="image/*">
+            </div>
+            <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+              建議：書本正拍照、白底或乾淨背景、直式或方形皆可，長邊 800px 以上（系統會自動縮到 800px、轉 WebP）。去背由後續批次處理，直接傳原圖即可。
+            </div>
+            <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
+              <label for="fCoverRemoveBg">去背方式</label>
+              <select id="fCoverRemoveBg">
+                <option value="removebg">去背：remove.bg（Canva 同款）</option>
+                <option value="solid">去背：實心（免費）</option>
+                <option value="ai">去背：純 AI（免費）</option>
+                <option value="none" selected>不去背（先原圖上傳，之後由 Claude 批次去背，預設）</option>
+              </select>
+            </div>
+            <div id="fCoverPending" class="pbi-pending" style="display:none;"></div>
+            <div class="pba-upload-status" id="fCoverUploadStatus"></div>
+            <input type="hidden" id="fCoverUrl">
+          </div>
+
+          <div class="pba-form-actions">
+            <button type="submit" class="pba-btn pba-btn-save">儲存</button>
+            <button type="button" class="pba-btn pba-btn-danger" id="deleteBookBtn" style="display:none;">刪除這本書</button>
+          </div>
+        </form>
+
+        <hr class="pba-section-divider">
+
+        <!-- 延伸教材 -->
+        <div id="materialsSection">
+          <div class="pba-panel-title">延伸教材</div>
+          <div id="materialsNeedSaveHint" class="pba-empty-list">請先儲存這本書，才能新增延伸教材</div>
+          <div id="materialsBody" style="display:none;">
+            <div id="materialList"></div>
+            <button type="button" class="pba-mini-btn" id="addMaterialBtn">＋ 新增教材</button>
+
+            <div class="pba-material-form" id="materialForm">
+              <div class="pba-field">
+                <label>標題</label>
+                <input type="text" id="mTitle">
+              </div>
+              <div class="pba-field">
+                <label>介紹</label>
+                <textarea id="mDescription"></textarea>
+              </div>
+              <div class="pba-field">
+                <label>建議尺寸</label>
+                <input type="text" id="mPrintSize" placeholder="例：A4 直式、A3 橫式、10×15cm 相片紙" maxlength="60">
+              </div>
+              <div class="pba-field">
+                <label>縮圖</label>
+                <div class="pba-cover-preview-row">
+                  <img id="mThumbPreview" class="pba-material-thumb" style="display:none; width:56px; height:56px;">
+                  <div id="mThumbPreviewPh" class="pba-material-thumb placeholder" style="width:56px; height:56px;">📄</div>
+                  <input type="file" id="mThumbFile" accept="image/*">
+                </div>
+                <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                  建議：直式或方形、寬 600px 以上、JPG/PNG；前台會以卡片大圖顯示（寬約 180px），主體清楚即可。系統會自動縮到 600px、轉 WebP。
+                </div>
+                <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
+                  <label for="mThumbRemoveBg">去背方式</label>
+                  <select id="mThumbRemoveBg">
+                    <option value="removebg">去背：remove.bg（Canva 同款）</option>
+                    <option value="solid">去背：實心（免費）</option>
+                    <option value="ai">去背：純 AI（免費）</option>
+                    <option value="none" selected>不去背（先原圖上傳，之後由 Claude 批次去背，預設）</option>
+                  </select>
+                </div>
+                <div id="mThumbPending" class="pbi-pending" style="display:none;"></div>
+                <div class="pba-upload-status" id="mThumbUploadStatus"></div>
+                <input type="hidden" id="mThumbUrl">
+              </div>
+              <div class="pba-field">
+                <label>原始檔案（上限 50MB）</label>
+                <input type="file" id="mFileInput">
+                <div class="pba-upload-status" id="mFileUploadStatus"></div>
+                <input type="hidden" id="mFileUrl">
+                <input type="hidden" id="mFileName">
+                <input type="hidden" id="mFileSize">
+              </div>
+              <div class="pba-form-actions">
+                <button type="button" class="pba-btn pba-btn-save" id="saveMaterialBtn">儲存教材</button>
+                <button type="button" class="pba-mini-btn" id="cancelMaterialBtn">取消</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="pba-section-divider">
+
+        <!-- 年齡與主題管理 -->
+        <div>
+          <div class="pba-panel-title">年齡與主題清單管理</div>
+          <div id="categoryManageList"></div>
+          <div class="pba-cat-add-row">
+            <input type="text" id="newCategoryInput" placeholder="新增年齡與主題名稱">
+            <button type="button" class="pba-mini-btn" id="addCategoryBtn">新增</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pbaToast"></div>
+  </div><!-- /viewBooks -->
 
   </div><!-- /paneLeft -->
   <div id="splitDivider" title="拖曳調整左右欄寬度"></div>
@@ -5529,6 +5907,8 @@
 <script src="tools.js?v=17"></script>
 <script src="report.js?v=3"></script>
 <script src="accounting.js?v=15"></script>
+<!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
+<script src="books.js?v=1"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

@@ -56,7 +56,7 @@ let splitPersistReady = false;
 // 必須宣告在這裡（檔案最前段）：已登入時 admin.js:1442 附近會在**最外層**直接呼叫
 // switchView('home')，若這個 const 宣告在它後面，會踩到 TDZ 而拋 ReferenceError，
 // 導致那行之後的最外層程式（initAppUI、漢堡選單監聽…）全部不執行，整頁變磚。
-const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign' };
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewDispatch', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', groupStatus: 'viewGroupStatus', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks' };
 
 // ===== 開機期就會被讀到的模組層狀態，一律宣告在這裡 =====
 // 理由同上面 VIEW_ID_MAP：initAppUI() 會還原上次停留的分頁，於**最外層**同步呼叫
@@ -2143,8 +2143,8 @@ function switchView(name, target) {
   target = (target === 'right') ? 'right' : 'left';
   // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
   // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
-  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印' };
-  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon' };
+  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印', books: '繪本後台' };
+  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', books: 'bookEdit' };
   if (VIEW_PERM[name] && !hasPerm(VIEW_PERM_KEY[name] || name)) {
     alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
@@ -2219,6 +2219,7 @@ function switchView(name, target) {
   if (name === 'report') renderReportView();
   // 帳務資料在另一份試算表，量也大，進入分頁時才拉（之後切回來就用快取）
   if (name === 'accounting') loadAccounting();
+  if (name === 'books') loadBooksView();
 }
 
 // ===== 寬螢幕雙欄工作區：側邊欄 / 右欄 / 拖曳分隔線 =====
