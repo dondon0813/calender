@@ -230,52 +230,11 @@
   .pb-materials-panel { display: none; margin-top: 12px; }
   .pb-materials-panel.show {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 10px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
-  @media (max-width: 359px) {
-    .pb-materials-panel.show { grid-template-columns: minmax(0, 1fr); }
-  }
-
-  .pb-lightbox {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .pb-lightbox.show { display: flex; }
-  .pb-lightbox-inner {
-    position: relative;
-    background: #fff;
-    border-radius: 16px;
-    padding: 8px;
-    line-height: 0;
-  }
-  .pb-lightbox-inner img {
-    display: block;
-    max-width: 92vw;
-    max-height: 88vh;
-    object-fit: contain;
-    border-radius: 10px;
-  }
-  .pb-lb-close {
-    position: absolute;
-    top: -12px;
-    right: -12px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: var(--c-primary);
-    color: #fff;
-    font-size: 13px;
-    cursor: pointer;
-    z-index: 2;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  @media (min-width: 640px) {
+    .pb-materials-panel.show { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
   }
 
   #pbToast {
@@ -317,7 +276,6 @@
     object-fit: cover;
     display: block;
     border-radius: 14px 14px 0 0;
-    cursor: zoom-in;
   }
   .pb-material-card-img.placeholder {
     aspect-ratio: 4 / 3;
@@ -475,14 +433,6 @@
     <div class="pb-materials-panel" id="pbMaterialsPanel"></div>
 
     <div class="rc-footer" style="text-align:center; margin-top:16px; font-size:11px; color:var(--c-muted-light);">🩷 雪莉與朵栗・@dondon0813 🩷</div>
-  </div>
-</div>
-
-<!-- 教材大圖檢視（純看大圖，讚／分享／下載都在卡片上，這裡不重複） -->
-<div class="pb-lightbox" id="pbLightbox" onclick="if(event.target===this) closeLightbox()">
-  <div class="pb-lightbox-inner">
-    <button class="pb-lb-close" onclick="closeLightbox()">✕</button>
-    <img id="pbLightboxImg" src="" alt="">
   </div>
 </div>
 
@@ -774,7 +724,6 @@ function renderMaterials(book) {
       img.src = m.thumb_url;
       img.alt = m.title || '';
       img.loading = 'lazy';
-      img.addEventListener('click', () => openLightbox(m));
       imgWrap.appendChild(img);
     } else {
       imgWrap.classList.add('placeholder');
@@ -955,18 +904,6 @@ function closeBookModal() {
   history.replaceState(null, '', url);
 }
 
-// ===== 教材大圖檢視 =====
-function openLightbox(m) {
-  const img = document.getElementById('pbLightboxImg');
-  img.src = m.thumb_url;
-  img.alt = m.title || '';
-  document.getElementById('pbLightbox').classList.add('show');
-}
-
-function closeLightbox() {
-  document.getElementById('pbLightbox').classList.remove('show');
-}
-
 // 分享＝分享這本繪本的介紹網址（帶 #book= 深連結，開啟時會自動跳出這本書的浮動視窗）。
 function sharePbBook() {
   if (!CURRENT_BOOK) return;
@@ -995,11 +932,6 @@ function showPbToast(msg) {
   pbToastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('pbLightbox').classList.contains('show')) {
-    closeLightbox();
-  }
-});
 
 function handleHashOpen() {
   const m = /^#book=(.+)$/.exec(location.hash);
