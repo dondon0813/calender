@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="shared.css">
 <style>
   /* picture-books-admin.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
+  .pba-loading { text-align: center; color: var(--c-muted-light); font-size: 13px; padding: 40px 0; }
   :root { --wrap-max: 1100px; }
 
   /* ===== 登入畫面 ===== */
@@ -279,8 +280,11 @@
     <div class="page-title">📚 繪本後台</div>
   </div>
 
+  <!-- 從 admin.html 點進來通常已經有共用 session，先顯示載入中避免登入畫面閃一下才切走（FOUC）。 -->
+  <div id="pbaLoading" class="pba-loading">載入中…</div>
+
   <!-- 登入畫面 -->
-  <div id="loginView">
+  <div id="loginView" style="display:none;">
     <div class="pba-login-box">
       <div class="pba-login-title">請先登入</div>
       <form id="loginForm">
@@ -505,12 +509,14 @@ function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
 function showLogin(msg) {
   clearToken();
+  document.getElementById('pbaLoading').style.display = 'none';
   document.getElementById('mainView').style.display = 'none';
   document.getElementById('loginView').style.display = 'block';
   document.getElementById('loginError').textContent = msg || '';
 }
 
 function showMain(name) {
+  document.getElementById('pbaLoading').style.display = 'none';
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('mainView').style.display = 'block';
   document.getElementById('pbaWelcome').textContent = name ? `👋 ${name}，你好` : '';
