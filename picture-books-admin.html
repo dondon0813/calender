@@ -497,7 +497,9 @@ function showToast(msg, isError, durationMs) {
 }
 
 // ===== token / 登入狀態 =====
-function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+// 從 admin.html 點「繪本後台」點進來時直接沿用已登入的 session（同網域共用 localStorage），
+// 沒有自己的 booksAdminToken 才退回 admin_token；避免多開一次登入。
+function getToken() { return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('admin_token') || ''; }
 function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
@@ -783,11 +785,13 @@ function pbiCheckWebp() {
   return pbiWebpOk;
 }
 
+// 退回 PNG（而非 JPEG）：JPEG 沒有透明通道，canvas 匯出時會把透明像素填成黑色，
+// 去背後的封面在不支援 WebP 匯出的瀏覽器（如舊版 iOS Safari）上會整片變黑底。跟 bgRemover.js 同一套做法。
 function pbiEncodeCanvas(canvas) {
   const isWebp = pbiCheckWebp();
-  const mime = isWebp ? 'image/webp' : 'image/jpeg';
-  const dataUrl = canvas.toDataURL(mime, isWebp ? PBI_WEBP_QUALITY : 0.9);
-  return { base64: dataUrl.split(',')[1], dataUrl: dataUrl, ext: isWebp ? '.webp' : '.jpg' };
+  const mime = isWebp ? 'image/webp' : 'image/png';
+  const dataUrl = canvas.toDataURL(mime, PBI_WEBP_QUALITY);
+  return { base64: dataUrl.split(',')[1], dataUrl: dataUrl, ext: isWebp ? '.webp' : '.png' };
 }
 
 // 去背引擎載入（只跑一次；失敗要把 promise 清掉，下次點才會重試而不是永遠卡在壞掉的 promise）
