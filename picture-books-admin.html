@@ -11,24 +11,6 @@
   .pba-loading { text-align: center; color: var(--c-muted-light); font-size: 13px; padding: 40px 0; }
   :root { --wrap-max: 1100px; }
 
-  /* ===== 登入畫面 ===== */
-  .pba-login-box {
-    max-width: 340px;
-    margin: 60px auto 0;
-    background: var(--c-surface);
-    border: 1.5px solid var(--c-border-light);
-    border-radius: var(--r-modal);
-    padding: 26px 22px;
-    box-shadow: var(--sh-card);
-  }
-  .pba-login-title {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 18px;
-    color: var(--c-text);
-    text-align: center;
-    margin-bottom: 18px;
-  }
   .pba-field { margin-bottom: 14px; }
   .pba-field label {
     display: block;
@@ -55,22 +37,6 @@
   }
   .pba-field input:focus, .pba-field textarea:focus, .pba-field select:focus { border-color: var(--c-primary); }
   .pba-field textarea { resize: vertical; min-height: 70px; font-family: var(--font-body); }
-  .pba-error { color: var(--c-danger); font-size: 12.5px; text-align: center; margin-top: 10px; min-height: 16px; }
-
-  .pba-full-btn {
-    width: 100%;
-    text-align: center;
-    font-weight: 800;
-    border: none;
-    border-radius: var(--r-pill);
-    background: var(--c-primary);
-    color: #fff;
-    cursor: pointer;
-    padding: 11px 12px;
-    font-size: 14px;
-    font-family: var(--font-round);
-  }
-  .pba-full-btn:hover { background: var(--c-primary-dark); }
 
   /* ===== 主畫面 ===== */
   .pba-topbar {
@@ -280,27 +246,9 @@
     <div class="page-title">📚 繪本後台</div>
   </div>
 
-  <!-- 從 admin.html 點進來通常已經有共用 session，先顯示載入中避免登入畫面閃一下才切走（FOUC）。 -->
+  <!-- 單一登入系統：這頁不再有自己的登入畫面，一律沿用 admin.html 的 session；
+       沒有有效 session 就導回 admin.html，在那裡登入。 -->
   <div id="pbaLoading" class="pba-loading">載入中…</div>
-
-  <!-- 登入畫面 -->
-  <div id="loginView" style="display:none;">
-    <div class="pba-login-box">
-      <div class="pba-login-title">請先登入</div>
-      <form id="loginForm">
-        <div class="pba-field">
-          <label for="loginName">姓名</label>
-          <input type="text" id="loginName" autocomplete="username">
-        </div>
-        <div class="pba-field">
-          <label for="loginPassword">密碼</label>
-          <input type="password" id="loginPassword" autocomplete="current-password">
-        </div>
-        <button type="submit" class="pba-full-btn">登入</button>
-        <div class="pba-error" id="loginError"></div>
-      </form>
-    </div>
-  </div>
 
   <!-- 主畫面 -->
   <div id="mainView" style="display:none;">
@@ -481,8 +429,6 @@
 
 <script>
 const BOOKS_API_URL = 'https://dondon-platform.vercel.app/api/books';
-const LEGACY_API_URL = 'https://dondon-platform.vercel.app/api/legacy';
-const TOKEN_KEY = 'booksAdminToken';
 const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
 
 let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
@@ -501,23 +447,18 @@ function showToast(msg, isError, durationMs) {
 }
 
 // ===== token / 登入狀態 =====
-// 從 admin.html 點「繪本後台」點進來時直接沿用已登入的 session（同網域共用 localStorage），
-// 沒有自己的 booksAdminToken 才退回 admin_token；避免多開一次登入。
-function getToken() { return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('admin_token') || ''; }
-function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+// 單一登入系統：跟 admin.html 共用同一把 session（同網域共用 localStorage），這頁本身
+// 沒有獨立的登入畫面——沒有有效 session 就導回 admin.html，在那裡登入。
+const TOKEN_KEY = 'admin_token';
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
-function showLogin(msg) {
-  clearToken();
-  document.getElementById('pbaLoading').style.display = 'none';
-  document.getElementById('mainView').style.display = 'none';
-  document.getElementById('loginView').style.display = 'block';
-  document.getElementById('loginError').textContent = msg || '';
+function goToAdminLogin() {
+  location.href = 'admin.html';
 }
 
 function showMain(name) {
   document.getElementById('pbaLoading').style.display = 'none';
-  document.getElementById('loginView').style.display = 'none';
   document.getElementById('mainView').style.display = 'block';
   document.getElementById('pbaWelcome').textContent = name ? `👋 ${name}，你好` : '';
 }
@@ -541,7 +482,7 @@ async function apiPost(type, extra, timeoutMs) {
   }
   const data = await res.json();
   if (data && data.needLogin) {
-    showLogin('請重新登入');
+    goToAdminLogin();
     throw new Error(data.error || '請重新登入');
   }
   return data;
@@ -552,59 +493,23 @@ async function loadPackage() {
   const res = await fetch(`${BOOKS_API_URL}?all=1&token=${encodeURIComponent(token)}`, { cache: 'no-store' });
   const data = await res.json();
   if (!data || data.success !== true) {
-    showLogin(data && data.error ? data.error : '請重新登入');
+    goToAdminLogin();
     return null;
   }
   // token 失效時後端會靜默降級成公開包（adminView=false），要當成未登入處理
   if (data.adminView !== true) {
-    showLogin('登入已逾時，請重新登入');
+    goToAdminLogin();
     return null;
   }
   return data;
 }
 
-// ===== 登入 / 登出 =====
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const name = document.getElementById('loginName').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  document.getElementById('loginError').textContent = '';
-  try {
-    const res = await fetch(LEGACY_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'login', name, password })
-    });
-    const data = await res.json();
-    if (!data || data.success !== true) {
-      document.getElementById('loginError').textContent = (data && data.error) || '登入失敗';
-      return;
-    }
-    setToken(data.token);
-    document.getElementById('loginPassword').value = '';
-    await bootMain(data.name);
-  } catch (err) {
-    document.getElementById('loginError').textContent = '登入失敗，請確認網路連線';
-  }
-});
-
+// ===== 登出 =====
+// 登出是整個後台共用的 session，這裡登出＝admin.html 也一起登出，導回去讓它顯示登入畫面。
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  showLogin('');
+  clearToken();
+  goToAdminLogin();
 });
-
-async function bootMain(name) {
-  const pkg = await loadPackage();
-  if (!pkg) return;
-  PACKAGE_DATA = pkg;
-  showMain(name || '');
-  pbiLoadEngine().catch(() => {}); // 進主畫面就背景預載去背引擎，降低第一次選檔時失敗機率
-  renderBookList();
-  renderBrandOptions();
-  renderCategoryCheckboxes();
-  renderTypeCheckboxes();
-  renderCategoryManageList();
-  resetForm();
-}
 
 // ===== 書單（左欄） =====
 function renderBookList() {
@@ -1623,7 +1528,7 @@ async function refreshCategoriesOnly() {
 // ===== 啟動 =====
 (async function init() {
   const token = getToken();
-  if (!token) { showLogin(''); return; }
+  if (!token) { goToAdminLogin(); return; }
   const pkg = await loadPackage();
   if (!pkg) return;
   PACKAGE_DATA = pkg;
