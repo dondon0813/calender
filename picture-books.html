@@ -115,6 +115,8 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   .pb-card-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
   .mini-tag {
@@ -165,7 +167,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 42px; color: var(--c-placeholder);
   }
-  .rc-title { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--c-text); margin: 0 0 4px; }
+  .rc-title { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--c-text); margin: 0 0 4px; word-break: keep-all; overflow-wrap: break-word; }
   .pb-subline { font-size: 12.5px; color: var(--c-text-soft); margin-bottom: 10px; }
   .pb-tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
   .pb-tag { font-size: 11px; font-weight: 700; border-radius: var(--r-pill); padding: 3px 10px; }
@@ -252,6 +254,8 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   .pb-materials-toggle {
@@ -545,6 +549,35 @@ let selTypes = null;
 let selSeries = null;
 let searchTerm = '';
 
+// ===== 書名智慧換行 =====
+// 「｜」是後台可以手動指定的斷行點（比照行事曆標題的既有慣例）；沒有手動標記時，
+// 標題夠長才自動在「中英交界」跟「標點符號後面」插入 <wbr>（可斷行提示，瀏覽器只有在真的
+// 需要換行時才會用到，短標題不受影響，不會看起來被過度切開）。
+const TITLE_BREAK_MIN_LEN = 10;
+const TITLE_BREAK_PUNCT = /[，。、；：！？,.;:!?～\/]/;
+function isCjkChar(ch) { return /[一-鿿㐀-䶿豈-﫿]/.test(ch); }
+function isLatinDigitChar(ch) { return /[A-Za-z0-9]/.test(ch); }
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function smartBreakSegment(segment) {
+  if (segment.length <= TITLE_BREAK_MIN_LEN) return escapeHtml(segment);
+  let out = '';
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    out += escapeHtml(ch);
+    const next = segment[i + 1];
+    if (!next) continue;
+    const atLangBoundary = (isCjkChar(ch) && isLatinDigitChar(next)) || (isLatinDigitChar(ch) && isCjkChar(next));
+    const afterPunct = TITLE_BREAK_PUNCT.test(ch);
+    if (atLangBoundary || afterPunct) out += '<wbr>';
+  }
+  return out;
+}
+function smartTitleHtml(rawTitle) {
+  return String(rawTitle || '').split('｜').map(smartBreakSegment).join('<br>');
+}
+
 // ===== 載入資料 =====
 async function loadBooks() {
   const statusEl = document.getElementById('statusMsg');
@@ -682,7 +715,7 @@ function renderGrid() {
     body.className = 'pb-card-body';
     const title = document.createElement('div');
     title.className = 'pb-card-title';
-    title.textContent = book.title;
+    title.innerHTML = smartTitleHtml(book.title);
     body.appendChild(title);
 
     const tags = document.createElement('div');
@@ -905,7 +938,7 @@ function renderMaterials(book) {
 // ===== Modal 開關 =====
 function openBookModal(book) {
   CURRENT_BOOK = book;
-  document.getElementById('pbModalTitle').textContent = book.title;
+  document.getElementById('pbModalTitle').innerHTML = smartTitleHtml(book.title);
 
   const subParts = [];
   if (book.author) subParts.push(book.author);
@@ -1015,7 +1048,7 @@ function renderSeriesBlock(book) {
 
     const title = document.createElement('div');
     title.className = 'pb-series-item-title';
-    title.textContent = sib.title;
+    title.innerHTML = smartTitleHtml(sib.title);
     item.appendChild(title);
 
     rowEl.appendChild(item);
