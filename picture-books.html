@@ -127,7 +127,6 @@
     background: var(--c-mint-bg);
     color: var(--c-mint-text);
   }
-  .mini-tag-series { background: var(--c-purple-bg); color: var(--c-purple-text); }
 
   /* ===== Modal ===== */
   .modal-backdrop { padding: 16px; }
@@ -455,10 +454,6 @@
       <div class="filter-label">類型</div>
       <div class="filter-chips" id="pbTypeChips"></div>
     </div>
-    <div class="filter-section" id="pbSeriesFilterSection" style="display:none;">
-      <div class="filter-label">系列</div>
-      <div class="filter-chips" id="pbSeriesChips"></div>
-    </div>
 
     <div class="pb-count" id="pbCount">共 0 本</div>
     <div class="pb-grid" id="pbGrid"></div>
@@ -497,6 +492,8 @@
       <div class="pb-series-label" id="pbSeriesLabel"></div>
       <div class="pb-series-row" id="pbSeriesRow"></div>
     </div>
+
+    <div id="pbOrderCta"></div>
 
     <button class="pb-materials-toggle" id="pbMaterialsToggle" style="display:none;">📎 延伸教材</button>
     <div class="pb-materials-panel" id="pbMaterialsPanel"></div>
@@ -539,14 +536,12 @@ let ALL_BOOKS = [];
 let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
 let USED_BRANDS = [];
-let USED_SERIES = []; // 有出現在書籍資料裡的系列名稱（去重、依首次出現排序）
 let CURRENT_BOOK = null; // 目前開著的繪本浮動視窗，教材大圖的分享按鈕要用
 
-// 四組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
+// 三組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
 let selCats = null;
 let selBrands = null;
 let selTypes = null;
-let selSeries = null;
 let searchTerm = '';
 
 // ===== 書名智慧換行 =====
@@ -594,8 +589,6 @@ async function loadBooks() {
 
     const brandIdsUsed = new Set(ALL_BOOKS.map(b => b.brand_id).filter(Boolean));
     USED_BRANDS = (data.brands || []).filter(b => brandIdsUsed.has(b.id));
-
-    USED_SERIES = [...new Set(ALL_BOOKS.map(b => b.series_name).filter(Boolean))];
 
     statusEl.style.display = 'none';
     document.getElementById('pbContent').style.display = 'block';
@@ -652,9 +645,6 @@ function renderChips() {
     v => toggleSelection(selBrands, v, s => { selBrands = s; }));
   buildChipGroup('pbTypeChips', ALL_TYPES.slice(), selTypes,
     v => toggleSelection(selTypes, v, s => { selTypes = s; }));
-  document.getElementById('pbSeriesFilterSection').style.display = USED_SERIES.length ? '' : 'none';
-  buildChipGroup('pbSeriesChips', USED_SERIES, selSeries,
-    v => toggleSelection(selSeries, v, s => { selSeries = s; }));
 }
 
 // ===== 篩選邏輯 =====
@@ -673,9 +663,6 @@ function matchesFilters(book) {
   if (selTypes) {
     const types = book.types || [];
     if (!types.some(t => selTypes.has(t))) return false;
-  }
-  if (selSeries) {
-    if (!book.series_name || !selSeries.has(book.series_name)) return false;
   }
   return true;
 }
@@ -720,12 +707,6 @@ function renderGrid() {
 
     const tags = document.createElement('div');
     tags.className = 'pb-card-tags';
-    if (book.series_name) {
-      const seriesTag = document.createElement('span');
-      seriesTag.className = 'mini-tag mini-tag-series';
-      seriesTag.textContent = '🔗 ' + book.series_name;
-      tags.appendChild(seriesTag);
-    }
     (book.types || []).forEach(t => {
       const tag = document.createElement('span');
       tag.className = 'mini-tag';
@@ -1008,12 +989,30 @@ function openBookModal(book) {
 
   renderPurchaseSection(book);
   renderSeriesBlock(book);
+  renderOrderCta(book);
   renderMaterials(book);
 
   document.getElementById('bookModal').classList.add('show');
   const modalBox = document.querySelector('.pb-modal-box');
   if (modalBox) modalBox.scrollTop = 0;
   history.replaceState(null, '', '#book=' + encodeURIComponent(book.id));
+}
+
+// ===== 延伸教材前的「前往下單」提醒（跟頂部購買按鈕分開放，讓要下載教材的人也順手看到下單連結）=====
+function renderOrderCta(book) {
+  const wrap = document.getElementById('pbOrderCta');
+  wrap.innerHTML = '';
+  if (!book.shopee_url) return;
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+  const btn = document.createElement('a');
+  btn.className = 'action-btn';
+  btn.href = book.shopee_url;
+  btn.target = '_blank';
+  btn.rel = 'noopener noreferrer';
+  btn.textContent = '🛒 前往下單';
+  actions.appendChild(btn);
+  wrap.appendChild(actions);
 }
 
 // ===== 同系列作品 =====
