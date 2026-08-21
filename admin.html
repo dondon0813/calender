@@ -3073,7 +3073,14 @@
   .acct-filters{
     display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;
   }
-  .acct-filters select, .acct-filters input{
+  .acct-filters select{
+    flex:0 1 auto; width:auto; min-width:110px; margin:0;
+    font-family:var(--font-body); font-size:13px; font-weight:700;
+    color:var(--c-text-soft); padding:7px 10px; cursor:pointer; outline:none;
+    border: 1px solid var(--c-border-light); border-radius:var(--r-pill);
+    background:var(--c-surface);
+  }
+  .acct-filters input{
     flex:0 1 auto; width:auto; min-width:110px; margin:0;
     font-size:13px; padding:7px 10px;
   }
@@ -3756,7 +3763,14 @@
       padding-left: 14px;
       border-left: 2px solid var(--c-border-light);
     }
-    #paneRightPicker { margin-bottom: 10px; }
+    #paneRightPicker {
+      margin-bottom: 10px;
+      width: 100%;
+      font-family: var(--font-body); font-weight: 700; font-size: 13px;
+      color: var(--c-brown); cursor: pointer; outline: none;
+      border: 1px solid var(--c-border); border-radius: var(--r-pill);
+      background: #fff; padding: 7px 14px;
+    }
     #paneRightEmpty {
       text-align: center;
       color: var(--c-muted);
