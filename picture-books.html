@@ -261,10 +261,9 @@
     flex-direction: column;
     min-width: 0;
     background: #fff;
-    border: 1px solid var(--c-border);
+    border: none;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     transition: transform .15s ease, box-shadow .15s ease;
   }
   .pb-material-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.09); }
@@ -273,9 +272,7 @@
     width: 100%;
     position: relative;
     aspect-ratio: 3 / 4;
-    box-sizing: border-box;
-    padding: 8px;
-    background: #E9E5DF;
+    overflow: hidden;
     border-radius: 14px 14px 0 0;
   }
   .pb-material-card-img img {
@@ -283,7 +280,15 @@
     height: 100%;
     object-fit: cover;
     display: block;
-    border-radius: 8px;
+  }
+  /* 白底教材照片跟頁面背景太接近，疊一層薄灰讓它從背景浮出來（不加框、不留白邊，類似 Pinterest 卡片） */
+  .pb-material-card-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 15, 10, 0.08);
+    mix-blend-mode: multiply;
+    pointer-events: none;
   }
   .pb-material-card-img.placeholder {
     aspect-ratio: 3 / 4;
@@ -292,8 +297,9 @@
     justify-content: center;
     font-size: 32px;
     color: var(--c-placeholder);
-    background: #E9E5DF;
+    background: var(--c-bg-bottom);
   }
+  .pb-material-card-img.placeholder::after { content: none; }
 
   .pb-material-card-body {
     flex: 1;
