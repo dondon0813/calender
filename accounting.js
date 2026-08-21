@@ -968,9 +968,12 @@ document.getElementById('acctVendorSelect').addEventListener('change', () => acc
 
 // ----- 新增／編輯 -----
 function openAcctEditModal(rec) {
-  acctEditCtx = { isNew: !rec, rec: rec };
-  document.getElementById('acctEditTitle').textContent = rec ? '✏️ 編輯開團紀錄' : '➕ 新增開團紀錄';
-  document.getElementById('acctDeleteBtn').style.display = (rec && isAdmin) ? 'inline-block' : 'none';
+  // 行事曆帶入、還沒有真實帳務紀錄的虛擬列（rec.isVirtual）：雖然有內容可以預填，
+  // 但存檔時要當成新增（acct-add），不是編輯（acct-update）——資料庫裡本來就沒有這筆
+  const isNew = !rec || rec.isVirtual;
+  acctEditCtx = { isNew, rec: rec };
+  document.getElementById('acctEditTitle').textContent = isNew ? '➕ 新增開團紀錄' : '✏️ 編輯開團紀錄';
+  document.getElementById('acctDeleteBtn').style.display = (!isNew && isAdmin) ? 'inline-block' : 'none';
   setFormStatus('acctEditStatus', '', '');
 
   // 品牌下拉：全部品牌都能選（新團可能是還沒開過的品牌），已結束的標出來
@@ -1057,6 +1060,8 @@ document.getElementById('acctSaveBtn').addEventListener('click', async () => {
     payload.rate = rateIn === '' ? '' : Math.round(acctNum(rateIn) * 100) / 10000;
     payload.rateNote = val('acctRateNoteInput');
   }
+  // 從行事曆虛擬列轉正：帶上原本的事件 id，讓後端把這筆帳務跟行事曆事件關聯起來
+  if (acctEditCtx.rec && acctEditCtx.rec.eventId) payload.eventId = acctEditCtx.rec.eventId;
 
   const btn = document.getElementById('acctSaveBtn');
   btn.disabled = true;
