@@ -1463,11 +1463,25 @@ async function fetchMemos() {
 }
 
 // 目前登入者有沒有某項權限。管理員（雪莉）一律全開。
-// ⚠️ 這只管「畫面上看不看得到」；真正的防線在 Code.gs 的權限閘門，前端藏起來不等於鎖住。
+// ⚠️ 這只管「畫面上看不看得到」；真正的防線在後端的權限閘門，前端藏起來不等於鎖住。
 // key 可以寫成 "a|b"＝任一即可（帳務頁要業績或分潤其中一種就進得去）
+// 三態權限（brandVendorEdit／calendarEdit）值是 'edit'/'view'/'off' 字串：
+// 單獨一個 key＝「至少看得到」（view 或 edit 都算，只有 off 擋）；"key:edit"＝一定要可編輯層級。
+// 其餘仍是布林開關的舊權限，兩種寫法效果一樣。
+function permOk_(spec) {
+  const [rawKey, need] = String(spec || '').split(':');
+  const v = myPermissions[rawKey.trim()];
+  if (v === 'off') return false;
+  if (need === 'edit') return v === 'edit' || v === true;
+  return !!v;
+}
 function hasPerm(key) {
   if (isAdmin) return true;
-  return String(key || '').split('|').some(k => !!myPermissions[k.trim()]);
+  return String(key || '').split('|').some(k => permOk_(k.trim()));
+}
+function hasEditPerm(key) {
+  if (isAdmin) return true;
+  return String(key || '').split('|').some(k => permOk_(k.trim() + ':edit'));
 }
 
 // 依目前登入者的身份／權限，切換相關功能入口的顯示與隱藏。
@@ -1876,7 +1890,7 @@ function ymdStr(d) {
 // ev 為 null＝新增活動；prefillDate 是從「當日活動面板」的＋新增活動點進來時，預先帶入的日期
 function openEventEditModal(ev, prefillDate) {
   // 沒有行事曆編輯權限＝只能看，不開編輯視窗（後端也會擋 event-add/update/delete）
-  if (!hasPerm('calendarEdit')) {
+  if (!hasEditPerm('calendarEdit')) {
     alert('你沒有行事曆的編輯權限，如果需要請跟雪莉申請開通。');
     return;
   }
@@ -2673,14 +2687,29 @@ function renderPermissionsList(staffNames, permissions) {
       }
       item.appendChild(textWrap);
 
-      const sw = document.createElement('span');
-      sw.className = 'pr-switch' + (perm[def.key] ? ' on' : '');
-      sw.dataset.permKey = def.key;
-      const knob = document.createElement('span');
-      knob.className = 'pr-knob';
-      sw.appendChild(knob);
-      sw.addEventListener('click', () => togglePermission(name, def.key, sw));
-      item.appendChild(sw);
+      if (def.type === 'tristate') {
+        const sel = document.createElement('select');
+        sel.className = 'perm-level-select';
+        sel.dataset.permKey = def.key;
+        (def.options || []).forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt.value;
+          o.textContent = opt.label;
+          sel.appendChild(o);
+        });
+        sel.value = perm[def.key] || 'view';
+        sel.addEventListener('change', () => setPermissionLevel(name, def.key, sel.value, sel));
+        item.appendChild(sel);
+      } else {
+        const sw = document.createElement('span');
+        sw.className = 'pr-switch' + (perm[def.key] ? ' on' : '');
+        sw.dataset.permKey = def.key;
+        const knob = document.createElement('span');
+        knob.className = 'pr-knob';
+        sw.appendChild(knob);
+        sw.addEventListener('click', () => togglePermission(name, def.key, sw));
+        item.appendChild(sw);
+      }
 
       grid.appendChild(item);
     });
@@ -2719,6 +2748,9 @@ async function applyRole(name, role, selectEl) {
       card.querySelectorAll('.pr-switch').forEach(sw => {
         sw.classList.toggle('on', !!allPermissions[name][sw.dataset.permKey]);
       });
+      card.querySelectorAll('.perm-level-select').forEach(sel => {
+        sel.value = allPermissions[name][sel.dataset.permKey] || 'view';
+      });
     }
   } catch (err) {
     selectEl.value = prev;
@@ -2736,6 +2768,19 @@ async function togglePermission(name, key, switchEl) {
     allPermissions[name][key] = newVal;
   } catch (err) {
     switchEl.classList.toggle('on', !newVal);
+    alert('更新失敗：' + err.message);
+  }
+}
+
+// 三態權限（下拉選單版）：可編輯／瀏覽／關閉
+async function setPermissionLevel(name, key, value, selectEl) {
+  const prev = allPermissions[name] ? allPermissions[name][key] : undefined;
+  try {
+    await postTask({ type: 'perm-set', name, key, value });
+    if (!allPermissions[name]) allPermissions[name] = {};
+    allPermissions[name][key] = value;
+  } catch (err) {
+    selectEl.value = prev || 'view';
     alert('更新失敗：' + err.message);
   }
 }

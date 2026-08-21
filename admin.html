@@ -3368,10 +3368,32 @@
   }
   .perm-role-select {
     flex: 0 1 190px;
+    font-family: var(--font-body);
     font-size: 12.5px;
     font-weight: 700;
+    color: var(--c-brown);
     padding: 6px 8px;
     margin: 0;
+    cursor: pointer;
+    outline: none;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    background: #fff;
+  }
+  /* 三態權限（可編輯／瀏覽／關閉）下拉，跟開關並排在同一列 */
+  .perm-level-select {
+    flex: 0 0 auto;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--c-brown);
+    padding: 6px 10px;
+    margin: 0;
+    cursor: pointer;
+    outline: none;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-pill);
+    background: #fff;
   }
   .perm-view-as-btn {
     flex: 0 0 auto;
@@ -4127,14 +4149,14 @@
   <div id="sideNav">
     <div class="sn-group-title">工作</div>
     <button class="sn-item" data-view="home">🏠 工作首頁</button>
-    <button class="sn-item" data-view="calendar">📅 行事曆</button>
+    <button class="sn-item" data-view="calendar" data-perm="calendarEdit">📅 行事曆</button>
     <button class="sn-item" data-view="dispatch">📨 派遣任務</button>
     <button class="sn-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
     <button class="sn-item" data-view="memo">📝 備忘錄</button>
     <button class="sn-item" data-view="todoList">🗒️ 待辦事項</button>
     <button class="sn-item" data-view="prItems">🎀 公關品狀態</button>
     <button class="sn-item" data-view="groupStatus">📢 開團狀態</button>
-    <button class="sn-item" data-view="brandVendor">🏢 品牌廠商</button>
+    <button class="sn-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
     <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
     <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
     <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
@@ -4179,13 +4201,13 @@
         </button>
         <div class="menu-panel" id="menuPanel">
           <button class="menu-item" data-view="home">🏠 工作首頁</button>
-          <button class="menu-item" data-view="calendar">📅 行事曆</button>
+          <button class="menu-item" data-view="calendar" data-perm="calendarEdit">📅 行事曆</button>
           <button class="menu-item" data-view="dispatch">📨 派遣任務</button>
           <button class="menu-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
           <button class="menu-item" data-view="memo">📝 備忘錄</button>
           <button class="menu-item" data-view="todoList">🗒️ 待辦事項</button>
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
-          <button class="menu-item" data-view="brandVendor">🏢 品牌廠商</button>
+          <button class="menu-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
           <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
           <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
           <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
@@ -4397,7 +4419,7 @@
   <div class="view" id="viewBrandVendor">
     <div class="pnote-header-wrap">
       <h2 class="view-title">品牌廠商管理</h2>
-      <label class="pr-toggle show pnote-scope-toggle" id="bvEditToggleWrap" data-perm="brandVendorEdit" title="開啟後點廠商／品牌會直接跳出編輯視窗；關閉時點了只會顯示資料">
+      <label class="pr-toggle show pnote-scope-toggle" id="bvEditToggleWrap" data-perm="brandVendorEdit:edit" title="開啟後點廠商／品牌會直接跳出編輯視窗；關閉時點了只會顯示資料">
         <span class="pr-toggle-text">✏️ 編輯</span>
         <span class="pr-switch" id="bvEditSwitch"><span class="pr-knob"></span></span>
       </label>
@@ -5087,14 +5109,14 @@
     <select id="paneRightPicker">
       <option value="">（關閉右欄）</option>
       <option value="home">🏠 工作首頁</option>
-      <option value="calendar">📅 行事曆</option>
+      <option value="calendar" data-perm="calendarEdit">📅 行事曆</option>
       <option value="dispatch">📨 派遣任務</option>
       <option value="myTasks">📋 我的任務</option>
       <option value="memo">📝 備忘錄</option>
       <option value="todoList">🗒️ 待辦事項</option>
       <option value="prItems">🎀 公關品狀態</option>
       <option value="groupStatus">📢 開團狀態</option>
-      <option value="brandVendor">🏢 品牌廠商</option>
+      <option value="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</option>
       <option value="report" data-perm="report">📊 報表統計</option>
       <option value="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</option>
       <option value="tools">🧰 便利小工具</option>

@@ -192,7 +192,7 @@ function renderBrandDbList() {
 let brandVendorEditMode = false;
 document.getElementById('bvEditToggleWrap').addEventListener('click', () => {
   // 沒有品牌廠商編輯權限的人，開關已經藏起來了，這裡再擋一次（保險）
-  if (typeof hasPerm === 'function' && !hasPerm('brandVendorEdit')) return;
+  if (typeof hasEditPerm === 'function' && !hasEditPerm('brandVendorEdit')) return;
   brandVendorEditMode = !brandVendorEditMode;
   document.getElementById('bvEditSwitch').classList.toggle('on', brandVendorEditMode);
 });
