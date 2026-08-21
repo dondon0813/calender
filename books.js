@@ -184,6 +184,7 @@ function fillForm(book) {
   document.getElementById('fTitle').value = book ? book.title || '' : '';
   document.getElementById('fAuthor').value = book ? book.author || '' : '';
   document.getElementById('fPublisher').value = book ? book.publisher || '' : '';
+  document.getElementById('fSeries').value = book ? book.series_name || '' : '';
   document.getElementById('fDescription').value = book ? book.description || '' : '';
   document.getElementById('fYoutube').value = book ? book.youtube_url || '' : '';
   document.getElementById('fShopee').value = book ? book.shopee_url || '' : '';
@@ -746,6 +747,7 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     title,
     author: document.getElementById('fAuthor').value.trim(),
     publisher: document.getElementById('fPublisher').value.trim(),
+    series_name: document.getElementById('fSeries').value.trim(),
     description: document.getElementById('fDescription').value,
     youtube_url: document.getElementById('fYoutube').value.trim(),
     shopee_url: document.getElementById('fShopee').value.trim(),
