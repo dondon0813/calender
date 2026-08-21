@@ -60,12 +60,12 @@
 
   .pb-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px 18px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 12px;
   }
-  @media (min-width: 640px) { .pb-grid { grid-template-columns: repeat(3, 1fr); gap: 22px 20px; } }
-  @media (min-width: 900px) { .pb-grid { grid-template-columns: repeat(4, 1fr); gap: 24px 20px; } }
-  @media (min-width: 1200px) { .pb-grid { grid-template-columns: repeat(5, 1fr); gap: 24px 20px; } }
+  @media (min-width: 640px) { .pb-grid { grid-template-columns: repeat(4, 1fr); gap: 22px 18px; } }
+  @media (min-width: 900px) { .pb-grid { grid-template-columns: repeat(5, 1fr); gap: 24px 20px; } }
+  @media (min-width: 1200px) { .pb-grid { grid-template-columns: repeat(6, 1fr); gap: 24px 20px; } }
 
   .pb-card {
     background: none;
@@ -261,30 +261,38 @@
     flex-direction: column;
     min-width: 0;
     background: #fff;
-    border: none;
+    border: 1px solid var(--c-border);
     border-radius: 16px;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     transition: transform .15s ease, box-shadow .15s ease;
   }
   .pb-material-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.09); }
 
-  .pb-material-card-img { width: 100%; position: relative; }
-  .pb-material-card-img img {
+  .pb-material-card-img {
     width: 100%;
-    height: auto;
-    max-height: 260px;
-    object-fit: cover;
-    display: block;
+    position: relative;
+    aspect-ratio: 3 / 4;
+    box-sizing: border-box;
+    padding: 8px;
+    background: #E9E5DF;
     border-radius: 14px 14px 0 0;
   }
+  .pb-material-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+  }
   .pb-material-card-img.placeholder {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 3 / 4;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 32px;
     color: var(--c-placeholder);
-    background: var(--c-bg-bottom);
+    background: #E9E5DF;
   }
 
   .pb-material-card-body {
@@ -387,7 +395,7 @@
       <div class="filter-label">年齡與主題</div>
       <div class="filter-chips" id="pbCatChips"></div>
     </div>
-    <div class="filter-section">
+    <div class="filter-section" id="pbBrandSection" style="display:none;">
       <div class="filter-label">品牌</div>
       <div class="filter-chips" id="pbBrandChips"></div>
     </div>
@@ -545,6 +553,7 @@ function toggleSelection(current, value, setter) {
 function renderChips() {
   buildChipGroup('pbCatChips', ALL_CATEGORIES.map(c => c.name), selCats,
     v => toggleSelection(selCats, v, s => { selCats = s; }));
+  document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
   buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
     v => toggleSelection(selBrands, v, s => { selBrands = s; }));
   buildChipGroup('pbTypeChips', ALL_TYPES.slice(), selTypes,
