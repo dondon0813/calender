@@ -516,6 +516,9 @@ function acctPastGroupBuysForBrand_(brand, matchedCalendarEvents) {
 // ①比對到品牌對應的檔期 → 用檔期結束日（含延長，跟 getBrandGroupBuys_ 同一套 displayEnd）判斷；
 // ②比對不到（歷史舊團、品牌改過名、事件被刪）→ fallback 用帳務日期本身跟今天比。
 function acctReconIsClosed_(r, todayStr, eventIndex) {
+  // 行事曆虛擬列（isVirtual）自己就帶了真正的結束日（closeDate），不用再靠品牌名稱反查檔期——
+  // 這種列的 brandId 本來就是空的，反查一定落空，會誤用「開團日」當結團日
+  if (r.closeDate) return r.closeDate < todayStr;
   const ev = acctReconFindEvent_(r, eventIndex);
   if (ev) {
     const todayD = parseDateStr(todayStr);
