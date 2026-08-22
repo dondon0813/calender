@@ -14,6 +14,8 @@ const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
 const FALLBACK_PASSWORD = "0000";
 let currentToken = null; // 登入後從後端拿到的通行證，之後每次呼叫後端都要帶著它
 let isViewOnlyMode = false; // 主管理員「以員工身分檢視」的唯讀分頁：token 存 sessionStorage（分頁隔離），不動 localStorage 的真登入態
+// 一次性密碼登入者強制改密碼流程中：true 時 closeSettingsModal 要擋掉關閉（✕／backdrop 都不行）
+let forcePasswordChange = false;
 
 let memoMap = {}; // { key: 備忘錄內容 }
 let urlMap = {}; // { key: 後台網址 }
@@ -1427,6 +1429,8 @@ async function fetchMemos() {
     prLocations = Array.isArray(data.prLocations) ? data.prLocations : [];
     statsMap = data.stats || {};
     isAdmin = !!data.isAdmin;
+    // 涵蓋「已登入者重新整理頁面／背景輪詢」的情境，不是只有登入當下才檢查一次性密碼
+    if (data.mustChangePassword) openForcedPasswordChange();
     myPermissions = data.permissions || {};
     allPermissions = data.allPermissions || {};
     updatePermissionUI();
@@ -1565,7 +1569,11 @@ async function tryUnlock() {
       switchView('home'); // 先顯示首頁骨架，不要讓畫面空白等後端資料回來
       initAppUI(); // 介面接線（側邊欄監聽、雙欄工作區）不可依賴後端成功，否則抓資料失敗＝整頁變磚
       try { await fetchMemos(); } catch (e) { console.error('fetchMemos 失敗，介面仍可操作', e); }
-      if (result.weakPassword) {
+      // mustChangePassword（一次性密碼）優先於單純提醒的 weakPassword，兩者互斥——
+      // 否則會先跳一個擋住畫面的 alert，關掉後才看到強制改密碼視窗，體驗很怪
+      if (result.mustChangePassword) {
+        openForcedPasswordChange();
+      } else if (result.weakPassword) {
         alert('提醒：你目前還在使用初始密碼，請到 設定→修改密碼 更換，避免帳號被盜用。');
       }
     } else {
@@ -2514,7 +2522,28 @@ function openSettingsModal() {
 }
 
 function closeSettingsModal() {
+  // 強制改密碼流程還沒完成前不准關掉這個視窗——不管是按 ✕ 還是點 backdrop
+  if (forcePasswordChange) return;
   document.getElementById('settingsModal').classList.remove('show');
+}
+
+// 一次性密碼登入者：強制先改密碼才能用其他功能。設旗標讓 closeSettingsModal 擋掉關閉、
+// 隱藏 ✕ 按鈕避免使用者以為關得掉，並順手收掉可能開著的設定選單/漢堡選單（避免繞過去）。
+function openForcedPasswordChange() {
+  forcePasswordChange = true;
+  document.getElementById('oldPasswordInput').value = '';
+  document.getElementById('newPasswordInput').value = '';
+  document.getElementById('newPasswordInput2').value = '';
+  setFormStatus('settingsStatus', '', '');
+  const modal = document.getElementById('settingsModal');
+  modal.classList.add('show');
+  const closeBtn = modal.querySelector('.modal-close');
+  if (closeBtn) closeBtn.style.display = 'none';
+  const hint = document.getElementById('settingsForceHint');
+  if (hint) hint.style.display = '';
+  document.getElementById('settingsHubModal').classList.remove('show');
+  document.getElementById('menuPanel').classList.remove('show');
+  document.getElementById('oldPasswordInput').focus();
 }
 
 // 前端先做一次跟後端一樣的規則檢查：至少6碼、需含大寫、小寫、數字各一個
@@ -2557,6 +2586,13 @@ async function submitPasswordChange() {
     document.getElementById('oldPasswordInput').value = '';
     document.getElementById('newPasswordInput').value = '';
     document.getElementById('newPasswordInput2').value = '';
+    // 強制改密碼流程解除：恢復 ✕ 按鈕、藏起提示，讓 1.2 秒後的 closeSettingsModal 能正常關窗
+    forcePasswordChange = false;
+    const modal = document.getElementById('settingsModal');
+    const closeBtn = modal && modal.querySelector('.modal-close');
+    if (closeBtn) closeBtn.style.display = '';
+    const hint = document.getElementById('settingsForceHint');
+    if (hint) hint.style.display = 'none';
     setTimeout(closeSettingsModal, 1200);
   } catch (err) {
     setFormStatus('settingsStatus', err.message || '修改失敗，請確認舊密碼是否正確', 'error');

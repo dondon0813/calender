@@ -3312,6 +3312,13 @@
   }
   .acct-recon-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .acct-recon-actions .form-status{ margin:0; font-size:12px; }
+  /* 對帳清單裡的虛擬列（行事曆帶入、資料庫還沒有帳務紀錄）：提示＋回填按鈕，取代輸入表單 */
+  .acct-recon-virtual-hint{font-size:12.5px;color:#a05a00;background:#fff6e6;border:1px solid #ffdb99;border-radius:8px;padding:8px 10px;margin:6px 0}
+  /* 帳務編輯視窗裡的「修改紀錄」清單 */
+  #acctHistoryBox{margin-top:8px;max-height:160px;overflow:auto;font-size:11.5px;color:#6b5d50;border-top:1px dashed #e5d9cc;padding-top:6px}
+  #acctHistoryBox .acct-hist-item{margin:0 0 6px}
+  #acctHistoryBox .acct-hist-head{font-weight:600;color:#8a7866}
+  #acctHistoryBox .acct-hist-chg{margin-left:10px}
   /* 品牌檢視彈窗裡的帳務摘要 */
   .bda-wrap{
     margin-top:12px; padding:12px 14px; border-radius:10px;
@@ -5354,6 +5361,7 @@
   <div class="modal-box">
     <button class="modal-close" onclick="closeSettingsModal()">✕</button>
     <h3>⚙️ 設定：修改密碼</h3>
+    <p id="settingsForceHint" style="display:none; font-size:12.5px; color:#a05a00; background:#fff6e6; border:1px solid #ffdb99; border-radius:8px; padding:8px 10px; margin:0 0 10px;">🔒 你目前使用的是一次性密碼，請先更換密碼，完成前無法使用其他功能。</p>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="oldPasswordInput">目前密碼</label>
       <input type="password" id="oldPasswordInput" autocomplete="off">
@@ -5430,6 +5438,7 @@
       </div>
 
       <div id="acctAuditLine" style="font-size:11.5px; color:var(--c-muted); margin-top:10px;"></div>
+      <div id="acctHistoryBox" style="display:none"></div>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="acctSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="acctDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>

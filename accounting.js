@@ -166,19 +166,23 @@ function renderAccountingView() {
   const box = document.getElementById('acctList');
   if (!sumBox || !box) return;
 
+  // 虛擬列（行事曆帶入、資料庫還沒有這筆帳務）不能算進任何統計，會虛報筆數/團數/金額；
+  // 清單本身仍要顯示虛擬列（提醒使用者去回填），所以只有這裡算數字的地方另外濾一份。
+  const stat = list.filter(r => !r.isVirtual);
+
   // 「實際團數」把「同團延續」（廠商中途重開表單、業績拆兩列）排除，避免重複計算
-  const realTeams = list.filter(r => !r.contFrom).length;
-  const sales = list.reduce((a, r) => a + acctNum(r.sales), 0);
-  const comm = list.reduce((a, r) => a + acctNum(r.commission), 0);
-  const fee = list.reduce((a, r) => a + acctNum(r.fee), 0);
-  const pend = list.filter(r => r.status !== '已入帳' && r.status !== '已請款')
+  const realTeams = stat.filter(r => !r.contFrom).length;
+  const sales = stat.reduce((a, r) => a + acctNum(r.sales), 0);
+  const comm = stat.reduce((a, r) => a + acctNum(r.commission), 0);
+  const fee = stat.reduce((a, r) => a + acctNum(r.fee), 0);
+  const pend = stat.filter(r => r.status !== '已入帳' && r.status !== '已請款')
                    .reduce((a, r) => a + acctNum(r.commission), 0);
 
   const tile = (label, val, cls) =>
     `<div class="acct-tile ${cls || ''}"><b>${val}</b><span>${label}</span></div>`;
   const hidden = '<span class="acct-hidden">•••</span>';
   sumBox.innerHTML =
-    tile('筆數', list.length) +
+    tile('筆數', stat.length) +
     tile('實際團數', realTeams) +
     tile('銷售金額', acctCan.revenue ? acctMoney(sales) : hidden, 'wide') +
     tile('分潤', acctCan.revenue ? acctMoney(comm) : hidden, 'wide') +
@@ -231,6 +235,7 @@ function renderAccountingView() {
 function acctMonthly(list) {
   const m = new Map();
   list.forEach(r => {
+    if (r.isVirtual) return; // 虛擬列還沒有真實金額，不能算進月趨勢
     const ym = (r.date || '').slice(0, 7);
     if (!ym) return;
     if (!m.has(ym)) m.set(ym, { ym, sales: 0, commission: 0, fee: 0, n: 0, teams: 0, pend: 0 });
@@ -310,6 +315,7 @@ function acctShort(v) {
 function acctByBrand(list) {
   const m = new Map();
   list.forEach(r => {
+    if (r.isVirtual) return; // 虛擬列還沒有真實金額，不能算進品牌排行
     const id = r.brandId || '(未指定)';
     if (!m.has(id)) m.set(id, { id, teams: 0, n: 0, sales: 0, commission: 0, fee: 0, last: '' });
     const o = m.get(id);
@@ -378,6 +384,8 @@ function renderAcctPrint() {
     list = acctData.filter(r => (r.date || '').startsWith(ym));
     title = ym.slice(0, 4) + ' 年 ' + parseInt(ym.slice(5), 10) + ' 月';
   }
+  // 正式報表數字，虛擬列（行事曆帶入、還沒有帳務紀錄）不能算進去
+  list = list.filter(r => !r.isVirtual);
   const sales = list.reduce((a, r) => a + acctNum(r.sales), 0);
   const comm = list.reduce((a, r) => a + acctNum(r.commission), 0);
   const fee = list.reduce((a, r) => a + acctNum(r.fee), 0);
@@ -597,14 +605,15 @@ function renderAcctRecon() {
     const badgeGroup = acctReconBadgeGroup_(r.reconStatus);
     const isOpen = acctReconOpenIds.has(r.id);
 
-    return `${monthBar}<div class="acct-recon-row${isOpen ? ' open' : ''}" data-id="${escHtml(r.id)}">
-      <div class="acct-recon-summary">
-        <span class="acct-recon-date">${escHtml((r.date || '').slice(5))}</span>
-        <span class="acct-recon-brand">${escHtml(acctBrandName(r.brandId) || r.rawName || '')}</span>
-        <span class="acct-recon-badge acct-recon-badge-${badgeGroup}">${escHtml(r.reconStatus)}</span>
-        <span class="acct-recon-warn"${warn ? '' : ' style="display:none"'} title="分潤金額跟試算差異超標，回頭check一下">⚠</span>
-      </div>
-      <div class="acct-recon-detail">
+    // 虛擬列（行事曆帶入、資料庫還沒有這筆帳務，id 形如 evt:xxxx）：資料庫沒有這筆紀錄，
+    // 不能顯示輸入框／送 acct-update（後端會回「找不到這筆紀錄」）。改成提示＋一顆按鈕，
+    // 導去新增流程（openAcctEditModal 已支援虛擬列走 acct-add）。
+    const detailHtml = r.isVirtual
+      ? `<div class="acct-recon-detail">
+          <div class="acct-recon-virtual-hint">📋 這團來自行事曆，還沒有帳務紀錄。請先回填業績（品牌、銷售金額…），存檔後才會進入對帳流程。</div>
+          <div class="acct-recon-actions"><button class="task-mini-btn acct-recon-fill">📋 回填業績</button></div>
+        </div>`
+      : `<div class="acct-recon-detail">
         <div class="acct-recon-head"><span class="acct-rate">分潤 ${rateTxt}</span></div>
         <div class="acct-recon-grid">
           <label>對帳狀態
@@ -631,7 +640,16 @@ function renderAcctRecon() {
           <button class="task-mini-btn acct-recon-next">下一階段 ▶</button>
           <span class="form-status acct-recon-msg"></span>
         </div>
+      </div>`;
+
+    return `${monthBar}<div class="acct-recon-row${isOpen ? ' open' : ''}" data-id="${escHtml(r.id)}">
+      <div class="acct-recon-summary">
+        <span class="acct-recon-date">${escHtml((r.date || '').slice(5))}</span>
+        <span class="acct-recon-brand">${escHtml(acctBrandName(r.brandId) || r.rawName || '')}</span>
+        <span class="acct-recon-badge acct-recon-badge-${badgeGroup}">${escHtml(r.reconStatus)}</span>
+        <span class="acct-recon-warn"${warn ? '' : ' style="display:none"'} title="分潤金額跟試算差異超標，回頭check一下">⚠</span>
       </div>
+      ${detailHtml}
     </div>`;
   }).join('');
 
@@ -650,6 +668,15 @@ function renderAcctRecon() {
       if (rowEl.classList.contains('open')) acctReconOpenIds.add(id);
       else acctReconOpenIds.delete(id);
     });
+
+    // 虛擬列：detail 只渲染了提示＋「回填業績」按鈕，沒有 .acct-recon-save 等輸入元素，
+    // 收合/展開已經在上面綁好了，這裡把回填按鈕接到編輯視窗（走 acct-add）後直接 return——
+    // 絕對不要往下去抓不存在的元素（querySelector 會回傳 null，掛事件會炸）。
+    if (rec.isVirtual) {
+      const fillBtn = rowEl.querySelector('.acct-recon-fill');
+      if (fillBtn) fillBtn.addEventListener('click', () => openAcctEditModal(rec));
+      return;
+    }
 
     const salesEl = rowEl.querySelector('.acct-recon-sales');
     const commEl = rowEl.querySelector('.acct-recon-commission');
@@ -722,6 +749,7 @@ function renderAcctRecon() {
     };
 
     rowEl.querySelector('.acct-recon-save').addEventListener('click', async () => {
+      if (rec.isVirtual) return; // 保險絲：虛擬列理論上走不到這裡（上面已經 return），多一道防線避免誤送 acct-update
       const payload = gather();
       setMsg('儲存中…', '');
       try {
@@ -735,6 +763,7 @@ function renderAcctRecon() {
     });
 
     rowEl.querySelector('.acct-recon-next').addEventListener('click', async () => {
+      if (rec.isVirtual) return; // 保險絲：虛擬列理論上走不到這裡（上面已經 return），多一道防線避免誤送 acct-update
       const payload = gather();
       const cur = payload.reconStatus;
       if (cur === '待對帳') {
@@ -785,7 +814,8 @@ async function renderBrandAcctSummary(brandId) {
     if (!stillSame()) return;
   }
 
-  const rows = acctData.filter(r => r.brandId === brandId);
+  // 虛擬列（行事曆帶入、還沒有帳務紀錄）排除，這個摘要框全是統計數字
+  const rows = acctData.filter(r => r.brandId === brandId && !r.isVirtual);
   if (!rows.length) {
     box.innerHTML = '<div class="bda-wrap"><div class="bda-title">💰 開團帳務</div>' +
       '<div class="bda-empty">這個品牌還沒有帳務紀錄</div></div>';
@@ -854,7 +884,9 @@ async function renderVendorAcctSummary(vendorId) {
       .filter(b => (b.vendorIds || []).indexOf(vendorId) !== -1)
       .map(b => b.id)
   );
-  const rows = acctData.filter(r => r.vendorId === vendorId || (r.brandId && myBrandIds.has(r.brandId)));
+  // 虛擬列（行事曆帶入、還沒有帳務紀錄）排除，這個摘要框全是統計數字
+  const rows = acctData.filter(r => !r.isVirtual &&
+    (r.vendorId === vendorId || (r.brandId && myBrandIds.has(r.brandId))));
   if (!rows.length) {
     box.innerHTML = '<div class="bda-wrap"><div class="bda-title">💰 開團帳務</div>' +
       '<div class="bda-empty">這個廠商還沒有帳務紀錄（底下的品牌也沒有開過團）</div></div>';
@@ -1024,6 +1056,37 @@ function openAcctEditModal(rec) {
   if (rec && rec.contFrom) audit.push('這是 ' + rec.contFrom + ' 同一團重開表單的延續');
   document.getElementById('acctAuditLine').innerHTML = audit.map(escHtml).join('<br>');
 
+  // 修改紀錄：新增（含虛擬列，isNew）沒有既有紀錄可查，直接隱藏。既有紀錄非同步查，
+  // 不 await——不要卡住開窗動作。回來時要先確認使用者還開著同一筆，換開別筆時作廢丟棄。
+  const histBox = document.getElementById('acctHistoryBox');
+  if (histBox) {
+    if (isNew) {
+      histBox.style.display = 'none';
+      histBox.innerHTML = '';
+    } else {
+      histBox.style.display = '';
+      histBox.innerHTML = '<div class="task-empty">讀取修改紀錄…</div>';
+      const historyId = rec.id;
+      postTask({ type: 'acct-history', id: historyId }).then(res => {
+        if (!acctEditCtx || !acctEditCtx.rec || acctEditCtx.rec.id !== historyId) return; // 使用者已經換開別筆
+        const items = Array.isArray(res.items) ? res.items : [];
+        if (res.unavailable || !items.length) {
+          histBox.innerHTML = '<div class="task-empty">尚無修改紀錄</div>';
+          return;
+        }
+        histBox.innerHTML = items.map(it => {
+          const chgs = (Array.isArray(it.changes) ? it.changes : []).map(c =>
+            `<div class="acct-hist-chg">${escHtml(c.field)}：${escHtml(c.from || '（空）')} → ${escHtml(c.to || '（空）')}</div>`
+          ).join('');
+          return `<div class="acct-hist-item"><div class="acct-hist-head">${escHtml(it.at)}　${escHtml(it.by)}　${escHtml(it.action)}</div>${chgs}</div>`;
+        }).join('');
+      }).catch(() => {
+        if (!acctEditCtx || !acctEditCtx.rec || acctEditCtx.rec.id !== historyId) return;
+        histBox.innerHTML = '<div class="task-empty">修改紀錄讀取失敗</div>';
+      });
+    }
+  }
+
   // 新增時才自動帶抬頭；編輯既有紀錄一律照原值，不要偷改助理已經對過的帳
   acctSyncCompanyOptions(!rec);
 
@@ -1032,6 +1095,9 @@ function openAcctEditModal(rec) {
 function closeAcctEditModal() {
   document.getElementById('acctEditModal').classList.remove('show');
   acctEditCtx = null;
+  // 清空修改紀錄，避免非同步的查詢結果在視窗關閉後才回來、殘留上一筆的內容
+  const histBox = document.getElementById('acctHistoryBox');
+  if (histBox) { histBox.innerHTML = ''; histBox.style.display = 'none'; }
 }
 
 document.getElementById('acctSaveBtn').addEventListener('click', async () => {
