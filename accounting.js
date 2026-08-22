@@ -972,7 +972,10 @@ function openAcctEditModal(rec) {
   // 但存檔時要當成新增（acct-add），不是編輯（acct-update）——資料庫裡本來就沒有這筆
   const isNew = !rec || rec.isVirtual;
   acctEditCtx = { isNew, rec: rec };
-  document.getElementById('acctEditTitle').textContent = isNew ? '➕ 新增開團紀錄' : '✏️ 編輯開團紀錄';
+  // 三種情境分開標示：純空白新增＝補登舊資料（罕見，要有警語）；從行事曆虛擬列回填＝正常流程；編輯既有紀錄
+  document.getElementById('acctEditTitle').textContent =
+    !rec ? '📝 帳務補登' : rec.isVirtual ? '📋 回填業績' : '✏️ 編輯開團紀錄';
+  document.getElementById('acctBackfillHint').style.display = !rec ? 'block' : 'none';
   document.getElementById('acctDeleteBtn').style.display = (!isNew && isAdmin) ? 'inline-block' : 'none';
   setFormStatus('acctEditStatus', '', '');
 

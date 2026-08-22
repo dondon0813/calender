@@ -4806,7 +4806,7 @@
       <h2 class="view-title">💰 開團帳務</h2>
       <div style="display:flex; gap:8px;">
         <button class="task-mini-btn" id="acctReloadBtn">🔄 重新整理</button>
-        <button class="task-mini-btn" id="acctAddBtn">➕ 新增開團</button>
+        <button class="task-mini-btn" id="acctAddBtn">📝 帳務補登</button>
       </div>
     </div>
     <div class="form-status" id="acctStatus" style="text-align:center;"></div>
@@ -5375,6 +5375,9 @@
   <div class="modal-box" style="width:min(460px, 94vw);">
     <button class="modal-close" onclick="closeAcctEditModal()">✕</button>
     <h3 id="acctEditTitle">➕ 新增開團紀錄</h3>
+    <div id="acctBackfillHint" style="display:none; font-size:12.5px; color:#a05a00; background:#fff6e6; border:1px solid #ffdb99; border-radius:8px; padding:8px 10px; margin-bottom:10px;">
+      ⚠️ 這個按鈕只用來補登「系統沒有自動抓到」的舊帳務。正常情況下只要有開團就會在行事曆排日期，對帳畫面會自動列出待回填的團，不需要在這裡手動新增。
+    </div>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="acctDateInput">開團日期</label>
       <input type="date" id="acctDateInput">
