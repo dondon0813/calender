@@ -1045,6 +1045,33 @@ async function refreshCurrentBookAfterMaterialChange() {
   renderBookList();
 }
 
+// ===== 繪本館優惠活動（一行一條，整批覆蓋） =====
+function renderPromotions() {
+  const ta = document.getElementById('promoTextarea');
+  if (!ta) return;
+  ta.value = (PACKAGE_DATA.promotions || []).map(p => p.text || '').filter(Boolean).join('\n');
+  document.getElementById('promoStatus').textContent = '';
+}
+
+document.getElementById('savePromoBtn').addEventListener('click', async () => {
+  const ta = document.getElementById('promoTextarea');
+  const statusEl = document.getElementById('promoStatus');
+  const items = ta.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  statusEl.textContent = '儲存中…';
+  try {
+    const res = await apiPost('book-promotions-set', { items });
+    if (!res || res.success !== true) {
+      statusEl.textContent = '';
+      showToast('儲存優惠失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    PACKAGE_DATA.promotions = res.promotions || [];
+    renderPromotions();
+    statusEl.textContent = `已儲存 ${items.length} 條`;
+    showToast('優惠活動已儲存');
+  } catch (err) { statusEl.textContent = ''; /* needLogin 已處理 */ }
+});
+
 // ===== 年齡與主題清單管理 =====
 function renderCategoryManageList() {
   const el = document.getElementById('categoryManageList');
@@ -1124,6 +1151,7 @@ async function loadBooksView(force) {
   renderCategoryCheckboxes();
   renderTypeCheckboxes();
   renderCategoryManageList();
+  renderPromotions();
   resetForm();
 }
 

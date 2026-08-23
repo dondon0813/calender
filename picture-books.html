@@ -216,6 +216,30 @@
     box-shadow: 0 3px 10px rgba(0,0,0,0.3);
   }
 
+  /* 頂端團購入口 */
+  .pb-top-purchase { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 14px; }
+  .pb-top-purchase .pb-top-btn {
+    display: inline-block; text-decoration: none; text-align: center;
+    font-family: var(--font-round); font-weight: 800; font-size: 14px;
+    color: #fff; background: var(--c-primary);
+    border-radius: var(--r-pill); padding: 11px 22px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+  }
+  .pb-top-purchase .pb-top-btn:hover { background: var(--c-primary-dark); }
+  .pb-top-purchase button.pb-top-btn { border: none; cursor: pointer; font-family: var(--font-round); }
+  .pb-top-purchase .pb-top-btn-soft { background: var(--c-cat-4); }
+  /* 團購資訊浮動視窗 */
+  .pb-promo-box { text-align: center; }
+  .pb-promo-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--c-text); margin: 6px 0 4px; }
+  .pb-promo-sub { font-family: var(--font-round); font-weight: 800; font-size: 15px; color: var(--c-primary); margin-bottom: 16px; }
+  .pb-promo-sec-title { font-weight: 800; font-size: 13.5px; color: var(--c-text); margin-bottom: 8px; text-align: left; }
+  .pb-promo-list { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .pb-promo-list li {
+    background: var(--c-mint-bg, #eef8f4); border-radius: 10px; padding: 9px 12px;
+    font-size: 13.5px; line-height: 1.5; color: var(--c-text); white-space: pre-wrap; word-break: break-word;
+  }
+  .pb-promo-list li::before { content: '✦ '; color: var(--c-primary); font-weight: 800; }
+  .pb-promo-empty { font-size: 13px; color: var(--c-text-soft); padding: 10px 0 4px; }
   .modal-actions { display: flex; gap: 8px; margin-top: 4px; margin-bottom: 14px; flex-wrap: wrap; }
   .action-btn { text-align: center; text-decoration: none; font-weight: 800; border: none; border-radius: var(--r-pill); background: var(--c-primary); color: #fff; cursor: pointer; flex: 1 1 auto; font-size: 13.5px; padding: 11px 12px; }
   .action-btn:hover { background: var(--c-primary-dark); }
@@ -451,6 +475,9 @@
     <div class="page-title">📚 繪本館</div>
   </div>
 
+  <!-- 頂端團購入口：有開團 → 下單按鈕；沒開團但有排程 → 下一團日期；都沒有 → 隱藏 -->
+  <div class="pb-top-purchase" id="pbTopPurchase" style="display:none;"></div>
+
   <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="books"></div>
 
   <div id="statusMsg" class="status-msg">資料載入中…</div>
@@ -482,6 +509,18 @@
 </div>
 
 <!-- 繪本彈窗 -->
+<!-- 團購資訊浮動視窗（沒開團時點頂端按鈕開啟）：下一團日期＋優惠活動 -->
+<div class="modal-backdrop" id="pbPromoModal" onclick="if(event.target===this) closePromoModal()">
+  <div class="modal-box pb-modal-box pb-promo-box">
+    <button class="rc-close-btn" onclick="closePromoModal()">✕</button>
+    <div class="pb-promo-title" id="pbPromoTitle"></div>
+    <div class="pb-promo-sub" id="pbPromoSub"></div>
+    <div class="pb-promo-sec-title">🎁 優惠活動</div>
+    <ul class="pb-promo-list" id="pbPromoList"></ul>
+    <div class="pb-promo-empty" id="pbPromoEmpty" style="display:none;">優惠活動籌備中，開團前公布 ✨</div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="bookModal" onclick="if(event.target===this) closeBookModal()">
   <div class="modal-box pb-modal-box">
     <button class="rc-close-btn" onclick="closeBookModal()">✕</button>
@@ -555,6 +594,7 @@ let ALL_BOOKS = [];
 let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
 let USED_BRANDS = [];
+let ALL_PROMOTIONS = []; // 優惠活動 [{id,text}]（後台維護，沒開團時在團購資訊視窗顯示）
 let CURRENT_BOOK = null; // 目前開著的繪本浮動視窗，教材大圖的分享按鈕要用
 
 // 三組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
@@ -605,6 +645,7 @@ async function loadBooks() {
     ALL_BOOKS = data.books || [];
     ALL_CATEGORIES = (data.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
     ALL_TYPES = data.types || [];
+    ALL_PROMOTIONS = (data.promotions || []).filter(p => p && p.text);
 
     const brandIdsUsed = new Set(ALL_BOOKS.map(b => b.brand_id).filter(Boolean));
     USED_BRANDS = (data.brands || []).filter(b => brandIdsUsed.has(b.id));
@@ -613,6 +654,7 @@ async function loadBooks() {
     document.getElementById('pbContent').style.display = 'block';
 
     renderChips();
+    renderTopPurchase();
     renderGrid();
     handleHashOpen();
   } catch (err) {
@@ -758,6 +800,116 @@ function parseYoutube(url) {
     }
   } catch (e) { /* 網址格式不對，當作沒有影片 */ }
   return none;
+}
+
+// ===== 頂端團購入口 =====
+// 彙總所有書的 purchase 狀態（後端依品牌對照行事曆算好的）：
+// 有品牌開團中 → 「前往團購下單」按鈕直接連到團購頁；
+// 沒開團但有排程 → 按鈕顯示下一團日期（7 天內顯示「即將開團」），點開浮動視窗看日期＋優惠活動；
+// 沒排程但後台有填優惠活動 → 「團購優惠」按鈕開同一個視窗；什麼都沒有 → 隱藏
+let TOP_PURCHASE_INFO = null;
+function renderTopPurchase() {
+  const wrap = document.getElementById('pbTopPurchase');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const openByUrl = new Map();   // url → 品牌名稱
+  const upcoming = new Map();    // 品牌名稱 → 最近的 nextDate
+  ALL_BOOKS.forEach(b => {
+    const p = b.purchase || {};
+    const brand = b.brand_name || '';
+    if (p.status === 'open' && p.url) {
+      if (!openByUrl.has(p.url)) openByUrl.set(p.url, brand);
+    } else if (p.status === 'upcoming' && p.nextDate) {
+      const prev = upcoming.get(brand);
+      if (!prev || p.nextDate < prev) upcoming.set(brand, p.nextDate);
+    }
+  });
+
+  if (openByUrl.size) {
+    const multi = openByUrl.size > 1;
+    openByUrl.forEach((brand, url) => {
+      const a = document.createElement('a');
+      a.className = 'pb-top-btn';
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = multi && brand ? `🛒 ${brand} 團購下單` : '🛒 前往團購下單';
+      wrap.appendChild(a);
+    });
+    wrap.style.display = 'flex';
+    return;
+  }
+
+  const entries = [...upcoming.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  if (!entries.length && !ALL_PROMOTIONS.length) { wrap.style.display = 'none'; return; }
+
+  const next = entries[0] || null;
+  const soon = next ? daysUntil(next[1]) <= 7 : false;
+  TOP_PURCHASE_INFO = { entries, soon };
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'pb-top-btn' + (next ? '' : ' pb-top-btn-soft');
+  if (next) btn.textContent = soon ? `🔥 即將開團！${fmtMD(next[1])}` : `📅 下一團 ${fmtMD(next[1])} 開團`;
+  else btn.textContent = '🎁 團購優惠';
+  btn.addEventListener('click', openPromoModal);
+  wrap.appendChild(btn);
+  wrap.style.display = 'flex';
+}
+
+function fmtMD(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
+  return m ? `${Number(m[2])}/${Number(m[3])}` : String(s || '');
+}
+// 距離某天（YYYY-MM-DD）還有幾天（以本機日期算；今天＝0）
+function daysUntil(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
+  if (!m) return Infinity;
+  const target = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((target - today) / 86400000);
+}
+
+function openPromoModal() {
+  const info = TOP_PURCHASE_INFO || { entries: [], soon: false };
+  const titleEl = document.getElementById('pbPromoTitle');
+  const subEl = document.getElementById('pbPromoSub');
+  const listEl = document.getElementById('pbPromoList');
+  const emptyEl = document.getElementById('pbPromoEmpty');
+
+  if (info.entries.length) {
+    const [brand, d] = info.entries[0];
+    const days = daysUntil(d);
+    titleEl.textContent = info.soon ? '🔥 即將開團！' : '📅 下一團開團時間';
+    let sub = `${fmtMD(d)} 開團`;
+    if (days === 0) sub = '今天開團！';
+    else if (days > 0 && days <= 7) sub += `（還有 ${days} 天）`;
+    if (info.entries.length > 1) sub += '｜' + info.entries.slice(1).map(([b2, d2]) => `${b2} ${fmtMD(d2)}`).join('・');
+    else if (brand) sub = `${brand}：${sub}`;
+    subEl.textContent = sub;
+  } else {
+    titleEl.textContent = '📅 下一團開團時間';
+    subEl.textContent = '開團時間待公布，敬請期待';
+  }
+
+  listEl.innerHTML = '';
+  if (ALL_PROMOTIONS.length) {
+    ALL_PROMOTIONS.forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = p.text;
+      listEl.appendChild(li);
+    });
+    listEl.style.display = '';
+    emptyEl.style.display = 'none';
+  } else {
+    listEl.style.display = 'none';
+    emptyEl.style.display = '';
+  }
+  document.getElementById('pbPromoModal').classList.add('show');
+}
+function closePromoModal() {
+  document.getElementById('pbPromoModal').classList.remove('show');
 }
 
 // ===== 購買區塊 =====
