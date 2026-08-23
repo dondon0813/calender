@@ -5059,6 +5059,13 @@
                 <input type="text" id="mPrintSize" placeholder="例：A4 直式、A3 橫式、10×15cm 相片紙" maxlength="60">
               </div>
               <div class="pba-field">
+                <label>開放日期</label>
+                <input type="date" id="mAvailableFrom">
+                <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                  留空＝立即開放下載。設了日期，前台在那天（含）之前會顯示「M/D 開放下載」、不給下載連結；當天 0:00（台北時間）自動開放。
+                </div>
+              </div>
+              <div class="pba-field">
                 <label>縮圖</label>
                 <div class="pba-cover-preview-row">
                   <img id="mThumbPreview" class="pba-material-thumb" style="display:none; width:56px; height:56px;">

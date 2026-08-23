@@ -844,7 +844,8 @@ function renderMaterialList(materials) {
     const sub = document.createElement('div');
     sub.className = 'pba-material-sub';
     const printSizePrefix = m.print_size ? `建議尺寸：${m.print_size} ・ ` : '';
-    sub.textContent = `${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)}`;
+    const availablePrefix = m.available_from ? `${m.locked ? '🔒 ' : ''}${formatAvailableFrom(m.available_from)} 開放 ・ ` : '';
+    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)}`;
     info.appendChild(sub);
     item.appendChild(info);
 
@@ -868,6 +869,14 @@ function renderMaterialList(materials) {
   });
 }
 
+// YYYY-MM-DD → M/D（跨年或不同年則顯示 YYYY/M/D）
+function formatAvailableFrom(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
+  if (!m) return String(s || '');
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  return y === new Date().getFullYear() ? `${mo}/${d}` : `${y}/${mo}/${d}`;
+}
+
 function formatBytes(n) {
   if (!n) return '0 KB';
   if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
@@ -883,6 +892,7 @@ function openMaterialForm(material) {
   document.getElementById('mTitle').value = material ? material.title || '' : '';
   document.getElementById('mDescription').value = material ? material.description || '' : '';
   document.getElementById('mPrintSize').value = material ? material.print_size || '' : '';
+  document.getElementById('mAvailableFrom').value = material ? (material.available_from || '').slice(0, 10) : '';
   document.getElementById('mThumbUrl').value = material ? material.thumb_url || '' : '';
   document.getElementById('mFileUrl').value = material ? material.file_url || '' : '';
   document.getElementById('mFileName').value = material ? material.file_name || '' : '';
@@ -989,6 +999,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     title,
     description: document.getElementById('mDescription').value,
     print_size: document.getElementById('mPrintSize').value.trim(),
+    available_from: document.getElementById('mAvailableFrom').value || '',
     thumb_url: document.getElementById('mThumbUrl').value.trim(),
     file_url: document.getElementById('mFileUrl').value.trim(),
     file_name: document.getElementById('mFileName').value,

@@ -421,6 +421,15 @@
     padding: 7px 16px 3px;
     white-space: nowrap;
   }
+  /* 還沒到開放日期：灰底、不可點 */
+  .pb-mat-download.pb-mat-locked {
+    background: #cfd4d3;
+    color: #5d6866;
+    cursor: default;
+    font-size: 11px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
 </style>
 </head>
 <body>
@@ -866,7 +875,13 @@ function renderMaterials(book) {
 
     actions.appendChild(icons);
 
-    if (m.file_url || m.thumb_url) {
+    if (m.locked) {
+      // 還沒到開放日：後端公開包不回 file_url，這裡只顯示開放日期，不給下載
+      const lockTag = document.createElement('span');
+      lockTag.className = 'pb-mat-download pb-mat-locked';
+      lockTag.textContent = `🔒 ${formatPbAvailableFrom(m.available_from)} 開放下載`;
+      actions.appendChild(lockTag);
+    } else if (m.file_url || m.thumb_url) {
       const dl = document.createElement('a');
       dl.className = 'pb-mat-download';
       dl.href = m.file_url || m.thumb_url;
@@ -914,6 +929,14 @@ function renderMaterials(book) {
   });
 
   toggle.onclick = () => panel.classList.toggle('show');
+}
+
+// YYYY-MM-DD → M/D（不同年則顯示 YYYY/M/D）
+function formatPbAvailableFrom(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
+  if (!m) return String(s || '');
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  return y === new Date().getFullYear() ? `${mo}/${d}` : `${y}/${mo}/${d}`;
 }
 
 // ===== Modal 開關 =====
