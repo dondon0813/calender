@@ -192,6 +192,14 @@
     aspect-ratio: 16 / 9;
     cursor: pointer;
   }
+  /* Shorts／直式影片：改 9:16、置中、限制寬度，不要硬塞進橫框 */
+  .pb-yt-wrap.vertical {
+    aspect-ratio: 9 / 16;
+    /* 寬度取三者最小：容器寬、320px、或讓高度不超過 65vh 的寬度，確保比例永遠是真正的 9:16 */
+    width: min(100%, 320px, calc(65vh * 9 / 16));
+    margin-left: auto;
+    margin-right: auto;
+  }
   .pb-yt-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-yt-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
   .pb-yt-play {
@@ -731,18 +739,23 @@ function renderGrid() {
 
 // ===== YouTube 網址解析 =====
 function parseYoutubeId(url) {
-  if (!url) return '';
+  return parseYoutube(url).id;
+}
+// 回 { id, vertical }：vertical＝網址是 /shorts/ → 前台用直式 9:16 框
+function parseYoutube(url) {
+  const none = { id: '', vertical: false };
+  if (!url) return none;
   try {
     const u = new URL(String(url).trim());
     const host = u.hostname.replace(/^www\./, '');
-    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || '';
+    if (host === 'youtu.be') return { id: u.pathname.slice(1).split('/')[0] || '', vertical: false };
     if (host.indexOf('youtube.com') !== -1) {
-      if (u.pathname === '/watch') return u.searchParams.get('v') || '';
+      if (u.pathname === '/watch') return { id: u.searchParams.get('v') || '', vertical: false };
       const m = u.pathname.match(/^\/(shorts|embed)\/([^/?]+)/);
-      if (m) return m[2];
+      if (m) return { id: m[2], vertical: m[1] === 'shorts' };
     }
   } catch (e) { /* 網址格式不對，當作沒有影片 */ }
-  return '';
+  return none;
 }
 
 // ===== 購買區塊 =====
@@ -997,10 +1010,24 @@ function openBookModal(book) {
   }
 
   const ytWrap = document.getElementById('pbYtWrap');
-  const ytId = parseYoutubeId(book.youtube_url);
+  const yt = parseYoutube(book.youtube_url);
+  const ytId = yt.id;
+  ytWrap.classList.toggle('vertical', Boolean(ytId) && yt.vertical);
   if (ytId) {
     ytWrap.style.display = 'block';
-    ytWrap.innerHTML = `<img id="pbYtThumb" src="https://i.ytimg.com/vi/${ytId}/hqdefault.jpg" alt="YouTube 影片"><div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>`;
+    // 預覽圖依序嘗試高畫質版本：Shorts 先用直式 oardefault（1080×1920）→ maxresdefault（1280×720）→ hqdefault（480×360）。
+    // 不是每支都有高畫質版，沒有時 YouTube 回 120×90 的灰色佔位圖，用 naturalWidth 判斷後換下一個。
+    const thumbNames = (yt.vertical ? ['oardefault'] : []).concat(['maxresdefault', 'hqdefault']);
+    ytWrap.innerHTML = `<img id="pbYtThumb" alt="YouTube 影片"><div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>`;
+    const thumb = document.getElementById('pbYtThumb');
+    let thumbIdx = 0;
+    const tryNextThumb = () => {
+      if (thumbIdx >= thumbNames.length) { thumb.onload = null; thumb.onerror = null; return; }
+      thumb.src = `https://i.ytimg.com/vi/${ytId}/${thumbNames[thumbIdx++]}.jpg`;
+    };
+    thumb.onload = () => { if (thumb.naturalWidth <= 120 && thumbIdx < thumbNames.length) tryNextThumb(); };
+    thumb.onerror = tryNextThumb;
+    tryNextThumb();
     ytWrap.onclick = function () {
       ytWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" title="YouTube 影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
       ytWrap.onclick = null;
