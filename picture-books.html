@@ -398,6 +398,7 @@
     white-space: pre-wrap;
   }
   .pb-mat-desc.show { display: block; }
+  .pb-mat-desc .pb-mat-size { font-weight: 700; color: var(--c-text); margin-bottom: 3px; }
   .pb-mat-actions {
     display: flex;
     align-items: center;
@@ -916,7 +917,8 @@ function renderMaterials(book) {
     title.textContent = m.title || '未命名教材';
     titleRow.appendChild(title);
 
-    if (m.description) {
+    // 「更多」展開：介紹＋列印建議尺寸（任一有填就顯示按鈕）
+    if (m.description || m.print_size) {
       const moreBtn = document.createElement('button');
       moreBtn.type = 'button';
       moreBtn.className = 'pb-mat-more';
@@ -925,7 +927,17 @@ function renderMaterials(book) {
 
       const desc = document.createElement('div');
       desc.className = 'pb-mat-desc';
-      desc.textContent = m.description;
+      if (m.print_size) {
+        const sizeLine = document.createElement('div');
+        sizeLine.className = 'pb-mat-size';
+        sizeLine.textContent = `🖨️ 列印建議尺寸：${m.print_size}`;
+        desc.appendChild(sizeLine);
+      }
+      if (m.description) {
+        const descText = document.createElement('div');
+        descText.textContent = m.description;
+        desc.appendChild(descText);
+      }
 
       moreBtn.addEventListener('click', () => {
         const show = desc.classList.toggle('show');
