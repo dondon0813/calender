@@ -485,6 +485,12 @@
   <div class="modal-box pb-modal-box">
     <button class="rc-close-btn" onclick="closeBookModal()">✕</button>
 
+    <!-- 有影片介紹時，影片取代首圖（封面隱藏）；沒影片才顯示封面 -->
+    <div class="pb-yt-wrap" id="pbYtWrap" style="display:none;">
+      <img id="pbYtThumb" src="" alt="YouTube 影片">
+      <div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>
+    </div>
+
     <div class="pb-cover-wrap" id="pbModalCoverWrap">
       <img id="pbModalCover" src="" alt="">
     </div>
@@ -496,11 +502,6 @@
     <div class="rc-tip-box" id="pbModalDescBox" style="display:none;">
       <div class="rc-tip-title">📝 內容介紹</div>
       <div class="rc-tip-text" id="pbModalDesc"></div>
-    </div>
-
-    <div class="pb-yt-wrap" id="pbYtWrap" style="display:none;">
-      <img id="pbYtThumb" src="" alt="YouTube 影片">
-      <div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>
     </div>
 
     <div id="pbPurchaseSection"></div>
@@ -1013,6 +1014,8 @@ function openBookModal(book) {
   const yt = parseYoutube(book.youtube_url);
   const ytId = yt.id;
   ytWrap.classList.toggle('vertical', Boolean(ytId) && yt.vertical);
+  // 有影片介紹 → 影片當首圖，封面隱藏（封面在書卡上仍看得到）；沒影片 → 封面照常
+  coverWrap.style.display = ytId ? 'none' : '';
   if (ytId) {
     ytWrap.style.display = 'block';
     // 預覽圖依序嘗試高畫質版本：Shorts 先用直式 oardefault（1080×1920）→ maxresdefault（1280×720）→ hqdefault（480×360）。
