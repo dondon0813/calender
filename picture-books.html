@@ -305,32 +305,41 @@
   }
   .pb-top-btn-line1 { font-size: 13.5px; word-break: break-word; }
   .pb-top-btn-line2 { font-size: 12px; font-weight: 700; opacity: .92; letter-spacing: .3px; }
-  /* 開團中：頂端活動區塊（標題＋優惠條列＋下單按鈕），手機優先、寬度貼齊搜尋列 */
+  /* 開團中：頂端活動區（2026-08-25 雪莉指定改版：深米色底、單排橫向滑動卡片，不再是大面板；
+     排序＝下單卡 → 優惠卡 → 滿額贈卡，完整優惠內容仍在「團購優惠」浮動視窗） */
   .pb-top-active {
     width: 100%; max-width: 420px; margin: 0 auto;
-    background: var(--c-mint-bg, #eef8f4);
-    border: 1.5px solid var(--c-mint-text, var(--c-primary));
+    background: #e8dcc2;
+    border: 1.5px solid #c5a878;
     border-radius: var(--r-lg, 16px);
-    padding: 14px 16px;
-    text-align: center;
+    padding: 10px 12px;
   }
-  .pb-top-active-header {
-    font-family: var(--font-round); font-weight: 800; font-size: 15px;
-    color: var(--c-text); margin-bottom: 8px;
+  .pb-top-active-row {
+    display: flex; align-items: stretch; gap: 10px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
   }
-  .pb-top-active-dates {
-    font-size: 12.5px; color: var(--c-text-2, var(--c-text));
-    margin: -2px 0 8px;
+  .pb-top-active-card {
+    flex: 0 0 auto;
+    background: rgba(255,255,255,0.78);
+    border-radius: 12px;
+    padding: 9px 11px;
   }
-  .pb-top-active-promos {
-    text-align: left; display: flex; flex-direction: column; gap: 5px;
-    max-height: 132px; overflow-y: auto;
-    margin: 0 0 10px; padding: 9px 11px;
-    background: rgba(255,255,255,0.65); border-radius: 10px;
+  .pb-top-active-cta-card {
+    width: 156px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    gap: 5px; text-align: center;
   }
-  .pb-top-active-promo-line { font-size: 12.5px; line-height: 1.5; color: var(--c-text); white-space: pre-wrap; word-break: break-word; }
-  .pb-top-active-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-  .pb-top-active .pb-top-btn { margin: 0; }
+  .pb-top-active-cta-title { font-family: var(--font-round); font-weight: 800; font-size: 12.5px; line-height: 1.35; color: var(--c-text); }
+  .pb-top-active-cta-dates { font-size: 11px; color: var(--c-text-2, var(--c-text)); }
+  .pb-top-active .pb-top-btn { margin: 0; font-size: 12.5px; padding: 8px 14px; box-shadow: none; }
+  .pb-top-active-promo-card { width: 190px; display: flex; align-items: center; }
+  .pb-top-active-promo-text {
+    font-size: 12px; line-height: 1.45; color: var(--c-text);
+    white-space: pre-wrap; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .pb-top-active-gift-card { display: flex; align-items: center; }
   /* 滿額贈：可累積達標一次帶走，橫滑卡片列（沿用 .pb-featured-row 的橫滑模式），
      用在頂端開團活動區與「團購優惠」浮動視窗兩處，純展示不可點擊 */
   .pb-gift-wrap { margin: 0 0 10px; text-align: left; }
@@ -860,6 +869,29 @@ function sendBooksBeacon(type, extra) {
   } catch (e) { /* 統計失敗不影響使用者操作，安靜忽略 */ }
 }
 
+// ===== 外連按鈕點擊統計（2026-08-25）=====
+// 打相容層 stat-click，key 走白名單 page_<小寫英數>_<Y-M-D>（clicks 欄，跟 page_books_ 瀏覽量分開）。
+// 代號對照後台報表 report.js RPT_BOOKS_BUTTON_DEFS：booksorder=頂端前往下單、booksbuy=彈窗前往購買、
+// booksshopee=蝦皮購買（含教材前「前往下單」）、booksdownload=教材下載
+function pbTrackClick(code) {
+  try {
+    const d = new Date();
+    const key = `page_${code}_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    const payload = JSON.stringify({ type: 'stat-click', key });
+    const url = 'https://dondon-platform.vercel.app/api/legacy';
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者操作，安靜忽略 */ }
+}
+
 // ===== 愛心（喜歡這本繪本）=====
 // 「按過」狀態存 localStorage，跨重整記住；無痕模式等寫入失敗時 try/catch 吞掉，
 // 按讚本身仍可送出，只是重整後會忘記已經按過（不影響當次操作）。
@@ -1182,58 +1214,58 @@ function renderTopPurchase() {
   });
 
   if (openByUrl.size) {
-    // 開團中：不再只放單顆按鈕，改成攤開的活動區塊（標題＋團購時間＋優惠條列＋下單按鈕）。
-    const multi = openByUrl.size > 1;
-    const brandNames = [...openByUrl.values()].map(v => v.brand).filter(Boolean);
-
+    // 開團中（2026-08-25 改版）：單排橫向滑動卡片列——每團一張下單卡（品牌＋時間＋按鈕），
+    // 後接優惠卡（長文截 6 行，完整內容在浮動視窗）與滿額贈卡。
     const box = document.createElement('div');
     box.className = 'pb-top-active';
+    const row = document.createElement('div');
+    row.className = 'pb-top-active-row';
 
-    const header = document.createElement('div');
-    header.className = 'pb-top-active-header';
-    const headline = brandNames.length ? `${brandNames.join('・')} 團購開跑中` : '團購開跑中';
-    header.textContent = `🛒 ${headline}`;
-    box.appendChild(header);
-
-    // 團購時間：單一團才顯示（多團日期各異，掛在各自按鈕上反而亂，省略）
-    if (!multi) {
-      const only = [...openByUrl.values()][0];
-      if (only.startDate && only.endDate) {
-        const dateLine = document.createElement('div');
-        dateLine.className = 'pb-top-active-dates';
-        dateLine.textContent = `⏰ 團購時間：${fmtMD(only.startDate)} – ${fmtMD(only.endDate)}`;
-        box.appendChild(dateLine);
-      }
-    }
-
-    const giftSection = buildGiftSection();
-    if (giftSection) box.appendChild(giftSection);
-
-    if (ALL_PROMOTIONS.length) {
-      const promoWrap = document.createElement('div');
-      promoWrap.className = 'pb-top-active-promos';
-      ALL_PROMOTIONS.forEach(p => {
-        const line = document.createElement('div');
-        line.className = 'pb-top-active-promo-line';
-        line.textContent = `🎁 ${p.text}`;
-        promoWrap.appendChild(line);
-      });
-      box.appendChild(promoWrap);
-    }
-
-    const ctaWrap = document.createElement('div');
-    ctaWrap.className = 'pb-top-active-ctas';
     openByUrl.forEach((info, url) => {
+      const card = document.createElement('div');
+      card.className = 'pb-top-active-card pb-top-active-cta-card';
+
+      const title = document.createElement('div');
+      title.className = 'pb-top-active-cta-title';
+      title.textContent = `🛒 ${info.brand ? info.brand + ' ' : ''}團購開跑中`;
+      card.appendChild(title);
+
+      if (info.startDate && info.endDate) {
+        const dates = document.createElement('div');
+        dates.className = 'pb-top-active-cta-dates';
+        dates.textContent = `⏰ ${fmtMD(info.startDate)} – ${fmtMD(info.endDate)}`;
+        card.appendChild(dates);
+      }
+
       const a = document.createElement('a');
       a.className = 'pb-top-btn';
       a.href = url;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      a.textContent = multi && info.brand ? `🛒 ${info.brand} 前往下單` : '🛒 前往團購下單';
-      ctaWrap.appendChild(a);
+      a.textContent = '前往下單';
+      a.addEventListener('click', () => pbTrackClick('booksorder'));
+      card.appendChild(a);
+      row.appendChild(card);
     });
-    box.appendChild(ctaWrap);
 
+    ALL_PROMOTIONS.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'pb-top-active-card pb-top-active-promo-card';
+      const t = document.createElement('div');
+      t.className = 'pb-top-active-promo-text';
+      t.textContent = `🎁 ${p.text}`;
+      card.appendChild(t);
+      row.appendChild(card);
+    });
+
+    ALL_GIFTS.forEach(g => {
+      const card = document.createElement('div');
+      card.className = 'pb-top-active-card pb-top-active-gift-card';
+      card.appendChild(buildGiftItem(g));
+      row.appendChild(card);
+    });
+
+    box.appendChild(row);
     wrap.appendChild(box);
     wrap.style.display = 'flex';
     return;
@@ -1356,45 +1388,48 @@ function buildGiftSection() {
 
   const row = document.createElement('div');
   row.className = 'pb-gift-row';
-  ALL_GIFTS.forEach(g => {
-    const item = document.createElement('div');
-    item.className = 'pb-gift-item';
-
-    const thumbWrap = document.createElement('div');
-    thumbWrap.className = 'pb-gift-thumb-wrap';
-    if (g.imageUrl) {
-      const img = document.createElement('img');
-      img.src = g.imageUrl;
-      img.alt = g.title || '';
-      img.loading = 'lazy';
-      thumbWrap.appendChild(img);
-    } else {
-      thumbWrap.classList.add('placeholder');
-      thumbWrap.textContent = '🎁';
-    }
-    item.appendChild(thumbWrap);
-
-    const name = document.createElement('div');
-    name.className = 'pb-gift-name';
-    name.textContent = g.title || '';
-    item.appendChild(name);
-
-    const badge = document.createElement('div');
-    badge.className = 'pb-gift-badge';
-    badge.textContent = `滿 $${pbFormatMoney(g.amount)}`;
-    item.appendChild(badge);
-
-    if (g.note) {
-      const noteText = document.createElement('div');
-      noteText.className = 'pb-gift-note-text';
-      noteText.textContent = g.note;
-      item.appendChild(noteText);
-    }
-
-    row.appendChild(item);
-  });
+  ALL_GIFTS.forEach(g => row.appendChild(buildGiftItem(g)));
   wrap.appendChild(row);
   return wrap;
+}
+
+// 單張滿額贈卡片：浮動視窗的橫滑列與頂端開團卡片列共用
+function buildGiftItem(g) {
+  const item = document.createElement('div');
+  item.className = 'pb-gift-item';
+
+  const thumbWrap = document.createElement('div');
+  thumbWrap.className = 'pb-gift-thumb-wrap';
+  if (g.imageUrl) {
+    const img = document.createElement('img');
+    img.src = g.imageUrl;
+    img.alt = g.title || '';
+    img.loading = 'lazy';
+    thumbWrap.appendChild(img);
+  } else {
+    thumbWrap.classList.add('placeholder');
+    thumbWrap.textContent = '🎁';
+  }
+  item.appendChild(thumbWrap);
+
+  const name = document.createElement('div');
+  name.className = 'pb-gift-name';
+  name.textContent = g.title || '';
+  item.appendChild(name);
+
+  const badge = document.createElement('div');
+  badge.className = 'pb-gift-badge';
+  badge.textContent = `滿 $${pbFormatMoney(g.amount)}`;
+  item.appendChild(badge);
+
+  if (g.note) {
+    const noteText = document.createElement('div');
+    noteText.className = 'pb-gift-note-text';
+    noteText.textContent = g.note;
+    item.appendChild(noteText);
+  }
+
+  return item;
 }
 
 function fmtMD(s) {
@@ -1478,6 +1513,7 @@ function renderPurchaseSection(book) {
     btn.target = '_blank';
     btn.rel = 'noopener noreferrer';
     btn.textContent = '🛒 前往購買';
+    btn.addEventListener('click', () => pbTrackClick('booksbuy'));
     actions.appendChild(btn);
     wrap.appendChild(actions);
     return;
@@ -1498,6 +1534,7 @@ function renderPurchaseSection(book) {
       btn.target = '_blank';
       btn.rel = 'noopener noreferrer';
       btn.textContent = '🛍 蝦皮購買';
+      btn.addEventListener('click', () => pbTrackClick('booksshopee'));
       actions.appendChild(btn);
       wrap.appendChild(actions);
     }
@@ -1514,6 +1551,7 @@ function renderPurchaseSection(book) {
     btn.target = '_blank';
     btn.rel = 'noopener noreferrer';
     btn.textContent = '🛍 蝦皮購買';
+    btn.addEventListener('click', () => pbTrackClick('booksshopee'));
     actions.appendChild(btn);
     wrap.appendChild(actions);
   }
@@ -1606,7 +1644,10 @@ function renderMaterials(book) {
       dl.target = '_blank';
       dl.rel = 'noopener noreferrer';
       dl.textContent = '下載';
-      dl.addEventListener('click', () => sendBooksBeacon('material-download-hit', { materialId: m.id }));
+      dl.addEventListener('click', () => {
+        sendBooksBeacon('material-download-hit', { materialId: m.id });
+        pbTrackClick('booksdownload'); // 報表用彙總數，跟上面的單教材計數各記各的
+      });
       actions.appendChild(dl);
     }
 
@@ -1780,6 +1821,7 @@ function renderOrderCta(book) {
   btn.target = '_blank';
   btn.rel = 'noopener noreferrer';
   btn.textContent = '🛒 前往下單';
+  btn.addEventListener('click', () => pbTrackClick('booksshopee'));
   actions.appendChild(btn);
   wrap.appendChild(actions);
 }

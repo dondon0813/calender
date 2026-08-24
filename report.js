@@ -24,7 +24,16 @@ const RPT_PAGE_DEFS = [
   { key: 'kids', label: '免費資源' },
   { key: 'starcard', label: '集點卡' },
   { key: 'namesticker', label: '姓名貼產生器' },
-  { key: 'schoollabels', label: '開學姓名貼' }
+  { key: 'schoollabels', label: '開學姓名貼' },
+  { key: 'books', label: '繪本館' }
+];
+// 繪本館外連按鈕點擊（2026-08-25）：picture-books.html pbTrackClick() 送 page_<key>_<日期> 的 clicks 欄，
+// key 代號要跟前台完全一致
+const RPT_BOOKS_BUTTON_DEFS = [
+  { key: 'booksorder', label: '頂端前往下單' },
+  { key: 'booksbuy', label: '彈窗前往購買（開團中）' },
+  { key: 'booksshopee', label: '蝦皮購買' },
+  { key: 'booksdownload', label: '教材下載' }
 ];
 // 對應 index.html 的 attachStatTracking()：來源 key 固定是 evKey + '_src_' + mode
 // 行事曆各模式維持單層；食譜頁／開學清單頁 2026-07-27 拆成頁內細項（items），
@@ -90,6 +99,29 @@ function rptComputePageViews(stats) {
     let total = 0;
     Object.keys(stats).forEach(k => {
       if (k.indexOf(prefix) === 0) total += (stats[k].views || 0);
+    });
+    return { key: p.key, label: p.label, today, seven, thirty, total };
+  });
+}
+
+// 繪本館按鈕點擊聚合：跟 rptComputePageViews 同四個時間窗，但讀 clicks 欄
+function rptComputeBooksButtons(stats) {
+  stats = stats || {};
+  const todayKey = rptDateKeyOf(rptDaysAgoDate(0));
+  const last7 = [];
+  for (let i = 0; i < 7; i++) last7.push(rptDateKeyOf(rptDaysAgoDate(i)));
+  const last30 = [];
+  for (let i = 0; i < 30; i++) last30.push(rptDateKeyOf(rptDaysAgoDate(i)));
+
+  const clicksOf = (k) => (((stats[k] || {}).clicks) || 0);
+  return RPT_BOOKS_BUTTON_DEFS.map(p => {
+    const prefix = 'page_' + p.key + '_';
+    const today = clicksOf(prefix + todayKey);
+    const seven = last7.reduce((s, d) => s + clicksOf(prefix + d), 0);
+    const thirty = last30.reduce((s, d) => s + clicksOf(prefix + d), 0);
+    let total = 0;
+    Object.keys(stats).forEach(k => {
+      if (k.indexOf(prefix) === 0) total += (stats[k].clicks || 0);
     });
     return { key: p.key, label: p.label, today, seven, thirty, total };
   });
@@ -248,6 +280,21 @@ function rptRenderPageViewsTable(stats) {
   el.innerHTML = html;
 }
 
+function rptRenderBooksButtonsTable(stats) {
+  const el = document.getElementById('rptBooksButtonsTable');
+  if (!el) return;
+  const rows = rptComputeBooksButtons(stats);
+  const hasAny = rows.some(r => r.today || r.seven || r.thirty || r.total);
+  if (!hasAny) { el.innerHTML = '<div class="rpt-empty">尚無資料</div>'; return; }
+  let html = '<table class="rpt-table"><thead><tr><th>按鈕</th><th>今日</th><th>近7日</th><th>近30日</th><th>累計</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    html += '<tr><td>' + escHtml(r.label) + '</td><td>' + r.today + '</td><td>' + r.seven +
+      '</td><td>' + r.thirty + '</td><td>' + r.total + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
 function rptSourceItemsTagsHtml(items) {
   const shown = (items || []).filter(i => i.count > 0);
   if (!shown.length) return '';
@@ -338,6 +385,7 @@ function renderReportView() {
 
   rptRenderOverview(stats);
   rptRenderPageViewsTable(stats);
+  rptRenderBooksButtonsTable(stats);
   rptGroupRows = rptComputeGroupRanking(stats, events);
   rptRenderGroupRankTable();
   rptRenderSourceTable(stats);
