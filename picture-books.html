@@ -1163,13 +1163,7 @@ function renderGrid() {
     title.innerHTML = smartTitleHtml(book.title);
     body.appendChild(title);
 
-    const likeCount = Number(book.likeCount) || 0;
-    if (likeCount > 0) {
-      const likes = document.createElement('div');
-      likes.className = 'pb-card-likes';
-      likes.textContent = `❤️ ${likeCount}`;
-      body.appendChild(likes);
-    }
+    // 書卡不顯示愛心數（2026-08-25 雪莉指定：列表太亂）；介紹視窗內的愛心數保留
 
     const tags = document.createElement('div');
     tags.className = 'pb-card-tags';
