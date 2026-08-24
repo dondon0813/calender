@@ -337,15 +337,18 @@
     width: 72px;
     height: 72px;
     margin: 0 auto;
-    border-radius: var(--r-md);
-    overflow: hidden;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
-    background: var(--c-border-light);
   }
-  .pb-gift-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pb-gift-thumb-wrap.placeholder { font-size: 24px; }
+  /* 贈品圖都是去背圖：不裁切、不墊底色（灰底框只留給無圖占位），同套組小圖做法 */
+  .pb-gift-thumb-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .pb-gift-thumb-wrap.placeholder {
+    font-size: 24px;
+    align-items: center;
+    background: var(--c-border-light);
+    border-radius: var(--r-md);
+  }
   .pb-gift-name {
     margin-top: 4px;
     font-size: 11px;
