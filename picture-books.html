@@ -309,8 +309,8 @@
      2026-08-25 只換色：底色由薄荷綠改深米色（雪莉指定），排版照原樣不動 */
   .pb-top-active {
     width: 100%; max-width: 420px; margin: 0 auto;
-    background: #fdf3e2;
-    border: 1.5px solid #f0d0a6;
+    background: #fcefe8;
+    border: 1.5px solid #f0c8b4;
     border-radius: var(--r-lg, 16px);
     padding: 14px 16px;
     text-align: center;
@@ -332,6 +332,11 @@
   .pb-top-active-promo-line { font-size: 12.5px; line-height: 1.5; color: var(--c-text); white-space: pre-wrap; word-break: break-word; }
   .pb-top-active-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .pb-top-active .pb-top-btn { margin: 0; }
+  /* 開團區塊限定的按鈕／滿額標珊瑚色（2026-08-25 雪莉用調色盤選的三色組之一；
+     浮動視窗裡的同元件維持原本粉色不動） */
+  .pb-top-active .pb-top-btn { background: #df7972; }
+  .pb-top-active .pb-top-btn:hover { background: #c9615a; }
+  .pb-top-active .pb-gift-badge { background: #df7972; }
   /* 本頁限定（2026-08-25 雪莉指定）：「現正開團中」不用共用 shared.css 的多欄格線，
      改單排橫向滑動；連 openGroupBuy.js 依數量掛上的 ogb-grid4/5 也一併蓋掉（id 選擇器權重較高），
      其他頁面不受影響 */
