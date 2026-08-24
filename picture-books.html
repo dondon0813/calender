@@ -19,6 +19,12 @@
     margin-bottom: 8px;
     letter-spacing: 1px;
   }
+  .pb-featured-intro {
+    font-size: 11.5px;
+    color: var(--c-muted);
+    margin: -4px 0 8px;
+    line-height: 1.5;
+  }
   .pb-featured-row {
     display: flex;
     gap: 10px;
@@ -683,6 +689,7 @@ let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
 let USED_BRANDS = [];
 let ALL_PROMOTIONS = []; // 優惠活動 [{id,text}]（後台維護，沒開團時在團購資訊視窗顯示）
+let ALL_SETS = []; // 套組專區 [{id,title,intro,bookIds}]（公開包已算好可見性，2026-08-24）
 let CURRENT_BOOK = null; // 目前開著的繪本浮動視窗，教材大圖的分享按鈕要用
 
 // 三組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
@@ -734,6 +741,7 @@ async function loadBooks() {
     ALL_CATEGORIES = (data.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
     ALL_TYPES = data.types || [];
     ALL_PROMOTIONS = (data.promotions || []).filter(p => p && p.text);
+    ALL_SETS = data.sets || [];
 
     const brandIdsUsed = new Set(ALL_BOOKS.map(b => b.brand_id).filter(Boolean));
     USED_BRANDS = (data.brands || []).filter(b => brandIdsUsed.has(b.id));
@@ -840,37 +848,37 @@ function matchesFilters(book) {
 }
 
 // ===== 套組專區（頂端橫向滑動小圖區，可能多排）=====
-// 分類名稱含「套組」或「雪莉精選」的都算套組分類，各自獨立一排，依 ALL_CATEGORIES 順序排列；
-// 一本書可同時屬多個套組分類，各排都會出現。固定顯示全部（不受搜尋列/篩選 chips 影響）。
-// 一排是否顯示：排內至少一本書開團中，或 7 天內即將開團；都不符合就整排不渲染。
-// 全部排都不顯示 → 整區隱藏，不留空框。點小圖走跟書卡完全同一顆 openBookModal。
-function bookIsHot(book) {
-  const p = (book && book.purchase) || {};
-  if (p.status === 'open') return true;
-  if (p.status === 'upcoming' && p.nextDate) return daysUntil(p.nextDate) <= 7;
-  return false;
-}
-
+// 資料來源改為後端公開包的 sets（2026-08-24）：只回傳「目前可見」的套組（開團前 showNow 開才顯示、
+// 結團含延長就自動消失，可見性判斷全在後端），前端不再自己用分類名稱／開團狀態判斷要不要顯示。
+// 每排照 set.bookIds 順序取書，找不到（下架/刪除）的 id 跳過；整排一本都對不到就不渲染該排。
+// sets 為空/undefined（表還沒建、或都不可見）→ 整區隱藏，不留空框。點小圖走跟書卡完全同一顆 openBookModal。
 function renderFeatured() {
   const wrap = document.getElementById('pbFeatured');
   if (!wrap) return;
   wrap.innerHTML = '';
 
-  const setCats = ALL_CATEGORIES.filter(c => isSetCategory(c.name));
   let anyShown = false;
 
-  setCats.forEach(cat => {
-    const list = ALL_BOOKS.filter(b => (b.categories || []).includes(cat.name));
-    if (!list.length || !list.some(bookIsHot)) return;
+  (ALL_SETS || []).forEach(set => {
+    const bookIds = set.bookIds || [];
+    const list = bookIds.map(id => ALL_BOOKS.find(b => b.id === id)).filter(Boolean);
+    if (!list.length) return;
     anyShown = true;
 
-    const set = document.createElement('div');
-    set.className = 'pb-featured-set';
+    const setEl = document.createElement('div');
+    setEl.className = 'pb-featured-set';
 
     const title = document.createElement('div');
     title.className = 'pb-featured-title';
-    title.textContent = `⭐ ${cat.name}`;
-    set.appendChild(title);
+    title.textContent = `⭐ ${set.title || ''}`;
+    setEl.appendChild(title);
+
+    if (set.intro) {
+      const intro = document.createElement('div');
+      intro.className = 'pb-featured-intro';
+      intro.textContent = set.intro;
+      setEl.appendChild(intro);
+    }
 
     const row = document.createElement('div');
     row.className = 'pb-featured-row';
@@ -902,8 +910,8 @@ function renderFeatured() {
 
       row.appendChild(item);
     });
-    set.appendChild(row);
-    wrap.appendChild(set);
+    setEl.appendChild(row);
+    wrap.appendChild(setEl);
   });
 
   wrap.style.display = anyShown ? 'block' : 'none';

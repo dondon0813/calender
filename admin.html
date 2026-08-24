@@ -4100,14 +4100,16 @@
   .pba-mini-btn:hover { background: var(--c-bg-bottom); }
   .pba-mini-btn.danger { color: var(--c-danger); border-color: var(--c-danger); }
 
-  .pba-material-form {
+  .pba-material-form,
+  .pba-set-form {
     border: 1px dashed var(--c-border);
     border-radius: 12px;
     padding: 12px;
     margin-top: 10px;
     display: none;
   }
-  .pba-material-form.show { display: block; }
+  .pba-material-form.show,
+  .pba-set-form.show { display: block; }
   .pba-upload-status { font-size: 11.5px; color: var(--c-muted); margin-top: 4px; }
 
   .pba-cat-manage-row {
@@ -4122,6 +4124,39 @@
   }
   .pba-cat-add-row { display: flex; gap: 8px; margin-top: 10px; }
   .pba-cat-add-row input { flex: 1; }
+
+  /* 優惠活動子分頁左右導覽（🎁 優惠活動／📦 套組設定），窄螢幕時選單轉成頂部橫排 */
+  .pba-promo-layout { display: flex; flex-direction: column; gap: 14px; }
+  .pba-promo-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  @media (min-width: 640px) {
+    .pba-promo-layout { flex-direction: row; align-items: flex-start; }
+    .pba-promo-nav { flex-direction: column; width: 160px; flex: none; }
+  }
+  .pba-promo-nav-btn {
+    font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; text-align: left;
+    padding: 9px 14px; border-radius: 12px;
+    border: 1px solid var(--c-border-light); background: var(--c-surface); color: var(--c-text-soft);
+  }
+  .pba-promo-nav-btn.on { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+  .pba-promo-content { flex: 1; min-width: 0; }
+
+  /* 套組設定列表 */
+  .pba-set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--c-surface-2);
+    border-radius: 10px;
+    padding: 9px 10px;
+    margin-bottom: 6px;
+  }
+  .pba-set-row-main { min-width: 0; flex: 1; }
+  .pba-set-row-name { font-size: 13px; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pba-set-row-meta { font-size: 11px; color: var(--c-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
+  .pba-set-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--c-muted-light); flex: none; vertical-align: middle; }
+  .pba-set-dot.on { background: var(--c-mint-text); }
+  .pba-set-row-actions { display: flex; gap: 6px; flex: none; }
 
   #pbaToast {
     position: fixed;
@@ -5133,19 +5168,71 @@
     </div>
     </div><!-- /pbaTabPanelManage -->
 
-    <!-- 繪本館優惠活動（前台開團中時攤開顯示在頂端活動區；沒開團時收在「下一團」按鈕點開的浮動視窗裡） -->
+    <!-- 繪本館優惠活動＋套組設定：左側窄選單／右側內容區（窄螢幕轉頂部橫排，比照 .pba-promo-nav） -->
     <div class="pba-tab-panel" id="pbaTabPanelPromo" style="display:none;">
-      <div class="pba-panel">
-        <div class="pba-panel-title">🎁 繪本館優惠活動</div>
-        <div class="pba-field">
-          <textarea id="promoTextarea" rows="5" placeholder="一行一條優惠，例如：&#10;滿 1500 免運&#10;加購延伸教材組 9 折&#10;前 50 名送貼紙"></textarea>
-          <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
-            一行一條，存檔後整批覆蓋。開團期間會攤開顯示在繪本館頁面頂端的活動區；沒開團時則收在「下一團」按鈕點開的浮動視窗裡。清空存檔＝不顯示。
-          </div>
+      <div class="pba-promo-layout">
+        <div class="pba-promo-nav">
+          <button type="button" class="pba-promo-nav-btn on" id="pbaPromoNavBtnText" data-pba-promo-nav="text">🎁 優惠活動</button>
+          <button type="button" class="pba-promo-nav-btn" id="pbaPromoNavBtnSets" data-pba-promo-nav="sets">📦 套組設定</button>
         </div>
-        <div class="pba-form-actions" style="margin-top:8px; align-items:center;">
-          <button type="button" class="pba-btn pba-btn-save" id="savePromoBtn">儲存優惠活動</button>
-          <span id="promoStatus" style="font-size:12px; color:var(--c-muted); align-self:center;"></span>
+
+        <div class="pba-promo-content">
+          <!-- 🎁 優惠活動（前台開團中時攤開顯示在頂端活動區；沒開團時收在「下一團」按鈕點開的浮動視窗裡） -->
+          <div class="pba-promo-subpanel" id="pbaPromoSubpanelText">
+            <div class="pba-panel">
+              <div class="pba-panel-title">🎁 繪本館優惠活動</div>
+              <div class="pba-field">
+                <textarea id="promoTextarea" rows="5" placeholder="一行一條優惠，例如：&#10;滿 1500 免運&#10;加購延伸教材組 9 折&#10;前 50 名送貼紙"></textarea>
+                <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                  一行一條，存檔後整批覆蓋。開團期間會攤開顯示在繪本館頁面頂端的活動區；沒開團時則收在「下一團」按鈕點開的浮動視窗裡。清空存檔＝不顯示。
+                </div>
+              </div>
+              <div class="pba-form-actions" style="margin-top:8px; align-items:center;">
+                <button type="button" class="pba-btn pba-btn-save" id="savePromoBtn">儲存優惠活動</button>
+                <span id="promoStatus" style="font-size:12px; color:var(--c-muted); align-self:center;"></span>
+              </div>
+            </div>
+          </div><!-- /pbaPromoSubpanelText -->
+
+          <!-- 📦 套組設定：繪本館頁面頂端「⭐ 套組名稱」橫滑書封小圖排，可綁團購自動顯示/隱藏 -->
+          <div class="pba-promo-subpanel" id="pbaPromoSubpanelSets" style="display:none;">
+            <div class="pba-panel">
+              <div class="pba-panel-title">📦 套組設定</div>
+              <button type="button" class="pba-add-btn" id="addSetBtn">＋ 新增套組</button>
+              <div id="setList"></div>
+
+              <div class="pba-set-form" id="setForm">
+                <div class="pba-panel-title" id="setFormTitle">新增套組</div>
+                <div class="pba-field">
+                  <label>名稱 *</label>
+                  <input type="text" id="sTitle">
+                </div>
+                <div class="pba-field">
+                  <label>介紹（選填）</label>
+                  <textarea id="sIntro"></textarea>
+                </div>
+                <div class="pba-field">
+                  <label>書籍</label>
+                  <div class="pba-checkbox-group" id="sBooks"></div>
+                </div>
+                <div class="pba-field">
+                  <label>綁定團購</label>
+                  <select id="sEvent"><option value="">不綁定</option></select>
+                </div>
+                <div class="pba-field">
+                  <label class="pba-checkbox-inline"><input type="checkbox" id="sShowNow"> ⚡ 馬上顯示</label>
+                  <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                    開團前就先顯示；結團（含延長）後一樣自動消失。
+                  </div>
+                </div>
+                <div class="pba-form-actions">
+                  <button type="button" class="pba-btn pba-btn-save" id="saveSetBtn">儲存</button>
+                  <button type="button" class="pba-mini-btn" id="cancelSetBtn">取消</button>
+                  <button type="button" class="pba-btn pba-btn-danger" id="deleteSetBtn" style="display:none;">刪除這個套組</button>
+                </div>
+              </div>
+            </div>
+          </div><!-- /pbaPromoSubpanelSets -->
         </div>
       </div>
     </div>

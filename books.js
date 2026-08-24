@@ -19,6 +19,7 @@ const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
 let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
 let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
 let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
+let setFormEditingId = null; // 目前套組表單是編輯哪個套組（null＝新增）
 
 // ===== Toast =====
 let toastTimer = null;
@@ -1072,6 +1073,194 @@ document.getElementById('savePromoBtn').addEventListener('click', async () => {
   } catch (err) { statusEl.textContent = ''; /* needLogin 已處理 */ }
 });
 
+// ===== 優惠活動子分頁左右導覽（🎁 優惠活動／📦 套組設定）=====
+// 純顯示切換，不動 promoTextarea 的內容/事件——切分頁不影響已輸入未儲存的優惠文字。
+const PBA_PROMO_PANELS = {
+  text: document.getElementById('pbaPromoSubpanelText'),
+  sets: document.getElementById('pbaPromoSubpanelSets'),
+};
+const PBA_PROMO_NAV_BTNS = {
+  text: document.getElementById('pbaPromoNavBtnText'),
+  sets: document.getElementById('pbaPromoNavBtnSets'),
+};
+function switchPbaPromoTab(tab) {
+  Object.keys(PBA_PROMO_PANELS).forEach(key => {
+    PBA_PROMO_PANELS[key].style.display = key === tab ? '' : 'none';
+    PBA_PROMO_NAV_BTNS[key].classList.toggle('on', key === tab);
+  });
+}
+PBA_PROMO_NAV_BTNS.text.addEventListener('click', () => switchPbaPromoTab('text'));
+PBA_PROMO_NAV_BTNS.sets.addEventListener('click', () => switchPbaPromoTab('sets'));
+
+// ===== 套組設定（繪本館頁面頂端「⭐ 套組名稱」橫滑書封小圖排）=====
+// 可見性（visible）與「開團中/即將開團」判斷全在後端算好，這裡只負責 CRUD 表單。
+// PACKAGE_DATA.sets 表還沒 db push 前可能是 undefined，一律當空陣列處理，不炸頁面。
+function renderSetList() {
+  const el = document.getElementById('setList');
+  if (!el) return;
+  el.innerHTML = '';
+  const sets = (PACKAGE_DATA.sets || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  if (!sets.length) {
+    el.innerHTML = '<div class="pba-empty-list">尚無資料或表未建立</div>';
+    return;
+  }
+  sets.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'pba-set-row';
+
+    const main = document.createElement('div');
+    main.className = 'pba-set-row-main';
+    const name = document.createElement('div');
+    name.className = 'pba-set-row-name';
+    name.textContent = s.title || '未命名套組';
+    main.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'pba-set-row-meta';
+    const evtSpan = document.createElement('span');
+    evtSpan.textContent = `綁定團：${s.eventTitle || '—'}`;
+    meta.appendChild(evtSpan);
+    const showNowSpan = document.createElement('span');
+    showNowSpan.textContent = `⚡ 馬上顯示：${s.showNow ? '開' : '關'}`;
+    meta.appendChild(showNowSpan);
+    const visSpan = document.createElement('span');
+    const dot = document.createElement('span');
+    dot.className = 'pba-set-dot' + (s.visible ? ' on' : '');
+    visSpan.appendChild(dot);
+    visSpan.appendChild(document.createTextNode(s.visible ? ' 目前可見' : ' 目前不可見'));
+    meta.appendChild(visSpan);
+    main.appendChild(meta);
+    row.appendChild(main);
+
+    const actions = document.createElement('div');
+    actions.className = 'pba-set-row-actions';
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'pba-mini-btn';
+    editBtn.textContent = '編輯';
+    editBtn.addEventListener('click', () => openSetForm(s));
+    actions.appendChild(editBtn);
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pba-mini-btn danger';
+    delBtn.textContent = '刪除';
+    delBtn.addEventListener('click', () => deleteSet(s));
+    actions.appendChild(delBtn);
+    row.appendChild(actions);
+
+    el.appendChild(row);
+  });
+}
+
+function renderSetBookCheckboxes(selectedIds) {
+  const wrap = document.getElementById('sBooks');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const selectedSet = new Set(selectedIds || []);
+  const books = (PACKAGE_DATA.books || []).slice().sort((a, b) => {
+    const aSel = selectedSet.has(a.id) ? 0 : 1;
+    const bSel = selectedSet.has(b.id) ? 0 : 1;
+    if (aSel !== bSel) return aSel - bSel;
+    return String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant');
+  });
+  if (!books.length) {
+    wrap.innerHTML = '<div class="pba-empty-list">還沒有書籍</div>';
+    return;
+  }
+  books.forEach(b => {
+    const label = document.createElement('label');
+    label.className = 'pba-checkbox-item';
+    label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(b.id)}"> ${pbaEscapeHtml(b.title || '未命名')}`;
+    wrap.appendChild(label);
+  });
+}
+
+function renderSetEventOptions(selectedId) {
+  const sel = document.getElementById('sEvent');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">不綁定</option>';
+  (PACKAGE_DATA.setEventChoices || []).forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    const range = (e.startDate && e.endDate) ? `（${formatAvailableFrom(e.startDate)}–${formatAvailableFrom(e.endDate)}）` : '';
+    opt.textContent = `${e.title || '未命名團購'}${range}`;
+    sel.appendChild(opt);
+  });
+  sel.value = selectedId || '';
+}
+
+document.getElementById('addSetBtn').addEventListener('click', () => openSetForm(null));
+document.getElementById('cancelSetBtn').addEventListener('click', closeSetForm);
+
+function openSetForm(set) {
+  setFormEditingId = set ? set.id : null;
+  document.getElementById('setFormTitle').textContent = set ? '編輯套組' : '新增套組';
+  document.getElementById('sTitle').value = set ? set.title || '' : '';
+  document.getElementById('sIntro').value = set ? set.intro || '' : '';
+  renderSetBookCheckboxes(set ? set.bookIds || [] : []);
+  setCheckedValues('sBooks', set ? set.bookIds || [] : []);
+  renderSetEventOptions(set ? set.eventId || '' : '');
+  document.getElementById('sShowNow').checked = !!(set && set.showNow);
+  document.getElementById('deleteSetBtn').style.display = set ? '' : 'none';
+  document.getElementById('setForm').classList.add('show');
+}
+
+function closeSetForm() {
+  setFormEditingId = null;
+  const form = document.getElementById('setForm');
+  if (form) form.classList.remove('show');
+}
+
+document.getElementById('saveSetBtn').addEventListener('click', async () => {
+  const title = document.getElementById('sTitle').value.trim();
+  if (!title) { showToast('請輸入套組名稱', true); return; }
+  const payload = {
+    title,
+    intro: document.getElementById('sIntro').value.trim(),
+    bookIds: getCheckedValues('sBooks'),
+    eventId: document.getElementById('sEvent').value || null,
+    showNow: document.getElementById('sShowNow').checked
+  };
+  if (setFormEditingId) payload.id = setFormEditingId;
+  try {
+    const res = await apiPost('book-set-upsert', payload);
+    if (!res || res.success !== true) {
+      showToast('儲存套組失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    const saved = res.set;
+    if (saved) {
+      PACKAGE_DATA.sets = PACKAGE_DATA.sets || [];
+      const idx = PACKAGE_DATA.sets.findIndex(s => s.id === saved.id);
+      if (idx >= 0) PACKAGE_DATA.sets[idx] = saved; else PACKAGE_DATA.sets.push(saved);
+    }
+    renderSetList();
+    showToast('套組已儲存');
+    closeSetForm();
+  } catch (err) { /* needLogin 已處理 */ }
+});
+
+document.getElementById('deleteSetBtn').addEventListener('click', () => {
+  if (!setFormEditingId) return;
+  const set = (PACKAGE_DATA.sets || []).find(s => s.id === setFormEditingId);
+  deleteSet(set || { id: setFormEditingId, title: document.getElementById('sTitle').value.trim() });
+});
+
+async function deleteSet(set) {
+  if (!confirm(`確定要刪除套組「${set.title || '未命名'}」嗎？`)) return;
+  try {
+    const res = await apiPost('book-set-delete', { id: set.id });
+    if (!res || res.success !== true) {
+      showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    PACKAGE_DATA.sets = (PACKAGE_DATA.sets || []).filter(s => s.id !== set.id);
+    if (setFormEditingId === set.id) closeSetForm();
+    renderSetList();
+    showToast('套組已刪除');
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
 // ===== 年齡與主題清單管理 =====
 function renderCategoryManageList() {
   const el = document.getElementById('categoryManageList');
@@ -1152,6 +1341,7 @@ async function loadBooksView(force) {
   renderTypeCheckboxes();
   renderCategoryManageList();
   renderPromotions();
+  renderSetList();
   resetForm();
 }
 
