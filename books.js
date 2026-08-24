@@ -1261,6 +1261,180 @@ async function deleteSet(set) {
   } catch (err) { /* needLogin 已處理 */ }
 }
 
+// ===== 滿額贈（累積達標，門檻金額由小到大；後端已排好序） =====
+// PACKAGE_DATA.gifts 表還沒 db push 前可能是 undefined，一律當空陣列處理，不炸頁面。
+function pbaFormatMoney(n) {
+  const num = Number(n) || 0;
+  return num.toLocaleString('en-US');
+}
+
+function renderGiftList() {
+  const el = document.getElementById('giftList');
+  if (!el) return;
+  el.innerHTML = '';
+  const gifts = (PACKAGE_DATA.gifts || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  if (!gifts.length) {
+    el.innerHTML = '<div class="pba-empty-list">尚無資料或表未建立</div>';
+    return;
+  }
+  gifts.forEach(g => {
+    const item = document.createElement('div');
+    item.className = 'pba-material-item';
+
+    if (g.imageUrl) {
+      const img = document.createElement('img');
+      img.className = 'pba-material-thumb';
+      img.src = g.imageUrl;
+      item.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pba-material-thumb placeholder';
+      ph.textContent = '🎁';
+      item.appendChild(ph);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'pba-material-info';
+    const title = document.createElement('div');
+    title.className = 'pba-material-title';
+    title.textContent = g.title || '未命名贈品';
+    info.appendChild(title);
+    const sub = document.createElement('div');
+    sub.className = 'pba-material-sub';
+    const noteSuffix = g.note ? ` ・ ${g.note}` : '';
+    sub.textContent = `滿 $${pbaFormatMoney(g.amount)}${noteSuffix}`;
+    info.appendChild(sub);
+    item.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'pba-material-actions';
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'pba-mini-btn';
+    editBtn.textContent = '編輯';
+    editBtn.addEventListener('click', () => openGiftForm(g));
+    actions.appendChild(editBtn);
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pba-mini-btn danger';
+    delBtn.textContent = '刪除';
+    delBtn.addEventListener('click', () => deleteGift(g));
+    actions.appendChild(delBtn);
+    item.appendChild(actions);
+
+    el.appendChild(item);
+  });
+}
+
+let giftFormEditingId = null;
+
+function setGiftImagePreview(url) {
+  const img = document.getElementById('gImagePreview');
+  const ph = document.getElementById('gImagePreviewPh');
+  if (url) { img.src = url; img.style.display = 'block'; ph.style.display = 'none'; }
+  else { img.style.display = 'none'; ph.style.display = 'flex'; }
+}
+
+document.getElementById('addGiftBtn').addEventListener('click', () => openGiftForm(null));
+document.getElementById('cancelGiftBtn').addEventListener('click', closeGiftForm);
+
+function openGiftForm(gift) {
+  giftFormEditingId = gift ? gift.id : null;
+  document.getElementById('giftFormTitle').textContent = gift ? '編輯滿額贈' : '新增滿額贈';
+  document.getElementById('gTitle').value = gift ? gift.title || '' : '';
+  document.getElementById('gAmount').value = gift ? gift.amount || '' : '';
+  document.getElementById('gNote').value = gift ? gift.note || '' : '';
+  document.getElementById('gImageUrl').value = gift ? gift.imageUrl || '' : '';
+  setGiftImagePreview(gift ? gift.imageUrl || '' : '');
+  document.getElementById('gImageUploadStatus').textContent = '';
+  document.getElementById('gImageFile').value = '';
+  document.getElementById('gImageRemoveBg').value = 'none';
+  pbiClearPending('gImagePending');
+  document.getElementById('deleteGiftBtn').style.display = gift ? '' : 'none';
+  document.getElementById('giftForm').classList.add('show');
+}
+
+function closeGiftForm() {
+  giftFormEditingId = null;
+  const form = document.getElementById('giftForm');
+  if (form) form.classList.remove('show');
+  document.getElementById('gImageRemoveBg').value = 'none';
+  pbiClearPending('gImagePending');
+}
+
+document.getElementById('gImageFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const giftId = giftFormEditingId || Date.now();
+  pbiHandleUpload({
+    file,
+    maxDim: 600,
+    kind: 'gift',
+    removeBgCheckboxId: 'gImageRemoveBg',
+    statusElId: 'gImageUploadStatus',
+    pendingContainerId: 'gImagePending',
+    previewSetFn: setGiftImagePreview,
+    hiddenInputId: 'gImageUrl',
+    fileInputId: 'gImageFile',
+    buildFilename: (ext) => `gift-${giftId}${ext}`
+  });
+});
+
+document.getElementById('saveGiftBtn').addEventListener('click', async () => {
+  const title = document.getElementById('gTitle').value.trim();
+  if (!title) { showToast('請輸入贈品名稱', true); return; }
+  const amountRaw = document.getElementById('gAmount').value.trim();
+  const amount = Number(amountRaw);
+  if (!amountRaw || !Number.isInteger(amount) || amount <= 0) {
+    showToast('金額必須是正整數', true);
+    return;
+  }
+  const payload = {
+    title,
+    amount,
+    note: document.getElementById('gNote').value.trim(),
+    imageUrl: document.getElementById('gImageUrl').value.trim()
+  };
+  if (giftFormEditingId) payload.id = giftFormEditingId;
+  try {
+    const res = await apiPost('book-gift-upsert', payload);
+    if (!res || res.success !== true) {
+      showToast('儲存滿額贈失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    const saved = res.gift;
+    if (saved) {
+      PACKAGE_DATA.gifts = PACKAGE_DATA.gifts || [];
+      const idx = PACKAGE_DATA.gifts.findIndex(g => g.id === saved.id);
+      if (idx >= 0) PACKAGE_DATA.gifts[idx] = saved; else PACKAGE_DATA.gifts.push(saved);
+    }
+    renderGiftList();
+    showToast('滿額贈已儲存');
+    closeGiftForm();
+  } catch (err) { /* needLogin 已處理 */ }
+});
+
+document.getElementById('deleteGiftBtn').addEventListener('click', () => {
+  if (!giftFormEditingId) return;
+  const gift = (PACKAGE_DATA.gifts || []).find(g => g.id === giftFormEditingId);
+  deleteGift(gift || { id: giftFormEditingId, title: document.getElementById('gTitle').value.trim() });
+});
+
+async function deleteGift(gift) {
+  if (!confirm(`確定要刪除滿額贈「${gift.title || '未命名'}」嗎？`)) return;
+  try {
+    const res = await apiPost('book-gift-delete', { id: gift.id });
+    if (!res || res.success !== true) {
+      showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    PACKAGE_DATA.gifts = (PACKAGE_DATA.gifts || []).filter(g => g.id !== gift.id);
+    if (giftFormEditingId === gift.id) closeGiftForm();
+    renderGiftList();
+    showToast('滿額贈已刪除');
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
 // ===== 年齡與主題清單管理 =====
 function renderCategoryManageList() {
   const el = document.getElementById('categoryManageList');
@@ -1342,6 +1516,7 @@ async function loadBooksView(force) {
   renderCategoryManageList();
   renderPromotions();
   renderSetList();
+  renderGiftList();
   resetForm();
 }
 

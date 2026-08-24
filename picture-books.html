@@ -318,6 +318,60 @@
   .pb-top-active-promo-line { font-size: 12.5px; line-height: 1.5; color: var(--c-text); white-space: pre-wrap; word-break: break-word; }
   .pb-top-active-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .pb-top-active .pb-top-btn { margin: 0; }
+  /* 滿額贈：可累積達標一次帶走，橫滑卡片列（沿用 .pb-featured-row 的橫滑模式），
+     用在頂端開團活動區與「團購優惠」浮動視窗兩處，純展示不可點擊 */
+  .pb-gift-wrap { margin: 0 0 10px; text-align: left; }
+  .pb-gift-note { font-size: 12px; font-weight: 700; color: var(--c-text); margin: 0 0 8px; }
+  .pb-gift-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .pb-gift-item { flex: 0 0 auto; width: 84px; text-align: center; }
+  .pb-gift-thumb-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--c-border-light);
+  }
+  .pb-gift-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pb-gift-thumb-wrap.placeholder { font-size: 24px; }
+  .pb-gift-name {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pb-gift-badge {
+    display: inline-block;
+    margin-top: 3px;
+    background: var(--c-primary);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    border-radius: var(--r-pill);
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+  .pb-gift-note-text {
+    margin-top: 3px;
+    font-size: 10px;
+    color: var(--c-muted);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   /* 團購資訊浮動視窗 */
   .pb-promo-box { text-align: center; }
   .pb-promo-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--c-text); margin: 6px 0 4px; }
@@ -609,6 +663,7 @@
     <button class="rc-close-btn" onclick="closePromoModal()">✕</button>
     <div class="pb-promo-title" id="pbPromoTitle"></div>
     <div class="pb-promo-sub" id="pbPromoSub"></div>
+    <div id="pbPromoGiftWrap" style="display:none;"></div>
     <div class="pb-promo-sec-title">🎁 優惠活動</div>
     <ul class="pb-promo-list" id="pbPromoList"></ul>
     <div class="pb-promo-empty" id="pbPromoEmpty" style="display:none;">優惠活動籌備中，開團前公布 ✨</div>
@@ -689,6 +744,7 @@ let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
 let USED_BRANDS = [];
 let ALL_PROMOTIONS = []; // 優惠活動 [{id,text}]（後台維護，沒開團時在團購資訊視窗顯示）
+let ALL_GIFTS = []; // 滿額贈 [{id,title,amount,note,imageUrl}]（後端已依 amount 低→高排序，2026-08-24）
 let ALL_SETS = []; // 套組專區 [{id,title,intro,bookIds}]（公開包已算好可見性，2026-08-24）
 let CURRENT_BOOK = null; // 目前開著的繪本浮動視窗，教材大圖的分享按鈕要用
 
@@ -741,6 +797,7 @@ async function loadBooks() {
     ALL_CATEGORIES = (data.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
     ALL_TYPES = data.types || [];
     ALL_PROMOTIONS = (data.promotions || []).filter(p => p && p.text);
+    ALL_GIFTS = data.gifts || [];
     ALL_SETS = data.sets || [];
 
     const brandIdsUsed = new Set(ALL_BOOKS.map(b => b.brand_id).filter(Boolean));
@@ -1044,6 +1101,9 @@ function renderTopPurchase() {
       }
     }
 
+    const giftSection = buildGiftSection();
+    if (giftSection) box.appendChild(giftSection);
+
     if (ALL_PROMOTIONS.length) {
       const promoWrap = document.createElement('div');
       promoWrap.className = 'pb-top-active-promos';
@@ -1075,7 +1135,7 @@ function renderTopPurchase() {
   }
 
   const entries = [...upcoming.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  if (!entries.length && !ALL_PROMOTIONS.length) { wrap.style.display = 'none'; return; }
+  if (!entries.length && !ALL_PROMOTIONS.length && !ALL_GIFTS.length) { wrap.style.display = 'none'; return; }
 
   const next = entries[0] || null;
   const soon = next ? daysUntil(next[1]) <= 7 : false;
@@ -1173,6 +1233,65 @@ function formatCountdown(diffMs) {
   return `⏳ 倒數 ${days} 天 ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
 }
 
+// 千分位金額顯示（1999 → "1,999"）
+function pbFormatMoney(n) {
+  return (Number(n) || 0).toLocaleString('en-US');
+}
+
+// 滿額贈橫滑卡片列（純展示，不可點擊）。ALL_GIFTS 空陣列時回傳 null，呼叫方自行決定不插入。
+function buildGiftSection() {
+  if (!ALL_GIFTS.length) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'pb-gift-wrap';
+
+  const note = document.createElement('div');
+  note.className = 'pb-gift-note';
+  note.textContent = '💝 滿額禮可累積，全部達標一次帶走！';
+  wrap.appendChild(note);
+
+  const row = document.createElement('div');
+  row.className = 'pb-gift-row';
+  ALL_GIFTS.forEach(g => {
+    const item = document.createElement('div');
+    item.className = 'pb-gift-item';
+
+    const thumbWrap = document.createElement('div');
+    thumbWrap.className = 'pb-gift-thumb-wrap';
+    if (g.imageUrl) {
+      const img = document.createElement('img');
+      img.src = g.imageUrl;
+      img.alt = g.title || '';
+      img.loading = 'lazy';
+      thumbWrap.appendChild(img);
+    } else {
+      thumbWrap.classList.add('placeholder');
+      thumbWrap.textContent = '🎁';
+    }
+    item.appendChild(thumbWrap);
+
+    const name = document.createElement('div');
+    name.className = 'pb-gift-name';
+    name.textContent = g.title || '';
+    item.appendChild(name);
+
+    const badge = document.createElement('div');
+    badge.className = 'pb-gift-badge';
+    badge.textContent = `滿 $${pbFormatMoney(g.amount)}`;
+    item.appendChild(badge);
+
+    if (g.note) {
+      const noteText = document.createElement('div');
+      noteText.className = 'pb-gift-note-text';
+      noteText.textContent = g.note;
+      item.appendChild(noteText);
+    }
+
+    row.appendChild(item);
+  });
+  wrap.appendChild(row);
+  return wrap;
+}
+
 function fmtMD(s) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
   return m ? `${Number(m[2])}/${Number(m[3])}` : String(s || '');
@@ -1207,6 +1326,16 @@ function openPromoModal() {
   } else {
     titleEl.textContent = '📅 下一團開團時間';
     subEl.textContent = '開團時間待公布，敬請期待';
+  }
+
+  const giftWrapEl = document.getElementById('pbPromoGiftWrap');
+  giftWrapEl.innerHTML = '';
+  const giftSection = buildGiftSection();
+  if (giftSection) {
+    giftWrapEl.appendChild(giftSection);
+    giftWrapEl.style.display = '';
+  } else {
+    giftWrapEl.style.display = 'none';
   }
 
   listEl.innerHTML = '';

@@ -5180,7 +5180,7 @@
           <!-- 🎁 優惠活動（前台開團中時攤開顯示在頂端活動區；沒開團時收在「下一團」按鈕點開的浮動視窗裡） -->
           <div class="pba-promo-subpanel" id="pbaPromoSubpanelText">
             <div class="pba-panel">
-              <div class="pba-panel-title">🎁 繪本館優惠活動</div>
+              <div class="pba-panel-title">📝 一般活動（一行一條）</div>
               <div class="pba-field">
                 <textarea id="promoTextarea" rows="5" placeholder="一行一條優惠，例如：&#10;滿 1500 免運&#10;加購延伸教材組 9 折&#10;前 50 名送貼紙"></textarea>
                 <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
@@ -5190,6 +5190,57 @@
               <div class="pba-form-actions" style="margin-top:8px; align-items:center;">
                 <button type="button" class="pba-btn pba-btn-save" id="savePromoBtn">儲存優惠活動</button>
                 <span id="promoStatus" style="font-size:12px; color:var(--c-muted); align-self:center;"></span>
+              </div>
+            </div>
+
+            <!-- 💝 滿額贈：可累積達標，門檻金額由小到大排序（後端已排好） -->
+            <div class="pba-panel" style="margin-top:14px;">
+              <div class="pba-panel-title">💝 滿額贈</div>
+              <button type="button" class="pba-add-btn" id="addGiftBtn">＋ 新增滿額贈</button>
+              <div id="giftList"></div>
+
+              <div class="pba-set-form" id="giftForm">
+                <div class="pba-panel-title" id="giftFormTitle">新增滿額贈</div>
+                <div class="pba-field">
+                  <label>贈品名稱 *</label>
+                  <input type="text" id="gTitle">
+                </div>
+                <div class="pba-field">
+                  <label>門檻金額 *</label>
+                  <input type="number" id="gAmount" min="1" step="1" placeholder="例：3999">
+                </div>
+                <div class="pba-field">
+                  <label>備註（選填）</label>
+                  <input type="text" id="gNote" placeholder="例：限量100份">
+                </div>
+                <div class="pba-field">
+                  <label>圖片</label>
+                  <div class="pba-cover-preview-row">
+                    <img id="gImagePreview" class="pba-material-thumb" style="display:none; width:56px; height:56px;">
+                    <div id="gImagePreviewPh" class="pba-material-thumb placeholder" style="width:56px; height:56px;">🎁</div>
+                    <input type="file" id="gImageFile" accept="image/*">
+                  </div>
+                  <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                    建議：方形或直式、寬 400px 以上、JPG/PNG。去背由後續批次處理，直接傳原圖即可。
+                  </div>
+                  <div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--c-text);">
+                    <label for="gImageRemoveBg">去背方式</label>
+                    <select id="gImageRemoveBg">
+                      <option value="removebg">去背：remove.bg（Canva 同款）</option>
+                      <option value="solid">去背：實心（免費）</option>
+                      <option value="ai">去背：純 AI（免費）</option>
+                      <option value="none" selected>不去背（先原圖上傳，之後由 Claude 批次去背，預設）</option>
+                    </select>
+                  </div>
+                  <div id="gImagePending" class="pbi-pending" style="display:none;"></div>
+                  <div class="pba-upload-status" id="gImageUploadStatus"></div>
+                  <input type="hidden" id="gImageUrl">
+                </div>
+                <div class="pba-form-actions">
+                  <button type="button" class="pba-btn pba-btn-save" id="saveGiftBtn">儲存</button>
+                  <button type="button" class="pba-mini-btn" id="cancelGiftBtn">取消</button>
+                  <button type="button" class="pba-btn pba-btn-danger" id="deleteGiftBtn" style="display:none;">刪除這個滿額贈</button>
+                </div>
               </div>
             </div>
           </div><!-- /pbaPromoSubpanelText -->
