@@ -115,15 +115,30 @@ function renderBookList() {
 document.getElementById('bookSearchInput').addEventListener('input', renderBookList);
 
 // ===== 表單：品牌 / 年齡與主題 / 類型 選項渲染 =====
+// 書團目前只有這兩家，其餘品牌不出現在下拉（2026-08-25 雪莉指定；要加品牌改這裡）
+var BOOK_BRAND_WHITELIST = ['禾流文創', 'Kidsread點讀筆'];
+
 function renderBrandOptions() {
   const sel = document.getElementById('fBrand');
   sel.innerHTML = '<option value="">無</option>';
-  (PACKAGE_DATA.brands || []).forEach(b => {
+  (PACKAGE_DATA.brands || []).filter(b => BOOK_BRAND_WHITELIST.includes(b.name)).forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id;
     opt.textContent = b.name;
     sel.appendChild(opt);
   });
+}
+
+// 編輯的書若掛著名單外的品牌，補一個選項，避免回填變空白、存檔時把品牌洗掉
+function ensureBrandOption(brandId) {
+  if (!brandId) return;
+  const sel = document.getElementById('fBrand');
+  if (sel.querySelector(`option[value="${brandId}"]`)) return;
+  const src = (PACKAGE_DATA.brands || []).find(b => b.id === brandId);
+  const opt = document.createElement('option');
+  opt.value = brandId;
+  opt.textContent = src ? src.name : '(未知品牌)';
+  sel.appendChild(opt);
 }
 
 function renderCategoryCheckboxes() {
@@ -189,6 +204,7 @@ function fillForm(book) {
   document.getElementById('fDescription').value = book ? book.description || '' : '';
   document.getElementById('fYoutube').value = book ? book.youtube_url || '' : '';
   document.getElementById('fShopee').value = book ? book.shopee_url || '' : '';
+  ensureBrandOption(book && book.brand_id);
   document.getElementById('fBrand').value = book && book.brand_id ? book.brand_id : '';
   setCheckedValues('fCategories', book ? book.categories || [] : []);
   setCheckedValues('fTypes', book ? book.types || [] : []);
