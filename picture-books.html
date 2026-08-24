@@ -10,6 +10,8 @@
   /* picture-books.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
 
   .pb-featured { margin: 0 0 16px; }
+  .pb-featured-set { margin: 0 0 14px; }
+  .pb-featured-set:last-child { margin-bottom: 0; }
   .pb-featured-title {
     font-size: 12.5px;
     font-weight: 800;
@@ -277,6 +279,13 @@
   .pb-top-purchase .pb-top-btn:hover { background: var(--c-primary-dark); }
   .pb-top-purchase button.pb-top-btn { border: none; cursor: pointer; font-family: var(--font-round); }
   .pb-top-purchase .pb-top-btn-soft { background: var(--c-cat-4); }
+  /* 倒數按鈕（7 天內即將開團）：兩行排版，手機也不爆版 */
+  .pb-top-purchase button.pb-top-btn-countdown {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    line-height: 1.3; padding: 9px 20px; max-width: 92vw;
+  }
+  .pb-top-btn-line1 { font-size: 13.5px; word-break: break-word; }
+  .pb-top-btn-line2 { font-size: 12px; font-weight: 700; opacity: .92; letter-spacing: .3px; }
   /* 開團中：頂端活動區塊（標題＋優惠條列＋下單按鈕），手機優先、寬度貼齊搜尋列 */
   .pb-top-active {
     width: 100%; max-width: 420px; margin: 0 auto;
@@ -558,11 +567,9 @@
   <div id="statusMsg" class="status-msg">資料載入中…</div>
 
   <div id="pbContent" style="display:none;">
-    <!-- 雪莉精選套組：分類名稱含「雪莉精選」的書，橫向滑動小圖區；不受搜尋/篩選影響，集合為空整區不渲染 -->
-    <div class="pb-featured" id="pbFeatured" style="display:none;">
-      <div class="pb-featured-title">⭐ 雪莉精選套組</div>
-      <div class="pb-featured-row" id="pbFeaturedRow"></div>
-    </div>
+    <!-- 套組專區：分類名稱含「套組」或「雪莉精選」都算，各自獨立一排橫向滑動小圖區；
+         不受搜尋/篩選影響，內容由 renderFeatured() 動態產生，排的顯示與否跟著開團狀態走 -->
+    <div class="pb-featured" id="pbFeatured" style="display:none;"></div>
 
     <div class="pb-search-row">
       <input type="text" id="pbSearchInput" class="pb-search-input" placeholder="🔍 搜尋書名...">
@@ -781,9 +788,14 @@ function toggleSelection(current, value, setter) {
   renderGrid();
 }
 
+// 套組分類判定：分類名稱含「套組」或「雪莉精選」都算，另外用頂端套組專區呈現，
+// 不重複出現在年齡與主題 chips 裡（renderChips／renderFeatured 共用同一判定）
+function isSetCategory(name) {
+  return typeof name === 'string' && (name.includes('套組') || name.includes('雪莉精選'));
+}
+
 function renderChips() {
-  // 「雪莉精選」分類另外用頂端精選區呈現，不重複出現在年齡與主題 chips 裡（只過濾顯示，資料本身不受影響）
-  buildChipGroup('pbCatChips', ALL_CATEGORIES.filter(c => !c.name.includes('雪莉精選')).map(c => c.name), selCats,
+  buildChipGroup('pbCatChips', ALL_CATEGORIES.filter(c => !isSetCategory(c.name)).map(c => c.name), selCats,
     v => toggleSelection(selCats, v, s => { selCats = s; }));
   document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
   buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
@@ -827,47 +839,74 @@ function matchesFilters(book) {
   return true;
 }
 
-// ===== 雪莉精選套組（頂端橫向滑動小圖區）=====
-// 分類名稱含「雪莉精選」的書才收錄；固定顯示全部（不受搜尋列/篩選 chips 影響），順序照 ALL_BOOKS
-// 原本順序（API 已排好）。集合為空就整區隱藏，不留空框。點小圖走跟書卡完全同一顆 openBookModal。
+// ===== 套組專區（頂端橫向滑動小圖區，可能多排）=====
+// 分類名稱含「套組」或「雪莉精選」的都算套組分類，各自獨立一排，依 ALL_CATEGORIES 順序排列；
+// 一本書可同時屬多個套組分類，各排都會出現。固定顯示全部（不受搜尋列/篩選 chips 影響）。
+// 一排是否顯示：排內至少一本書開團中，或 7 天內即將開團；都不符合就整排不渲染。
+// 全部排都不顯示 → 整區隱藏，不留空框。點小圖走跟書卡完全同一顆 openBookModal。
+function bookIsHot(book) {
+  const p = (book && book.purchase) || {};
+  if (p.status === 'open') return true;
+  if (p.status === 'upcoming' && p.nextDate) return daysUntil(p.nextDate) <= 7;
+  return false;
+}
+
 function renderFeatured() {
   const wrap = document.getElementById('pbFeatured');
-  const row = document.getElementById('pbFeaturedRow');
-  if (!wrap || !row) return;
-  row.innerHTML = '';
-  const list = ALL_BOOKS.filter(b => (b.categories || []).some(c => c.includes('雪莉精選')));
-  if (!list.length) { wrap.style.display = 'none'; return; }
+  if (!wrap) return;
+  wrap.innerHTML = '';
 
-  list.forEach(book => {
-    const item = document.createElement('div');
-    item.className = 'pb-featured-item';
-    item.addEventListener('click', () => openBookModal(book));
+  const setCats = ALL_CATEGORIES.filter(c => isSetCategory(c.name));
+  let anyShown = false;
 
-    const coverWrap = document.createElement('div');
-    coverWrap.className = 'pb-featured-cover-wrap';
-    if (book.cover_url) {
-      const img = document.createElement('img');
-      img.src = book.cover_url;
-      img.alt = book.title;
-      img.loading = 'lazy';
-      coverWrap.appendChild(img);
-    } else {
-      coverWrap.classList.add('placeholder');
-      const span = document.createElement('span');
-      span.textContent = book.title || '';
-      coverWrap.appendChild(span);
-    }
-    item.appendChild(coverWrap);
+  setCats.forEach(cat => {
+    const list = ALL_BOOKS.filter(b => (b.categories || []).includes(cat.name));
+    if (!list.length || !list.some(bookIsHot)) return;
+    anyShown = true;
 
-    const name = document.createElement('div');
-    name.className = 'pb-featured-name';
-    name.textContent = book.title || '';
-    item.appendChild(name);
+    const set = document.createElement('div');
+    set.className = 'pb-featured-set';
 
-    row.appendChild(item);
+    const title = document.createElement('div');
+    title.className = 'pb-featured-title';
+    title.textContent = `⭐ ${cat.name}`;
+    set.appendChild(title);
+
+    const row = document.createElement('div');
+    row.className = 'pb-featured-row';
+    list.forEach(book => {
+      const item = document.createElement('div');
+      item.className = 'pb-featured-item';
+      item.addEventListener('click', () => openBookModal(book));
+
+      const coverWrap = document.createElement('div');
+      coverWrap.className = 'pb-featured-cover-wrap';
+      if (book.cover_url) {
+        const img = document.createElement('img');
+        img.src = book.cover_url;
+        img.alt = book.title;
+        img.loading = 'lazy';
+        coverWrap.appendChild(img);
+      } else {
+        coverWrap.classList.add('placeholder');
+        const span = document.createElement('span');
+        span.textContent = book.title || '';
+        coverWrap.appendChild(span);
+      }
+      item.appendChild(coverWrap);
+
+      const name = document.createElement('div');
+      name.className = 'pb-featured-name';
+      name.textContent = book.title || '';
+      item.appendChild(name);
+
+      row.appendChild(item);
+    });
+    set.appendChild(row);
+    wrap.appendChild(set);
   });
 
-  wrap.style.display = 'block';
+  wrap.style.display = anyShown ? 'block' : 'none';
 }
 
 function renderGrid() {
@@ -950,9 +989,14 @@ function parseYoutube(url) {
 // 沒開團但有排程 → 按鈕顯示下一團日期（7 天內顯示「即將開團」），點開浮動視窗看日期＋優惠活動；
 // 沒排程但後台有填優惠活動 → 「團購優惠」按鈕開同一個視窗；什麼都沒有 → 隱藏
 let TOP_PURCHASE_INFO = null;
+// 倒數計時器（7 天內即將開團時才會啟動）：每次重繪先清掉舊的，避免疊加；
+// 倒數歸零時只 reload 一次，靠這個旗標防連續觸發
+let topCountdownInterval = null;
+let topCountdownReloadTriggered = false;
 function renderTopPurchase() {
   const wrap = document.getElementById('pbTopPurchase');
   if (!wrap) return;
+  if (topCountdownInterval) { clearInterval(topCountdownInterval); topCountdownInterval = null; }
   wrap.innerHTML = '';
   const openByUrl = new Map();   // url → 品牌名稱
   const upcoming = new Map();    // 品牌名稱 → 最近的 nextDate
@@ -1029,14 +1073,96 @@ function renderTopPurchase() {
   const soon = next ? daysUntil(next[1]) <= 7 : false;
   TOP_PURCHASE_INFO = { entries, soon };
 
+  if (next && soon) {
+    renderTopCountdownButton(wrap, entries, next[1]);
+    return;
+  }
+
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'pb-top-btn' + (next ? '' : ' pb-top-btn-soft');
-  if (next) btn.textContent = soon ? `🔥 即將開團！${fmtMD(next[1])}` : `📅 下一團 ${fmtMD(next[1])} 開團`;
+  if (next) btn.textContent = `📅 下一團 ${fmtMD(next[1])} 開團`;
   else btn.textContent = '🎁 團購優惠';
   btn.addEventListener('click', openPromoModal);
   wrap.appendChild(btn);
   wrap.style.display = 'flex';
+}
+
+// 倒數按鈕：品牌名取最早那團（多品牌同日用「・」串接），標題行＋倒數行分兩行顯示，
+// 每秒更新；倒數歸零 clearInterval 並整頁 reload 一次，讓開團中活動區接手渲染
+function renderTopCountdownButton(wrap, entries, earliestDate) {
+  const brandNames = entries.filter(e => e[1] === earliestDate).map(e => e[0]).filter(Boolean);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'pb-top-btn pb-top-btn-countdown';
+
+  const line1 = document.createElement('div');
+  line1.className = 'pb-top-btn-line1';
+  line1.textContent = `🔥 ${brandNames.join('・')} ${fmtMD(earliestDate)} 開團`;
+  btn.appendChild(line1);
+
+  const line2 = document.createElement('div');
+  line2.className = 'pb-top-btn-line2';
+  line2.id = 'pbTopCountdownLine';
+  btn.appendChild(line2);
+
+  // 用 onclick（不用 addEventListener）：倒數歸零冷卻期要整顆改成「點擊更新頁面」，直接覆蓋才不會兩個行為同時觸發
+  btn.onclick = openPromoModal;
+  wrap.appendChild(btn);
+  wrap.style.display = 'flex';
+
+  const targetMs = countdownTargetMs(earliestDate);
+  topCountdownReloadTriggered = false;
+  const tick = () => {
+    const lineEl = document.getElementById('pbTopCountdownLine');
+    const diff = targetMs === null ? 0 : targetMs - Date.now();
+    if (diff <= 0) {
+      if (topCountdownInterval) { clearInterval(topCountdownInterval); topCountdownInterval = null; }
+      // API 快取鍵每 20 秒換一次：歸零 reload 後可能還拿到「未開團」舊快取又進到這裡。
+      // 25 秒內不重複自動 reload；sessionStorage 不可用（無痕模式等）時完全不自動 reload——
+      // 冷卻依據只有 sessionStorage，沒有它就無法防連環刷新，一律走手動更新按鈕
+      let canAutoReload = false;
+      if (!topCountdownReloadTriggered) {
+        try {
+          const lastReload = Number(sessionStorage.getItem('pbCdReloadAt')) || 0;
+          if (Date.now() - lastReload > 25000) {
+            sessionStorage.setItem('pbCdReloadAt', String(Date.now()));
+            canAutoReload = true;
+          }
+        } catch (e) { /* storage 被擋：canAutoReload 維持 false */ }
+      }
+      if (canAutoReload) {
+        topCountdownReloadTriggered = true;
+        location.reload();
+      } else {
+        if (lineEl) lineEl.textContent = '🎉 開團囉！點我更新頁面';
+        btn.onclick = () => location.reload();
+      }
+      return;
+    }
+    if (lineEl) lineEl.textContent = formatCountdown(diff);
+  };
+  tick();
+  topCountdownInterval = setInterval(tick, 1000);
+}
+
+// 倒數目標時間（毫秒）：nextDate（YYYY-MM-DD）當天 00:00:00，本機時間（同 daysUntil 慣例，不用時區庫）
+function countdownTargetMs(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+}
+
+// 毫秒差轉「⏳ 倒數 D 天 HH:MM:SS」；抽成獨立函式方便單測
+function formatCountdown(diffMs) {
+  const totalSec = Math.max(0, Math.floor(diffMs / 1000));
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return `⏳ 倒數 ${days} 天 ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
 }
 
 function fmtMD(s) {
