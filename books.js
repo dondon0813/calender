@@ -1156,3 +1156,22 @@ async function loadBooksView(force) {
 }
 
 document.getElementById('booksRefreshBtn').addEventListener('click', () => loadBooksView(true));
+
+// ===== 子分頁切換（📖 繪本管理／🎁 優惠活動）=====
+// 純顯示切換，不影響既有的優惠載入/儲存流程（那套邏輯只認 DOM id，跟分頁容器無關）。
+const PBA_TAB_PANELS = {
+  manage: document.getElementById('pbaTabPanelManage'),
+  promo: document.getElementById('pbaTabPanelPromo'),
+};
+const PBA_TAB_BTNS = {
+  manage: document.getElementById('pbaTabBtnManage'),
+  promo: document.getElementById('pbaTabBtnPromo'),
+};
+function switchPbaTab(tab) {
+  Object.keys(PBA_TAB_PANELS).forEach(key => {
+    PBA_TAB_PANELS[key].style.display = key === tab ? '' : 'none';
+    PBA_TAB_BTNS[key].classList.toggle('on', key === tab);
+  });
+}
+PBA_TAB_BTNS.manage.addEventListener('click', () => switchPbaTab('manage'));
+PBA_TAB_BTNS.promo.addEventListener('click', () => switchPbaTab('promo'));

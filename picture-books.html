@@ -228,6 +228,32 @@
   .pb-top-purchase .pb-top-btn:hover { background: var(--c-primary-dark); }
   .pb-top-purchase button.pb-top-btn { border: none; cursor: pointer; font-family: var(--font-round); }
   .pb-top-purchase .pb-top-btn-soft { background: var(--c-cat-4); }
+  /* 開團中：頂端活動區塊（標題＋優惠條列＋下單按鈕），手機優先、寬度貼齊搜尋列 */
+  .pb-top-active {
+    width: 100%; max-width: 420px; margin: 0 auto;
+    background: var(--c-mint-bg, #eef8f4);
+    border: 1.5px solid var(--c-mint-text, var(--c-primary));
+    border-radius: var(--r-lg, 16px);
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .pb-top-active-header {
+    font-family: var(--font-round); font-weight: 800; font-size: 15px;
+    color: var(--c-text); margin-bottom: 8px;
+  }
+  .pb-top-active-dates {
+    font-size: 12.5px; color: var(--c-text-2, var(--c-text));
+    margin: -2px 0 8px;
+  }
+  .pb-top-active-promos {
+    text-align: left; display: flex; flex-direction: column; gap: 5px;
+    max-height: 132px; overflow-y: auto;
+    margin: 0 0 10px; padding: 9px 11px;
+    background: rgba(255,255,255,0.65); border-radius: 10px;
+  }
+  .pb-top-active-promo-line { font-size: 12.5px; line-height: 1.5; color: var(--c-text); white-space: pre-wrap; word-break: break-word; }
+  .pb-top-active-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .pb-top-active .pb-top-btn { margin: 0; }
   /* 團購資訊浮動視窗 */
   .pb-promo-box { text-align: center; }
   .pb-promo-title { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--c-text); margin: 6px 0 4px; }
@@ -654,6 +680,7 @@ async function loadBooks() {
     document.getElementById('pbContent').style.display = 'block';
 
     renderChips();
+    applyBrandParam();
     renderTopPurchase();
     renderGrid();
     handleHashOpen();
@@ -706,6 +733,21 @@ function renderChips() {
     v => toggleSelection(selBrands, v, s => { selBrands = s; }));
   buildChipGroup('pbTypeChips', ALL_TYPES.slice(), selTypes,
     v => toggleSelection(selTypes, v, s => { selTypes = s; }));
+}
+
+// ===== 品牌專屬連結 ?brand=品牌名稱 =====
+// 載入完成、chips 建好後套用；找不到同名品牌（打錯字、品牌後來下架等）就忽略，不報錯。
+// 效果等同使用者自己點了那顆品牌 chip；後面緊接的 renderGrid() 會套用篩選，這裡只負責
+// 設定選取狀態＋重繪 chips 讓選中的品牌 chip 亮起來。
+function applyBrandParam() {
+  const raw = new URLSearchParams(location.search).get('brand');
+  if (!raw) return;
+  let name = raw;
+  try { name = decodeURIComponent(raw); } catch (e) { /* 已經是解碼過的字串，忽略 */ }
+  const match = USED_BRANDS.find(b => b.name === name);
+  if (!match) return;
+  selBrands = new Set([match.name]);
+  renderChips();
 }
 
 // ===== 篩選邏輯 =====
@@ -818,7 +860,7 @@ function renderTopPurchase() {
     const p = b.purchase || {};
     const brand = b.brand_name || '';
     if (p.status === 'open' && p.url) {
-      if (!openByUrl.has(p.url)) openByUrl.set(p.url, brand);
+      if (!openByUrl.has(p.url)) openByUrl.set(p.url, { brand, startDate: p.startDate || '', endDate: p.endDate || '' });
     } else if (p.status === 'upcoming' && p.nextDate) {
       const prev = upcoming.get(brand);
       if (!prev || p.nextDate < prev) upcoming.set(brand, p.nextDate);
@@ -826,16 +868,56 @@ function renderTopPurchase() {
   });
 
   if (openByUrl.size) {
+    // 開團中：不再只放單顆按鈕，改成攤開的活動區塊（標題＋團購時間＋優惠條列＋下單按鈕）。
     const multi = openByUrl.size > 1;
-    openByUrl.forEach((brand, url) => {
+    const brandNames = [...openByUrl.values()].map(v => v.brand).filter(Boolean);
+
+    const box = document.createElement('div');
+    box.className = 'pb-top-active';
+
+    const header = document.createElement('div');
+    header.className = 'pb-top-active-header';
+    const headline = brandNames.length ? `${brandNames.join('・')} 團購開跑中` : '團購開跑中';
+    header.textContent = `🛒 ${headline}`;
+    box.appendChild(header);
+
+    // 團購時間：單一團才顯示（多團日期各異，掛在各自按鈕上反而亂，省略）
+    if (!multi) {
+      const only = [...openByUrl.values()][0];
+      if (only.startDate && only.endDate) {
+        const dateLine = document.createElement('div');
+        dateLine.className = 'pb-top-active-dates';
+        dateLine.textContent = `⏰ 團購時間：${fmtMD(only.startDate)} – ${fmtMD(only.endDate)}`;
+        box.appendChild(dateLine);
+      }
+    }
+
+    if (ALL_PROMOTIONS.length) {
+      const promoWrap = document.createElement('div');
+      promoWrap.className = 'pb-top-active-promos';
+      ALL_PROMOTIONS.forEach(p => {
+        const line = document.createElement('div');
+        line.className = 'pb-top-active-promo-line';
+        line.textContent = `🎁 ${p.text}`;
+        promoWrap.appendChild(line);
+      });
+      box.appendChild(promoWrap);
+    }
+
+    const ctaWrap = document.createElement('div');
+    ctaWrap.className = 'pb-top-active-ctas';
+    openByUrl.forEach((info, url) => {
       const a = document.createElement('a');
       a.className = 'pb-top-btn';
       a.href = url;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      a.textContent = multi && brand ? `🛒 ${brand} 團購下單` : '🛒 前往團購下單';
-      wrap.appendChild(a);
+      a.textContent = multi && info.brand ? `🛒 ${info.brand} 前往下單` : '🛒 前往團購下單';
+      ctaWrap.appendChild(a);
     });
+    box.appendChild(ctaWrap);
+
+    wrap.appendChild(box);
     wrap.style.display = 'flex';
     return;
   }
