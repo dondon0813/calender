@@ -1736,6 +1736,8 @@ function formatPbAvailableFrom(s) {
 // ===== Modal 開關 =====
 function openBookModal(book) {
   CURRENT_BOOK = book;
+  // 每本書點擊計數（2026-08-25）：點開介紹視窗就 +1，fire-and-forget，數字只有後台看得到
+  sendBooksBeacon('book-click-hit', { bookId: book.id });
   document.getElementById('pbModalTitle').innerHTML = smartTitleHtml(book.title);
 
   const subParts = [];

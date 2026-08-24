@@ -105,7 +105,7 @@ function renderBookList() {
 
     const meta = document.createElement('div');
     meta.className = 'pba-book-item-meta';
-    meta.innerHTML = `<span class="${b.is_published ? 'pba-badge-pub' : 'pba-badge-draft'}">${b.is_published ? '已發布' : '草稿'}</span><br>教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}`;
+    meta.innerHTML = `<span class="${b.is_published ? 'pba-badge-pub' : 'pba-badge-draft'}">${b.is_published ? '已發布' : '草稿'}</span><br>教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
     item.appendChild(meta);
 
     listEl.appendChild(item);
