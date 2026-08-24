@@ -9,6 +9,55 @@
 <style>
   /* picture-books.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
 
+  .pb-featured { margin: 0 0 16px; }
+  .pb-featured-title {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--c-muted);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .pb-featured-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .pb-featured-item { flex: 0 0 auto; width: 76px; text-align: center; cursor: pointer; }
+  .pb-featured-item:active { opacity: .8; }
+  .pb-featured-cover-wrap {
+    width: 76px;
+    height: 92px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--c-border-light);
+  }
+  .pb-featured-cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pb-featured-cover-wrap.placeholder { padding: 4px; }
+  .pb-featured-cover-wrap.placeholder span {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--c-brown);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pb-featured-name {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .pb-search-row { margin-bottom: 14px; }
   .pb-search-input {
     width: 100%;
@@ -509,6 +558,12 @@
   <div id="statusMsg" class="status-msg">資料載入中…</div>
 
   <div id="pbContent" style="display:none;">
+    <!-- 雪莉精選套組：分類名稱含「雪莉精選」的書，橫向滑動小圖區；不受搜尋/篩選影響，集合為空整區不渲染 -->
+    <div class="pb-featured" id="pbFeatured" style="display:none;">
+      <div class="pb-featured-title">⭐ 雪莉精選套組</div>
+      <div class="pb-featured-row" id="pbFeaturedRow"></div>
+    </div>
+
     <div class="pb-search-row">
       <input type="text" id="pbSearchInput" class="pb-search-input" placeholder="🔍 搜尋書名...">
     </div>
@@ -682,6 +737,7 @@ async function loadBooks() {
     renderChips();
     applyBrandParam();
     renderTopPurchase();
+    renderFeatured();
     renderGrid();
     handleHashOpen();
   } catch (err) {
@@ -726,7 +782,8 @@ function toggleSelection(current, value, setter) {
 }
 
 function renderChips() {
-  buildChipGroup('pbCatChips', ALL_CATEGORIES.map(c => c.name), selCats,
+  // 「雪莉精選」分類另外用頂端精選區呈現，不重複出現在年齡與主題 chips 裡（只過濾顯示，資料本身不受影響）
+  buildChipGroup('pbCatChips', ALL_CATEGORIES.filter(c => !c.name.includes('雪莉精選')).map(c => c.name), selCats,
     v => toggleSelection(selCats, v, s => { selCats = s; }));
   document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
   buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
@@ -768,6 +825,49 @@ function matchesFilters(book) {
     if (!types.some(t => selTypes.has(t))) return false;
   }
   return true;
+}
+
+// ===== 雪莉精選套組（頂端橫向滑動小圖區）=====
+// 分類名稱含「雪莉精選」的書才收錄；固定顯示全部（不受搜尋列/篩選 chips 影響），順序照 ALL_BOOKS
+// 原本順序（API 已排好）。集合為空就整區隱藏，不留空框。點小圖走跟書卡完全同一顆 openBookModal。
+function renderFeatured() {
+  const wrap = document.getElementById('pbFeatured');
+  const row = document.getElementById('pbFeaturedRow');
+  if (!wrap || !row) return;
+  row.innerHTML = '';
+  const list = ALL_BOOKS.filter(b => (b.categories || []).some(c => c.includes('雪莉精選')));
+  if (!list.length) { wrap.style.display = 'none'; return; }
+
+  list.forEach(book => {
+    const item = document.createElement('div');
+    item.className = 'pb-featured-item';
+    item.addEventListener('click', () => openBookModal(book));
+
+    const coverWrap = document.createElement('div');
+    coverWrap.className = 'pb-featured-cover-wrap';
+    if (book.cover_url) {
+      const img = document.createElement('img');
+      img.src = book.cover_url;
+      img.alt = book.title;
+      img.loading = 'lazy';
+      coverWrap.appendChild(img);
+    } else {
+      coverWrap.classList.add('placeholder');
+      const span = document.createElement('span');
+      span.textContent = book.title || '';
+      coverWrap.appendChild(span);
+    }
+    item.appendChild(coverWrap);
+
+    const name = document.createElement('div');
+    name.className = 'pb-featured-name';
+    name.textContent = book.title || '';
+    item.appendChild(name);
+
+    row.appendChild(item);
+  });
+
+  wrap.style.display = 'block';
 }
 
 function renderGrid() {
