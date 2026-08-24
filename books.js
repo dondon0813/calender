@@ -105,7 +105,7 @@ function renderBookList() {
 
     const meta = document.createElement('div');
     meta.className = 'pba-book-item-meta';
-    meta.innerHTML = `<span class="${b.is_published ? 'pba-badge-pub' : 'pba-badge-draft'}">${b.is_published ? '已發布' : '草稿'}</span><br>教材 ${(b.materials || []).length}`;
+    meta.innerHTML = `<span class="${b.is_published ? 'pba-badge-pub' : 'pba-badge-draft'}">${b.is_published ? '已發布' : '草稿'}</span><br>教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}`;
     item.appendChild(meta);
 
     listEl.appendChild(item);
@@ -846,7 +846,7 @@ function renderMaterialList(materials) {
     sub.className = 'pba-material-sub';
     const printSizePrefix = m.print_size ? `建議尺寸：${m.print_size} ・ ` : '';
     const availablePrefix = m.available_from ? `${m.locked ? '🔒 ' : ''}${formatAvailableFrom(m.available_from)} 開放 ・ ` : '';
-    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)}`;
+    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載`;
     info.appendChild(sub);
     item.appendChild(info);
 

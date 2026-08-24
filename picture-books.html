@@ -178,6 +178,7 @@
     word-break: keep-all;
     overflow-wrap: break-word;
   }
+  .pb-card-likes { font-size: 10.5px; font-weight: 700; color: var(--c-muted-light); text-align: center; margin-bottom: 4px; }
   .pb-card-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
   .mini-tag {
     font-size: 9px;
@@ -227,6 +228,15 @@
     font-size: 42px; color: var(--c-placeholder);
   }
   .rc-title { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--c-text); margin: 0 0 4px; word-break: keep-all; overflow-wrap: break-word; }
+  .pb-modal-like-row { display: flex; justify-content: center; margin: 0 0 6px; }
+  .pb-like-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: none; border: none; padding: 4px 10px;
+    cursor: pointer; color: var(--c-muted-light); font-size: 13px; font-weight: 800;
+  }
+  .pb-like-btn svg { width: 20px; height: 20px; display: block; }
+  .pb-like-btn.liked { color: var(--c-primary); }
+  .pb-like-btn.liked svg { fill: currentColor; }
   .pb-subline { font-size: 12.5px; color: var(--c-text-soft); margin-bottom: 10px; }
   .pb-tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
   .pb-tag { font-size: 11px; font-weight: 700; border-radius: var(--r-pill); padding: 3px 10px; }
@@ -691,6 +701,12 @@
     </div>
 
     <h2 class="rc-title" id="pbModalTitle"></h2>
+    <div class="pb-modal-like-row">
+      <button type="button" class="pb-like-btn" id="pbModalLikeBtn" aria-label="喜歡這本繪本">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span id="pbModalLikeCount">0</span>
+      </button>
+    </div>
     <div class="pb-subline" id="pbModalSubline"></div>
     <div class="pb-tag-row" id="pbModalTags"></div>
 
@@ -823,6 +839,81 @@ async function loadBooks() {
     statusEl.classList.add('error');
     console.error('繪本載入失敗', err);
   }
+}
+
+// ===== 免登入寫入：fire-and-forget（教材下載計數用）=====
+// 跟頁首瀏覽量統計同一套手法：sendBeacon 優先，Blob 用 text/plain 避開跨網域 preflight
+// （後端照樣把 body 當 JSON 解析），沒有 sendBeacon 才退回 fetch keepalive；失敗一律安靜吞掉。
+function sendBooksBeacon(type, extra) {
+  try {
+    const payload = JSON.stringify(Object.assign({ type }, extra || {}));
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(BOOKS_API_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(BOOKS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者操作，安靜忽略 */ }
+}
+
+// ===== 愛心（喜歡這本繪本）=====
+// 「按過」狀態存 localStorage，跨重整記住；無痕模式等寫入失敗時 try/catch 吞掉，
+// 按讚本身仍可送出，只是重整後會忘記已經按過（不影響當次操作）。
+const PB_LIKED_KEY = 'pbLikedBooks';
+function loadLikedBookIds() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(PB_LIKED_KEY) || '[]');
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch (e) { return new Set(); }
+}
+function saveLikedBookIds(set) {
+  try { localStorage.setItem(PB_LIKED_KEY, JSON.stringify([...set])); } catch (e) { /* 無痕模式等寫入失敗，忽略 */ }
+}
+let LIKED_BOOK_IDS = loadLikedBookIds();
+let LIKE_REQ_SEQ = {}; // bookId -> 最新一次送出的序號，用來忽略連點時過期的回應，避免舊回應覆蓋新狀態
+
+function isBookLiked(bookId) { return LIKED_BOOK_IDS.has(bookId); }
+
+// 樂觀更新：先切本地「按過」狀態＋畫面上的數字，再送 API；API 回真正的 likeCount 才校正一次。
+// 方向永遠以本地已按過/沒按過的狀態為準，所以連點會正確地一次+1、一次-1交替，不會同方向送兩次。
+function toggleBookLike(book) {
+  const liked = isBookLiked(book.id);
+  const delta = liked ? -1 : 1;
+  if (liked) LIKED_BOOK_IDS.delete(book.id); else LIKED_BOOK_IDS.add(book.id);
+  saveLikedBookIds(LIKED_BOOK_IDS);
+
+  book.likeCount = Math.max(0, (Number(book.likeCount) || 0) + delta);
+  renderModalLike(book);
+  renderGrid();
+
+  const seq = (LIKE_REQ_SEQ[book.id] || 0) + 1;
+  LIKE_REQ_SEQ[book.id] = seq;
+
+  fetch(BOOKS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'book-like', bookId: book.id, delta })
+  }).then(res => res.json()).then(data => {
+    if (LIKE_REQ_SEQ[book.id] !== seq) return; // 這期間又點過，回應已過期，不要覆蓋更新的狀態
+    if (data && data.success && typeof data.likeCount === 'number') {
+      book.likeCount = data.likeCount;
+      renderModalLike(book);
+      renderGrid();
+    }
+  }).catch(() => { /* 功能未上線／請求失敗都安靜忽略，畫面維持樂觀更新的結果 */ });
+}
+
+function renderModalLike(book) {
+  const btn = document.getElementById('pbModalLikeBtn');
+  const countEl = document.getElementById('pbModalLikeCount');
+  if (!btn || !countEl) return;
+  btn.classList.toggle('liked', isBookLiked(book.id));
+  countEl.textContent = String(Number(book.likeCount) || 0);
+  btn.onclick = () => toggleBookLike(book);
 }
 
 // ===== 篩選 chips =====
@@ -1017,6 +1108,14 @@ function renderGrid() {
     title.className = 'pb-card-title';
     title.innerHTML = smartTitleHtml(book.title);
     body.appendChild(title);
+
+    const likeCount = Number(book.likeCount) || 0;
+    if (likeCount > 0) {
+      const likes = document.createElement('div');
+      likes.className = 'pb-card-likes';
+      likes.textContent = `❤️ ${likeCount}`;
+      body.appendChild(likes);
+    }
 
     const tags = document.createElement('div');
     tags.className = 'pb-card-tags';
@@ -1507,6 +1606,7 @@ function renderMaterials(book) {
       dl.target = '_blank';
       dl.rel = 'noopener noreferrer';
       dl.textContent = '下載';
+      dl.addEventListener('click', () => sendBooksBeacon('material-download-hit', { materialId: m.id }));
       actions.appendChild(dl);
     }
 
@@ -1655,6 +1755,7 @@ function openBookModal(book) {
     ytWrap.onclick = null;
   }
 
+  renderModalLike(book);
   renderPurchaseSection(book);
   renderSeriesBlock(book);
   renderOrderCta(book);
