@@ -4210,6 +4210,7 @@
     <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
     <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
     <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
+    <button class="sn-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -4261,6 +4262,7 @@
           <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
           <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
           <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
+          <button class="menu-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -5296,6 +5298,17 @@
     <div id="pbaToast"></div>
   </div><!-- /viewBooks -->
 
+  <!-- ===== 訂閱管理（subscriptions.js；信用卡訂閱個人財務工具）===== -->
+  <div class="view" id="viewCardSub">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">💳 訂閱管理</h2>
+      <button class="task-mini-btn" id="cardSubAddBtn">＋ 新增訂閱</button>
+      <button class="task-mini-btn" id="cardSubRefreshBtn">🔄 重新整理</button>
+    </div>
+    <div id="cardSubAlerts"></div>
+    <div id="cardSubListArea"><div class="task-empty">讀取中…</div></div>
+  </div><!-- /viewCardSub -->
+
   </div><!-- /paneLeft -->
   <div id="splitDivider" title="拖曳調整左右欄寬度"></div>
   <div id="paneRight">
@@ -5626,6 +5639,38 @@
         <button class="task-mini-btn danger" id="acctDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
       </div>
       <div class="form-status" id="acctEditStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 訂閱管理：新增／編輯 modal（subscriptions.js） ===== -->
+<div class="modal-backdrop" id="cardSubEditModal" onclick="if(event.target===this) closeCardSubEditModal()">
+  <div class="modal-box" style="width:min(460px, 94vw);">
+    <button class="modal-close" onclick="closeCardSubEditModal()">✕</button>
+    <h3 id="cardSubEditTitle">➕ 新增訂閱</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="cardSubSiteName">訂閱網站名稱 *</label>
+      <input type="text" id="cardSubSiteName" placeholder="例如：Netflix">
+      <label for="cardSubSitePurpose">網站功能/用途</label>
+      <input type="text" id="cardSubSitePurpose" placeholder="例如：追劇">
+      <label for="cardSubCardName">卡片名稱</label>
+      <input type="text" id="cardSubCardName" placeholder="暱稱＋末四碼，如：國泰 CUBE ・1234，不要填完整卡號">
+      <label for="cardSubBank">銀行</label>
+      <input type="text" id="cardSubBank" placeholder="例如：國泰世華">
+      <label for="cardSubCardExpiry">卡片到期日</label>
+      <input type="month" id="cardSubCardExpiry">
+      <label for="cardSubNextBilling">訂閱到期日／下次扣款日</label>
+      <input type="date" id="cardSubNextBilling">
+      <label for="cardSubFee">訂閱費用</label>
+      <input type="text" id="cardSubFee" placeholder="例如：NT$390/月">
+      <label for="cardSubNote">備註</label>
+      <textarea id="cardSubNote" rows="2" placeholder="備註…"></textarea>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="cardSubSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="cardSubDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="cardSubEditStatus"></div>
     </div>
   </div>
 </div>
@@ -6160,6 +6205,8 @@
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
+<!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
+<script src="subscriptions.js?v=1"></script>
 <script src="admin.js?v=83"></script>
 <script src="memo.js?v=5"></script>
 
