@@ -19,6 +19,7 @@ const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
 let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
 let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
 let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
+let materialFormEditingBookIds = null; // 編輯中教材的掛載書單（教材庫；null＝新增或舊資料沒帶）
 let setFormEditingId = null; // 目前套組表單是編輯哪個套組（null＝新增）
 
 // ===== Toast =====
@@ -202,7 +203,7 @@ function fillForm(book) {
   document.getElementById('fPublisher').value = book ? book.publisher || '' : '';
   document.getElementById('fSeries').value = book ? book.series_name || '' : '';
   document.getElementById('fDescription').value = book ? book.description || '' : '';
-  document.getElementById('fYoutube').value = book ? book.youtube_url || '' : '';
+  renderVideoEditor(book);
   document.getElementById('fShopee').value = book ? book.shopee_url || '' : '';
   ensureBrandOption(book && book.brand_id);
   document.getElementById('fBrand').value = book && book.brand_id ? book.brand_id : '';
@@ -754,6 +755,96 @@ document.getElementById('fCoverFile').addEventListener('change', (e) => {
   });
 });
 
+// ===== 介紹影片編輯器（book_videos 獨立表，book-videos-set 整批覆蓋這本書的清單） =====
+// 每列＝一支影片（網址必填＋小標題選填）；順序＝前台顯示順序。共用影片（掛多本書）顯示徽章，
+// 從這本書刪掉該列只會解除這本書的掛載，其他書不受影響（後端 reconcile 規則）。
+// 儲存時機＝跟「儲存」按鈕同一發（先 book-upsert 拿到 id，再 book-videos-set）。
+let VIDEO_EDITOR_ORIGINAL = '[]'; // JSON 字串，判斷有沒有動過（videosReady=false 時用來警告）
+
+function renderVideoEditor(book) {
+  const wrap = document.getElementById('fVideoRows');
+  wrap.innerHTML = '';
+  const videos = book && Array.isArray(book.videos) ? book.videos : [];
+  videos.forEach(v => addVideoRow(v));
+  VIDEO_EDITOR_ORIGINAL = JSON.stringify(collectVideoRows());
+  const notReady = PACKAGE_DATA && PACKAGE_DATA.videosReady === false;
+  document.getElementById('fVideosNotReady').style.display = notReady ? 'block' : 'none';
+}
+
+function addVideoRow(video) {
+  const wrap = document.getElementById('fVideoRows');
+  const row = document.createElement('div');
+  row.className = 'pba-video-row';
+  row.style.cssText = 'display:flex; gap:6px; align-items:center; margin-bottom:6px;';
+
+  const url = document.createElement('input');
+  url.type = 'text';
+  url.className = 'pba-video-url';
+  url.placeholder = 'https://www.youtube.com/watch?v=...';
+  url.value = video && video.url ? video.url : '';
+  url.style.cssText = 'flex:2; min-width:0;';
+  if (video && video.id) row.dataset.videoId = video.id;
+  row.appendChild(url);
+
+  const title = document.createElement('input');
+  title.type = 'text';
+  title.className = 'pba-video-title';
+  title.placeholder = '小標題（選填）';
+  title.maxLength = 60;
+  title.value = video && video.title ? video.title : '';
+  title.style.cssText = 'flex:1; min-width:0;';
+  row.appendChild(title);
+
+  const shared = video && Array.isArray(video.bookIds) ? video.bookIds.length : 0;
+  if (shared > 1) {
+    const badge = document.createElement('span');
+    badge.style.cssText = 'flex:none; font-size:11px; font-weight:700; color:var(--c-muted); white-space:nowrap;';
+    badge.textContent = `共用 ${shared} 本`;
+    badge.title = '這支影片同時掛在其他書上；刪掉這列只會從這本書移除，其他書不受影響';
+    row.appendChild(badge);
+  }
+
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'pba-mini-btn danger';
+  del.textContent = '✕';
+  del.title = '移除這支影片';
+  del.style.flex = 'none';
+  del.addEventListener('click', () => row.remove());
+  row.appendChild(del);
+
+  wrap.appendChild(row);
+}
+
+document.getElementById('addVideoRowBtn').addEventListener('click', () => addVideoRow(null));
+
+function collectVideoRows() {
+  return Array.from(document.querySelectorAll('#fVideoRows .pba-video-row'))
+    .map(row => ({
+      id: row.dataset.videoId || '',
+      url: row.querySelector('.pba-video-url').value.trim(),
+      title: row.querySelector('.pba-video-title').value.trim()
+    }))
+    .filter(v => v.url);
+}
+
+/** 書存好後接著存影片；回 true＝沒問題（含「沒動過所以跳過」），false＝有變更但存不進去 */
+async function saveVideosForBook(bookId) {
+  const rows = collectVideoRows();
+  const dirty = JSON.stringify(rows) !== VIDEO_EDITOR_ORIGINAL;
+  if (PACKAGE_DATA && PACKAGE_DATA.videosReady === false) {
+    if (dirty) showToast('影片資料表尚未建立（需先 npx supabase db push），影片變更未儲存', true);
+    return !dirty;
+  }
+  if (!dirty) return true;
+  const res = await apiPost('book-videos-set', { book_id: bookId, videos: rows });
+  if (!res || res.success !== true) {
+    showToast('影片儲存失敗：' + ((res && res.error) || '未知錯誤'), true);
+    return false;
+  }
+  return true;
+}
+
 // ===== 儲存 / 刪除 書籍 =====
 document.getElementById('bookForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -766,7 +857,6 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     publisher: document.getElementById('fPublisher').value.trim(),
     series_name: document.getElementById('fSeries').value.trim(),
     description: document.getElementById('fDescription').value,
-    youtube_url: document.getElementById('fYoutube').value.trim(),
     shopee_url: document.getElementById('fShopee').value.trim(),
     brand_id: document.getElementById('fBrand').value || null,
     categories: getCheckedValues('fCategories'),
@@ -783,7 +873,9 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
       showToast('儲存失敗：' + ((res && res.error) || '未知錯誤'), true);
       return;
     }
-    showToast('已儲存');
+    // 書本體存好 → 接著存影片清單（沒動過會自動跳過）；影片失敗不擋書的儲存，錯誤已 toast
+    const videosOk = await saveVideosForBook(res.book.id);
+    if (videosOk) showToast('已儲存');
     const pkg = await loadPackage();
     if (!pkg) return;
     PACKAGE_DATA = pkg;
@@ -819,6 +911,7 @@ function renderMaterialsSection(book) {
   const hint = document.getElementById('materialsNeedSaveHint');
   const body = document.getElementById('materialsBody');
   closeMaterialForm();
+  closeLibraryPicker();
   if (!book) {
     hint.style.display = 'block';
     body.style.display = 'none';
@@ -862,7 +955,9 @@ function renderMaterialList(materials) {
     sub.className = 'pba-material-sub';
     const printSizePrefix = m.print_size ? `建議尺寸：${m.print_size} ・ ` : '';
     const availablePrefix = m.available_from ? `${m.locked ? '🔒 ' : ''}${formatAvailableFrom(m.available_from)} 開放 ・ ` : '';
-    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載`;
+    // 教材庫：同一份教材掛幾本書（bookIds），共用時提示一下，下載數是全部書合併的
+    const sharedSuffix = Array.isArray(m.bookIds) && m.bookIds.length > 1 ? ` ・ 📚 共用 ${m.bookIds.length} 本` : '';
+    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載${sharedSuffix}`;
     info.appendChild(sub);
     item.appendChild(info);
 
@@ -905,6 +1000,8 @@ document.getElementById('cancelMaterialBtn').addEventListener('click', closeMate
 
 function openMaterialForm(material) {
   materialFormEditingId = material ? material.id : null;
+  // 編輯共用教材時要原封不動帶回 bookIds（只送 book_id 會把其他書的掛載洗掉）
+  materialFormEditingBookIds = material && Array.isArray(material.bookIds) ? material.bookIds.slice() : null;
   document.getElementById('materialForm').classList.add('show');
   document.getElementById('mTitle').value = material ? material.title || '' : '';
   document.getElementById('mDescription').value = material ? material.description || '' : '';
@@ -925,6 +1022,7 @@ function openMaterialForm(material) {
 
 function closeMaterialForm() {
   materialFormEditingId = null;
+  materialFormEditingBookIds = null;
   const form = document.getElementById('materialForm');
   if (form) form.classList.remove('show');
   document.getElementById('mThumbRemoveBg').value = 'none';
@@ -1011,8 +1109,13 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
   if (!CURRENT_BOOK) { showToast('請先儲存書籍', true); return; }
   const title = document.getElementById('mTitle').value.trim();
   if (!title) { showToast('請輸入教材標題', true); return; }
+  // 掛載書單：新增＝掛在目前這本書；編輯＝保留原本的掛載（共用教材不能被洗成單本），
+  // 保險再把目前這本書併進去（正常情況本來就在裡面）
+  const bookIds = materialFormEditingId && materialFormEditingBookIds
+    ? Array.from(new Set(materialFormEditingBookIds.concat(CURRENT_BOOK.id)))
+    : [CURRENT_BOOK.id];
   const payload = {
-    book_id: CURRENT_BOOK.id,
+    book_ids: bookIds,
     title,
     description: document.getElementById('mDescription').value,
     print_size: document.getElementById('mPrintSize').value.trim(),
@@ -1038,15 +1141,115 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
 });
 
 async function deleteMaterial(material) {
-  if (!confirm(`確定要刪除教材《${material.title || '未命名'}》嗎？`)) return;
+  // 共用教材（掛多本書）：預設只從這本書移除掛載，檔案與其他書都保留；
+  // 只剩這一本書掛著時才是真刪除（material-delete，檔案紀錄整筆消失）
+  const shared = Array.isArray(material.bookIds) ? material.bookIds : [];
+  const isShared = CURRENT_BOOK && shared.length > 1 && shared.includes(CURRENT_BOOK.id);
   try {
-    const res = await apiPost('material-delete', { id: material.id });
+    let res;
+    if (isShared) {
+      if (!confirm(`教材《${material.title || '未命名'}》同時掛在另外 ${shared.length - 1} 本書。\n要從《${CURRENT_BOOK.title}》移除嗎？（其他書照常保留，檔案不會刪除）`)) return;
+      res = await apiPost('material-upsert', { id: material.id, book_ids: shared.filter(id => id !== CURRENT_BOOK.id) });
+    } else {
+      if (!confirm(`確定要刪除教材《${material.title || '未命名'}》嗎？`)) return;
+      res = await apiPost('material-delete', { id: material.id });
+    }
     if (!res || res.success !== true) {
       showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
       return;
     }
-    showToast('已刪除教材');
+    showToast(isShared ? '已從這本書移除（其他書保留）' : '已刪除教材');
     await refreshCurrentBookAfterMaterialChange();
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
+// ===== 教材庫（從既有教材掛進這本書，不重複上傳檔案） =====
+document.getElementById('addFromLibraryBtn').addEventListener('click', () => {
+  const picker = document.getElementById('materialLibraryPicker');
+  if (picker.style.display === 'none') {
+    picker.style.display = 'block';
+    document.getElementById('materialLibrarySearch').value = '';
+    renderLibraryList();
+  } else {
+    closeLibraryPicker();
+  }
+});
+
+function closeLibraryPicker() {
+  const picker = document.getElementById('materialLibraryPicker');
+  if (picker) picker.style.display = 'none';
+}
+
+document.getElementById('materialLibrarySearch').addEventListener('input', renderLibraryList);
+
+function renderLibraryList() {
+  const listEl = document.getElementById('materialLibraryList');
+  listEl.innerHTML = '';
+  if (!CURRENT_BOOK) return;
+  const term = (document.getElementById('materialLibrarySearch').value || '').trim().toLowerCase();
+  const bookTitleById = new Map((PACKAGE_DATA.books || []).map(b => [b.id, b.title]));
+  const candidates = (PACKAGE_DATA.materialsLibrary || [])
+    .filter(m => !(Array.isArray(m.bookIds) && m.bookIds.includes(CURRENT_BOOK.id)))
+    .filter(m => !term || (m.title || '').toLowerCase().includes(term));
+  if (!candidates.length) {
+    listEl.innerHTML = '<div class="pba-empty-list">沒有可加入的教材（其他書的教材會出現在這裡）</div>';
+    return;
+  }
+  candidates.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'pba-material-item';
+
+    if (m.thumb_url) {
+      const img = document.createElement('img');
+      img.className = 'pba-material-thumb';
+      img.src = m.thumb_url;
+      item.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pba-material-thumb placeholder';
+      ph.textContent = '📄';
+      item.appendChild(ph);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'pba-material-info';
+    const title = document.createElement('div');
+    title.className = 'pba-material-title';
+    title.textContent = m.title || '未命名教材';
+    info.appendChild(title);
+    const sub = document.createElement('div');
+    sub.className = 'pba-material-sub';
+    const owners = (Array.isArray(m.bookIds) ? m.bookIds : []).map(id => bookTitleById.get(id) || '').filter(Boolean);
+    sub.textContent = owners.length ? `目前掛在：${owners.join('、')}` : '目前沒掛任何書';
+    info.appendChild(sub);
+    item.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'pba-material-actions';
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'pba-mini-btn';
+    addBtn.textContent = '加入';
+    addBtn.addEventListener('click', () => linkLibraryMaterial(m));
+    actions.appendChild(addBtn);
+    item.appendChild(actions);
+
+    listEl.appendChild(item);
+  });
+}
+
+async function linkLibraryMaterial(material) {
+  if (!CURRENT_BOOK) return;
+  const bookIds = (Array.isArray(material.bookIds) ? material.bookIds : []).concat(CURRENT_BOOK.id);
+  try {
+    const res = await apiPost('material-upsert', { id: material.id, book_ids: Array.from(new Set(bookIds)) });
+    if (!res || res.success !== true) {
+      showToast('加入失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast(`已把《${material.title || '未命名教材'}》掛進這本書`);
+    await refreshCurrentBookAfterMaterialChange();
+    renderLibraryList();
   } catch (err) { /* needLogin 已處理 */ }
 }
 

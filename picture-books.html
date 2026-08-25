@@ -285,6 +285,32 @@
     box-shadow: 0 3px 10px rgba(0,0,0,0.3);
   }
 
+  /* 多影片輪播：影片框下方一列「‹ 小圓點 ›」＋選填小標題；只有一支影片時整列隱藏 */
+  .pb-video-area { margin-bottom: 14px; }
+  .pb-video-area .pb-yt-wrap { margin-bottom: 0; }
+  .pb-video-nav {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-top: 8px;
+  }
+  .pb-video-arrow {
+    border: none; cursor: pointer;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--c-purple-bg); color: var(--c-purple-text);
+    font-size: 16px; font-weight: 800; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pb-video-arrow:disabled { opacity: .35; cursor: default; }
+  .pb-video-dots { display: flex; gap: 6px; }
+  .pb-video-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--c-border, #ddd); border: none; padding: 0; cursor: pointer;
+  }
+  .pb-video-dot.active { background: var(--c-primary); }
+  .pb-video-caption {
+    text-align: center; margin-top: 6px;
+    font-size: 12.5px; font-weight: 700; color: var(--c-text-light, #888);
+  }
+
   /* 頂端團購入口 */
   .pb-top-purchase { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 14px; }
   .pb-top-purchase .pb-top-btn {
@@ -720,10 +746,16 @@
   <div class="modal-box pb-modal-box">
     <button class="rc-close-btn" onclick="closeBookModal()">✕</button>
 
-    <!-- 有影片介紹時，影片取代首圖（封面隱藏）；沒影片才顯示封面 -->
-    <div class="pb-yt-wrap" id="pbYtWrap" style="display:none;">
-      <img id="pbYtThumb" src="" alt="YouTube 影片">
-      <div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>
+    <!-- 有影片介紹時，影片取代首圖（封面隱藏）；沒影片才顯示封面。
+         多支影片：左右滑（或 ‹ › 小圓點）切換，小標題選填、留空顯示「影片 N」 -->
+    <div class="pb-video-area" id="pbVideoArea" style="display:none;">
+      <div class="pb-yt-wrap" id="pbYtWrap"></div>
+      <div class="pb-video-nav" id="pbVideoNav" style="display:none;">
+        <button type="button" class="pb-video-arrow" id="pbVideoPrev" aria-label="上一支影片">‹</button>
+        <div class="pb-video-dots" id="pbVideoDots"></div>
+        <button type="button" class="pb-video-arrow" id="pbVideoNext" aria-label="下一支影片">›</button>
+      </div>
+      <div class="pb-video-caption" id="pbVideoCaption" style="display:none;"></div>
     </div>
 
     <div class="pb-cover-wrap" id="pbModalCoverWrap">
@@ -1199,6 +1231,102 @@ function parseYoutube(url) {
   } catch (e) { /* 網址格式不對，當作沒有影片 */ }
   return none;
 }
+
+// ===== 介紹視窗多影片輪播 =====
+// 後端 videos = [{id, url, title}]（依後台順序）；舊快取沒有 videos 時退回單支 youtube_url。
+// 解析不出 YouTube ID 的連結直接略過（跟舊行為一致：壞連結＝沒有影片）。
+let MODAL_VIDEOS = [];
+let MODAL_VIDEO_IDX = 0;
+function getBookVideos(book) {
+  const raw = (Array.isArray(book.videos) && book.videos.length)
+    ? book.videos
+    : (book.youtube_url ? [{ url: book.youtube_url, title: '' }] : []);
+  return raw
+    .map(v => {
+      const parsed = parseYoutube(v.url);
+      return { ytId: parsed.id, vertical: parsed.vertical, title: String(v.title || '').trim() };
+    })
+    .filter(v => v.ytId);
+}
+
+function renderModalVideo() {
+  const ytWrap = document.getElementById('pbYtWrap');
+  const v = MODAL_VIDEOS[MODAL_VIDEO_IDX];
+  if (!v) return;
+  ytWrap.classList.toggle('vertical', v.vertical);
+
+  // 預覽圖依序嘗試高畫質版本：Shorts 先用直式 oardefault（1080×1920）→ maxresdefault（1280×720）→ hqdefault（480×360）。
+  // 不是每支都有高畫質版，沒有時 YouTube 回 120×90 的灰色佔位圖，用 naturalWidth 判斷後換下一個。
+  const thumbNames = (v.vertical ? ['oardefault'] : []).concat(['maxresdefault', 'hqdefault']);
+  ytWrap.innerHTML = `<img id="pbYtThumb" alt="YouTube 影片"><div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>`;
+  const thumb = document.getElementById('pbYtThumb');
+  let thumbIdx = 0;
+  const tryNextThumb = () => {
+    if (thumbIdx >= thumbNames.length) { thumb.onload = null; thumb.onerror = null; return; }
+    thumb.src = `https://i.ytimg.com/vi/${v.ytId}/${thumbNames[thumbIdx++]}.jpg`;
+  };
+  thumb.onload = () => { if (thumb.naturalWidth <= 120 && thumbIdx < thumbNames.length) tryNextThumb(); };
+  thumb.onerror = tryNextThumb;
+  tryNextThumb();
+  ytWrap.onclick = function () {
+    ytWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.ytId}?autoplay=1" title="YouTube 影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    ytWrap.onclick = null;
+  };
+
+  // ‹ 小圓點 ›＋小標題：只有一支影片時整列隱藏；標題留空顯示「影片 N」（多支時才顯示標題列）
+  const nav = document.getElementById('pbVideoNav');
+  const caption = document.getElementById('pbVideoCaption');
+  const many = MODAL_VIDEOS.length > 1;
+  nav.style.display = many ? 'flex' : 'none';
+  if (many) {
+    const dots = document.getElementById('pbVideoDots');
+    dots.innerHTML = '';
+    MODAL_VIDEOS.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'pb-video-dot' + (i === MODAL_VIDEO_IDX ? ' active' : '');
+      dot.setAttribute('aria-label', `第 ${i + 1} 支影片`);
+      dot.addEventListener('click', () => showModalVideo(i));
+      dots.appendChild(dot);
+    });
+    document.getElementById('pbVideoPrev').disabled = MODAL_VIDEO_IDX === 0;
+    document.getElementById('pbVideoNext').disabled = MODAL_VIDEO_IDX === MODAL_VIDEOS.length - 1;
+    caption.style.display = 'block';
+    caption.textContent = `${v.title || `影片 ${MODAL_VIDEO_IDX + 1}`}（${MODAL_VIDEO_IDX + 1}/${MODAL_VIDEOS.length}）`;
+  } else {
+    // 單支影片有填標題也顯示（例：🎬 開箱），沒填就整列不佔空間
+    caption.style.display = v.title ? 'block' : 'none';
+    caption.textContent = v.title;
+  }
+}
+
+function showModalVideo(idx) {
+  if (idx < 0 || idx >= MODAL_VIDEOS.length || idx === MODAL_VIDEO_IDX) return;
+  MODAL_VIDEO_IDX = idx;
+  renderModalVideo(); // 切換一律回到預覽圖狀態（播放中的 iframe 直接被換掉＝停止播放）
+}
+
+document.getElementById('pbVideoPrev').addEventListener('click', () => showModalVideo(MODAL_VIDEO_IDX - 1));
+document.getElementById('pbVideoNext').addEventListener('click', () => showModalVideo(MODAL_VIDEO_IDX + 1));
+
+// 左右滑切換（在影片框上）：橫向位移 > 40px 且大於縱向位移才算滑動，避免跟頁面捲動打架。
+// 注意：影片播放中（iframe 狀態）觸控會被 iframe 吃掉，滑不動是正常的，改用 ‹ › 或小圓點。
+(function () {
+  const area = document.getElementById('pbVideoArea');
+  let sx = 0, sy = 0;
+  area.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+  area.addEventListener('touchend', (e) => {
+    if (MODAL_VIDEOS.length < 2 || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    showModalVideo(MODAL_VIDEO_IDX + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+})();
 
 // ===== 頂端團購入口 =====
 // 彙總所有書的 purchase 狀態（後端依品牌對照行事曆算好的）：
@@ -1785,35 +1913,13 @@ function openBookModal(book) {
     descBox.style.display = 'none';
   }
 
-  const ytWrap = document.getElementById('pbYtWrap');
-  const yt = parseYoutube(book.youtube_url);
-  const ytId = yt.id;
-  ytWrap.classList.toggle('vertical', Boolean(ytId) && yt.vertical);
+  // 影片：後端每本書回 videos 陣列（book_videos 表）；舊快取/表未 push 只有 youtube_url → 合成單支。
   // 有影片介紹 → 影片當首圖，封面隱藏（封面在書卡上仍看得到）；沒影片 → 封面照常
-  coverWrap.style.display = ytId ? 'none' : '';
-  if (ytId) {
-    ytWrap.style.display = 'block';
-    // 預覽圖依序嘗試高畫質版本：Shorts 先用直式 oardefault（1080×1920）→ maxresdefault（1280×720）→ hqdefault（480×360）。
-    // 不是每支都有高畫質版，沒有時 YouTube 回 120×90 的灰色佔位圖，用 naturalWidth 判斷後換下一個。
-    const thumbNames = (yt.vertical ? ['oardefault'] : []).concat(['maxresdefault', 'hqdefault']);
-    ytWrap.innerHTML = `<img id="pbYtThumb" alt="YouTube 影片"><div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>`;
-    const thumb = document.getElementById('pbYtThumb');
-    let thumbIdx = 0;
-    const tryNextThumb = () => {
-      if (thumbIdx >= thumbNames.length) { thumb.onload = null; thumb.onerror = null; return; }
-      thumb.src = `https://i.ytimg.com/vi/${ytId}/${thumbNames[thumbIdx++]}.jpg`;
-    };
-    thumb.onload = () => { if (thumb.naturalWidth <= 120 && thumbIdx < thumbNames.length) tryNextThumb(); };
-    thumb.onerror = tryNextThumb;
-    tryNextThumb();
-    ytWrap.onclick = function () {
-      ytWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" title="YouTube 影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-      ytWrap.onclick = null;
-    };
-  } else {
-    ytWrap.style.display = 'none';
-    ytWrap.onclick = null;
-  }
+  MODAL_VIDEOS = getBookVideos(book);
+  MODAL_VIDEO_IDX = 0;
+  coverWrap.style.display = MODAL_VIDEOS.length ? 'none' : '';
+  document.getElementById('pbVideoArea').style.display = MODAL_VIDEOS.length ? 'block' : 'none';
+  if (MODAL_VIDEOS.length) renderModalVideo();
 
   renderModalLike(book);
   renderPurchaseSection(book);

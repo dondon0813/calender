@@ -5035,8 +5035,15 @@
             <textarea id="fDescription"></textarea>
           </div>
           <div class="pba-field">
-            <label>YouTube 網址</label>
-            <input type="text" id="fYoutube" placeholder="https://www.youtube.com/watch?v=...">
+            <label>介紹影片（可多支，由上到下＝前台顯示順序）</label>
+            <div id="fVideoRows"></div>
+            <button type="button" class="pba-mini-btn" id="addVideoRowBtn">＋ 加一支影片</button>
+            <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+              小標題選填（例：📖 說故事、🎬 開箱），留空前台顯示「影片 1、2…」。一套多本共用同一支影片：在每本書都貼同一條連結即可，系統會自動合併成同一筆，不會重複。
+            </div>
+            <div id="fVideosNotReady" style="display:none; font-size:11.5px; color:#c0392b; margin-top:4px;">
+              ⚠ 影片資料表尚未建立（需先 npx supabase db push），影片變更暫時無法儲存。
+            </div>
           </div>
           <div class="pba-field">
             <label>蝦皮網址</label>
@@ -5100,6 +5107,14 @@
           <div id="materialsBody" style="display:none;">
             <div id="materialList"></div>
             <button type="button" class="pba-mini-btn" id="addMaterialBtn">＋ 新增教材</button>
+            <button type="button" class="pba-mini-btn" id="addFromLibraryBtn">📚 從教材庫加入</button>
+
+            <!-- 教材庫選單：列出全部教材（排除已掛在這本書的），點「加入」＝把這本書掛進該教材，
+                 檔案共用一份、下載計數合併；不會複製檔案 -->
+            <div id="materialLibraryPicker" style="display:none; margin-top:10px; border:1.5px dashed var(--c-border, #ddd); border-radius:12px; padding:10px;">
+              <input type="text" id="materialLibrarySearch" placeholder="搜尋教材名稱…" style="width:100%; margin-bottom:8px;">
+              <div id="materialLibraryList" style="max-height:260px; overflow-y:auto;"></div>
+            </div>
 
             <div class="pba-material-form" id="materialForm">
               <div class="pba-field">
@@ -6201,7 +6216,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=3"></script>
+<script src="books.js?v=4"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
