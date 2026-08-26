@@ -84,36 +84,181 @@ async function loadPackage() {
   return data;
 }
 
-// ===== 書單（左欄） =====
+// ===== 封面牆（預設畫面；模擬前台書牆，拖曳小圖改排序，放開即自動儲存）=====
 function renderBookList() {
   const listEl = document.getElementById('bookList');
   listEl.innerHTML = '';
   const term = (document.getElementById('bookSearchInput').value || '').trim().toLowerCase();
+  const hintEl = document.getElementById('bookGridHint');
+  hintEl.textContent = term
+    ? '搜尋中無法拖曳排序（清空搜尋後才是完整順序）'
+    : '前台顯示順序＝這裡的順序。電腦按住封面拖曳、手機長按 0.3 秒後拖曳，放開自動儲存。';
   const books = (PACKAGE_DATA.books || []).filter(b => !term || (b.title || '').toLowerCase().includes(term));
   if (!books.length) {
     listEl.innerHTML = '<div class="pba-empty-list">沒有符合的繪本</div>';
     return;
   }
   books.forEach(b => {
-    const item = document.createElement('div');
-    item.className = 'pba-book-item' + (CURRENT_BOOK && CURRENT_BOOK.id === b.id ? ' active' : '');
-    item.addEventListener('click', () => selectBook(b));
+    const card = document.createElement('div');
+    card.className = 'pba-grid-card';
+    card.dataset.bookId = b.id;
 
-    const name = document.createElement('div');
-    name.className = 'pba-book-item-name';
-    name.textContent = b.title;
-    item.appendChild(name);
+    if (b.cover_url) {
+      const img = document.createElement('img');
+      img.className = 'pba-grid-cover';
+      img.src = b.cover_url;
+      img.draggable = false;
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pba-grid-cover placeholder';
+      ph.textContent = '📖';
+      card.appendChild(ph);
+    }
+
+    if (!b.is_published) {
+      const badge = document.createElement('span');
+      badge.className = 'pba-grid-badge pba-badge-draft';
+      badge.textContent = '草稿';
+      card.appendChild(badge);
+    }
+
+    const title = document.createElement('div');
+    title.className = 'pba-grid-title';
+    title.textContent = b.title;
+    card.appendChild(title);
 
     const meta = document.createElement('div');
-    meta.className = 'pba-book-item-meta';
-    meta.innerHTML = `<span class="${b.is_published ? 'pba-badge-pub' : 'pba-badge-draft'}">${b.is_published ? '已發布' : '草稿'}</span><br>教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
-    item.appendChild(meta);
+    meta.className = 'pba-grid-meta';
+    meta.textContent = `教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
+    card.appendChild(meta);
 
-    listEl.appendChild(item);
+    card.addEventListener('pointerdown', (e) => pbaDragPointerDown(e, card, b));
+    listEl.appendChild(card);
   });
 }
 
 document.getElementById('bookSearchInput').addEventListener('input', renderBookList);
+
+// ---- 拖曳排序 ----
+// 點一下＝進編輯；拖曳（滑鼠移超過 6px；觸控長按 300ms，先動超過 10px＝在捲頁、放棄）＝改排序。
+// 搜尋過濾中禁止拖曳（只看得到部分書，順序沒有意義）。放開後整批打 book-sort-set 存檔。
+let pbaDrag = null;
+
+function pbaDragPointerDown(e, card, book) {
+  if (pbaDrag) return;
+  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+  const filtering = !!(document.getElementById('bookSearchInput').value || '').trim();
+  pbaDrag = {
+    card, book, filtering,
+    startX: e.clientX, startY: e.clientY,
+    started: false, moved: false, timer: null,
+    isTouch: e.pointerType !== 'mouse',
+  };
+  if (pbaDrag.isTouch && !filtering) {
+    pbaDrag.timer = setTimeout(() => { if (pbaDrag && !pbaDrag.started && !pbaDrag.moved) pbaStartDrag(); }, 300);
+  }
+  document.addEventListener('pointermove', pbaDragMove);
+  document.addEventListener('pointerup', pbaDragUp);
+  document.addEventListener('pointercancel', pbaDragCancel);
+}
+
+function pbaBlockScroll(e) { e.preventDefault(); }
+
+function pbaStartDrag() {
+  pbaDrag.started = true;
+  pbaDrag.card.classList.add('dragging');
+  // 拖曳期間擋掉頁面捲動（touch-action 平常保持可捲，長按進入拖曳才鎖）
+  document.addEventListener('touchmove', pbaBlockScroll, { passive: false });
+}
+
+function pbaDragMove(e) {
+  if (!pbaDrag) return;
+  const dx = e.clientX - pbaDrag.startX;
+  const dy = e.clientY - pbaDrag.startY;
+  const dist = Math.hypot(dx, dy);
+  if (!pbaDrag.started) {
+    if (!pbaDrag.isTouch && dist > 6 && !pbaDrag.filtering) pbaStartDrag();
+    else if (dist > 10) { pbaDrag.moved = true; clearTimeout(pbaDrag.timer); } // 觸控在長按前就滑動＝捲頁
+    if (!pbaDrag.started) return;
+  }
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const target = under && under.closest ? under.closest('.pba-grid-card') : null;
+  if (!target || target === pbaDrag.card || target.parentElement !== pbaDrag.card.parentElement) return;
+  const listEl = pbaDrag.card.parentElement;
+  const cards = Array.from(listEl.children);
+  const from = cards.indexOf(pbaDrag.card);
+  const to = cards.indexOf(target);
+  if (from < to) target.after(pbaDrag.card);
+  else target.before(pbaDrag.card);
+}
+
+function pbaDragCleanup() {
+  clearTimeout(pbaDrag && pbaDrag.timer);
+  document.removeEventListener('pointermove', pbaDragMove);
+  document.removeEventListener('pointerup', pbaDragUp);
+  document.removeEventListener('pointercancel', pbaDragCancel);
+  document.removeEventListener('touchmove', pbaBlockScroll);
+  if (pbaDrag && pbaDrag.card) pbaDrag.card.classList.remove('dragging');
+  pbaDrag = null;
+}
+
+function pbaDragCancel() {
+  // 被系統中斷（例如瀏覽器接管捲動）：不存檔，重畫回資料裡的順序
+  const started = pbaDrag && pbaDrag.started;
+  pbaDragCleanup();
+  if (started) renderBookList();
+}
+
+async function pbaDragUp(e) {
+  if (!pbaDrag) return;
+  const { card, book, started, moved } = pbaDrag;
+  pbaDragCleanup();
+  if (!started) {
+    if (!moved) selectBook(book); // 沒拖＝單純點一下
+    return;
+  }
+  const ids = Array.from(card.parentElement.querySelectorAll('.pba-grid-card')).map(el => el.dataset.bookId);
+  const oldIds = (PACKAGE_DATA.books || []).map(b => b.id);
+  if (ids.join() === oldIds.join()) return; // 拖了又放回原位
+  // 先樂觀更新本地順序，失敗再畫回來
+  const byId = {};
+  (PACKAGE_DATA.books || []).forEach(b => { byId[b.id] = b; });
+  PACKAGE_DATA.books = ids.map((id, i) => { const b = byId[id]; if (b) b.sort = i + 1; return b; }).filter(Boolean);
+  try {
+    const res = await apiPost('book-sort-set', { ids });
+    if (!res || res.success !== true) {
+      showToast('排序儲存失敗：' + ((res && res.error) || '未知錯誤'), true);
+      PACKAGE_DATA.books = oldIds.map(id => byId[id]).filter(Boolean);
+      renderBookList();
+      return;
+    }
+    showToast('已更新排序');
+  } catch (err) {
+    showToast('排序儲存失敗（網路問題），已還原順序', true);
+    PACKAGE_DATA.books = oldIds.map(id => byId[id]).filter(Boolean);
+    renderBookList();
+  }
+}
+
+// ---- 封面牆／編輯模式切換 ----
+function showBookGrid() {
+  CURRENT_BOOK = null;
+  document.getElementById('bookEditWrap').style.display = 'none';
+  document.getElementById('bookGridMode').style.display = '';
+  renderBookList();
+}
+
+function openBookEditor(book) {
+  CURRENT_BOOK = book || null;
+  fillForm(book || null);
+  renderMaterialsSection(book || null);
+  document.getElementById('bookGridMode').style.display = 'none';
+  document.getElementById('bookEditWrap').style.display = '';
+  document.getElementById('bookEditWrap').scrollIntoView({ block: 'start' });
+}
+
+document.getElementById('bookBackBtn').addEventListener('click', showBookGrid);
 
 // ===== 表單：品牌 / 年齡與主題 / 類型 選項渲染 =====
 // 書團目前只有這兩家，其餘品牌不出現在下拉（2026-08-25 雪莉指定；要加品牌改這裡）
@@ -181,20 +326,10 @@ function setCheckedValues(containerId, values) {
 
 // ===== 選書 / 新增書 =====
 function selectBook(book) {
-  CURRENT_BOOK = book;
-  renderBookList();
-  fillForm(book);
-  renderMaterialsSection(book);
+  openBookEditor(book);
 }
 
-function resetForm() {
-  CURRENT_BOOK = null;
-  renderBookList();
-  fillForm(null);
-  renderMaterialsSection(null);
-}
-
-document.getElementById('addBookBtn').addEventListener('click', resetForm);
+document.getElementById('addBookBtn').addEventListener('click', () => openBookEditor(null));
 
 function fillForm(book) {
   document.getElementById('formTitle').textContent = book ? '編輯繪本' : '新增繪本';
@@ -209,7 +344,6 @@ function fillForm(book) {
   document.getElementById('fBrand').value = book && book.brand_id ? book.brand_id : '';
   setCheckedValues('fCategories', book ? book.categories || [] : []);
   setCheckedValues('fTypes', book ? book.types || [] : []);
-  document.getElementById('fSort').value = book ? (book.sort || 0) : 0;
   document.getElementById('fPublished').checked = book ? !!book.is_published : false;
 
   const coverUrl = book ? book.cover_url || '' : '';
@@ -861,11 +995,16 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     brand_id: document.getElementById('fBrand').value || null,
     categories: getCheckedValues('fCategories'),
     types: getCheckedValues('fTypes'),
-    sort: Number(document.getElementById('fSort').value) || 0,
     is_published: document.getElementById('fPublished').checked,
     cover_url: document.getElementById('fCoverUrl').value.trim()
   };
-  if (CURRENT_BOOK) payload.id = CURRENT_BOOK.id;
+  if (CURRENT_BOOK) {
+    payload.id = CURRENT_BOOK.id; // 編輯不送 sort（partial update 不動原值，順序只在封面牆拖曳改）
+  } else {
+    // 新書預設排最前面：比現有最小 sort 再小 1（拖曳存檔會把全部重新編成 1..n，不會一直變小）
+    const sorts = (PACKAGE_DATA.books || []).map(b => Number(b.sort) || 0);
+    payload.sort = sorts.length ? Math.min.apply(null, sorts) - 1 : 0;
+  }
 
   try {
     const res = await apiPost('book-upsert', payload);
@@ -879,11 +1018,8 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     const pkg = await loadPackage();
     if (!pkg) return;
     PACKAGE_DATA = pkg;
-    const saved = (PACKAGE_DATA.books || []).find(b => b.id === res.book.id) || res.book;
-    CURRENT_BOOK = saved;
-    renderBookList();
-    fillForm(saved);
-    renderMaterialsSection(saved);
+    // 存完關閉編輯框、回封面牆（新書因 sort 最小會排在最前面；要補教材就再點一次封面）
+    showBookGrid();
   } catch (err) {
     // needLogin 已在 apiPost 內處理，這裡不用重複提示
   }
@@ -902,7 +1038,7 @@ document.getElementById('deleteBookBtn').addEventListener('click', async () => {
     const pkg = await loadPackage();
     if (!pkg) return;
     PACKAGE_DATA = pkg;
-    resetForm();
+    showBookGrid();
   } catch (err) { /* needLogin 已處理 */ }
 });
 
@@ -1728,7 +1864,6 @@ async function loadBooksView(force) {
   PACKAGE_DATA = pkg;
   booksViewLoaded = true;
   pbiLoadEngine().catch(() => {}); // 進分頁就背景預載去背引擎，降低第一次選檔時失敗機率
-  renderBookList();
   renderBrandOptions();
   renderCategoryCheckboxes();
   renderTypeCheckboxes();
@@ -1736,7 +1871,7 @@ async function loadBooksView(force) {
   renderPromotions();
   renderSetList();
   renderGiftList();
-  resetForm();
+  showBookGrid(); // 預設畫面＝封面牆（含 renderBookList）
 }
 
 document.getElementById('booksRefreshBtn').addEventListener('click', () => loadBooksView(true));

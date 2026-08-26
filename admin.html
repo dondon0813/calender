@@ -3967,15 +3967,6 @@
   .pba-field input:focus, .pba-field textarea:focus, .pba-field select:focus { border-color: var(--c-primary); }
   .pba-field textarea { resize: vertical; min-height: 70px; font-family: var(--font-body); }
 
-  .pba-layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-  @media (min-width: 900px) {
-    .pba-layout { grid-template-columns: 320px 1fr; align-items: start; }
-  }
-
   .pba-panel {
     background: var(--c-surface);
     border: 1.5px solid var(--c-border-light);
@@ -4005,21 +3996,61 @@
   }
   .pba-add-btn:hover { opacity: 0.9; }
 
-  .pba-book-list { max-height: 60vh; overflow-y: auto; }
-  .pba-book-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 9px 10px;
-    border-radius: 10px;
-    cursor: pointer;
-    margin-bottom: 4px;
+  /* 封面牆（模擬前台書牆；拖曳小圖改排序） */
+  .pba-grid-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .pba-grid-toolbar .pba-add-btn { width: auto; margin-bottom: 0; flex: none; }
+  .pba-grid-hint { font-size: 11.5px; color: var(--c-muted); margin-bottom: 10px; }
+  .pba-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 12px;
   }
-  .pba-book-item:hover { background: var(--c-bg-bottom); }
-  .pba-book-item.active { background: var(--c-pink-bg); }
-  .pba-book-item-name { font-size: 13px; font-weight: 700; color: var(--c-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pba-book-item-meta { font-size: 10.5px; color: var(--c-muted); flex: none; text-align: right; }
+  .pba-grid-card {
+    position: relative;
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border-light);
+    border-radius: 12px;
+    padding: 8px 8px 6px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    text-align: center;
+  }
+  .pba-grid-card:hover { background: var(--c-bg-bottom); }
+  .pba-grid-card.dragging { opacity: 0.35; border-style: dashed; }
+  .pba-grid-cover {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: contain;
+    display: block;
+    pointer-events: none; /* 拖曳時 elementFromPoint 要打到卡片本體，也擋掉圖片原生拖曳 */
+  }
+  .pba-grid-cover.placeholder { display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--c-placeholder); }
+  .pba-grid-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin-top: 6px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .pba-grid-meta { font-size: 10px; color: var(--c-muted); margin-top: 2px; pointer-events: none; }
+  .pba-grid-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: var(--r-pill);
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-light);
+    pointer-events: none;
+  }
   .pba-badge-draft { color: var(--c-orange-text); }
   .pba-badge-pub { color: var(--c-mint-text); }
   .pba-empty-list { text-align: center; color: var(--c-muted-light); font-size: 12.5px; padding: 20px 0; }
@@ -4999,18 +5030,23 @@
     </div>
 
     <div class="pba-tab-panel" id="pbaTabPanelManage">
-    <div class="pba-layout">
-      <!-- 左：書單 -->
-      <div class="pba-panel">
+
+    <!-- 封面牆（預設畫面）：模擬前台書牆排列，直接拖曳小圖調整前台顯示順序 -->
+    <div id="bookGridMode">
+      <div class="pba-grid-toolbar">
         <button class="pba-add-btn" id="addBookBtn">＋ 新增繪本</button>
-        <div class="pba-field" style="margin-bottom:10px;">
+        <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
           <input type="text" id="bookSearchInput" placeholder="🔍 搜尋書名">
         </div>
-        <div class="pba-book-list" id="bookList"></div>
       </div>
+      <div class="pba-grid-hint" id="bookGridHint"></div>
+      <div class="pba-grid" id="bookList"></div>
+    </div>
 
-      <!-- 右：編輯表單 -->
-      <div class="pba-panel">
+    <!-- 編輯模式：點封面進入；儲存／返回後關閉、回到封面牆 -->
+    <div id="bookEditWrap" style="display:none;">
+      <button type="button" class="pba-mini-btn" id="bookBackBtn">← 返回書牆</button>
+      <div class="pba-panel" style="margin-top:10px; max-width:760px;">
         <div class="pba-panel-title" id="formTitle">新增繪本</div>
         <form id="bookForm">
           <div class="pba-field">
@@ -5061,10 +5097,7 @@
             <label>類型</label>
             <div class="pba-checkbox-group" id="fTypes"></div>
           </div>
-          <div class="pba-field">
-            <label>排序（數字越小越前面）</label>
-            <input type="number" id="fSort" value="0">
-          </div>
+          <!-- 排序欄位已移除（2026-08-26）：改在封面牆直接拖曳小圖調整，新書預設排最前面 -->
           <div class="pba-field">
             <label class="pba-checkbox-inline"><input type="checkbox" id="fPublished"> 發布（公開頁可見）</label>
           </div>
@@ -5187,7 +5220,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- /bookEditWrap -->
     </div><!-- /pbaTabPanelManage -->
 
     <!-- 繪本館優惠活動＋套組設定：左側窄選單／右側內容區（窄螢幕轉頂部橫排，比照 .pba-promo-nav） -->
@@ -6216,7 +6249,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=4"></script>
+<script src="books.js?v=5"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
