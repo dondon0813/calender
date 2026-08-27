@@ -1793,7 +1793,9 @@ async function deleteGift(gift) {
 // ===== 年齡與主題／類型標籤 清單管理（⚙️ 繪本館設定子分頁；2026-08-27 從書籍編輯表單底部搬出）=====
 const OPEN_TAG = { categories: null, types: null }; // 各區展開中的名稱（重繪後保持展開狀態）
 
-// 兩區設定（欄位名＝picture_books 上的陣列欄；checkboxGroup＝書籍編輯表單對應勾選群）
+// 兩區設定（欄位名＝picture_books 上的陣列欄；checkboxGroup＝書籍編輯表單對應勾選群）。
+// canEditNames＝名稱可否增刪：類型表 book_types 是 2026-08-27 的 migration，
+// 尚未 db push 時後台包 typesReady=false，先在前端擋掉（後端 handler 也會擋，雙保險）。
 const TAG_SECTIONS = {
   categories: {
     containerId: 'categoryManageList',
@@ -1802,7 +1804,8 @@ const TAG_SECTIONS = {
     emptyTagText: '這個分類還沒有書',
     addText: '＋ 把書加入這個分類…',
     removeTitle: '從這個分類移除',
-    deletable: true, // 分類存 book_categories 表可增刪；類型是程式固定清單不可
+    canEditNames: () => true,
+    deleteTag: (name) => deleteCategory(name),
     tagNames: () => (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).map(c => c.name),
   },
   types: {
@@ -1812,13 +1815,21 @@ const TAG_SECTIONS = {
     emptyTagText: '這個類型還沒有書',
     addText: '＋ 把書加入這個類型…',
     removeTitle: '從這個類型移除',
-    deletable: false,
+    canEditNames: () => !PACKAGE_DATA || PACKAGE_DATA.typesReady !== false,
+    deleteTag: (name) => deleteType(name),
     tagNames: () => (PACKAGE_DATA.types || []).slice(),
   },
 };
 
 function renderCategoryManageList() { renderTagManageCards('categories'); }
-function renderTypeManageList() { renderTagManageCards('types'); }
+function renderTypeManageList() {
+  renderTagManageCards('types');
+  // 表未 push 保險絲：顯示警告、擋新增（刪除鈕在 renderTagManageCards 內依 canEditNames 不產生）
+  const notReady = PACKAGE_DATA && PACKAGE_DATA.typesReady === false;
+  document.getElementById('typesNotReady').style.display = notReady ? '' : 'none';
+  document.getElementById('newTypeInput').disabled = notReady;
+  document.getElementById('addTypeBtn').disabled = notReady;
+}
 
 function renderTagManageCards(field) {
   const cfg = TAG_SECTIONS[field];
@@ -1842,12 +1853,12 @@ function renderTagManageCards(field) {
     const name = document.createElement('span');
     name.textContent = `${isOpen ? '▾' : '▸'} ${tagName}（${inTag.length} 本）`;
     head.appendChild(name);
-    if (cfg.deletable) {
+    if (cfg.canEditNames()) {
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'pba-mini-btn danger';
       delBtn.textContent = '刪除';
-      delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteCategory(tagName); });
+      delBtn.addEventListener('click', (e) => { e.stopPropagation(); cfg.deleteTag(tagName); });
       head.appendChild(delBtn);
     }
     head.addEventListener('click', () => {
@@ -1958,6 +1969,46 @@ async function refreshCategoriesOnly() {
   const prevChecked = getCheckedValues('fCategories');
   renderCategoryCheckboxes();
   setCheckedValues('fCategories', prevChecked);
+}
+
+// ---- 類型名稱增刪（book_types 表，2026-08-27 起可後台管理；比照分類那組）----
+document.getElementById('addTypeBtn').addEventListener('click', async () => {
+  const input = document.getElementById('newTypeInput');
+  const name = input.value.trim();
+  if (!name) { showToast('請輸入類型名稱', true); return; }
+  try {
+    const res = await apiPost('book-type-add', { name });
+    if (!res || res.success !== true) {
+      showToast('新增失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    input.value = '';
+    showToast('類型已新增');
+    await refreshTypesOnly();
+  } catch (err) { /* needLogin 已處理 */ }
+});
+
+async function deleteType(name) {
+  if (!confirm(`確定要刪除類型「${name}」嗎？\n（已勾這個類型的書不會被改動，只是前台篩選不再出現這個選項）`)) return;
+  try {
+    const res = await apiPost('book-type-delete', { name });
+    if (!res || res.success !== true) {
+      showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    showToast('類型已刪除');
+    await refreshTypesOnly();
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
+async function refreshTypesOnly() {
+  const pkg = await loadPackage();
+  if (!pkg) return;
+  PACKAGE_DATA = pkg;
+  renderTypeManageList();
+  const prevChecked = getCheckedValues('fTypes');
+  renderTypeCheckboxes();
+  setCheckedValues('fTypes', prevChecked);
 }
 
 // ===== 進分頁時載入（admin.js 的 switchView('books') 呼叫）=====

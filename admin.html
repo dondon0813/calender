@@ -5368,12 +5368,19 @@
 
         <hr class="pba-section-divider">
 
-        <!-- 類型標籤：清單本身是程式固定五項（docs/05 §2），這裡只管理書和類型的掛載 -->
+        <!-- 類型標籤：2026-08-27 起存 book_types 表（原程式固定五項），可後台增刪名稱 -->
         <div class="pba-panel-title">類型標籤管理</div>
         <div style="font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;">
-          類型清單是系統固定的（故事書／立體書／互動書／有聲書／貼紙書），不能新增或刪除名稱；點類型可展開，直接把書加入／移出（效果等同在那本書的編輯表單勾選）。
+          點類型可展開，直接把書加入／移出（效果等同在那本書的編輯表單勾選）。
+        </div>
+        <div id="typesNotReady" style="display:none; font-size:11.5px; color:#c0392b; margin-bottom:8px;">
+          ⚠ 類型資料表尚未建立（需先 npx supabase db push），類型名稱暫時無法新增或刪除。
         </div>
         <div id="typeManageList"></div>
+        <div class="pba-cat-add-row">
+          <input type="text" id="newTypeInput" placeholder="新增類型名稱">
+          <button type="button" class="pba-mini-btn" id="addTypeBtn">新增</button>
+        </div>
       </div>
     </div><!-- /pbaTabPanelSettings -->
 
@@ -6283,7 +6290,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=7"></script>
+<script src="books.js?v=8"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
