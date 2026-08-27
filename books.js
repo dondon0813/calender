@@ -1801,9 +1801,7 @@ const TAG_SECTIONS = {
     containerId: 'categoryManageList',
     checkboxGroup: 'fCategories',
     emptyText: '還沒有年齡與主題',
-    emptyTagText: '這個分類還沒有書',
-    addText: '＋ 把書加入這個分類…',
-    removeTitle: '從這個分類移除',
+    hintText: '點封面把書加入或移出這個分類（粉紅框✓＝已加入）',
     canEditNames: () => true,
     deleteTag: (name) => deleteCategory(name),
     tagNames: () => (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).map(c => c.name),
@@ -1812,9 +1810,7 @@ const TAG_SECTIONS = {
     containerId: 'typeManageList',
     checkboxGroup: 'fTypes',
     emptyText: '目前沒有類型',
-    emptyTagText: '這個類型還沒有書',
-    addText: '＋ 把書加入這個類型…',
-    removeTitle: '從這個類型移除',
+    hintText: '點封面把書加入或移出這個類型（粉紅框✓＝已加入）',
     canEditNames: () => !PACKAGE_DATA || PACKAGE_DATA.typesReady !== false,
     deleteTag: (name) => deleteType(name),
     tagNames: () => (PACKAGE_DATA.types || []).slice(),
@@ -1867,48 +1863,59 @@ function renderTagManageCards(field) {
     });
     card.appendChild(head);
 
+    // 展開內容：全部書的封面選取牆（仿封面牆圖卡；2026-08-27 取代 chip＋下拉，雪莉指定）
     const body = document.createElement('div');
     body.className = 'pba-cat-books';
-    if (!inTag.length) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;';
+    hint.textContent = cfg.hintText;
+    body.appendChild(hint);
+    if (!books.length) {
       const empty = document.createElement('div');
       empty.className = 'pba-empty-list';
-      empty.textContent = cfg.emptyTagText;
+      empty.textContent = '還沒有任何繪本';
       body.appendChild(empty);
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'pba-tag-grid';
+      books.forEach(b => {
+        const bookCard = document.createElement('div');
+        bookCard.className = 'pba-tag-card' + ((b[field] || []).includes(tagName) ? ' on' : '');
+        if (b.cover_url) {
+          const img = document.createElement('img');
+          img.className = 'pba-grid-cover';
+          img.src = b.cover_url;
+          img.draggable = false;
+          bookCard.appendChild(img);
+        } else {
+          const ph = document.createElement('div');
+          ph.className = 'pba-grid-cover placeholder';
+          ph.textContent = '📖';
+          bookCard.appendChild(ph);
+        }
+        if (!b.is_published) {
+          const badge = document.createElement('span');
+          badge.className = 'pba-grid-badge pba-badge-draft';
+          badge.textContent = '草稿';
+          bookCard.appendChild(badge);
+        }
+        const check = document.createElement('span');
+        check.className = 'pba-tag-check';
+        check.textContent = '✓';
+        bookCard.appendChild(check);
+        const t = document.createElement('div');
+        t.className = 'pba-grid-title';
+        t.textContent = b.title;
+        bookCard.appendChild(t);
+        bookCard.addEventListener('click', async () => {
+          bookCard.classList.add('busy'); // 防連點；成功會整區重繪，失敗時解鎖讓她再試
+          await setBookTag(field, b, tagName, !(b[field] || []).includes(tagName));
+          bookCard.classList.remove('busy');
+        });
+        grid.appendChild(bookCard);
+      });
+      body.appendChild(grid);
     }
-    inTag.forEach(b => {
-      const chip = document.createElement('span');
-      chip.className = 'pba-cat-book-chip';
-      const t = document.createElement('span');
-      t.textContent = b.title;
-      chip.appendChild(t);
-      const x = document.createElement('button');
-      x.type = 'button';
-      x.textContent = '✕';
-      x.title = cfg.removeTitle;
-      x.addEventListener('click', () => setBookTag(field, b, tagName, false));
-      chip.appendChild(x);
-      body.appendChild(chip);
-    });
-    // 加書下拉：只列還沒掛這個標籤的書
-    const addRow = document.createElement('div');
-    addRow.className = 'pba-cat-add-book-row';
-    const sel = document.createElement('select');
-    const ph = document.createElement('option');
-    ph.value = '';
-    ph.textContent = cfg.addText;
-    sel.appendChild(ph);
-    books.filter(b => !(b[field] || []).includes(tagName)).forEach(b => {
-      const opt = document.createElement('option');
-      opt.value = b.id;
-      opt.textContent = (b.is_published === false ? '（未發布）' : '') + b.title;
-      sel.appendChild(opt);
-    });
-    sel.addEventListener('change', () => {
-      const book = books.find(b => b.id === sel.value);
-      if (book) setBookTag(field, book, tagName, true);
-    });
-    addRow.appendChild(sel);
-    body.appendChild(addRow);
     card.appendChild(body);
     el.appendChild(card);
   });

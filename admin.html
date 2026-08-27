@@ -4161,20 +4161,42 @@
   .pba-cat-card .pba-cat-manage-row { background: none; margin-bottom: 0; cursor: pointer; user-select: none; }
   .pba-cat-books { display: none; padding: 2px 10px 10px; }
   .pba-cat-card.open .pba-cat-books { display: block; }
-  .pba-cat-book-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: var(--c-bg-bottom);
-    border: 1px solid var(--c-border, #ddd);
-    border-radius: 999px;
-    padding: 3px 9px;
-    margin: 0 6px 6px 0;
-    font-size: 12px;
+  /* 展開後的書封選取牆（2026-08-27 取代 chip＋下拉）：全部書的封面小圖，點封面＝加入/移出，粉框✓＝已加入 */
+  .pba-tag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 8px;
   }
-  .pba-cat-book-chip button { border: none; background: none; cursor: pointer; color: var(--c-danger); font-size: 12px; padding: 0 2px; line-height: 1; }
-  .pba-cat-add-book-row { display: flex; gap: 6px; margin-top: 4px; }
-  .pba-cat-add-book-row select { flex: 1; min-width: 0; }
+  .pba-tag-card {
+    position: relative;
+    background: var(--c-surface);
+    border: 2px solid var(--c-border-light);
+    border-radius: 10px;
+    padding: 6px 6px 4px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    text-align: center;
+  }
+  .pba-tag-card:hover { background: var(--c-bg-bottom); }
+  .pba-tag-card.on { border-color: var(--c-primary); }
+  .pba-tag-card.busy { opacity: 0.5; pointer-events: none; }
+  .pba-tag-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--c-primary);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .pba-tag-card.on .pba-tag-check { display: flex; }
 
   /* 優惠活動子分頁左右導覽（🎁 優惠活動／📦 套組設定），窄螢幕時選單轉成頂部橫排 */
   .pba-promo-layout { display: flex; flex-direction: column; gap: 14px; }
@@ -6290,7 +6312,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=8"></script>
+<script src="books.js?v=9"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
