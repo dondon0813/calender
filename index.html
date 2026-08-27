@@ -724,6 +724,20 @@ const COLORS = 7;
 const WD_LABEL = ['日','一','二','三','四','五','六'];
 
 const RECIPES_PAGE_URL = 'recipes.html';
+const PICTURE_BOOKS_PAGE_URL = 'picture-books.html';
+
+// 繪本團判定（2026-08-27 雪莉指定）：活動標題含 match 字樣（不分大小寫）＝繪本團，
+// 點開團跳「前往下單／前往觀看介紹」視窗，介紹連到繪本館的品牌專屬視角（?brand=）。
+// 食物團照舊走 recipeBrand（食材／食譜大全）。要新增繪本團品牌就在這裡加一行。
+const BOOK_TEAM_BRANDS = [
+  { match: '禾流', brand: '禾流文創' },
+  { match: 'kidsread', brand: 'Kidsread點讀筆' },
+];
+function bookTeamBrandOf(ev) {
+  const t = String(ev.title || '').toLowerCase();
+  const hit = BOOK_TEAM_BRANDS.find(b => t.includes(b.match.toLowerCase()));
+  return hit ? hit.brand : '';
+}
 
 let CUSTOM_BLOCKS = [];
 let SOCIAL_LINKS = {}; // 【新】品牌社群連結（IG／TikTok／FB／Email），現正開團中最上方顯示
@@ -1071,9 +1085,9 @@ function isLinkUnlocked(ev) {
   return new Date() >= ev.start;
 }
 
-// 有食譜品牌（食材／食譜入口）或有折扣碼，點擊時都要先跳小視窗而不是直接開網頁
+// 有食譜品牌（食材／食譜入口）、折扣碼、或是繪本團（繪本館介紹入口），點擊時都要先跳小視窗而不是直接開網頁
 function needsGroupModal(ev) {
-  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()));
+  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()) || bookTeamBrandOf(ev));
 }
 
 function parseExtendRaw(raw, originalEnd) {
@@ -1668,7 +1682,8 @@ function closeEarlyBirdModal() {
 function openGroupChoiceModal(ev) {
   const brand = (ev.recipeBrand || '').trim();
   const code = (ev.discountCode || '').trim();
-  if (!brand && !code) return;
+  const bookBrand = bookTeamBrandOf(ev);
+  if (!brand && !code && !bookBrand) return;
 
   const modal = document.getElementById('groupChoiceModal');
   document.getElementById('groupChoiceTitle').textContent = plainTitle(ev.title);
@@ -1679,8 +1694,9 @@ function openGroupChoiceModal(ev) {
 
   const baseKey = getStatKey(ev);
 
-  // 沒有品牌時只留「前往下單」，不顯示食材／食譜入口
-  introBtn.style.display = brand ? '' : 'none';
+  // 食物團（recipeBrand）：食材介紹＋食譜大全；繪本團：介紹連繪本館品牌視角、無食譜鈕；
+  // 都不是（只有折扣碼）：只留「前往下單」
+  introBtn.style.display = (brand || bookBrand) ? '' : 'none';
   recipeBtn.style.display = brand ? '' : 'none';
   if (brand) {
     introBtn.href = `${RECIPES_PAGE_URL}?view=ingredients&brand=${encodeURIComponent(brand)}`;
@@ -1689,6 +1705,9 @@ function openGroupChoiceModal(ev) {
     recipeBtn.href = `${RECIPES_PAGE_URL}?view=recipes&brand=${encodeURIComponent(brand)}`;
     recipeBtn.textContent = `🍽 ${brand} 食譜大全`;
     recipeBtn.onclick = () => sendStat(baseKey + '_recipe', 'click');
+  } else if (bookBrand) {
+    introBtn.href = `${PICTURE_BOOKS_PAGE_URL}?brand=${encodeURIComponent(bookBrand)}`;
+    introBtn.onclick = () => sendStat(baseKey + '_intro', 'click');
   }
 
   orderBtn.href = ev.url;
