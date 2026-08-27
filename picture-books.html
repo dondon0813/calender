@@ -126,6 +126,15 @@
   @media (min-width: 900px) { .pb-grid { grid-template-columns: repeat(5, 1fr); gap: 24px 20px; } }
   @media (min-width: 1200px) { .pb-grid { grid-template-columns: repeat(6, 1fr); gap: 24px 20px; } }
 
+  /* 分類子區塊（2026-08-27，語言學習細分）：分區模式時外層改直排，各區置中標題/說明＋自己的書牆 */
+  .pb-grid.sectioned { display: block; }
+  .pb-subsection { margin-bottom: 30px; }
+  .pb-subsection:last-child { margin-bottom: 0; }
+  .pb-subsection-head { text-align: center; margin-bottom: 14px; }
+  .pb-subsection-title { font-size: 17px; font-weight: 800; color: var(--c-text); }
+  .pb-subsection-desc { font-size: 12.5px; color: var(--c-muted); margin-top: 4px; line-height: 1.7; }
+  .pb-subsection .pb-grid { display: grid; }
+
   .pb-card {
     background: none;
     border: none;
@@ -1041,8 +1050,24 @@ function isSetCategory(name) {
   return typeof name === 'string' && (name.includes('套組') || name.includes('雪莉精選'));
 }
 
+// ===== 分類子區塊（2026-08-27 雪莉指定：語言學習底下再細分）=====
+// 點選 parent 分類 chip 時，書牆改成分區顯示：每區置中標題＋說明，依 sub 分類分組
+// （sub 分類＝一般分類，雪莉在後台「⚙️ 繪本館設定」新增並用封面選取牆掛書）；
+// 都沒掛 sub 分類的書列在所有區塊之後（不加標題）。sub 分類不出現在年齡與主題 chips。
+const CATEGORY_SUBSECTIONS = {
+  '語言學習': [
+    { cat: '單字書', title: '單字書', desc: '含有大量圖片與基本單字的繪本\n可以親子共讀增加孩子的單字量' },
+    { cat: '互動式書籍', title: '互動式書籍', desc: '繪本內包含多種角色扮演或適合引導對話的互動式繪本' },
+  ],
+};
+const SUBSECTION_CAT_NAMES = new Set(
+  Object.keys(CATEGORY_SUBSECTIONS).reduce((acc, k) => acc.concat(CATEGORY_SUBSECTIONS[k].map(s => s.cat)), [])
+);
+
 function renderChips() {
-  buildChipGroup('pbCatChips', ALL_CATEGORIES.filter(c => !isSetCategory(c.name)).map(c => c.name), selCats,
+  buildChipGroup('pbCatChips',
+    ALL_CATEGORIES.filter(c => !isSetCategory(c.name) && !SUBSECTION_CAT_NAMES.has(c.name)).map(c => c.name),
+    selCats,
     v => toggleSelection(selCats, v, s => { selCats = s; }));
   document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
   buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
@@ -1156,6 +1181,49 @@ function renderFeatured() {
   wrap.style.display = anyShown ? 'block' : 'none';
 }
 
+function buildBookCard(book) {
+  const card = document.createElement('div');
+  card.className = 'pb-card';
+  card.addEventListener('click', () => openBookModal(book));
+
+  const coverWrap = document.createElement('div');
+  coverWrap.className = 'pb-card-cover-wrap';
+  if (book.cover_url) {
+    const img = document.createElement('img');
+    img.className = 'pb-card-cover';
+    img.src = book.cover_url;
+    img.alt = book.title;
+    img.loading = 'lazy';
+    coverWrap.appendChild(img);
+  } else {
+    coverWrap.classList.add('placeholder');
+    coverWrap.textContent = '📖';
+  }
+  card.appendChild(coverWrap);
+
+  const body = document.createElement('div');
+  body.className = 'pb-card-body';
+  const title = document.createElement('div');
+  title.className = 'pb-card-title';
+  title.innerHTML = smartTitleHtml(book.title);
+  body.appendChild(title);
+
+  // 書卡不顯示愛心數（2026-08-25 雪莉指定：列表太亂）；介紹視窗內的愛心數保留
+
+  const tags = document.createElement('div');
+  tags.className = 'pb-card-tags';
+  (book.types || []).forEach(t => {
+    const tag = document.createElement('span');
+    tag.className = 'mini-tag';
+    tag.textContent = t;
+    tags.appendChild(tag);
+  });
+  body.appendChild(tags);
+
+  card.appendChild(body);
+  return card;
+}
+
 function renderGrid() {
   const grid = document.getElementById('pbGrid');
   const empty = document.getElementById('pbEmpty');
@@ -1163,52 +1231,58 @@ function renderGrid() {
   document.getElementById('pbCount').textContent = `共 ${list.length} 本`;
   grid.innerHTML = '';
   if (!list.length) {
+    grid.classList.remove('sectioned');
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
-  list.forEach(book => {
-    const card = document.createElement('div');
-    card.className = 'pb-card';
-    card.addEventListener('click', () => openBookModal(book));
 
-    const coverWrap = document.createElement('div');
-    coverWrap.className = 'pb-card-cover-wrap';
-    if (book.cover_url) {
-      const img = document.createElement('img');
-      img.className = 'pb-card-cover';
-      img.src = book.cover_url;
-      img.alt = book.title;
-      img.loading = 'lazy';
-      coverWrap.appendChild(img);
-    } else {
-      coverWrap.classList.add('placeholder');
-      coverWrap.textContent = '📖';
-    }
-    card.appendChild(coverWrap);
-
-    const body = document.createElement('div');
-    body.className = 'pb-card-body';
-    const title = document.createElement('div');
-    title.className = 'pb-card-title';
-    title.innerHTML = smartTitleHtml(book.title);
-    body.appendChild(title);
-
-    // 書卡不顯示愛心數（2026-08-25 雪莉指定：列表太亂）；介紹視窗內的愛心數保留
-
-    const tags = document.createElement('div');
-    tags.className = 'pb-card-tags';
-    (book.types || []).forEach(t => {
-      const tag = document.createElement('span');
-      tag.className = 'mini-tag';
-      tag.textContent = t;
-      tags.appendChild(tag);
+  // 分區模式：選中的分類（chips 為單選）有定義子區塊時，依 sub 分類分組顯示
+  const parent = selCats && selCats.size === 1 ? Array.from(selCats)[0] : null;
+  const sections = parent ? CATEGORY_SUBSECTIONS[parent] : null;
+  if (sections) {
+    grid.classList.add('sectioned');
+    const used = new Set();
+    sections.forEach(sec => {
+      const inSec = list.filter(b => (b.categories || []).includes(sec.cat));
+      if (!inSec.length) return; // 這區還沒掛書就整區不顯示（不留空標題）
+      inSec.forEach(b => used.add(b.id));
+      const wrap = document.createElement('div');
+      wrap.className = 'pb-subsection';
+      const head = document.createElement('div');
+      head.className = 'pb-subsection-head';
+      const t = document.createElement('div');
+      t.className = 'pb-subsection-title';
+      t.textContent = sec.title;
+      head.appendChild(t);
+      const d = document.createElement('div');
+      d.className = 'pb-subsection-desc';
+      d.textContent = sec.desc;
+      d.style.whiteSpace = 'pre-line'; // desc 內的換行照排
+      head.appendChild(d);
+      wrap.appendChild(head);
+      const secGrid = document.createElement('div');
+      secGrid.className = 'pb-grid';
+      inSec.forEach(b => secGrid.appendChild(buildBookCard(b)));
+      wrap.appendChild(secGrid);
+      grid.appendChild(wrap);
     });
-    body.appendChild(tags);
+    // 兩區都沒掛的書列在最後（不加標題），避免有書憑空消失
+    const rest = list.filter(b => !used.has(b.id));
+    if (rest.length) {
+      const wrap = document.createElement('div');
+      wrap.className = 'pb-subsection';
+      const restGrid = document.createElement('div');
+      restGrid.className = 'pb-grid';
+      rest.forEach(b => restGrid.appendChild(buildBookCard(b)));
+      wrap.appendChild(restGrid);
+      grid.appendChild(wrap);
+    }
+    return;
+  }
 
-    card.appendChild(body);
-    grid.appendChild(card);
-  });
+  grid.classList.remove('sectioned');
+  list.forEach(book => grid.appendChild(buildBookCard(book)));
 }
 
 // ===== YouTube 網址解析 =====
