@@ -156,12 +156,13 @@
     height: 150px;
     margin-bottom: 8px;
   }
-  /* 24 小時內發布的書右上角 New 徽章（後端 isNew 判定；快取最多慢 60 秒） */
+  /* 24 小時內發布的書右上角 New 徽章（後端 isNew 判定；快取最多慢 60 秒）
+     綠底、位置往下疊在封面上（2026-08-27 雪莉指定） */
   .pb-card-new {
     position: absolute;
-    top: 2px;
+    top: 16px;
     right: 2px;
-    background: var(--c-primary);
+    background: #34b36f;
     color: #fff;
     font-size: 10px;
     font-weight: 800;
