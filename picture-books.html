@@ -1081,6 +1081,10 @@ const CATEGORY_SUBSECTIONS = {
 const SUBSECTION_CAT_NAMES = new Set(
   Object.keys(CATEGORY_SUBSECTIONS).reduce((acc, k) => acc.concat(CATEGORY_SUBSECTIONS[k].map(s => s.cat)), [])
 );
+// 子分類 → 母分類對照：書只掛子分類（單字書/互動式書籍）就自動算母分類（語言學習），
+// 不必兩個都勾（matchesFilters 用）
+const SUBSECTION_PARENT_OF = {};
+Object.keys(CATEGORY_SUBSECTIONS).forEach(p => CATEGORY_SUBSECTIONS[p].forEach(s => { SUBSECTION_PARENT_OF[s.cat] = p; }));
 
 function renderChips() {
   buildChipGroup('pbCatChips',
@@ -1117,7 +1121,8 @@ function matchesFilters(book) {
   }
   if (selCats) {
     const cats = book.categories || [];
-    if (!cats.some(c => selCats.has(c))) return false;
+    // 掛子分類＝視同掛了母分類（點「語言學習」時只掛「單字書」的書也要出現）
+    if (!cats.some(c => selCats.has(c) || selCats.has(SUBSECTION_PARENT_OF[c]))) return false;
   }
   if (selBrands) {
     if (!book.brand_name || !selBrands.has(book.brand_name)) return false;

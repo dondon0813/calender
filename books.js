@@ -287,13 +287,37 @@ function ensureBrandOption(brandId) {
   sel.appendChild(opt);
 }
 
+// ===== 子分類巢狀（2026-08-27 雪莉指定）=====
+// 「單字書」「互動式書籍」資料上仍是一般分類，但屬於「語言學習」的子項目：
+// 後台介面縮排顯示在母分類底下；前台（picture-books.html）掛子分類＝自動算語言學習，
+// 點語言學習會依子分類分兩塊排版。要加新的子分類就改這裡＋picture-books.html 的 CATEGORY_SUBSECTIONS。
+const CATEGORY_CHILDREN = { '語言學習': ['單字書', '互動式書籍'] };
+const CATEGORY_PARENT_OF = {};
+Object.keys(CATEGORY_CHILDREN).forEach(p => CATEGORY_CHILDREN[p].forEach(c => { CATEGORY_PARENT_OF[c] = p; }));
+
+// 分類清單排序＋巢狀：子分類永遠緊跟在母分類後面（不管 sort 值），其餘照 sort；
+// 母分類被刪掉時孤兒子分類仍列在最後（不憑空消失）
+function orderedCategoryNames() {
+  const all = (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).map(c => c.name);
+  const out = [];
+  all.forEach(name => {
+    if (CATEGORY_PARENT_OF[name]) return; // 子分類由母分類帶入
+    out.push(name);
+    (CATEGORY_CHILDREN[name] || []).forEach(child => { if (all.includes(child)) out.push(child); });
+  });
+  all.forEach(name => { if (CATEGORY_PARENT_OF[name] && !out.includes(name)) out.push(name); });
+  return out;
+}
+
 function renderCategoryCheckboxes() {
   const wrap = document.getElementById('fCategories');
   wrap.innerHTML = '';
-  (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).forEach(c => {
+  orderedCategoryNames().forEach(name => {
+    const isSub = Boolean(CATEGORY_PARENT_OF[name]);
     const label = document.createElement('label');
     label.className = 'pba-checkbox-item';
-    label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(c.name)}"> ${pbaEscapeHtml(c.name)}`;
+    if (isSub) label.style.marginLeft = '18px';
+    label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(name)}"> ${isSub ? '↳ ' : ''}${pbaEscapeHtml(name)}`;
     wrap.appendChild(label);
   });
 }
@@ -1804,7 +1828,9 @@ const TAG_SECTIONS = {
     hintText: '點封面把書加入或移出這個分類（粉紅框✓＝已加入）',
     canEditNames: () => true,
     deleteTag: (name) => deleteCategory(name),
-    tagNames: () => (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).map(c => c.name),
+    tagNames: () => orderedCategoryNames(),
+    labelOf: (name) => (CATEGORY_PARENT_OF[name] ? '↳ ' : '') + name, // 子分類縮排掛在母分類底下
+    indentOf: (name) => Boolean(CATEGORY_PARENT_OF[name]),
   },
   types: {
     containerId: 'typeManageList',
@@ -1843,11 +1869,13 @@ function renderTagManageCards(field) {
 
     const card = document.createElement('div');
     card.className = 'pba-cat-card' + (isOpen ? ' open' : '');
+    if (cfg.indentOf && cfg.indentOf(tagName)) card.style.marginLeft = '18px';
 
     const head = document.createElement('div');
     head.className = 'pba-cat-manage-row';
     const name = document.createElement('span');
-    name.textContent = `${isOpen ? '▾' : '▸'} ${tagName}（${inTag.length} 本）`;
+    const displayName = cfg.labelOf ? cfg.labelOf(tagName) : tagName;
+    name.textContent = `${isOpen ? '▾' : '▸'} ${displayName}（${inTag.length} 本）`;
     head.appendChild(name);
     if (cfg.canEditNames()) {
       const delBtn = document.createElement('button');
