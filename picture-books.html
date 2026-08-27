@@ -1251,7 +1251,10 @@ function buildBookCard(book) {
 function renderGrid() {
   const grid = document.getElementById('pbGrid');
   const empty = document.getElementById('pbEmpty');
-  const list = ALL_BOOKS.filter(matchesFilters);
+  // New 徽章的書預設排最前面（2026-08-27 雪莉指定）；sort 是穩定排序，
+  // 其餘書維持後台拖曳順序，分區模式下每一區內也一樣 New 在前
+  const list = ALL_BOOKS.filter(matchesFilters)
+    .sort((a, b) => (b.isNew === true ? 1 : 0) - (a.isNew === true ? 1 : 0));
   document.getElementById('pbCount').textContent = `共 ${list.length} 本`;
   grid.innerHTML = '';
   if (!list.length) {
