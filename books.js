@@ -1790,7 +1790,9 @@ async function deleteGift(gift) {
   } catch (err) { /* needLogin 已處理 */ }
 }
 
-// ===== 年齡與主題清單管理 =====
+// ===== 年齡與主題清單管理（⚙️ 繪本館設定子分頁；2026-08-27 從書籍編輯表單底部搬出）=====
+let openCategoryName = null; // 展開中的分類名稱（重繪後保持展開狀態）
+
 function renderCategoryManageList() {
   const el = document.getElementById('categoryManageList');
   el.innerHTML = '';
@@ -1799,20 +1801,94 @@ function renderCategoryManageList() {
     el.innerHTML = '<div class="pba-empty-list">還沒有年齡與主題</div>';
     return;
   }
+  const books = (PACKAGE_DATA.books || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
   categories.forEach(c => {
-    const row = document.createElement('div');
-    row.className = 'pba-cat-manage-row';
+    const inCat = books.filter(b => (b.categories || []).includes(c.name));
+    const isOpen = openCategoryName === c.name;
+
+    const card = document.createElement('div');
+    card.className = 'pba-cat-card' + (isOpen ? ' open' : '');
+
+    const head = document.createElement('div');
+    head.className = 'pba-cat-manage-row';
     const name = document.createElement('span');
-    name.textContent = c.name;
-    row.appendChild(name);
+    name.textContent = `${isOpen ? '▾' : '▸'} ${c.name}（${inCat.length} 本）`;
+    head.appendChild(name);
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'pba-mini-btn danger';
     delBtn.textContent = '刪除';
-    delBtn.addEventListener('click', () => deleteCategory(c.name));
-    row.appendChild(delBtn);
-    el.appendChild(row);
+    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteCategory(c.name); });
+    head.appendChild(delBtn);
+    head.addEventListener('click', () => {
+      openCategoryName = isOpen ? null : c.name;
+      renderCategoryManageList();
+    });
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'pba-cat-books';
+    if (!inCat.length) {
+      const empty = document.createElement('div');
+      empty.className = 'pba-empty-list';
+      empty.textContent = '這個分類還沒有書';
+      body.appendChild(empty);
+    }
+    inCat.forEach(b => {
+      const chip = document.createElement('span');
+      chip.className = 'pba-cat-book-chip';
+      const t = document.createElement('span');
+      t.textContent = b.title;
+      chip.appendChild(t);
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.textContent = '✕';
+      x.title = '從這個分類移除';
+      x.addEventListener('click', () => setBookCategory(b, c.name, false));
+      chip.appendChild(x);
+      body.appendChild(chip);
+    });
+    // 加書下拉：只列還沒在這個分類裡的書
+    const addRow = document.createElement('div');
+    addRow.className = 'pba-cat-add-book-row';
+    const sel = document.createElement('select');
+    const ph = document.createElement('option');
+    ph.value = '';
+    ph.textContent = '＋ 把書加入這個分類…';
+    sel.appendChild(ph);
+    books.filter(b => !(b.categories || []).includes(c.name)).forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = (b.is_published === false ? '（未發布）' : '') + b.title;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      const book = books.find(b => b.id === sel.value);
+      if (book) setBookCategory(book, c.name, true);
+    });
+    addRow.appendChild(sel);
+    body.appendChild(addRow);
+    card.appendChild(body);
+    el.appendChild(card);
   });
+}
+
+/** 從分類側把書加入/移出分類：book-upsert partial update 只送 id＋categories，其餘欄位不動 */
+async function setBookCategory(book, catName, add) {
+  const next = (book.categories || []).filter(n => n !== catName);
+  if (add) next.push(catName);
+  try {
+    const res = await apiPost('book-upsert', { id: book.id, categories: next });
+    if (!res || res.success !== true) {
+      showToast((add ? '加入' : '移除') + '失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    book.categories = next; // book 是 PACKAGE_DATA.books 裡的同一個物件，直接改本地資料
+    // 若那本書的編輯表單剛好開著，把表單勾選同步過來，避免之後按儲存蓋回舊勾選
+    if (CURRENT_BOOK && CURRENT_BOOK.id === book.id) setCheckedValues('fCategories', next);
+    renderCategoryManageList();
+    showToast(add ? `已把《${book.title}》加入「${catName}」` : `已把《${book.title}》移出「${catName}」`);
+  } catch (err) { /* needLogin 已處理 */ }
 }
 
 document.getElementById('addCategoryBtn').addEventListener('click', async () => {
@@ -1876,21 +1952,26 @@ async function loadBooksView(force) {
 
 document.getElementById('booksRefreshBtn').addEventListener('click', () => loadBooksView(true));
 
-// ===== 子分頁切換（📖 繪本管理／🎁 優惠活動）=====
+// ===== 子分頁切換（📖 繪本管理／🎁 優惠活動／⚙️ 繪本館設定）=====
 // 純顯示切換，不影響既有的優惠載入/儲存流程（那套邏輯只認 DOM id，跟分頁容器無關）。
 const PBA_TAB_PANELS = {
   manage: document.getElementById('pbaTabPanelManage'),
   promo: document.getElementById('pbaTabPanelPromo'),
+  settings: document.getElementById('pbaTabPanelSettings'),
 };
 const PBA_TAB_BTNS = {
   manage: document.getElementById('pbaTabBtnManage'),
   promo: document.getElementById('pbaTabBtnPromo'),
+  settings: document.getElementById('pbaTabBtnSettings'),
 };
 function switchPbaTab(tab) {
   Object.keys(PBA_TAB_PANELS).forEach(key => {
     PBA_TAB_PANELS[key].style.display = key === tab ? '' : 'none';
     PBA_TAB_BTNS[key].classList.toggle('on', key === tab);
   });
+  // 進設定頁時重繪分類清單：書可能剛在編輯表單改過勾選，本數/清單要反映最新狀態
+  if (tab === 'settings') renderCategoryManageList();
 }
 PBA_TAB_BTNS.manage.addEventListener('click', () => switchPbaTab('manage'));
 PBA_TAB_BTNS.promo.addEventListener('click', () => switchPbaTab('promo'));
+PBA_TAB_BTNS.settings.addEventListener('click', () => switchPbaTab('settings'));
