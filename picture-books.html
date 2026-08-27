@@ -16,7 +16,7 @@
     margin: 0 auto 10px;
     text-align: center;
   }
-  .pb-featured-heading img { display: block; margin: 0 auto; width: min(78%, 300px); }
+  .pb-featured-heading img { display: block; margin: 0 auto; width: min(58%, 220px); }
   .pb-featured-set { margin: 0 0 14px; }
   .pb-featured-set:last-child { margin-bottom: 0; }
   .pb-featured-title {
@@ -41,6 +41,10 @@
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px;
   }
+  /* ≤4 本的套組排置中：用彈性佔位而非 justify-content:center，
+     螢幕太窄放不下時佔位縮成 0＝自動退回靠左、維持可滑動不裁切 */
+  .pb-featured-row.few::before,
+  .pb-featured-row.few::after { content: ''; margin: auto; }
   .pb-featured-item { flex: 0 0 auto; width: 76px; text-align: center; cursor: pointer; }
   .pb-featured-item:active { opacity: .8; }
   .pb-featured-cover-wrap {
@@ -1179,6 +1183,7 @@ function renderFeatured() {
 
     const row = document.createElement('div');
     row.className = 'pb-featured-row';
+    if (list.length <= 4) row.classList.add('few');
     list.forEach(book => {
       const item = document.createElement('div');
       item.className = 'pb-featured-item';
