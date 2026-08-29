@@ -514,6 +514,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 <body>
 
 <div class="topbar">
+  <button class="btn" id="btnBack" title="回到後台">← 回後台</button>
   <h1>🗓️ 行事曆產生器</h1>
   <div class="seg seg-pane" id="segPane">
     <button data-v="image" class="on">🖼 產生圖片</button>
@@ -2328,6 +2329,12 @@ function init() {
     saveSettings(); syncControls(); renderPoster();
   });
 
+  // 本頁通常是後台 window.open 開的新分頁：能關就直接關回原分頁；
+  // 關不掉（使用者直接輸入網址、或瀏覽器擋 close）就導回 admin.html
+  document.getElementById('btnBack').addEventListener('click', () => {
+    window.close();
+    setTimeout(() => { location.href = 'admin.html'; }, 200);
+  });
   document.getElementById('btnReload').addEventListener('click', loadData);
   document.getElementById('btnExport').addEventListener('click', exportPng);
   window.addEventListener('resize', fitScaler);
