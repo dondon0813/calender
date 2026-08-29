@@ -1051,21 +1051,61 @@ function textWidth(str) {
   return w;
 }
 
-function wrapSegment(text, maxCharsPerLine) {
-  const words = segmentTitle(text);
+/* 斷行規則：
+   1. 英文（含數字/半形符號）與中文的交界是優先斷行點——先拆成同文種的連續段，
+      每段放得進一行就不拆開（prepara保鮮盒 → prepara／保鮮盒，不會斷成 prepara保／鮮盒）。
+   2. 單一段自己就超過一行寬才在段內斷，且各行盡量等寬，
+      避免最後一行剩孤零零一個字（賽爸爸鬆餅粉 → 賽爸爸／鬆餅粉，不是 賽爸爸鬆餅／粉）。 */
+function scriptRuns(text) {
+  const runs = [];
+  let prevLatin = null;
+  for (const ch of String(text)) {
+    const latin = ch.charCodeAt(0) < 0x2E80;
+    if (prevLatin !== null && latin === prevLatin) runs[runs.length - 1] += ch;
+    else runs.push(ch);
+    prevLatin = latin;
+  }
+  return runs;
+}
+
+function wrapRunBalanced(run, maxCharsPerLine) {
+  const total = textWidth(run);
+  const lineCount = Math.max(1, Math.ceil(total / maxCharsPerLine));
+  const ideal = total / lineCount;
   const lines = [];
   let current = '';
-  words.forEach(w => {
-    if (current === '') {
-      current = w;
-    } else if (textWidth(current) + textWidth(w) <= maxCharsPerLine) {
-      current += w;
+  segmentTitle(run).forEach(w => {
+    if (current !== '' &&
+        (textWidth(current) + textWidth(w) > maxCharsPerLine ||
+         (lines.length < lineCount - 1 && textWidth(current) >= ideal))) {
+      lines.push(current);
+      current = '';
+    }
+    current += w;
+  });
+  if (current !== '') lines.push(current);
+  return lines;
+}
+
+function wrapSegment(text, maxCharsPerLine) {
+  const lines = [];
+  let current = '';
+  scriptRuns(text).forEach(run => {
+    if (textWidth(run) > maxCharsPerLine) {
+      if (current !== '') lines.push(current);
+      const sub = wrapRunBalanced(run, maxCharsPerLine);
+      lines.push(...sub.slice(0, -1));
+      current = sub[sub.length - 1]; // 後面的短段（例：2入）可以接在最後一行
+    } else if (current === '') {
+      current = run;
+    } else if (textWidth(current) + textWidth(run) <= maxCharsPerLine) {
+      current += run;
     } else {
       lines.push(current);
-      current = w;
+      current = run;
     }
   });
-  if (current) lines.push(current);
+  if (current !== '') lines.push(current);
   return lines;
 }
 
