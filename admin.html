@@ -5770,10 +5770,42 @@
       <input type="text" id="cardSubBank" placeholder="例如：國泰世華">
       <label for="cardSubCardExpiry">卡片到期日</label>
       <input type="month" id="cardSubCardExpiry">
-      <label for="cardSubNextBilling">訂閱到期日／下次扣款日</label>
+
+      <label for="cardSubFeeAmount">訂閱費用</label>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <select id="cardSubFeeCurrency" style="flex:0 0 92px;">
+          <option value="TWD">NT$</option>
+          <option value="USD">US$</option>
+          <option value="JPY">¥ 日圓</option>
+          <option value="EUR">€ 歐元</option>
+          <option value="CNY">CN¥ 人民幣</option>
+          <option value="GBP">£ 英鎊</option>
+        </select>
+        <input type="number" id="cardSubFeeAmount" step="0.01" min="0" placeholder="金額" style="flex:1; min-width:80px;">
+        <span style="color:var(--c-text-light);">／</span>
+        <select id="cardSubBillingCycle" style="flex:0 0 104px;">
+          <option value="">未設定</option>
+          <option value="daily">每日</option>
+          <option value="weekly">每週</option>
+          <option value="monthly">每月</option>
+          <option value="quarterly">每季</option>
+          <option value="yearly">每年</option>
+          <option value="onetime">一次性</option>
+        </select>
+      </div>
+      <div id="cardSubFeeLegacy" style="display:none; font-size:12px; color:var(--c-text-light); margin-top:4px;"></div>
+
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:12px;">
+        <input type="checkbox" id="cardSubAutoRenew" checked style="width:auto; margin:0;">
+        <span>🔄 自動續費中（到期會自動扣款、不用手動處理）</span>
+      </label>
+
+      <label for="cardSubNextBilling">下次扣款日</label>
       <input type="date" id="cardSubNextBilling">
-      <label for="cardSubFee">訂閱費用</label>
-      <input type="text" id="cardSubFee" placeholder="例如：NT$390/月">
+      <div style="font-size:12px; color:var(--c-text-light); margin-top:4px;">
+        填一次就好：自動續費的訂閱過了扣款日，系統會依上面的週期自動推算下一次，不用每個月來改。
+      </div>
+
       <label for="cardSubNote">備註</label>
       <textarea id="cardSubNote" rows="2" placeholder="備註…"></textarea>
 
@@ -6317,7 +6349,7 @@
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
-<script src="subscriptions.js?v=1"></script>
+<script src="subscriptions.js?v=2"></script>
 <script src="admin.js?v=84"></script>
 <script src="memo.js?v=5"></script>
 
