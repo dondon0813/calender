@@ -300,7 +300,6 @@
     margin-bottom: 14px;
     background: #000;
     aspect-ratio: 16 / 9;
-    cursor: pointer;
   }
   /* Shorts／直式影片：改 9:16、置中、限制寬度，不要硬塞進橫框 */
   .pb-yt-wrap.vertical {
@@ -310,21 +309,7 @@
     margin-left: auto;
     margin-right: auto;
   }
-  .pb-yt-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-yt-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
-  .pb-yt-play {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .pb-yt-play span {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.9);
-    color: var(--c-primary);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-  }
 
   /* 多影片輪播：影片框下方一列「‹ 小圓點 ›」＋選填小標題；只有一支影片時整列隱藏 */
   .pb-video-area { margin-bottom: 14px; }
@@ -1386,23 +1371,10 @@ function renderModalVideo() {
   if (!v) return;
   ytWrap.classList.toggle('vertical', v.vertical);
 
-  // 預覽圖依序嘗試高畫質版本：Shorts 先用直式 oardefault（1080×1920）→ maxresdefault（1280×720）→ hqdefault（480×360）。
-  // 不是每支都有高畫質版，沒有時 YouTube 回 120×90 的灰色佔位圖，用 naturalWidth 判斷後換下一個。
-  const thumbNames = (v.vertical ? ['oardefault'] : []).concat(['maxresdefault', 'hqdefault']);
-  ytWrap.innerHTML = `<img id="pbYtThumb" alt="YouTube 影片"><div class="pb-yt-play" id="pbYtPlayBtn"><span>▶</span></div>`;
-  const thumb = document.getElementById('pbYtThumb');
-  let thumbIdx = 0;
-  const tryNextThumb = () => {
-    if (thumbIdx >= thumbNames.length) { thumb.onload = null; thumb.onerror = null; return; }
-    thumb.src = `https://i.ytimg.com/vi/${v.ytId}/${thumbNames[thumbIdx++]}.jpg`;
-  };
-  thumb.onload = () => { if (thumb.naturalWidth <= 120 && thumbIdx < thumbNames.length) tryNextThumb(); };
-  thumb.onerror = tryNextThumb;
-  tryNextThumb();
-  ytWrap.onclick = function () {
-    ytWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.ytId}?autoplay=1" title="YouTube 影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-    ytWrap.onclick = null;
-  };
+  // 直接嵌 YouTube 播放器，不做預覽圖蓋板：手機瀏覽器擋 autoplay，
+  // 「點預覽圖→換入 iframe 要求自動播放」在 iPhone/iPad 會變成要點兩次；
+  // 直嵌時點的那一下就是播放器自己的播放鈕，一次就播。playsinline=1 讓 iPhone 內嵌播放不強制全螢幕。
+  ytWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.ytId}?playsinline=1" title="YouTube 影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
 
   // ‹ 小圓點 ›＋小標題：只有一支影片時整列隱藏；標題留空顯示「影片 N」（多支時才顯示標題列）
   const nav = document.getElementById('pbVideoNav');
@@ -1434,14 +1406,15 @@ function renderModalVideo() {
 function showModalVideo(idx) {
   if (idx < 0 || idx >= MODAL_VIDEOS.length || idx === MODAL_VIDEO_IDX) return;
   MODAL_VIDEO_IDX = idx;
-  renderModalVideo(); // 切換一律回到預覽圖狀態（播放中的 iframe 直接被換掉＝停止播放）
+  renderModalVideo(); // 換片＝整個 iframe 重建（播放中的舊 iframe 直接被換掉＝停止播放）
 }
 
 document.getElementById('pbVideoPrev').addEventListener('click', () => showModalVideo(MODAL_VIDEO_IDX - 1));
 document.getElementById('pbVideoNext').addEventListener('click', () => showModalVideo(MODAL_VIDEO_IDX + 1));
 
-// 左右滑切換（在影片框上）：橫向位移 > 40px 且大於縱向位移才算滑動，避免跟頁面捲動打架。
-// 注意：影片播放中（iframe 狀態）觸控會被 iframe 吃掉，滑不動是正常的，改用 ‹ › 或小圓點。
+// 左右滑切換：橫向位移 > 40px 且大於縱向位移才算滑動，避免跟頁面捲動打架。
+// 注意：改成直嵌播放器後，影片框本體的觸控被 iframe 吃掉，這段只對框下方的「‹ 圓點 ›／標題」列有效；
+// 換片主要靠 ‹ › 與小圓點。
 (function () {
   const area = document.getElementById('pbVideoArea');
   let sx = 0, sy = 0;
