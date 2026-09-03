@@ -899,8 +899,9 @@ function ensureHtml2Canvas() {
 const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-// 請把 Apps Script 部署後的網址貼在這裡（跟 admin.html / recipes.html 用同一組網址）
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTxoqVO1nf--Q9s-lf1eIPdgrDpJgLsuAy1mAwgydYzb7ThAuygx79oFNsEH-kWD2R/exec";
+// 正式切換（2026-09-03）：改打新後端（Next.js/Supabase，dondon-platform），回退＝revert 本 commit
+// 前提：開學清單已完成最後匯入、後台編輯改走 admin.html 開學清單分頁（試算表即將轉唯讀）
+const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
 
 // ===== 瀏覽/點擊統計（照抄 index.html 的 sendStat 寫法，key 白名單見 Code.gs STAT_KEY_WHITELIST_RE） =====
 function sendStat(key, field) {
