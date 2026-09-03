@@ -4284,6 +4284,8 @@
     <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
     <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
     <button class="sn-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
+    <button class="sn-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
+    <button class="sn-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -4336,6 +4338,8 @@
           <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
           <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
           <button class="menu-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
+          <button class="menu-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
+          <button class="menu-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -5420,6 +5424,30 @@
     <div id="cardSubListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewCardSub -->
 
+  <!-- ===== 食譜資料庫（sheetdb.js；食譜/食材/成品，原本只能直接改試算表）===== -->
+  <div class="view" id="viewRecipeDb">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">🥕 食譜資料庫</h2>
+      <button class="task-mini-btn" id="recipeDbAddBtn">＋ 新增</button>
+      <button class="task-mini-btn" id="recipeDbRefreshBtn">🔄 重新整理</button>
+    </div>
+    <!-- 三張表切換 chips＋搜尋（sheetdb.js 渲染內容） -->
+    <div id="recipeDbTabs" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
+    <input type="text" id="recipeDbSearch" placeholder="🔍 搜尋名稱／編號／品牌…" style="width:100%; max-width:360px; margin-bottom:10px;">
+    <div id="recipeDbListArea"><div class="task-empty">讀取中…</div></div>
+  </div><!-- /viewRecipeDb -->
+
+  <!-- ===== 開學清單（sheetdb.js；原本只能直接改試算表）===== -->
+  <div class="view" id="viewSchoolList">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">🎒 開學清單</h2>
+      <button class="task-mini-btn" id="schoolListAddBtn">＋ 新增項目</button>
+      <button class="task-mini-btn" id="schoolListRefreshBtn">🔄 重新整理</button>
+    </div>
+    <div style="font-size:12px; color:var(--c-text-light); margin-bottom:10px;">前台顯示順序＝「排序」數字由小到大；「隱藏」的項目前台看不到但資料還在。</div>
+    <div id="schoolListArea"><div class="task-empty">讀取中…</div></div>
+  </div><!-- /viewSchoolList -->
+
   </div><!-- /paneLeft -->
   <div id="splitDivider" title="拖曳調整左右欄寬度"></div>
   <div id="paneRight">
@@ -5814,6 +5842,22 @@
         <button class="task-mini-btn danger" id="cardSubDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
       </div>
       <div class="form-status" id="cardSubEditStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 食譜資料庫／開學清單：共用編輯 modal（sheetdb.js 依資料種類動態產表單欄位） ===== -->
+<div class="modal-backdrop" id="sheetDbEditModal" onclick="if(event.target===this) closeSheetDbEditModal()">
+  <div class="modal-box" style="width:min(520px, 94vw); max-height:88vh; overflow-y:auto;">
+    <button class="modal-close" onclick="closeSheetDbEditModal()">✕</button>
+    <h3 id="sheetDbEditTitle">➕ 新增</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <div id="sheetDbFormArea"></div>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="sheetDbSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="sheetDbDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="sheetDbEditStatus"></div>
     </div>
   </div>
 </div>
@@ -6350,7 +6394,9 @@
 <script src="bgRemover.js?v=1"></script>
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=2"></script>
-<script src="admin.js?v=84"></script>
+<!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
+<script src="sheetdb.js?v=1"></script>
+<script src="admin.js?v=85"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
