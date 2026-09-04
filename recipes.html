@@ -751,6 +751,18 @@
     text-decoration: none;
   }
 
+  /* 專屬折扣碼區塊（2026-09-04）：食材／食譜介紹視窗的購買區直接攤開折扣碼＋點擊複製。
+     人已在品牌介紹裡，不再跳選擇視窗（規則同繪本館），樣式對齊 index.html 的 gc-discount */
+  .rcp-discount { margin-top: 10px; text-align: center; }
+  .rcp-discount-label { font-size: 12px; font-weight: 800; color: var(--c-muted); letter-spacing: 1px; margin-bottom: 6px; }
+  .rcp-code { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%;
+    padding: 9px 12px; border: 1px dashed var(--c-primary); border-radius: 10px; background: var(--c-orange-bg);
+    cursor: pointer; font-family: inherit; }
+  .rcp-code-text { font-size: 17px; font-weight: 800; letter-spacing: 2px; color: var(--c-text); line-height: 1.2; word-break: break-all; }
+  .rcp-code-hint { font-size: 13px; font-weight: 700; color: #fff; background: var(--c-primary); border-radius: var(--r-pill); padding: 7px 14px; white-space: nowrap; }
+  .rcp-discount-desc { font-size: 12.5px; line-height: 1.6; color: var(--c-muted); margin-top: 8px; white-space: pre-line; }
+  .rcp-discount-remind { font-size: 12.5px; font-weight: 700; color: var(--c-primary); margin-top: 8px; }
+
   @media (max-width: 480px) {
     .page-title { font-size: 22px; }
     .item-card .card-name { font-size: 11px; }
@@ -1669,7 +1681,9 @@ async function loadCalendar() {
     const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
     const published = publishedRaw === '' ? true : (publishedRaw === '是');
     if (!published) return;
-    events.push({ id, title, start, displayEnd, url });
+    const discountCode = c[23] ? String(c[23].v || '').trim() : '';
+    const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
+    events.push({ id, title, start, displayEnd, url, discountCode, discountDesc });
   });
   CALENDAR_EVENTS = events;
 }
@@ -1685,13 +1699,88 @@ function getBrandStatus(brandName) {
     // evKey 格式須與 index.html 的 getStatKey 完全一致：${id}_${YYYY-M-D}（月/日不補零、本地時區）
     const s = openEvent.start;
     const evKey = `${openEvent.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
-    return { brand: brandName, status: 'open', url: openEvent.url, evKey, shopeeUrl };
+    return { brand: brandName, status: 'open', url: openEvent.url, evKey, shopeeUrl, discountCode: openEvent.discountCode || '', discountDesc: openEvent.discountDesc || '' };
   }
   const future = matches
     .filter(ev => startOfDay(ev.start) > today)
     .sort((a, b) => a.start - b.start);
   if (future.length) return { brand: brandName, status: 'upcoming', nextDate: future[0].start, shopeeUrl };
   return { brand: brandName, status: 'ended', shopeeUrl };
+}
+
+// ===== 專屬折扣碼（2026-09-04，規則同繪本館）=====
+// 購買入口已在品牌介紹視窗裡，不再跳「前往觀看介紹」選擇視窗，但折扣碼照樣要給：
+// 開團中且有折扣碼時，把折扣碼區塊攤開在購買按鈕下方（點擊複製），點購買也順手複製（不擋跳轉）。
+function rcpLegacyCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+function rcpCopyCode(code) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(code).then(() => true).catch(() => rcpLegacyCopy(code));
+  }
+  return Promise.resolve(rcpLegacyCopy(code));
+}
+function buildRcpDiscountBlock(code, desc, brandLabel) {
+  const box = document.createElement('div');
+  box.className = 'rcp-discount';
+
+  const label = document.createElement('div');
+  label.className = 'rcp-discount-label';
+  label.textContent = brandLabel ? `${brandLabel} 專屬折扣碼` : '專屬折扣碼';
+  box.appendChild(label);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'rcp-code';
+  const codeText = document.createElement('span');
+  codeText.className = 'rcp-code-text';
+  codeText.textContent = code;
+  const hint = document.createElement('span');
+  hint.className = 'rcp-code-hint';
+  hint.textContent = '點擊複製';
+  btn.appendChild(codeText);
+  btn.appendChild(hint);
+  btn.addEventListener('click', () => {
+    rcpCopyCode(code).then(ok => {
+      hint.textContent = ok ? '已複製 ✓' : '請手動複製';
+      setTimeout(() => { hint.textContent = '點擊複製'; }, 2000);
+    });
+  });
+  box.appendChild(btn);
+
+  if (desc) {
+    const descEl = document.createElement('div');
+    descEl.className = 'rcp-discount-desc';
+    descEl.textContent = desc;
+    box.appendChild(descEl);
+  }
+
+  const remind = document.createElement('div');
+  remind.className = 'rcp-discount-remind';
+  remind.textContent = '💡 記得輸入折扣碼才能享有折扣';
+  box.appendChild(remind);
+
+  return box;
+}
+// 開團＋有折扣碼：把折扣碼區塊放進購買按鈕下方的清單容器並顯示（讓客人從團購頁回來還看得到）
+function showRcpDiscountIn(el, status, brandLabel) {
+  if (!(status.status === 'open' && status.discountCode)) return false;
+  el.appendChild(buildRcpDiscountBlock(status.discountCode, status.discountDesc || '', brandLabel || ''));
+  el.style.display = 'block';
+  return true;
 }
 
 // ===== 資料整理 =====
@@ -2381,8 +2470,15 @@ function openIngredientModal(item) {
     if (isValidUrl(ownShopee)) status.shopeeUrl = ownShopee; // 食材自己的優先，空白才用品牌預設
     if (status.status === 'open') {
       if (status.evKey) sendStat(status.evKey + '_src_recipesing', 'click');
+      // 有折扣碼：順手複製＋把折扣碼區塊留在按鈕下方（客人從團購頁回來還看得到）
+      if (status.discountCode) {
+        rcpCopyCode(status.discountCode);
+        ingBuyStatusEl.innerHTML = '';
+        showRcpDiscountIn(ingBuyStatusEl, status, '');
+      } else {
+        ingBuyStatusEl.style.display = 'none';
+      }
       window.open(status.url, '_blank', 'noopener,noreferrer');
-      ingBuyStatusEl.style.display = 'none';
     } else {
       renderBuyStatusList([status], ingBuyStatusEl);
     }
@@ -2706,8 +2802,15 @@ function handleBuyClick(recipe, statusListEl) {
 
   if (openOnes.length === 1) {
     if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_src_recipesbrand', 'click');
+    // 有折扣碼：順手複製＋把折扣碼區塊留在按鈕下方（規則同食材視窗）
+    if (openOnes[0].discountCode) {
+      rcpCopyCode(openOnes[0].discountCode);
+      statusListEl.innerHTML = '';
+      showRcpDiscountIn(statusListEl, openOnes[0], '');
+    } else {
+      statusListEl.style.display = 'none';
+    }
     window.open(openOnes[0].url, '_blank', 'noopener,noreferrer');
-    statusListEl.style.display = 'none';
     return;
   }
 
@@ -2738,9 +2841,16 @@ function renderBuyStatusList(statuses, statusListEl) {
     row.innerHTML = `<span class="bsi-brand">${s.label || s.brand}</span>` + rightHtml;
     if (s.status === 'open' && s.evKey) {
       const btn = row.querySelector('.bsi-btn');
-      if (btn) btn.addEventListener('click', () => sendStat(s.evKey + '_src_recipeslist', 'click'));
+      if (btn) btn.addEventListener('click', () => {
+        sendStat(s.evKey + '_src_recipeslist', 'click');
+        if (s.discountCode) rcpCopyCode(s.discountCode);
+      });
     }
     statusListEl.appendChild(row);
+    // 開團中有折扣碼：折扣碼區塊跟在該品牌那一行下面（清單可能多品牌，帶品牌名）
+    if (s.status === 'open' && s.discountCode) {
+      statusListEl.appendChild(buildRcpDiscountBlock(s.discountCode, s.discountDesc || '', s.label || s.brand));
+    }
   });
   statusListEl.style.display = 'block';
 }

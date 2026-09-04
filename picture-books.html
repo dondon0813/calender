@@ -388,6 +388,20 @@
   .pb-top-active .pb-top-btn { background: #df7972; }
   .pb-top-active .pb-top-btn:hover { background: #c9615a; }
   .pb-top-active .pb-gift-badge { background: #df7972; }
+  /* 專屬折扣碼區塊（2026-09-04）：開團活動區與書籍介紹視窗共用。
+     人已在品牌介紹裡，不再跳「前往觀看介紹」選擇視窗，折扣碼直接攤開＋點擊複製 */
+  .pb-discount { margin-top: 10px; text-align: center; }
+  .pb-top-active .pb-discount { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #f0c8b4; }
+  .pb-discount-label { font-size: 12px; font-weight: 800; color: var(--c-text-soft); letter-spacing: 1px; margin-bottom: 6px; }
+  .pb-code { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%;
+    padding: 9px 12px; border: 1px dashed var(--c-border); border-radius: var(--r-md, 12px); background: #fff;
+    cursor: pointer; font-family: inherit; }
+  .pb-code:hover { border-color: var(--c-primary); }
+  .pb-code-text { font-size: 17px; font-weight: 800; letter-spacing: 2px; color: var(--c-text); line-height: 1.2; word-break: break-all; }
+  .pb-code-hint { font-size: 13px; font-weight: 700; color: #fff; background: var(--c-primary); border-radius: var(--r-pill, 999px); padding: 7px 14px; white-space: nowrap; }
+  .pb-top-active .pb-code-hint { background: #df7972; }
+  .pb-discount-desc { font-size: 12.5px; line-height: 1.6; color: var(--c-text-soft); margin-top: 8px; white-space: pre-line; }
+  .pb-discount-remind { font-size: 12.5px; font-weight: 700; color: var(--c-primary-dark); margin-top: 8px; }
   /* 本頁限定（2026-08-25 雪莉指定）：「現正開團中」不用共用 shared.css 的多欄格線，
      改單排橫向滑動；連 openGroupBuy.js 依數量掛上的 ogb-grid4/5 也一併蓋掉（id 選擇器權重較高），
      其他頁面不受影響 */
@@ -1437,6 +1451,76 @@ document.getElementById('pbVideoNext').addEventListener('click', () => showModal
 // 有品牌開團中 → 「前往團購下單」按鈕直接連到團購頁；
 // 沒開團但有排程 → 按鈕顯示下一團日期（7 天內顯示「即將開團」），點開浮動視窗看日期＋優惠活動；
 // 沒排程但後台有填優惠活動 → 「團購優惠」按鈕開同一個視窗；什麼都沒有 → 隱藏
+// ===== 專屬折扣碼（2026-09-04）=====
+// 規則（雪莉定）：連結已在品牌自身的視窗底下（開團活動區 CTA、書籍介紹視窗的前往購買），
+// 不再跳「前往觀看介紹」選擇視窗（人已經在介紹裡），但折扣碼照樣要給——
+// 直接攤開顯示＋點擊複製，點下單鈕也順手複製（不擋跳轉）。資料來源 purchase.open 的
+// discountCode/discountDesc（後端 lib/books/purchase.ts，與行事曆同源欄位）。
+function pbLegacyCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+function pbCopyCode(code) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(code).then(() => true).catch(() => pbLegacyCopy(code));
+  }
+  return Promise.resolve(pbLegacyCopy(code));
+}
+function buildDiscountBlock(code, desc, brandLabel) {
+  const box = document.createElement('div');
+  box.className = 'pb-discount';
+
+  const label = document.createElement('div');
+  label.className = 'pb-discount-label';
+  label.textContent = brandLabel ? `${brandLabel} 專屬折扣碼` : '專屬折扣碼';
+  box.appendChild(label);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'pb-code';
+  const codeText = document.createElement('span');
+  codeText.className = 'pb-code-text';
+  codeText.textContent = code;
+  const hint = document.createElement('span');
+  hint.className = 'pb-code-hint';
+  hint.textContent = '點擊複製';
+  btn.appendChild(codeText);
+  btn.appendChild(hint);
+  btn.addEventListener('click', () => {
+    pbCopyCode(code).then(ok => {
+      hint.textContent = ok ? '已複製 ✓' : '請手動複製';
+      setTimeout(() => { hint.textContent = '點擊複製'; }, 2000);
+    });
+  });
+  box.appendChild(btn);
+
+  if (desc) {
+    const descEl = document.createElement('div');
+    descEl.className = 'pb-discount-desc';
+    descEl.textContent = desc;
+    box.appendChild(descEl);
+  }
+
+  const remind = document.createElement('div');
+  remind.className = 'pb-discount-remind';
+  remind.textContent = '💡 記得輸入折扣碼才能享有折扣';
+  box.appendChild(remind);
+
+  return box;
+}
+
 let TOP_PURCHASE_INFO = null;
 // 倒數計時器（7 天內即將開團時才會啟動）：每次重繪先清掉舊的，避免疊加；
 // 倒數歸零時只 reload 一次，靠這個旗標防連續觸發
@@ -1453,7 +1537,7 @@ function renderTopPurchase() {
     const p = b.purchase || {};
     const brand = b.brand_name || '';
     if (p.status === 'open' && p.url) {
-      if (!openByUrl.has(p.url)) openByUrl.set(p.url, { brand, startDate: p.startDate || '', endDate: p.endDate || '' });
+      if (!openByUrl.has(p.url)) openByUrl.set(p.url, { brand, startDate: p.startDate || '', endDate: p.endDate || '', discountCode: (p.discountCode || '').trim(), discountDesc: (p.discountDesc || '').trim() });
     } else if (p.status === 'upcoming' && p.nextDate) {
       const prev = upcoming.get(brand);
       if (!prev || p.nextDate < prev) upcoming.set(brand, p.nextDate);
@@ -1510,10 +1594,19 @@ function renderTopPurchase() {
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
       a.textContent = multi && info.brand ? `🛒 ${info.brand} 前往下單` : '🛒 前往團購下單';
-      a.addEventListener('click', () => pbTrackClick('booksorder'));
+      a.addEventListener('click', () => {
+        pbTrackClick('booksorder');
+        // 有折扣碼時順手複製，貼到下單頁就能用（不擋跳轉）
+        if (info.discountCode) pbCopyCode(info.discountCode).then(ok => { if (ok) showPbToast('折扣碼已複製 ✓'); });
+      });
       ctaWrap.appendChild(a);
     });
     box.appendChild(ctaWrap);
+
+    // 折扣碼攤開顯示在下單按鈕下方；多團同時開時各自帶品牌名
+    openByUrl.forEach((info) => {
+      if (info.discountCode) box.appendChild(buildDiscountBlock(info.discountCode, info.discountDesc, multi ? info.brand : ''));
+    });
 
     wrap.appendChild(box);
     wrap.style.display = 'flex';
@@ -1762,9 +1855,14 @@ function renderPurchaseSection(book) {
     btn.target = '_blank';
     btn.rel = 'noopener noreferrer';
     btn.textContent = '🛒 前往購買';
-    btn.addEventListener('click', () => pbTrackClick('booksbuy'));
+    const modalCode = (p.discountCode || '').trim();
+    btn.addEventListener('click', () => {
+      pbTrackClick('booksbuy');
+      if (modalCode) pbCopyCode(modalCode).then(ok => { if (ok) showPbToast('折扣碼已複製 ✓'); });
+    });
     actions.appendChild(btn);
     wrap.appendChild(actions);
+    if (modalCode) wrap.appendChild(buildDiscountBlock(modalCode, (p.discountDesc || '').trim(), ''));
     return;
   }
 
