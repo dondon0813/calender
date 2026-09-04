@@ -1523,6 +1523,21 @@ function ingredientPlaceholderImg(item) {
   return emojiPlaceholderImg(categoryEmojiFor(item));
 }
 
+// 直式長圖（例如保久乳 200ml 鋁箔包）放進固定比例的相框用 cover 會被裁到只剩中間段，
+// 這裡在圖片載入後看實際長寬：直式改用 contain 完整顯示（旁邊留白），橫式/方形維持 cover 填滿。
+// 食材圖的四個顯示位置（篩選圖磚、食材清單卡、品牌選擇列、食材小卡）都要套用；
+// 準備食材圖磚（.prep-ing-photo）本來就是 contain 不用管。
+function fitPortraitImage(img) {
+  const apply = () => {
+    img.style.objectFit = (img.naturalHeight > img.naturalWidth) ? 'contain' : '';
+  };
+  if (!img._fitPortraitBound) {
+    img._fitPortraitBound = true;
+    img.addEventListener('load', apply);
+  }
+  if (img.complete && img.naturalWidth) apply();
+}
+
 // 蝦皮導流連結：一律填在後台「團購品牌資料庫」每個品牌的「蝦皮連結」欄，由 scope=public 帶下來存進 BRAND_SHOPEE。
 // 沒填的品牌就不會出現蝦皮按鈕（避免導去還沒設定好的連結）。
 // （原本這裡放過一個全站共用的預設連結常數，但從沒被使用，已移除，免得誤以為要填在程式碼裡。）
@@ -2002,6 +2017,7 @@ function renderIngredientFilterTiles() {
       const img = document.createElement('img');
       img.className = 'ing-tile-icon';
       img.src = representative['圖片網址'];
+      fitPortraitImage(img);
       img.onerror = function() {
         this.replaceWith(makeEmojiIconFallback(representative));
       };
@@ -2165,6 +2181,7 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
 
     const img = document.createElement('img');
     img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+    fitPortraitImage(img);
     img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     card.appendChild(img);
 
@@ -2285,6 +2302,7 @@ function openIngredientBrandChoice(group) {
     });
     const img = document.createElement('img');
     img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+    fitPortraitImage(img);
     img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     row.appendChild(img);
     const nameSpan = document.createElement('span');
@@ -2298,6 +2316,7 @@ function openIngredientBrandChoice(group) {
 
 function openIngredientModal(item) {
   document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+  fitPortraitImage(document.getElementById('ingModalImg'));
   document.getElementById('ingModalImg').onerror = function() { this.src = ingredientPlaceholderImg(item); };
   document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
 
