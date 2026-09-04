@@ -16,6 +16,7 @@ const SHEETDB_API_URL = 'https://dondon-platform.vercel.app/api/legacy';
 let RECIPE_DB_LOADED = false;
 let RECIPE_DB = { recipes: [], ingredients: [], products: [] };
 let RECIPE_DB_TAB = 'recipe';       // recipe | ingredient | product
+let RECIPE_DB_BRAND = '';           // 品牌篩選；''＝全部
 let SCHOOL_DB_LOADED = false;
 let SCHOOL_DB_LIST = [];
 let SHEETDB_EDIT = null;            // 目前 modal 編輯中的 { kind, id }；id=null＝新增
@@ -211,11 +212,51 @@ function renderRecipeDbTabs() {
       renderRecipeDbList();
     });
   });
+  renderRecipeDbBrandFilter();
+}
+
+// 食譜本身沒有品牌欄：用「使用食材」的每個詞去對食材/成品（編號／名稱／簡稱別名，
+// 同 recipes.html getRecipeBrands 的比對層次），對到誰就算誰的品牌
+function sdRecipeBrandsOf(recipe) {
+  const tokens = String(recipe.ingredientRefs || '').split('/')
+    .map(s => s.trim().split(':')[0].trim()).filter(Boolean);
+  const all = RECIPE_DB.ingredients.concat(RECIPE_DB.products);
+  const set = new Set();
+  tokens.forEach(t => {
+    all.forEach(i => {
+      if (!i.brand) return;
+      if (i.no === t || i.name === t ||
+          String(i.shortName || '').split('/').map(s => s.trim()).indexOf(t) !== -1) {
+        set.add(i.brand);
+      }
+    });
+  });
+  return set;
+}
+
+// 品牌下拉選項：食材/成品分頁列自己表裡出現過的品牌；食譜分頁列兩表聯集
+// （食譜的品牌是從食材對出來的）。換分頁時若原選擇不在新清單裡就退回「全部」。
+function renderRecipeDbBrandFilter() {
+  const sel = document.getElementById('recipeDbBrandFilter');
+  const src = RECIPE_DB_TAB === 'ingredient' ? RECIPE_DB.ingredients
+    : RECIPE_DB_TAB === 'product' ? RECIPE_DB.products
+    : RECIPE_DB.ingredients.concat(RECIPE_DB.products);
+  const brands = Array.from(new Set(src.map(r => String(r.brand || '').trim()).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  if (brands.indexOf(RECIPE_DB_BRAND) === -1) RECIPE_DB_BRAND = '';
+  sel.innerHTML = '<option value="">🏷️ 全部品牌</option>' +
+    brands.map(b => '<option value="' + sdEscapeHtml(b) + '">' + sdEscapeHtml(b) + '</option>').join('');
+  sel.value = RECIPE_DB_BRAND;
 }
 
 function sdRecipeDbRows() {
   const kind = RECIPE_DB_TAB;
-  const list = kind === 'recipe' ? RECIPE_DB.recipes : kind === 'ingredient' ? RECIPE_DB.ingredients : RECIPE_DB.products;
+  let list = kind === 'recipe' ? RECIPE_DB.recipes : kind === 'ingredient' ? RECIPE_DB.ingredients : RECIPE_DB.products;
+  if (RECIPE_DB_BRAND) {
+    list = kind === 'recipe'
+      ? list.filter(r => sdRecipeBrandsOf(r).has(RECIPE_DB_BRAND))
+      : list.filter(r => String(r.brand || '').trim() === RECIPE_DB_BRAND);
+  }
   const q = (document.getElementById('recipeDbSearch').value || '').trim().toLowerCase();
   if (!q) return list;
   return list.filter(r =>
@@ -395,3 +436,7 @@ document.getElementById('schoolListRefreshBtn').addEventListener('click', () => 
 document.getElementById('recipeDbAddBtn').addEventListener('click', () => openSheetDbEditModal(RECIPE_DB_TAB, null));
 document.getElementById('recipeDbRefreshBtn').addEventListener('click', () => loadRecipeDbView(true));
 document.getElementById('recipeDbSearch').addEventListener('input', () => { if (RECIPE_DB_LOADED) renderRecipeDbList(); });
+document.getElementById('recipeDbBrandFilter').addEventListener('change', function () {
+  RECIPE_DB_BRAND = this.value;
+  if (RECIPE_DB_LOADED) renderRecipeDbList();
+});

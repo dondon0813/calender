@@ -5433,9 +5433,12 @@
       <button class="task-mini-btn" id="recipeDbAddBtn">＋ 新增</button>
       <button class="task-mini-btn" id="recipeDbRefreshBtn">🔄 重新整理</button>
     </div>
-    <!-- 三張表切換 chips＋搜尋（sheetdb.js 渲染內容） -->
+    <!-- 三張表切換 chips＋搜尋＋品牌篩選（sheetdb.js 渲染內容；食譜表沒有品牌欄，用「使用食材」對到的品牌篩） -->
     <div id="recipeDbTabs" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
-    <input type="text" id="recipeDbSearch" placeholder="🔍 搜尋名稱／編號／品牌…" style="width:100%; max-width:360px; margin-bottom:10px;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <input type="text" id="recipeDbSearch" placeholder="🔍 搜尋名稱／編號／品牌…" style="flex:1; min-width:200px; max-width:360px;">
+      <select id="recipeDbBrandFilter" style="max-width:200px;"><option value="">🏷️ 全部品牌</option></select>
+    </div>
     <div id="recipeDbListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewRecipeDb -->
 
@@ -6410,7 +6413,7 @@
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=2"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
-<script src="sheetdb.js?v=1"></script>
+<script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
 <script src="blog.js?v=1"></script>
 <script src="admin.js?v=85"></script>
