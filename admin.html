@@ -4287,6 +4287,7 @@
     <button class="sn-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
     <button class="sn-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
     <button class="sn-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
+    <button class="sn-item" data-view="fanAdmin" data-perm="fanEdit">👥 會員管理</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -4342,6 +4343,7 @@
           <button class="menu-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
           <button class="menu-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
           <button class="menu-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
+          <button class="menu-item" data-view="fanAdmin" data-perm="fanEdit">👥 會員管理</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -5466,6 +5468,28 @@
     <div id="blogEditArea" style="display:none;"></div>
   </div><!-- /viewBlog -->
 
+  <!-- ===== 會員管理（fans.js；粉絲會員系統後台，見 dondon-platform docs/07）===== -->
+  <div class="view" id="viewFanAdmin">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">👥 會員管理</h2>
+      <button class="task-mini-btn" id="fanUnclaimedRefreshBtn">🔄 重新整理</button>
+    </div>
+    <div id="fanAdminBanner"></div>
+
+    <h3 style="margin:18px 0 8px; font-size:15px;">📥 未歸戶訂單</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <input type="text" id="fanUnclaimedSearch" placeholder="🔍 搜尋姓名／email／訂單編號…" style="flex:1; min-width:200px; max-width:360px;">
+    </div>
+    <div id="fanUnclaimedArea"><div class="task-empty">讀取中…</div></div>
+
+    <h3 style="margin:24px 0 8px; font-size:15px;">🔍 會員查詢</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <input type="text" id="fanMemberSearchInput" placeholder="會員編號／暱稱／email" style="flex:1; min-width:200px; max-width:360px;">
+      <button class="task-mini-btn" id="fanMemberSearchBtn">搜尋</button>
+    </div>
+    <div id="fanMemberArea"></div>
+  </div><!-- /viewFanAdmin -->
+
   </div><!-- /paneLeft -->
   <div id="splitDivider" title="拖曳調整左右欄寬度"></div>
   <div id="paneRight">
@@ -6412,6 +6436,8 @@
 <script src="bgRemover.js?v=1"></script>
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=2"></script>
+<!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
+<script src="fans.js?v=1"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
