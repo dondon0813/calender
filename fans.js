@@ -20,7 +20,9 @@ let FAN_TABLE_READY = true;     // 會員資料表是否已 db push（tableReady
 
 // ===== HTML 逃逸（自帶一份，不依賴 admin.js，同 books.js／subscriptions.js 的做法）=====
 function faEscapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // 注意不能寫 String(s || '')：數值 0 會變空白（錢包餘額 0、折點值 0 要照常顯示）
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // ===== 登入逾時 =====
