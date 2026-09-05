@@ -4273,12 +4273,10 @@
     <div class="sn-group-title">工作</div>
     <button class="sn-item" data-view="home">🏠 工作首頁</button>
     <button class="sn-item" data-view="calendar" data-perm="calendarEdit">📅 行事曆</button>
-    <button class="sn-item" data-view="dispatch">📨 派遣任務</button>
-    <button class="sn-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
+    <button class="sn-item" data-view="myTasks">📋 任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
     <button class="sn-item" data-view="memo">📝 備忘錄</button>
     <button class="sn-item" data-view="todoList">🗒️ 待辦事項</button>
     <button class="sn-item" data-view="prItems">🎀 公關品狀態</button>
-    <button class="sn-item" data-view="groupStatus">📢 開團狀態</button>
     <button class="sn-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
     <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
     <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
@@ -4330,8 +4328,7 @@
         <div class="menu-panel" id="menuPanel">
           <button class="menu-item" data-view="home">🏠 工作首頁</button>
           <button class="menu-item" data-view="calendar" data-perm="calendarEdit">📅 行事曆</button>
-          <button class="menu-item" data-view="dispatch">📨 派遣任務</button>
-          <button class="menu-item" data-view="myTasks">📋 我的任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
+          <button class="menu-item" data-view="myTasks">📋 任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
           <button class="menu-item" data-view="memo">📝 備忘錄</button>
           <button class="menu-item" data-view="todoList">🗒️ 待辦事項</button>
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
@@ -4363,11 +4360,8 @@
       <div class="home-card" onclick="switchView('calendar')">
         <span class="hc-icon">📅</span><span class="hc-name">行事曆</span>
       </div>
-      <div class="home-card" onclick="switchView('dispatch')">
-        <span class="hc-icon">📨</span><span class="hc-name">派遣任務</span>
-      </div>
       <div class="home-card" onclick="switchView('myTasks')">
-        <span class="hc-icon">📋</span><span class="hc-name">我的任務</span>
+        <span class="hc-icon">📋</span><span class="hc-name">任務</span>
         <span class="hc-urgent" id="homeUrgentIcon" style="display:none;">🚨</span>
       </div>
       <div class="home-card" onclick="switchView('todoList')">
@@ -4385,9 +4379,39 @@
     </div>
   </div>
 
-  <!-- ===== 派遣任務 ===== -->
-  <div class="view" id="viewDispatch">
-    <h2 class="view-title">派遣任務</h2>
+  <!-- ===== 任務（我的任務＋派遣任務合併） ===== -->
+  <div class="view" id="viewMyTasks">
+    <h2 class="view-title">我的任務</h2>
+
+    <div class="task-form">
+      <label for="selfTaskName">安排工作</label>
+      <select id="selfTaskName"></select>
+      <div class="newname-row" id="selfNewNameRow">
+        <input type="text" id="selfNewNameInput" placeholder="輸入新的任務名稱…">
+        <button id="selfNewNameBtn">新增</button>
+      </div>
+      <div class="my-taskname-tags" id="selfMyNamesTags"></div>
+      <div id="selfContentBlock" style="display:none;">
+        <div id="selfExtra"></div>
+        <label for="selfBrandInput">識別名稱／品牌（選填，會顯示在任務名稱後面方便辨識，例如：簽署合約書 MNTL）</label>
+        <input type="text" id="selfBrandInput" placeholder="例如：MNTL、林貝兒…">
+
+        <label for="selfContent">任務內容</label>
+        <textarea id="selfContent" placeholder="輸入工作的詳細內容…"></textarea>
+        <label for="selfDate">指定日期（可不填）</label>
+        <input type="date" id="selfDate">
+        <button class="task-submit-btn" id="selfSubmitBtn">安排</button>
+      </div>
+      <div class="form-status" id="selfStatus"></div>
+    </div>
+
+    <div style="text-align:center;"><span class="task-section-title">✅ 已完成</span></div>
+    <div class="task-list" id="doneGroups"></div>
+
+    <div style="text-align:center;"><span class="task-section-title">📋 待完成</span></div>
+    <div class="task-list" id="pendingList"></div>
+
+    <h3 style="margin:24px 0 8px; font-size:15px;">📮 派遣任務給別人</h3>
     <div class="task-form">
       <label for="dispatchTo">派遣給誰</label>
       <select id="dispatchTo"></select>
@@ -4420,39 +4444,6 @@
 
     <div style="text-align:center;"><span class="task-section-title">📤 已派遣的任務</span></div>
     <div class="task-list" id="dispatchedList"></div>
-  </div>
-
-  <!-- ===== 我的任務 ===== -->
-  <div class="view" id="viewMyTasks">
-    <h2 class="view-title">我的任務</h2>
-
-    <div class="task-form">
-      <label for="selfTaskName">安排工作</label>
-      <select id="selfTaskName"></select>
-      <div class="newname-row" id="selfNewNameRow">
-        <input type="text" id="selfNewNameInput" placeholder="輸入新的任務名稱…">
-        <button id="selfNewNameBtn">新增</button>
-      </div>
-      <div class="my-taskname-tags" id="selfMyNamesTags"></div>
-      <div id="selfContentBlock" style="display:none;">
-        <div id="selfExtra"></div>
-        <label for="selfBrandInput">識別名稱／品牌（選填，會顯示在任務名稱後面方便辨識，例如：簽署合約書 MNTL）</label>
-        <input type="text" id="selfBrandInput" placeholder="例如：MNTL、林貝兒…">
-
-        <label for="selfContent">任務內容</label>
-        <textarea id="selfContent" placeholder="輸入工作的詳細內容…"></textarea>
-        <label for="selfDate">指定日期（可不填）</label>
-        <input type="date" id="selfDate">
-        <button class="task-submit-btn" id="selfSubmitBtn">安排</button>
-      </div>
-      <div class="form-status" id="selfStatus"></div>
-    </div>
-
-    <div style="text-align:center;"><span class="task-section-title">✅ 已完成</span></div>
-    <div class="task-list" id="doneGroups"></div>
-
-    <div style="text-align:center;"><span class="task-section-title">📋 待完成</span></div>
-    <div class="task-list" id="pendingList"></div>
   </div>
 
   <!-- ===== 我的備忘錄（樹狀結構） ===== -->
@@ -4535,17 +4526,6 @@
       </select>
     </div>
     <div id="priList"></div>
-  </div>
-
-  <!-- ===== 開團狀態（結團倒數／現正團購中） ===== -->
-  <div class="view" id="viewGroupStatus">
-    <h2 class="view-title">開團狀態</h2>
-    <div style="text-align:center; margin-bottom:14px;">
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="copySiteUrl(this)">🔗 複製網址</button>
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openBlockEditModal(null)">➕ 新增文字按鈕</button>
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openSocialLinkEditor()">🔗 社群連結設定</button>
-    </div>
-    <div class="group-list" id="groupStatusList"></div>
   </div>
 
   <!-- ===== 品牌廠商管理 ===== -->
@@ -5602,12 +5582,10 @@
       <option value="">（關閉右欄）</option>
       <option value="home">🏠 工作首頁</option>
       <option value="calendar" data-perm="calendarEdit">📅 行事曆</option>
-      <option value="dispatch">📨 派遣任務</option>
-      <option value="myTasks">📋 我的任務</option>
+      <option value="myTasks">📋 任務</option>
       <option value="memo">📝 備忘錄</option>
       <option value="todoList">🗒️ 待辦事項</option>
       <option value="prItems">🎀 公關品狀態</option>
-      <option value="groupStatus">📢 開團狀態</option>
       <option value="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</option>
       <option value="report" data-perm="report">📊 報表統計</option>
       <option value="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</option>
@@ -6530,7 +6508,7 @@
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
-<script src="customBlocks.js?v=1"></script>
+<script src="customBlocks.js?v=2"></script>
 <script src="tools.js?v=17"></script>
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
@@ -6547,7 +6525,7 @@
 <script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
 <script src="blog.js?v=1"></script>
-<script src="admin.js?v=85"></script>
+<script src="admin.js?v=86"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

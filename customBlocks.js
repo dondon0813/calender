@@ -123,13 +123,11 @@ function appendCustomBlocksAdmin(listEl, position) {
 async function toggleCustomBlock(block) {
   const newVal = !block.enabled;
   block.enabled = newVal;
-  renderGroupStatusList('groupStatusList');
   renderGroupStatusList('calGroupList');
   try {
     await postTask({ type: 'block-update', id: block.id, enabled: newVal });
   } catch (err) {
     block.enabled = !newVal;
-    renderGroupStatusList('groupStatusList');
     renderGroupStatusList('calGroupList');
     alert('更新失敗：' + err.message);
   }
