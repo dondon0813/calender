@@ -322,6 +322,39 @@ async function faToggleCustDetail(row) {
   }
 }
 
+// ===== 子分頁切換（📥 未歸戶訂單／🔍 會員查詢／📊 顧客分析）=====
+// 純顯示切換，不影響各區塊原有的載入邏輯（那套邏輯只認 DOM id，跟分頁容器無關）。
+// 做法比照 books.js 的 switchPbaTab（admin.html 5077-5081 的 .pba-tab 樣式）。
+const FAN_TAB_PANELS = {
+  unclaimed: document.getElementById('fanTabPanelUnclaimed'),
+  member: document.getElementById('fanTabPanelMember'),
+  cust: document.getElementById('fanTabPanelCust'),
+};
+const FAN_TAB_BTNS = {
+  unclaimed: document.getElementById('fanTabBtnUnclaimed'),
+  member: document.getElementById('fanTabBtnMember'),
+  cust: document.getElementById('fanTabBtnCust'),
+};
+function switchFanTab(tab, skipSave) {
+  if (!FAN_TAB_PANELS[tab]) tab = 'unclaimed';
+  Object.keys(FAN_TAB_PANELS).forEach(key => {
+    FAN_TAB_PANELS[key].style.display = key === tab ? '' : 'none';
+    FAN_TAB_BTNS[key].classList.toggle('on', key === tab);
+  });
+  if (!skipSave) {
+    try { sessionStorage.setItem('fanAdminSubTab', tab); } catch (e) { /* 私密模式等情況忽略 */ }
+  }
+}
+Object.keys(FAN_TAB_BTNS).forEach(key => {
+  FAN_TAB_BTNS[key].addEventListener('click', () => switchFanTab(key));
+});
+// 開機還原上次停留的子分頁；讀不到（私密模式等）就用預設的未歸戶訂單
+(function restoreFanTab() {
+  let saved = null;
+  try { saved = sessionStorage.getItem('fanAdminSubTab'); } catch (e) { /* 忽略 */ }
+  switchFanTab(saved || 'unclaimed', true);
+})();
+
 // ===== DOM 事件掛載 =====
 document.getElementById('fanUnclaimedRefreshBtn').addEventListener('click', () => loadFanAdminView(true));
 document.getElementById('fanUnclaimedSearch').addEventListener('input', () => { if (FAN_TABLE_READY) renderFanUnclaimedList(); });

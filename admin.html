@@ -5476,19 +5476,31 @@
     </div>
     <div id="fanAdminBanner"></div>
 
+    <!-- 子分頁（做法比照 books.js 的 .pba-tab：📖 繪本管理／🎁 優惠活動／⚙️ 繪本館設定，admin.html 5077-5081） -->
+    <div class="pba-tabs">
+      <button type="button" class="pba-tab on" id="fanTabBtnUnclaimed" data-fan-tab="unclaimed">📥 未歸戶訂單</button>
+      <button type="button" class="pba-tab" id="fanTabBtnMember" data-fan-tab="member">🔍 會員查詢</button>
+      <button type="button" class="pba-tab" id="fanTabBtnCust" data-fan-tab="cust">📊 顧客分析</button>
+    </div>
+
+    <div class="pba-tab-panel" id="fanTabPanelUnclaimed">
     <h3 style="margin:18px 0 8px; font-size:15px;">📥 未歸戶訂單</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
       <input type="text" id="fanUnclaimedSearch" placeholder="🔍 搜尋姓名／email／訂單編號…" style="flex:1; min-width:200px; max-width:360px;">
     </div>
     <div id="fanUnclaimedArea"><div class="task-empty">讀取中…</div></div>
+    </div><!-- /fanTabPanelUnclaimed -->
 
+    <div class="pba-tab-panel" id="fanTabPanelMember" style="display:none;">
     <h3 style="margin:24px 0 8px; font-size:15px;">🔍 會員查詢</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
       <input type="text" id="fanMemberSearchInput" placeholder="會員編號／暱稱／email" style="flex:1; min-width:200px; max-width:360px;">
       <button class="task-mini-btn" id="fanMemberSearchBtn">搜尋</button>
     </div>
     <div id="fanMemberArea"></div>
+    </div><!-- /fanTabPanelMember -->
 
+    <div class="pba-tab-panel" id="fanTabPanelCust" style="display:none;">
     <h3 style="margin:24px 0 8px; font-size:15px;">📊 顧客分析</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
       <input type="text" id="fanCustSearch" placeholder="🔍 搜尋姓名／email…" style="flex:1; min-width:200px; max-width:360px;">
@@ -5500,6 +5512,7 @@
       <button class="task-mini-btn" id="fanCustLoadBtn">載入排行</button>
     </div>
     <div id="fanCustArea"><div class="task-empty">按「載入排行」開始</div></div>
+    </div><!-- /fanTabPanelCust -->
   </div><!-- /viewFanAdmin -->
 
   </div><!-- /paneLeft -->
@@ -6449,7 +6462,7 @@
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=2"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=2"></script>
+<script src="fans.js?v=3"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
