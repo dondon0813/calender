@@ -5488,6 +5488,18 @@
       <button class="task-mini-btn" id="fanMemberSearchBtn">搜尋</button>
     </div>
     <div id="fanMemberArea"></div>
+
+    <h3 style="margin:24px 0 8px; font-size:15px;">📊 顧客分析</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <input type="text" id="fanCustSearch" placeholder="🔍 搜尋姓名／email…" style="flex:1; min-width:200px; max-width:360px;">
+      <select id="fanCustSort" style="min-width:130px;">
+        <option value="totalSpent">依累積消費</option>
+        <option value="ordersCount">依訂單數</option>
+        <option value="lastOrder">依最近下單</option>
+      </select>
+      <button class="task-mini-btn" id="fanCustLoadBtn">載入排行</button>
+    </div>
+    <div id="fanCustArea"><div class="task-empty">按「載入排行」開始</div></div>
   </div><!-- /viewFanAdmin -->
 
   </div><!-- /paneLeft -->
@@ -6437,7 +6449,7 @@
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=2"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=1"></script>
+<script src="fans.js?v=2"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->

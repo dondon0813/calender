@@ -67,7 +67,7 @@ function faPaidBadge(order) {
 
 // ===== 表尚未建立時鎖住操作 =====
 function faSetControlsDisabled(disabled) {
-  ['fanUnclaimedSearch', 'fanMemberSearchInput', 'fanMemberSearchBtn'].forEach(id => {
+  ['fanUnclaimedSearch', 'fanMemberSearchInput', 'fanMemberSearchBtn', 'fanCustSearch', 'fanCustSort', 'fanCustLoadBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = disabled;
   });
@@ -208,8 +208,124 @@ function renderFanMemberList(members) {
     '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
+// ===== 顧客分析 =====
+let FAN_CUST_LIST = [];   // 最近一次 fan-admin-customers 的顧客清單（依 idx 對應展開列）
+
+async function faLoadCustomers() {
+  const area = document.getElementById('fanCustArea');
+  const q = (document.getElementById('fanCustSearch').value || '').trim();
+  const sort = document.getElementById('fanCustSort').value || 'totalSpent';
+  area.innerHTML = '<div class="task-empty">讀取中…</div>';
+  try {
+    const data = await faApiPost('fan-admin-customers', Object.assign({ sort, limit: 100 }, q ? { q } : {}));
+    if (!data || !data.success) {
+      area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
+      return;
+    }
+    if (data.tableReady === false) {
+      area.innerHTML = '<div class="task-empty">⚠️ 會員資料表尚未建立（待 db push）</div>';
+      return;
+    }
+    FAN_CUST_LIST = Array.isArray(data.customers) ? data.customers : [];
+    renderFanCustList(data.totalCustomers);
+  } catch (err) {
+    area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+
+function renderFanCustList(totalCustomers) {
+  const area = document.getElementById('fanCustArea');
+  if (!FAN_CUST_LIST.length) {
+    area.innerHTML = '<div class="task-empty">沒有符合的顧客</div>';
+    return;
+  }
+  const countLine = '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">共 ' +
+    faEscapeHtml(totalCustomers != null ? totalCustomers : FAN_CUST_LIST.length) + ' 位顧客（僅含跟團買體系訂單）</div>';
+
+  const rows = FAN_CUST_LIST.map((c, idx) => {
+    const memberBadge = c.isMember
+      ? '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#e6f4ea; color:#1e7a3c; font-size:11px; white-space:nowrap;">✓ 會員</span>'
+      : '';
+    return '<tr class="fa-cust-row" data-email="' + faEscapeHtml(c.email) + '" data-idx="' + idx + '" style="border-bottom:1px solid var(--c-line); cursor:pointer;">' +
+      '<td style="padding:8px 10px;">' + faEscapeHtml(c.name || '—') + '</td>' +
+      '<td style="padding:8px 10px;">' + faEscapeHtml(c.email) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(faMoney(c.totalSpent)) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(c.paidCount) + '/' + faEscapeHtml(c.ordersCount) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(c.teamsCount) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(faDate(c.lastOrderAt)) + '</td>' +
+      '<td style="padding:8px 10px;">' + memberBadge + '</td>' +
+      '</tr>' +
+      '<tr class="fa-cust-detail-row" data-detail-for="' + idx + '" style="display:none;">' +
+      '<td colspan="7" style="padding:0; background:var(--c-bg-bottom);"><div class="fa-cust-detail-inner" style="padding:10px 14px;"></div></td>' +
+      '</tr>';
+  }).join('');
+
+  area.innerHTML = countLine + '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
+    '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:760px;">' +
+    '<thead><tr style="background:var(--c-bg-bottom); text-align:left;">' +
+    '<th style="padding:8px 10px;">姓名</th><th style="padding:8px 10px;">email</th><th style="padding:8px 10px;">累積消費</th>' +
+    '<th style="padding:8px 10px;">訂單數</th><th style="padding:8px 10px;">跟團數</th><th style="padding:8px 10px;">最近下單</th><th style="padding:8px 10px;">會員</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+  area.querySelectorAll('.fa-cust-row').forEach(row => {
+    row.addEventListener('click', () => faToggleCustDetail(row));
+  });
+}
+
+// 點列展開/收合顧客明細（一次只保留一位展開，避免表格過長）
+async function faToggleCustDetail(row) {
+  const idx = row.dataset.idx;
+  const tbody = row.parentElement;
+  const detailRow = tbody.querySelector('.fa-cust-detail-row[data-detail-for="' + idx + '"]');
+  if (!detailRow) return;
+
+  const isOpen = detailRow.style.display !== 'none';
+  if (isOpen) {
+    detailRow.style.display = 'none';
+    return;
+  }
+  tbody.querySelectorAll('.fa-cust-detail-row').forEach(r => { if (r !== detailRow) r.style.display = 'none'; });
+  detailRow.style.display = '';
+  const inner = detailRow.querySelector('.fa-cust-detail-inner');
+  inner.innerHTML = '<div class="task-empty">讀取中…</div>';
+
+  try {
+    const data = await faApiPost('fan-admin-customer-detail', { email: row.dataset.email });
+    if (!data || !data.success) {
+      inner.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
+      return;
+    }
+    const orders = Array.isArray(data.orders) ? data.orders : [];
+    if (!orders.length) {
+      inner.innerHTML = '<div class="task-empty">沒有訂單紀錄</div>';
+      return;
+    }
+    const orderRows = orders.map(o => {
+      const claimedMark = o.claimed
+        ? '<span style="color:#1e7a3c;">✓ 已歸戶' + (o.claimedVia ? '（' + faEscapeHtml(o.claimedVia) + '）' : '') + '</span>'
+        : '<span style="color:var(--c-text-light);">未歸戶</span>';
+      return '<tr style="border-bottom:1px solid var(--c-line);">' +
+        '<td style="padding:6px 10px;">' + faEscapeHtml(o.eventTitle || '—') + '</td>' +
+        '<td style="padding:6px 10px; white-space:nowrap;">' + faEscapeHtml(faDate(o.orderedAt)) + '</td>' +
+        '<td style="padding:6px 10px; white-space:nowrap;">' + faEscapeHtml(faMoney(o.amount)) + '</td>' +
+        '<td style="padding:6px 10px;">' + faPaidBadge(o) + '</td>' +
+        '<td style="padding:6px 10px; white-space:nowrap;">' + claimedMark + '</td>' +
+        '</tr>';
+    }).join('');
+    inner.innerHTML = '<div style="overflow-x:auto;">' +
+      '<table style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:600px;">' +
+      '<thead><tr style="text-align:left;"><th style="padding:6px 10px;">團名</th><th style="padding:6px 10px;">日期</th>' +
+      '<th style="padding:6px 10px;">金額</th><th style="padding:6px 10px;">付款</th><th style="padding:6px 10px;">歸戶</th></tr></thead>' +
+      '<tbody>' + orderRows + '</tbody></table></div>';
+  } catch (err) {
+    inner.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+
 // ===== DOM 事件掛載 =====
 document.getElementById('fanUnclaimedRefreshBtn').addEventListener('click', () => loadFanAdminView(true));
 document.getElementById('fanUnclaimedSearch').addEventListener('input', () => { if (FAN_TABLE_READY) renderFanUnclaimedList(); });
 document.getElementById('fanMemberSearchBtn').addEventListener('click', faSearchMembers);
 document.getElementById('fanMemberSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') faSearchMembers(); });
+document.getElementById('fanCustLoadBtn').addEventListener('click', () => faLoadCustomers());
+document.getElementById('fanCustSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') faLoadCustomers(); });
