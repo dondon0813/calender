@@ -668,9 +668,11 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 }
 .remg-empty { font-size: 0.75em; font-weight: 800; color: #fff; }
 
-/* 面板：各團簡短介紹輸入列 */
+/* 面板：各團簡短介紹輸入列（含每團自己的格寬欄） */
 .remnote-item { margin-bottom: 8px; }
-.remnote-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.remnote-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.remnote-name { font-size: 12px; font-weight: 700; flex: 1 1 auto; min-width: 0; }
+.remnote-w { width: 72px; flex: none; font-size: 12px; }
 .remnote-item input { width: 100%; box-sizing: border-box; }
 .remnote-state { display: block; font-size: 11px; margin-top: 2px; }
 </style>
@@ -723,7 +725,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
       <div class="row rem-icon-only"><label>標題（上）</label><input type="text" id="tRemgToday"></div>
       <div class="row rem-icon-only"><label>標題（下）</label><input type="text" id="tRemgOpen"></div>
       <div class="rem-icon-only">
-        <p class="hint"><b>各團簡短介紹</b>（顯示在圖上團名下方的底色框，跟貼文 👉🏻 那句同一個庫）：留空＝用系統介紹庫的那句；還沒有介紹的團填一句，<b>離開輸入格就自動存進系統</b>，以後每次都自動帶出來（要先在這個瀏覽器登入過後台 admin.html）。</p>
+        <p class="hint"><b>各團簡短介紹</b>（顯示在圖上團名下方的底色框，跟貼文 👉🏻 那句同一個庫）：留空＝用系統介紹庫的那句；還沒有介紹的團填一句，<b>離開輸入格就自動存進系統</b>，以後每次都自動帶出來（要先在這個瀏覽器登入過後台 admin.html）。團名右邊的「<b>格寬</b>」欄＝這一團自己的格子寬度（px），留空＝用上面「名稱寬度」的值——最後一排只剩一團想單獨拉寬就填這裡（只存這台電腦、只影響這張圖）。</p>
         <div id="remNoteList"></div>
       </div>
       <p class="hint">兩種樣式都自動列出<b>今天還在開團</b>的團（延長過的看延長後日期）。<b>列表式</b>＝一團一條，帶小圖＋結單日（今天「今晚結單」、明天「明天結單」紅字）。<b>圖案式</b>＝整張實色底，白色粗體標題分兩區——上面「今日結單」（今天結單的團）、下面「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期；哪一區沒有團就自動不顯示。標題留空＝不顯示那行。小圖跟前台「現正開團中」同一套：行事曆該檔的小圖欄優先，其次品牌庫去背小圖，都沒有就用字首。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
@@ -1935,6 +1937,9 @@ function buildReminderIcons() {
     arr.forEach(group => {
       const item = document.createElement('div');
       item.className = 'remg-item';
+      // 這一團有自己的格寬就用它（面板「格寬」欄），沒有＝走「名稱寬度」滑桿
+      const ownW = group.map(e => (EV_OVERRIDES[e.id] || {}).remW).find(v => v > 0);
+      if (ownW) item.style.width = ownW + 'px';
       const thumbs = document.createElement('div');
       thumbs.className = 'remg-thumbs';
       group.forEach(ev => thumbs.appendChild(buildThumbEl(ev)));   // 同框的團一個品牌一顆
@@ -2819,10 +2824,27 @@ function renderRemNotes() {
     const item = document.createElement('div');
     item.className = 'remnote-item';
 
+    const head = document.createElement('div');
+    head.className = 'remnote-head';
     const label = document.createElement('div');
     label.className = 'remnote-name';
     label.textContent = plainName(displayName(ev, 'list'));
-    item.appendChild(label);
+    head.appendChild(label);
+    // 這一團自己的格寬（px）：留空＝用「名稱寬度」滑桿的預設值。
+    // 例：最後一排只剩一團想單獨拉寬，就填大一點的數字
+    const wIn = document.createElement('input');
+    wIn.type = 'number';
+    wIn.className = 'remnote-w';
+    wIn.placeholder = '格寬';
+    wIn.title = '這一團的格寬（px），留空＝用「名稱寬度」預設';
+    wIn.value = rec.remW > 0 ? rec.remW : '';
+    wIn.addEventListener('input', () => {
+      const v = parseInt(wIn.value, 10);
+      rec.remW = (v > 0) ? v : 0;
+      saveEvents(); renderPoster();
+    });
+    head.appendChild(wIn);
+    item.appendChild(head);
 
     const lib = brandNoteFor(plainName(displayName(ev, 'list'))) || brandNoteFor(ev.title);
     const input = document.createElement('input');
