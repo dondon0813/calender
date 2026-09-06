@@ -589,6 +589,56 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
 }
 .rem-end.hot { color: var(--p-badge-bg); }
 .rem-empty { font-size: 0.75em; color: var(--p-date-color); }
+
+/* ---------- 結單提醒：圖案式 ----------
+   面板：兩種樣式各自的欄位互相隱藏（body.remstyle-icon 由 JS 依 S.remStyle 切）。 */
+body.remstyle-icon .rem-list-only { display: none !important; }
+body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
+
+/* 圖：整張一個實色底（--p-rem-bg），奶油色面板（poster-deco）不畫。 */
+.poster.rem-solid { background: var(--p-rem-bg); }
+.poster.rem-solid .poster-deco { display: none; }
+
+.remg-wrap {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  gap: 0.45em;
+  overflow: hidden;
+  color: #fff;
+}
+.remg-title {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 1.3em; line-height: 1.2;
+  color: #fff;
+  letter-spacing: 0.1em;
+}
+.remg-grid {
+  display: flex; flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--p-gap);
+  width: 100%;
+}
+.remg-item {
+  width: 5.4em;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.12em;
+}
+.remg-thumbs { display: flex; justify-content: center; gap: 0.1em; }
+.remg-thumb {
+  width: 3.1em; height: 3.1em;
+  display: flex; align-items: center; justify-content: center;
+}
+.remg-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.remg-thumb-fallback { font-family: var(--font-display); font-weight: 900; font-size: 1.5em; color: #fff; }
+.remg-name {
+  font-weight: 800;
+  font-size: 0.58em; line-height: 1.25;
+  color: #fff;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+.remg-empty { font-size: 0.75em; font-weight: 800; color: #fff; }
 </style>
 </head>
 <body>
@@ -624,9 +674,19 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
 
     <fieldset data-pane="image" class="rem-only">
       <legend>結單提醒</legend>
-      <div class="row"><label>標題</label><input type="text" id="tRemTitle"></div>
-      <div class="row"><label>副標</label><input type="text" id="tRemSub"></div>
-      <p class="hint">自動列出<b>今天還在開團</b>的團（延長過的看延長後日期），照結單日由近到遠排；今天結單顯示「今晚結單」、明天結單顯示「明天結單」。小圖跟「現正開團中」橫列同一套：行事曆該檔的小圖欄優先，其次品牌資料庫的去背小圖，都沒有就用字首圓圈。標題或副標留空＝不顯示那一行。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
+      <div class="row">
+        <label>樣式</label>
+        <div class="seg" id="segRemStyle">
+          <button data-v="list" class="on">列表式</button>
+          <button data-v="icon">圖案式</button>
+        </div>
+      </div>
+      <div class="row rem-list-only"><label>標題</label><input type="text" id="tRemTitle"></div>
+      <div class="row rem-list-only"><label>副標</label><input type="text" id="tRemSub"></div>
+      <div class="row rem-icon-only"><label>底色</label><input type="color" id="cRemBg"></div>
+      <div class="row rem-icon-only"><label>標題（上）</label><input type="text" id="tRemgToday"></div>
+      <div class="row rem-icon-only"><label>標題（下）</label><input type="text" id="tRemgOpen"></div>
+      <p class="hint">兩種樣式都自動列出<b>今天還在開團</b>的團（延長過的看延長後日期）。<b>列表式</b>＝一團一條，帶小圖＋結單日（今天「今晚結單」、明天「明天結單」紅字）。<b>圖案式</b>＝整張實色底，白色粗體標題分兩區——上面「今日結單」（今天結單的團）、下面「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期；哪一區沒有團就自動不顯示。標題留空＝不顯示那行。小圖跟前台「現正開團中」同一套：行事曆該檔的小圖欄優先，其次品牌庫去背小圖，都沒有就用字首。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
     </fieldset>
 
     <fieldset class="rem-hide">
@@ -915,9 +975,14 @@ const DEFAULTS = {
   capOutro: '🎁 文末留言告訴我：\n這個月最期待哪一團？\n抽一位送神秘小禮物❤️',
   capTags: '#育兒日記 #新手媽媽',
   capMode: 'full',          // 貼文版本：'full'＝每團帶 👉🏻 小介紹｜'brief'＝只列團名
-  // 結單提醒模式自己的兩行字（留空＝不顯示那行）
-  remTitle: '⏰ 結單倒數',
-  remSub: '要跟要快，晚了就沒有囉！'
+  // 結單提醒模式自己的欄位：remStyle 'list'＝列表式（小圖＋團名＋結單日）
+  // ／'icon'＝圖案式（實色底、白粗體兩區標題、小圖上團名下、不寫日期）
+  remStyle: 'list',
+  remTitle: '⏰ 結單倒數',       // 列表式的標題／副標（留空＝不顯示那行）
+  remSub: '要跟要快，晚了就沒有囉！',
+  remBg: '#F2707E',              // 圖案式的實色底
+  remgToday: '今日結單',         // 圖案式上區標題（今天結單的團）
+  remgOpen: '現正開團中'         // 圖案式下區標題（其餘開團中的團）
 };
 
 // 列表模式的號碼圈配色（照 shared.css 的分類色盤循環）
@@ -1303,6 +1368,9 @@ function renderPoster() {
   poster.style.setProperty('--p-inset-l', S.insetL + 'px');
   poster.style.setProperty('--p-inset-r', S.insetR + 'px');
   poster.classList.toggle('has-bg', !!ASSETS.bg);
+  // 結單提醒圖案式：整張一個實色底、不畫奶油色面板
+  poster.classList.toggle('rem-solid', S.mode === 'reminder' && S.remStyle === 'icon');
+  poster.style.setProperty('--p-rem-bg', S.remBg || '#F2707E');
 
   poster.innerHTML = '';
 
@@ -1401,8 +1469,8 @@ function autoFit() {
   // 團太多塞不下就整組一起縮，比例不會亂掉。
   // justify-content:center 的容器溢出時上緣被裁掉、scrollHeight 量不準，
   // 所以改量「第一個到最後一個子元素的實際範圍」（預覽縮放兩邊同樣被縮，不影響比較）。
-  const remWrap = document.querySelector('#poster .rem-wrap');
-  if (remWrap && remWrap.children.length) {
+  document.querySelectorAll('#poster .rem-wrap, #poster .remg-wrap').forEach(remWrap => {
+    if (!remWrap.children.length) return;
     const overflows = () => {
       const kids = remWrap.children;
       const top = kids[0].getBoundingClientRect().top;
@@ -1415,7 +1483,7 @@ function autoFit() {
       fs -= 1;
       remWrap.style.fontSize = fs + 'px';
     }
-  }
+  });
 }
 
 /* 月份標題圖：images/calendar/title-MM.webp（去背 webp，12 個月 × 標準／壓扁兩款）。
@@ -1765,6 +1833,85 @@ function reminderGroups() {
 }
 
 function buildReminder() {
+  return S.remStyle === 'icon' ? buildReminderIcons() : buildReminderList();
+}
+
+/* 圖案式：實色底＋白粗體兩區標題——上「今日結單」（今天結單的團）、
+   下「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期。 */
+function buildReminderIcons() {
+  const wrap = document.createElement('div');
+  wrap.className = 'remg-wrap';
+  wrap.style.fontSize = Math.round(44 * S.fs) + 'px';
+
+  const today = todayStart();
+  const groups = reminderGroups();
+  const todayGroups = groups.filter(g => sameDay(g[0].displayEnd, today));
+  const openGroups = groups.filter(g => !sameDay(g[0].displayEnd, today));
+
+  const buildThumbEl = ev => {
+    const tb = document.createElement('div');
+    tb.className = 'remg-thumb';
+    const url = thumbUrl(resolveThumb(ev));
+    const fallback = () => {
+      tb.innerHTML = '';
+      const fb = document.createElement('span');
+      fb.className = 'remg-thumb-fallback';
+      fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
+      tb.appendChild(fb);
+    };
+    if (url) {
+      const img = document.createElement('img');
+      img.crossOrigin = 'anonymous';   // 下載 PNG 的 useCORS 需要（同列表式的說明）
+      img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=1';
+      img.alt = '';
+      img.addEventListener('error', fallback);
+      tb.appendChild(img);
+    } else fallback();
+    return tb;
+  };
+
+  const buildSection = (title, arr) => {
+    if (!arr.length) return;
+    if (String(title || '').trim()) {
+      const h = document.createElement('div');
+      h.className = 'remg-title';
+      h.textContent = title.trim();
+      wrap.appendChild(h);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'remg-grid';
+    arr.forEach(group => {
+      const item = document.createElement('div');
+      item.className = 'remg-item';
+      const thumbs = document.createElement('div');
+      thumbs.className = 'remg-thumbs';
+      group.forEach(ev => thumbs.appendChild(buildThumbEl(ev)));   // 同框的團一個品牌一顆
+      item.appendChild(thumbs);
+      const name = document.createElement('div');
+      name.className = 'remg-name';
+      name.textContent = groupNames(group, 'list').join('＋');
+      item.appendChild(name);
+      grid.appendChild(item);
+    });
+    wrap.appendChild(grid);
+  };
+
+  buildSection(S.remgToday, todayGroups);
+  buildSection(S.remgOpen, openGroups);
+
+  if (!groups.length) {
+    const empty = document.createElement('div');
+    empty.className = 'remg-empty';
+    empty.textContent = '現在沒有開團中的團';
+    wrap.appendChild(empty);
+  }
+
+  document.getElementById('moveWarn').innerHTML = '';
+  return wrap;
+}
+
+/* 列表式：一團一條橫卡（小圖｜團名｜結單日）。 */
+function buildReminderList() {
   const wrap = document.createElement('div');
   wrap.className = 'rem-wrap';
   // 基準字級：所有 rem-* 元素都用 em，autoFit 塞不下時整組一起縮
@@ -2438,7 +2585,7 @@ async function exportPng() {
       width: dim.w,
       height: dim.h,
       scale: 1,               // 樣板本身就是 1080 寬，已是出圖解析度，不需再放大
-      backgroundColor: S.cOuter,
+      backgroundColor: (S.mode === 'reminder' && S.remStyle === 'icon') ? (S.remBg || '#F2707E') : S.cOuter,
       useCORS: true,
       imageTimeout: 8000
     }), 45000);
@@ -2474,6 +2621,9 @@ function renderAll() {
 function syncControls() {
   // 結單提醒模式：面板上跟月曆無關的區塊藏起來（.rem-hide）、自己的設定區亮出來（.rem-only）
   document.body.classList.toggle('mode-reminder', S.mode === 'reminder');
+  // 結單提醒的兩種樣式各自的欄位互相隱藏
+  document.body.classList.toggle('remstyle-icon', S.remStyle === 'icon');
+  segSet('segRemStyle', S.remStyle || 'list');
   segSet('segMode', S.mode);
   segSet('segCapMode', S.capMode || 'full');
   segSet('segSize', S.size);
@@ -2494,7 +2644,9 @@ function syncControls() {
     if (val.tagName === 'INPUT') val.value = S[key];
     else val.textContent = S[key];
   });
+  document.getElementById('cRemBg').value = S.remBg || '#F2707E';
   ['tTitle1|title1', 'tTitle2|title2', 'tFoot|foot', 'tRemTitle|remTitle', 'tRemSub|remSub',
+   'tRemgToday|remgToday', 'tRemgOpen|remgOpen',
    'tCapIntro|capIntro', 'tCapListTitle|capListTitle', 'tCapOutro|capOutro', 'tCapTags|capTags'].forEach(spec => {
     const [id, key] = spec.split('|');
     document.getElementById(id).value = S[key];
@@ -2544,9 +2696,16 @@ function init() {
   bindText('tTitle2', 'title2');
   bindText('tFoot', 'foot');
 
-  // 結單提醒：標題／副標
+  // 結單提醒：樣式切換＋兩種樣式各自的欄位
+  bindSeg('segRemStyle', v => {
+    S.remStyle = v;
+    document.body.classList.toggle('remstyle-icon', v === 'icon');
+  });
   bindText('tRemTitle', 'remTitle');
   bindText('tRemSub', 'remSub');
+  bindColor('cRemBg', 'remBg');
+  bindText('tRemgToday', 'remgToday');
+  bindText('tRemgOpen', 'remgOpen');
 
   bindCapText('tCapIntro', 'capIntro');
   bindCapText('tCapListTitle', 'capListTitle');
