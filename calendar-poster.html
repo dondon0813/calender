@@ -553,15 +553,13 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
   gap: 0.35em;
   text-align: left;
 }
+/* 去背小圖顯示原則（雪莉 2026-09-06 定）：以高度統一、寬度照比例、不加圓底 */
 .rem-thumb {
   flex: 0 0 auto;
-  width: 1.7em; height: 1.7em;
-  border-radius: 50%;
-  background: #fff;
+  height: 1.7em;
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
 }
-.rem-thumb img { max-width: 88%; max-height: 88%; object-fit: contain; }
+.rem-thumb img { height: 100%; width: auto; display: block; }
 .rem-thumb-fallback {
   font-family: var(--font-display); font-weight: 900;
   font-size: 0.8em; color: var(--p-chip-border);
@@ -631,11 +629,13 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   gap: 0.12em;
 }
 .remg-thumbs { display: flex; justify-content: center; gap: 0.1em; }
+/* 去背小圖顯示原則（雪莉 2026-09-06 定）：一律以「高度」統一——每張同高、
+   寬度照比例自動，寬就讓它寬（不設上限），橫式圖（雨衣）不會被正方形框壓小 */
 .remg-thumb {
-  width: 3.1em; height: 3.1em;
+  height: 3.1em;
   display: flex; align-items: center; justify-content: center;
 }
-.remg-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.remg-thumb img { height: 100%; width: auto; display: block; }
 .remg-thumb-fallback { font-family: var(--font-display); font-weight: 900; font-size: 1.5em; color: #fff; }
 .remg-name {
   font-weight: 800;
