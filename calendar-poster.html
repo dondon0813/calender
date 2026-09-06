@@ -610,9 +610,13 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 }
 .remg-title {
   font-family: var(--font-display); font-weight: 900;
-  font-size: 1.3em; line-height: 1.2;
+  font-size: 1.4em; line-height: 1.2;
   color: #fff;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
+  /* 粗線體：中文字型的 900 是合成粗體、不夠粗，用四方向 text-shadow 把筆畫實際加粗
+     （html2canvas 出圖畫得出 text-shadow；-webkit-text-stroke 出圖會被忽略，不能用） */
+  text-shadow: 0.035em 0 0 #fff, -0.035em 0 0 #fff, 0 0.035em 0 #fff, 0 -0.035em 0 #fff,
+               0.025em 0.025em 0 #fff, -0.025em 0.025em 0 #fff, 0.025em -0.025em 0 #fff, -0.025em -0.025em 0 #fff;
 }
 .remg-grid {
   display: flex; flex-wrap: wrap;
