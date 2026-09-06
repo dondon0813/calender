@@ -315,6 +315,27 @@
     background: var(--ix-card-gray-bg);
     color: var(--ix-card-gray-text);
   }
+  /* 品牌小圖：白色圓圈貼在卡片左側、垂直置中；沒有圖的團不出圓圈，卡片長相照舊。
+     文字仍然置中，所以左右各留一樣的空間給圓圈，才不會歪一邊。 */
+  .gs-card.has-thumb { padding-left: 66px; padding-right: 66px; }
+  .gs-thumb {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .gs-thumb img { max-width: 86%; max-height: 86%; object-fit: contain; display: block; }
+  .gs-card.gs-card-gray .gs-thumb img { filter: grayscale(1); opacity: 0.75; }
+  @media (max-width: 480px) {
+    .gs-card.has-thumb { padding-left: 56px; padding-right: 56px; }
+    .gs-thumb { width: 40px; height: 40px; left: 8px; }
+  }
   .gs-card-name {
     font-size: 19px;
     font-weight: 700;
@@ -806,9 +827,42 @@ async function loadCustomBlocks() {
     const data = await res.json();
     CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
     SOCIAL_LINKS = data.socialLinks || {};
+    // 品牌去背小圖（2026-09-06 起 blocks 包順便帶回來，「現正開團中」清單卡用；
+    // 後端還沒部署新版時拿不到這個 key，卡片就維持沒有小圖的舊長相，不會壞）
+    (data.brandThumbs || []).forEach(b => {
+      const name = String(b['品牌名稱'] || '').trim();
+      const url = String(b['去背小圖'] || '').trim();
+      if (name && url) BRAND_THUMBS[normalizeBrandKey(name)] = url;
+    });
   } catch (err) {
     console.warn('自訂區塊讀取失敗：', err);
   }
+}
+
+/* ===== 品牌小圖（「現正開團中」清單卡用）=====
+   規則照抄 openGroupBuy.js：行事曆該檔 W 欄優先 > 品牌庫（標準化品牌名是團名子字串、
+   命中最長的那個；命中長度打平＝無法判斷，寧可不顯示也不要放錯品牌的圖）。 */
+let BRAND_THUMBS = {};
+function normalizeBrandKey(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
+}
+function isValidThumbUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+function resolveThumb(ev) {
+  if (isValidThumbUrl(ev.thumb)) return thumbUrl(ev.thumb);
+  const key = normalizeBrandKey(ev.title);
+  let best = '', bestLen = 0, tied = false;
+  Object.keys(BRAND_THUMBS).forEach(bk => {
+    if (!bk || !key.includes(bk)) return;
+    if (bk.length > bestLen) { best = bk; bestLen = bk.length; tied = false; }
+    else if (bk.length === bestLen) { tied = true; }
+  });
+  return (best && !tied) ? thumbUrl(BRAND_THUMBS[best]) : '';
+}
+// 品牌庫不少小圖還是舊的 dondon0813.github.io 網址（會 301 轉到正式網域），改寫成直連省一跳
+function thumbUrl(u) {
+  return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
 }
 
 function buildCustomBlockEl(block) {
@@ -1199,6 +1253,7 @@ async function loadData() {
       const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
       const iconFb = c[19] ? String(c[19].v || '').trim() : '';
       const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
+      const thumb = c[22] ? String(c[22].v || '').trim() : '';   // W 欄：這一檔指定的小圖（優先於品牌庫）
       const discountCode = c[23] ? String(c[23].v || '').trim() : '';
       const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
       const start = parseDateStr(startRaw);
@@ -1212,7 +1267,7 @@ async function loadData() {
       const isGroupBuy = isGroupBuyRaw === '' ? true : (isGroupBuyRaw === '是');
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
       if (!published) return;
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, discountCode, discountDesc });
+      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc });
     });
 
     allEvents = events;
@@ -1366,6 +1421,21 @@ function renderGroupList() {
     }
     attachStatTracking(card, ev, clickable, 'now');
     card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+
+    // 品牌小圖：有對到圖才出白色圓圈；圖真的載不進來就整顆拿掉，回到原本的卡片長相
+    const thumbSrc = resolveThumb(ev);
+    if (thumbSrc) {
+      card.classList.add('has-thumb');
+      const tb = document.createElement('div');
+      tb.className = 'gs-thumb';
+      const img = document.createElement('img');
+      img.src = thumbSrc;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.addEventListener('error', () => { tb.remove(); card.classList.remove('has-thumb'); });
+      tb.appendChild(img);
+      card.appendChild(tb);
+    }
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
