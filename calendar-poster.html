@@ -532,11 +532,6 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
   font-size: 1.7em; line-height: 1.15;
   color: var(--p-title-color);
 }
-.rem-date {
-  font-family: var(--font-display); font-weight: 800;
-  font-size: 1.1em; line-height: 1.2;
-  color: var(--p-month-color);
-}
 .rem-sub { font-size: 0.62em; color: var(--p-date-color); }
 .rem-list {
   display: flex; flex-direction: column;
@@ -544,6 +539,8 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
   gap: var(--p-gap);
   margin-top: 0.4em;
 }
+/* 一團一張橫卡：小圖｜團名（＋徽章）｜結單日。長相比照前台「現正開團中」的格子，
+   但排成直列、字放大成限動看得清的尺寸。 */
 .rem-card {
   background: var(--p-chip-bg);
   border: 3px solid var(--p-chip-border);
@@ -551,17 +548,46 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
   color: var(--p-chip-text);
   font-weight: 700;
   line-height: var(--p-line-h);
-  padding: 0.45em 0.5em;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 0.18em;
+  padding: 0.3em 0.5em;
+  display: flex; flex-direction: row; align-items: center;
+  gap: 0.35em;
+  text-align: left;
 }
-.rem-card .rem-name { font-size: 1em; }
+.rem-thumb {
+  flex: 0 0 auto;
+  width: 1.7em; height: 1.7em;
+  border-radius: 50%;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.rem-thumb img { max-width: 88%; max-height: 88%; object-fit: contain; }
+.rem-thumb-fallback {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 0.8em; color: var(--p-chip-border);
+}
+.rem-info {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.12em;
+}
+.rem-card .rem-name {
+  font-size: 0.82em;
+  word-break: keep-all; overflow-wrap: break-word;   /* 同前台：先在空白處換行，真的太長才斷 */
+}
 .rem-card .rem-badge {
-  font-size: 0.58em;
+  font-size: 0.5em;
   background: var(--p-badge-bg); color: #fff;
   border-radius: 999px;
   padding: 0.1em 0.9em;
 }
+.rem-end {
+  flex: 0 0 auto;
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 0.62em;
+  color: var(--p-date-color);
+  white-space: nowrap;
+}
+.rem-end.hot { color: var(--p-badge-bg); }
 .rem-empty { font-size: 0.75em; color: var(--p-date-color); }
 </style>
 </head>
@@ -593,22 +619,14 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
         <button data-v="list">📋 開團列表</button>
         <button data-v="reminder">⏰ 結單提醒</button>
       </div>
-      <p class="hint">「結單提醒」＝挑一個結單日，把那天結單的團做成 9:16 限動圖。</p>
+      <p class="hint">「結單提醒」＝把現在開團中的團（跟前台「現正開團中」橫列同一批）做成 9:16 限動圖，每團帶小圖＋結單日。</p>
     </fieldset>
 
     <fieldset data-pane="image" class="rem-only">
       <legend>結單提醒</legend>
-      <div class="row">
-        <label>結單日</label>
-        <input type="date" id="remDate" style="flex:1;font-size:14px;">
-      </div>
-      <div class="btn-row">
-        <button class="btn" id="btnRemToday">今天</button>
-        <button class="btn" id="btnRemTomorrow">明天</button>
-      </div>
       <div class="row"><label>標題</label><input type="text" id="tRemTitle"></div>
       <div class="row"><label>副標</label><input type="text" id="tRemSub"></div>
-      <p class="hint">會自動列出「結單日」當天結單的團（延長過的看延長後的日期）。標題或副標留空＝不顯示那一行。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
+      <p class="hint">自動列出<b>今天還在開團</b>的團（延長過的看延長後日期），照結單日由近到遠排；今天結單顯示「今晚結單」、明天結單顯示「明天結單」。小圖跟「現正開團中」橫列同一套：行事曆該檔的小圖欄優先，其次品牌資料庫的去背小圖，都沒有就用字首圓圈。標題或副標留空＝不顯示那一行。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
     </fieldset>
 
     <fieldset class="rem-hide">
@@ -897,9 +915,7 @@ const DEFAULTS = {
   capOutro: '🎁 文末留言告訴我：\n這個月最期待哪一團？\n抽一位送神秘小禮物❤️',
   capTags: '#育兒日記 #新手媽媽',
   capMode: 'full',          // 貼文版本：'full'＝每團帶 👉🏻 小介紹｜'brief'＝只列團名
-  // 結單提醒模式（三種模式共用外的自己那幾格）：remDate 空字串＝今天；
-  // 過去的日期開站時會自動清掉，不會一直卡在上次選的那天
-  remDate: '',
+  // 結單提醒模式自己的兩行字（留空＝不顯示那行）
   remTitle: '⏰ 結單倒數',
   remSub: '要跟要快，晚了就沒有囉！'
 };
@@ -982,11 +998,53 @@ async function loadBrandNotes() {
   } catch (e) { /* 備援：沿用 brand-notes.js */ }
 }
 
+/* 品牌去背小圖（結單提醒模式用，跟 openGroupBuy.js 的「現正開團中」橫列同一套圖源）。
+   抓失敗就算了：resolveThumb 找不到圖會退回字首圓圈，不開天窗。 */
+let BRAND_THUMBS = {};
+function normalizeBrandKey(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
+}
+function isValidUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
+}
+async function loadBrandThumbs() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=public&t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    (data.brandThumbs || []).forEach(b => {
+      const name = String(b['品牌名稱'] || '').trim();
+      const url = String(b['去背小圖'] || '').trim();
+      if (name && url) BRAND_THUMBS[normalizeBrandKey(name)] = url;
+    });
+  } catch (e) { /* 沒圖就退回字首圓圈 */ }
+}
+/* 小圖優先序與打平規則照抄 openGroupBuy.js：行事曆該檔 W 欄 > 品牌庫（標準化品牌名是
+   團名子字串、命中最長的那個）；命中長度打平＝無法判斷，寧可不顯示也不要放錯品牌的圖。 */
+function resolveThumb(ev) {
+  if (isValidUrl(ev.thumb)) return ev.thumb;
+  const key = normalizeBrandKey(ev.title);
+  let best = '', bestLen = 0, tied = false;
+  Object.keys(BRAND_THUMBS).forEach(bk => {
+    if (!bk || !key.includes(bk)) return;
+    if (bk.length > bestLen) { best = bk; bestLen = bk.length; tied = false; }
+    else if (bk.length === bestLen) { tied = true; }
+  });
+  return (best && !tied) ? BRAND_THUMBS[best] : '';
+}
+/* 品牌庫裡不少小圖還是舊的 dondon0813.github.io 網址，那個網域現在會 301 轉到
+   sheridondon.com.tw，而 301 回應本身沒有 CORS 標頭——一般 <img> 跟著轉沒事，
+   但下載 PNG 要 crossorigin 載圖，會直接被擋、圖變空白。改寫成正式網域就沒有轉址。 */
+function thumbUrl(u) {
+  return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
+}
+
 async function loadData() {
   const statusEl = document.getElementById('status');
   statusEl.textContent = '資料載入中…';
   statusEl.classList.remove('error');
   const notesPromise = loadBrandNotes();   // 跟行事曆並行抓，renderAll 前等它一下
+  const thumbsPromise = loadBrandThumbs();
   try {
     const res = await fetch(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('網路錯誤 ' + res.status);
@@ -1011,13 +1069,15 @@ async function loadData() {
         start, end,
         displayEnd: computeDisplayEnd(end, extend),
         title: String(title).trim(),
-        category: c[6] ? String(c[6].v || '').trim() : ''   // G 欄分類：判斷冷凍/冷藏團用
+        category: c[6] ? String(c[6].v || '').trim() : '',  // G 欄分類：判斷冷凍/冷藏團用
+        thumb: c[22] ? String(c[22].v || '').trim() : ''    // W 欄小圖：結單提醒模式用（優先於品牌庫）
       });
     });
 
     allEvents = events;
     statusEl.textContent = `已同步 ${events.length} 檔團購 · ${new Date().toLocaleString('zh-TW')}`;
     await notesPromise;
+    await thumbsPromise;
     populateMonths();
     renderAll();
   } catch (err) {
@@ -1678,32 +1738,23 @@ function buildList() {
 }
 
 /* ---------- 結單提醒模式 ----------
-   跟月份無關：從全部團購裡挑「結單日＝選的那天」的團（displayEnd 已含延長）。
+   顯示的團＝前台「現正開團中」橫列同一批：今天還在開團的團（displayEnd 已含延長），
+   照結單日由近到遠排。每團帶小圖（resolveThumb，同橫列的圖源與規則）＋團名＋結單日。
    團名／不顯示／同框／徽章吃「列表」那套逐團微調（跟貼文同一套）。 */
-
-const CN_WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
 function todayStart() {
   const t = new Date();
   return new Date(t.getFullYear(), t.getMonth(), t.getDate());
-}
-// S.remDate 是 'YYYY-MM-DD'（date input 的值）；空字串＝今天
-function remDateObj() {
-  if (S.remDate) {
-    const p = String(S.remDate).split('-').map(Number);
-    if (p.length === 3 && p[0] > 2000) return new Date(p[0], p[1] - 1, p[2]);
-  }
-  return todayStart();
 }
 function remDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function reminderGroups() {
-  const day = remDateObj();
+  const today = todayStart();
   const evs = allEvents
-    .filter(ev => sameDay(ev.displayEnd, day) && !ovRead(ev.id, 'list').hidden)
-    .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
+    .filter(ev => ev.start <= today && today <= ev.displayEnd && !ovRead(ev.id, 'list').hidden)
+    .sort((a, b) => a.displayEnd - b.displayEnd || a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
   const groups = [];
   evs.forEach(ev => {
     const prev = groups[groups.length - 1];
@@ -1717,9 +1768,8 @@ function buildReminder() {
   const wrap = document.createElement('div');
   wrap.className = 'rem-wrap';
   // 基準字級：所有 rem-* 元素都用 em，autoFit 塞不下時整組一起縮
-  wrap.style.fontSize = Math.round(44 * S.fs) + 'px';
+  wrap.style.fontSize = Math.round(40 * S.fs) + 'px';
 
-  const day = remDateObj();
   const today = todayStart();
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
@@ -1729,14 +1779,6 @@ function buildReminder() {
     t.textContent = S.remTitle.trim();
     wrap.appendChild(t);
   }
-
-  const dt = document.createElement('div');
-  dt.className = 'rem-date';
-  const wd = `週${CN_WEEK[day.getDay()]}`;
-  dt.textContent = sameDay(day, today)    ? `今晚結單｜${fmtMD(day)}（${wd}）`
-                 : sameDay(day, tomorrow) ? `明天結單｜${fmtMD(day)}（${wd}）`
-                 : `${fmtMD(day)}（${wd}）結單`;
-  wrap.appendChild(dt);
 
   if (String(S.remSub || '').trim()) {
     const sub = document.createElement('div');
@@ -1749,7 +1791,7 @@ function buildReminder() {
   if (!groups.length) {
     const empty = document.createElement('div');
     empty.className = 'rem-empty';
-    empty.textContent = '這一天沒有結單的團';
+    empty.textContent = '現在沒有開團中的團';
     wrap.appendChild(empty);
   } else {
     const list = document.createElement('div');
@@ -1757,18 +1799,63 @@ function buildReminder() {
     groups.forEach(group => {
       const card = document.createElement('div');
       card.className = 'rem-card';
+
+      // 小圖：同框的團一個品牌一顆（通常一顆）；沒圖用團名字首圓圈
+      group.forEach(ev => {
+        const tb = document.createElement('div');
+        tb.className = 'rem-thumb';
+        const url = thumbUrl(resolveThumb(ev));
+        if (url) {
+          const img = document.createElement('img');
+          /* 下載 PNG 走 html2canvas 的 useCORS：圖若先前在別頁被「無 CORS」載入過，
+             瀏覽器快取裡那份沒有 CORS 標頭，重抓會直接失敗、圖變空白。
+             加 crossorigin＋固定的 calposter 參數（快取 key 跟別頁分開），
+             預覽與出圖都用同一份帶 CORS 的快取。 */
+          img.crossOrigin = 'anonymous';
+          img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=1';
+          img.alt = '';
+          img.addEventListener('error', () => {
+            tb.innerHTML = '';
+            const fb = document.createElement('span');
+            fb.className = 'rem-thumb-fallback';
+            fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
+            tb.appendChild(fb);
+          });
+          tb.appendChild(img);
+        } else {
+          const fb = document.createElement('span');
+          fb.className = 'rem-thumb-fallback';
+          fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
+          tb.appendChild(fb);
+        }
+        card.appendChild(tb);
+      });
+
+      const info = document.createElement('div');
+      info.className = 'rem-info';
       const name = document.createElement('div');
       name.className = 'rem-name';
       // 跟列表模式同一種寫法：一團一行、｜接回空白、同框用＋串起來
       name.textContent = groupNames(group, 'list').join('＋');
-      card.appendChild(name);
+      info.appendChild(name);
       const badge = group.map(e => ovRead(e.id, 'list').badge).find(Boolean);
       if (badge) {
         const b = document.createElement('div');
         b.className = 'rem-badge';
         b.textContent = badge;
-        card.appendChild(b);
+        info.appendChild(b);
       }
+      card.appendChild(info);
+
+      // 結單日：今天＝今晚結單（紅）、明天＝明天結單（紅）、其他照日期
+      const endDay = group[0].displayEnd;
+      const end = document.createElement('div');
+      end.className = 'rem-end';
+      if (sameDay(endDay, today)) { end.textContent = '今晚結單'; end.classList.add('hot'); }
+      else if (sameDay(endDay, tomorrow)) { end.textContent = '明天結單'; end.classList.add('hot'); }
+      else end.textContent = `${fmtMD(endDay)} 結單`;
+      card.appendChild(end);
+
       list.appendChild(card);
     });
     wrap.appendChild(list);
@@ -2361,7 +2448,7 @@ async function exportPng() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = S.mode === 'reminder'
-      ? `結單提醒_${remDateStr(remDateObj())}_${S.size.replace(':', 'x')}.png`
+      ? `結單提醒_${remDateStr(todayStart())}_${S.size.replace(':', 'x')}.png`
       : `行事曆_${currentYear}-${String(currentMonth + 1).padStart(2, '0')}_${S.mode === 'calendar' ? '行事曆' : '列表'}_${S.size.replace(':', 'x')}.png`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -2412,15 +2499,11 @@ function syncControls() {
     const [id, key] = spec.split('|');
     document.getElementById(id).value = S[key];
   });
-  const rd = document.getElementById('remDate');
-  if (rd) rd.value = remDateStr(remDateObj());
   applyPane();
 }
 
 function init() {
   loadStored();
-  // 上次選的結單日已經過了就自動清掉（空＝今天），開站不會停在過去的日期
-  if (S.remDate && remDateObj() < todayStart()) S.remDate = '';
   loadPresets();
   renderPresetList();
 
@@ -2461,21 +2544,9 @@ function init() {
   bindText('tTitle2', 'title2');
   bindText('tFoot', 'foot');
 
-  // 結單提醒：日期＋標題／副標
+  // 結單提醒：標題／副標
   bindText('tRemTitle', 'remTitle');
   bindText('tRemSub', 'remSub');
-  const remDateEl = document.getElementById('remDate');
-  const setRemDate = v => {
-    S.remDate = v || '';
-    remDateEl.value = remDateStr(remDateObj());
-    saveSettings(); renderPoster();
-  };
-  remDateEl.addEventListener('change', () => setRemDate(remDateEl.value));
-  document.getElementById('btnRemToday').addEventListener('click', () => setRemDate(remDateStr(todayStart())));
-  document.getElementById('btnRemTomorrow').addEventListener('click', () => {
-    const t = todayStart();
-    setRemDate(remDateStr(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)));
-  });
 
   bindCapText('tCapIntro', 'capIntro');
   bindCapText('tCapListTitle', 'capListTitle');
