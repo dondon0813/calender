@@ -2839,6 +2839,23 @@ function renderRemNotes() {
   }));
 }
 
+/* 自動存介紹庫時的品牌與關鍵字推導（2026-09-06 修）：
+   舊寫法拿「第一個空白前的詞」當 key——遇到 emoji 開頭的團名（🌧️ 快閃！UBMOM 雨衣
+   → key=🌧️）或含斜線的（日/韓 → key=日，會誤命中一堆團）都會出事，手機（沒有本機
+   暫存）就比對不到。改成：brand＝顯示名稱去 emoji；key＝「顯示名稱」與「原始團名」
+   各一把、整串正規化去 emoji——只會命中同名團，不會誤傷別團。 */
+const NOTE_EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu;
+function noteSyncMeta(ev) {
+  const disp = plainName(displayName(ev, 'list'));
+  const brand = disp.replace(NOTE_EMOJI_RE, '').trim() || plainName(ev.title);
+  const keys = [];
+  [disp, plainName(ev.title)].forEach(x => {
+    const k = normKey(x).replace(NOTE_EMOJI_RE, '');
+    if (k && keys.indexOf(k) === -1) keys.push(k);
+  });
+  return { brand, keys };
+}
+
 /* 自動把新介紹存進系統品牌備註庫（brand-note-set，跟「☁️ 同步新備註到系統」同一支）。
    跟庫一樣＝不用存；沒登入後台＝只存本機並提示。 */
 async function autoSaveRemNote(ev, note, say) {
@@ -2850,13 +2867,12 @@ async function autoSaveRemNote(ev, note, say) {
   try { token = localStorage.getItem('admin_token') || ''; } catch (e) {}
   if (!token) { say('（沒登入過後台，這句只存在這台電腦、只算這個月）'); return; }
   say('（存進系統中…）');
-  const brand = nameLines(displayName(ev, 'list'))[0] || plainName(ev.title);
-  const key = normKey(brand.split(/[\s　/／、]/)[0] || brand);
+  const meta = noteSyncMeta(ev);
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ type: 'brand-note-set', token, brand, keys: [key], note })
+      body: JSON.stringify({ type: 'brand-note-set', token, brand: meta.brand, keys: meta.keys, note })
     });
     const out = await res.json();
     if (out && out.success) {
@@ -3017,9 +3033,8 @@ function init() {
       if (!note) return;
       const name = plainName(displayName(ev, 'list'));
       if (note === brandNoteFor(name) || note === brandNoteFor(ev.title)) return;   // 跟庫裡一樣就不用同步
-      const brand = nameLines(displayName(ev, 'list'))[0] || plainName(ev.title);
-      const key = normKey(brand.split(/[\s　/／、]/)[0] || brand);
-      rows.push({ brand, keys: [key], note });
+      const meta = noteSyncMeta(ev);
+      rows.push({ brand: meta.brand, keys: meta.keys, note });
     });
     return rows;
   }
@@ -3064,7 +3079,7 @@ function init() {
   /* 備用：整理成可以直接貼進 brand-notes.js 的樣子，貼給 Claude 人工處理。 */
   document.getElementById('btnCopyNotes').addEventListener('click', e => {
     const rows = collectNewNotes().map(r =>
-      `  { brand: '${r.brand.replace(/'/g, "\\'")}', keys: ['${r.keys[0]}'], note: '${r.note.replace(/'/g, "\\'")}' },`);
+      `  { brand: '${r.brand.replace(/'/g, "\\'")}', keys: [${r.keys.map(k => `'${k}'`).join(', ')}], note: '${r.note.replace(/'/g, "\\'")}' },`);
     const state = document.getElementById('notesCopyState');
     if (!rows.length) {
       if (state) state.textContent = '（這個月沒有跟備註庫不一樣的手打備註）';
