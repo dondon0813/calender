@@ -869,7 +869,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 
     <fieldset>
       <legend>儲存的設定</legend>
-      <p class="hint">把現在的版面、顏色、文案樣板和逐團微調存成一份、取個名字，下個月選月份之後按「套用」就好。逐團的部分是<b>用團名對應</b>，所以同一個品牌下次開團會自動套上（這個月沒有的團就略過）。底圖與人像照太大，不進設定檔。</p>
+      <p class="hint">把現在的版面、顏色、文案樣板和逐團微調存成一份、取個名字，下個月選月份之後按「套用」就好。逐團的部分是<b>用團名對應</b>，所以同一個品牌下次開團會自動套上（這個月沒有的團就略過）。底圖與人像照太大，不進設定檔。設定檔跟「我的預設」一樣<b>自動同步到系統</b>（登入過後台的瀏覽器都看得到同一批）。</p>
       <div class="row">
         <label>設定檔</label>
         <select id="selPreset"></select>
@@ -2357,6 +2357,7 @@ function loadPresets() {
 function savePresets() {
   try { localStorage.setItem(LS_PRESETS, JSON.stringify(PRESETS)); }
   catch (e) { presetSay('存不下了（瀏覽器空間不足），可以先刪掉用不到的設定檔'); }
+  pushPresets();   // 另存／覆寫／刪除都順手同步到系統（沒登入就只存本機並提示）
 }
 function presetSay(msg) {
   const el = document.getElementById('presetStatus');
@@ -2629,6 +2630,46 @@ async function fetchServerDefaults() {
   } catch (e) { /* 網路失敗：安靜用本機版 */ }
 }
 
+/* 命名設定檔（PRESETS）同一套雲端同步：key=calposter.presets。
+   另存／覆寫／刪除都會順手推上系統；開站雲端有就以雲端為準。 */
+const PRESETS_KEY = 'calposter.presets';
+
+function presetSayAppendSync(txt) {
+  const el = document.getElementById('presetStatus');
+  const base = ((el && el.textContent) || '').split('｜')[0];
+  presetSay((base ? base + '｜' : '') + txt);
+}
+
+async function pushPresets() {
+  const token = getAdminToken();
+  if (!token) { presetSayAppendSync('沒登入過後台，設定檔只存這台電腦'); return; }
+  try {
+    const out = await settingCall({ type: 'setting-set', token, key: PRESETS_KEY, value: JSON.stringify(PRESETS) });
+    if (out && out.success) presetSayAppendSync('已同步到系統 ✓');
+    else if (out && out.notReady) presetSayAppendSync('系統同步還沒啟用，先存這台電腦');
+    else presetSayAppendSync('存系統失敗：' + ((out && out.error) || '未知錯誤') + '，先存這台電腦');
+  } catch (e) { presetSayAppendSync('存系統失敗（網路），先存這台電腦'); }
+}
+
+async function fetchServerPresets() {
+  const token = getAdminToken();
+  if (!token) return;
+  try {
+    const out = await settingCall({ type: 'setting-get', token, key: PRESETS_KEY });
+    if (!out || !out.success || !out.ready) return;
+    if (out.value) {
+      try {
+        PRESETS = JSON.parse(out.value) || {};
+        try { localStorage.setItem(LS_PRESETS, out.value); } catch (e) {}
+        renderPresetList();
+        presetSayAppendSync('設定檔已從系統同步');
+      } catch (e) { /* 雲端內容壞掉就不動本機 */ }
+    } else if (Object.keys(PRESETS).length) {
+      pushPresets();   // 雲端還沒有、這台有：一次性搬上去
+    }
+  } catch (e) { /* 網路失敗：安靜用本機版 */ }
+}
+
 function loadStored() {
   try { USER_DEFAULTS = JSON.parse(localStorage.getItem(LS_USERDEF) || 'null'); } catch (e) { USER_DEFAULTS = null; }
   S = effectiveDefaults();
@@ -2866,6 +2907,7 @@ function init() {
   fetchServerDefaults();   // 雲端的「我的預設」：非同步帶回，讀不到就維持本機版
   loadPresets();
   renderPresetList();
+  fetchServerPresets();    // 雲端的命名設定檔：同上
 
   // 貼文版本：完整（帶 👉🏻 小介紹）／精簡（只列團名）
   bindSeg('segCapMode', v => { S.capMode = v; renderCaption(); });
