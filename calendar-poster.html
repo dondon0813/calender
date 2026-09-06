@@ -609,14 +609,14 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   color: #fff;
 }
 .remg-title {
-  font-family: var(--font-display); font-weight: 900;
-  font-size: 1.4em; line-height: 1.2;
+  /* 粗線體＝使用者的自訂字體 Tsuhsianti（fonts.css，跟 admin.html 食譜貼文產生器
+     的標題同一套）。它只有一個字重、本身筆畫就很粗——不要再加 font-weight，
+     合成粗體會把細節糊掉（admin.html:2303 同一條註解）。 */
+  font-family: 'Tsuhsianti', var(--font-display);
+  font-weight: normal;
+  font-size: 1.5em; line-height: 1.2;
   color: #fff;
-  letter-spacing: 0.12em;
-  /* 粗線體：中文字型的 900 是合成粗體、不夠粗，用四方向 text-shadow 把筆畫實際加粗
-     （html2canvas 出圖畫得出 text-shadow；-webkit-text-stroke 出圖會被忽略，不能用） */
-  text-shadow: 0.035em 0 0 #fff, -0.035em 0 0 #fff, 0 0.035em 0 #fff, 0 -0.035em 0 #fff,
-               0.025em 0.025em 0 #fff, -0.025em 0.025em 0 #fff, 0.025em -0.025em 0 #fff, -0.025em -0.025em 0 #fff;
+  letter-spacing: 0.08em;
 }
 .remg-grid {
   display: flex; flex-wrap: wrap;
