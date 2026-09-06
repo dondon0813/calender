@@ -653,7 +653,11 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   word-break: keep-all; overflow-wrap: break-word;
 }
 .remg-name-line { display: block; }   /* 一行一個 div：｜斷行；超過「名稱寬度」才自動換行 */
-/* 簡短介紹：白色底色框（直角，雪莉指定不要圓角），字色用「團字色」色票 */
+/* 簡短介紹：白色底色框（直角，雪莉指定不要圓角），字色用「團字色」色票。
+   斷行刻意「不用」keep-all——那是給英文品牌名用的；中文句子套 keep-all 會把
+   整句當成一個拆不開的長詞，塞不下時瀏覽器只好硬拆，拆在哪各引擎不同
+   （2026-09-06 雪莉回報手機拆在怪地方的根因）。中文照一般規則逐字自然換行、
+   標點不會落到行首；要固定斷點就打「｜」。 */
 .remg-note {
   background: rgba(255, 255, 255, 0.93);
   color: var(--p-chip-text);
@@ -664,8 +668,21 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   margin-top: 0.3em;
   max-width: 100%;
   box-sizing: border-box;
-  word-break: keep-all; overflow-wrap: break-word;
+  overflow-wrap: break-word;
+  cursor: text;
 }
+/* 圖上直接編輯：點介紹＝編輯（Enter 換行、點旁邊儲存）。占位框半透明、出圖時隱藏；
+   占位提示用 ::before 畫（框保持 :empty，一打字提示就消失，focus 不用動 DOM） */
+.remg-note.remg-note-empty { opacity: 0.55; background: rgba(255, 255, 255, 0.5); min-width: 6em; min-height: 1.35em; }
+.remg-note.remg-note-empty:empty::before { content: '點這裡輸入介紹'; }
+.remg-note.editing, .remg-note:focus {
+  outline: 3px dashed rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+  opacity: 1;
+  min-width: 5em;
+}
+.remg-note.editing::before, .remg-note:focus::before { content: none; }
+.poster.exporting .remg-note-empty { display: none; }
 .remg-empty { font-size: 0.75em; font-weight: 800; color: #fff; }
 
 /* 面板：各團簡短介紹輸入列（含每團自己的格寬欄） */
@@ -1377,6 +1394,8 @@ function noteOf(ev) {
 function fmtMD(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
 
 function renderPoster() {
+  // 圖上介紹編輯中不重畫（滑桿、字型載入等都會呼叫這裡，重畫會把打到一半的字洗掉）
+  if (typeof remNoteEditing !== 'undefined' && remNoteEditing) return;
   const poster = document.getElementById('poster');
   const dim = SIZES[S.size];
 
@@ -1890,6 +1909,52 @@ function remNameLines(s) {
   return nameLines(s);
 }
 
+/* 圖上直接編輯的介紹框：contenteditable，Enter＝換行、失焦＝儲存。
+   換行存成「｜」（沿用既有格式：貼文自動接回一行、庫同步照舊）。
+   編輯中擋住 renderPoster 重畫，不然拉桿或字型載入會把打到一半的字洗掉。 */
+let remNoteEditing = false;
+
+function buildEditableNote(ev, note) {
+  const p = document.createElement('div');
+  p.className = 'remg-note' + (note ? '' : ' remg-note-empty');
+  if (note) {
+    nameLines(note).forEach(line => {
+      const d = document.createElement('div');
+      d.textContent = line;
+      p.appendChild(d);
+    });
+  }
+  // 空框不放文字：占位提示用 CSS ::before 畫（:empty 時才顯示，打字就消失）。
+  // ⚠ 這裡的重點是「focus 時完全不動 DOM」——之前 focus 就換掉框內容，
+  // 游標所在的節點被移除、瀏覽器立刻失焦，等於根本點不進去。
+  // plaintext-only：貼上、Enter 都是純文字（Chrome/Safari 支援；不支援的退回一般模式）
+  p.contentEditable = 'plaintext-only';
+  if (p.contentEditable !== 'plaintext-only') p.contentEditable = 'true';
+  p.spellcheck = false;
+
+  p.addEventListener('focus', () => {
+    remNoteEditing = true;
+    p.classList.add('editing');
+  });
+
+  p.addEventListener('blur', () => {
+    remNoteEditing = false;
+    p.classList.remove('editing');
+    const lines = p.innerText.split('\n').map(s => s.trim()).filter(Boolean);
+    const newNote = lines.join('｜');
+    if (newNote === (note || '')) { renderPoster(); return; }   // 沒改就原樣重畫
+    const rec = ovOf(ev.id);
+    rec.note = newNote;
+    saveEvents();
+    if (newNote) autoSaveRemNote(ev, newNote, () => {});   // 自動存進系統介紹庫
+    renderRemNotes();
+    renderPoster();
+    renderCaption();
+  });
+
+  return p;
+}
+
 /* 圖案式：實色底＋白粗體兩區標題——上「今日結單」（今天結單的團）、
    下「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期。 */
 function buildReminderIcons() {
@@ -1955,18 +2020,16 @@ function buildReminderIcons() {
         });
       });
       item.appendChild(name);
-      // 簡短介紹（貼文 👉🏻 同一個庫；本月手動覆寫優先）：有才畫底色框，沒有就空著。
-      // 「｜」＝手動斷行點（跟團名同一套）——想斷哪就斷哪，任何裝置都一模一樣；
-      // 沒打｜就照框寬自動換行
-      groupNotes(group).forEach(note => {
-        const p = document.createElement('div');
-        p.className = 'remg-note';
-        nameLines(note).forEach(line => {
-          const d = document.createElement('div');
-          d.textContent = line;
-          p.appendChild(d);
-        });
-        item.appendChild(p);
+      // 簡短介紹（貼文 👉🏻 同一個庫；本月手動覆寫優先）。
+      // 直接在圖上編輯（2026-09-06 雪莉要求）：點文字就能改、Enter＝換行、
+      // 點旁邊＝儲存＋自動存進介紹庫。換行存成「｜」，所見即所得、任何裝置一致。
+      // 沒有介紹的團顯示半透明「點這裡輸入介紹」占位框（下載 PNG 時自動隱藏）。
+      const seenNotes = [];
+      group.forEach(ev => {
+        const note = noteOf(ev);
+        if (note && seenNotes.indexOf(note) !== -1) return;   // 同框同句不重複
+        if (note) seenNotes.push(note);
+        item.appendChild(buildEditableNote(ev, note));
       });
       grid.appendChild(item);
     });
@@ -2769,6 +2832,9 @@ async function exportPng() {
   const btn = document.getElementById('btnExport');
   const old = btn.textContent;
   btn.disabled = true; btn.textContent = '產生中…';
+  // 圖上介紹還在編輯就先收尾存檔；「點這裡輸入介紹」占位框出圖時隱藏
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  document.getElementById('poster').classList.add('exporting');
   try {
     const dim = SIZES[S.size];
     // 明確傳寬高，不讓 html2canvas 自己量測 DOM 尺寸（school-list 卡住的成因之一）
@@ -2795,6 +2861,7 @@ async function exportPng() {
       ? '產圖超過 45 秒沒有完成，已中止。請重新整理後再試一次。'
       : '產圖失敗：' + err.message);
   } finally {
+    document.getElementById('poster').classList.remove('exporting');
     btn.disabled = false; btn.textContent = old;
   }
 }
