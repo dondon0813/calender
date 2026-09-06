@@ -1425,13 +1425,81 @@ async function refreshCurrentBookAfterMaterialChange() {
   renderBookList();
 }
 
-// ===== 繪本館優惠活動（一行一條，整批覆蓋） =====
+// ===== 繪本館優惠活動（一行一條，整批覆蓋；2026-09-07 起分團各自一批） =====
+// promoSelScope＝目前編輯中的 scope：''＝長期活動（不綁團、恆顯示），其餘＝團購事件 id。
+// 存檔只覆蓋「目前選的這一團」的條目，其他團的活動不受影響（後端 book-promotions-set 分 scope 刪插）。
+let promoSelScope = '';
+
+function renderPromoEventOptions() {
+  const sel = document.getElementById('promoEventSel');
+  if (!sel) return;
+  const keep = promoSelScope;
+  sel.innerHTML = '<option value="">🌐 長期活動（不綁團，恆顯示）</option>';
+  const known = new Set(['']);
+  (PACKAGE_DATA.setEventChoices || []).forEach(e => {
+    known.add(e.id);
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    const range = (e.startDate && e.endDate) ? `（${formatAvailableFrom(e.startDate)}–${formatAvailableFrom(e.endDate)}）` : '';
+    opt.textContent = `${e.title || '未命名團購'}${range}`;
+    sel.appendChild(opt);
+  });
+  // 有綁團但不在下拉裡（太舊/未發布的團）的既有條目也要能編輯：補進下拉
+  (PACKAGE_DATA.promotions || []).forEach(p => {
+    if (p.eventId && !known.has(p.eventId)) {
+      known.add(p.eventId);
+      const opt = document.createElement('option');
+      opt.value = p.eventId;
+      opt.textContent = p.eventTitle || '（已下架或未發布的團）';
+      sel.appendChild(opt);
+    }
+  });
+  sel.value = known.has(keep) ? keep : '';
+  promoSelScope = sel.value;
+}
+
+function promoScopeLines(scope) {
+  return (PACKAGE_DATA.promotions || [])
+    .filter(p => (p.eventId || '') === (scope || ''))
+    .map(p => p.text || '')
+    .filter(Boolean);
+}
+
+// 目前 scope 的前台顯示狀態提示（從後台包各條目的 eventStatus 讀；scope 內沒條目就不顯示）
+function promoScopeStatusNote(scope) {
+  if (!scope) return '';
+  const row = (PACKAGE_DATA.promotions || []).find(p => p.eventId === scope && p.eventStatus);
+  const st = row && row.eventStatus;
+  if (st === 'ended') return '⚠ 這一團已結團，這批活動前台已自動隱藏';
+  if (st === 'upcoming') return '⏳ 這一團還沒開團，這批活動會提早顯示在前台「下一團」視窗';
+  if (st === 'hidden') return '⚠ 這一團未發布，這批活動前台不會顯示';
+  if (st === 'open') return '✅ 這一團開團中，活動顯示在前台開團活動區';
+  return '';
+}
+
 function renderPromotions() {
+  renderPromoEventOptions();
   const ta = document.getElementById('promoTextarea');
   if (!ta) return;
-  ta.value = (PACKAGE_DATA.promotions || []).map(p => p.text || '').filter(Boolean).join('\n');
+  ta.value = promoScopeLines(promoSelScope).join('\n');
+  document.getElementById('promoScopeHint').textContent = promoScopeStatusNote(promoSelScope);
   document.getElementById('promoStatus').textContent = '';
 }
+
+document.getElementById('promoEventSel').addEventListener('change', (e) => {
+  const sel = e.target;
+  const ta = document.getElementById('promoTextarea');
+  // 切換前有未儲存的變動 → 先確認，取消就把下拉還原（防呆：切換會換掉整個文字框內容）
+  const current = promoScopeLines(promoSelScope).join('\n');
+  if (ta.value.trim() !== current.trim() && !confirm('這一團的優惠文字還沒儲存，切換會捨棄剛打的內容，確定切換？')) {
+    sel.value = promoSelScope;
+    return;
+  }
+  promoSelScope = sel.value;
+  ta.value = promoScopeLines(promoSelScope).join('\n');
+  document.getElementById('promoScopeHint').textContent = promoScopeStatusNote(promoSelScope);
+  document.getElementById('promoStatus').textContent = '';
+});
 
 document.getElementById('savePromoBtn').addEventListener('click', async () => {
   const ta = document.getElementById('promoTextarea');
@@ -1439,7 +1507,7 @@ document.getElementById('savePromoBtn').addEventListener('click', async () => {
   const items = ta.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   statusEl.textContent = '儲存中…';
   try {
-    const res = await apiPost('book-promotions-set', { items });
+    const res = await apiPost('book-promotions-set', { items, eventId: promoSelScope || '' });
     if (!res || res.success !== true) {
       statusEl.textContent = '';
       showToast('儲存優惠失敗：' + ((res && res.error) || '未知錯誤'), true);
@@ -1681,7 +1749,7 @@ function renderGiftList() {
     const sub = document.createElement('div');
     sub.className = 'pba-material-sub';
     const noteSuffix = g.note ? ` ・ ${g.note}` : '';
-    sub.textContent = `滿 $${pbaFormatMoney(g.amount)}${noteSuffix}`;
+    sub.textContent = `滿 $${pbaFormatMoney(g.amount)}${noteSuffix}${giftEventLabel(g)}`;
     info.appendChild(sub);
     item.appendChild(info);
 
@@ -1705,6 +1773,41 @@ function renderGiftList() {
   });
 }
 
+// 滿額贈清單的綁團標示（2026-09-07）：綁了哪一團＋目前前台顯示狀態
+function giftEventLabel(g) {
+  if (!g.eventId) return '';
+  const title = g.eventTitle || '已綁團';
+  if (g.eventStatus === 'ended') return ` ・ 🔗 ${title}（已結團，前台隱藏）`;
+  if (g.eventStatus === 'upcoming') return ` ・ 🔗 ${title}（提早顯示中）`;
+  if (g.eventStatus === 'hidden') return ` ・ 🔗 ${title}（團未發布，前台隱藏）`;
+  if (g.eventStatus === 'open') return ` ・ 🔗 ${title}（開團中）`;
+  return ` ・ 🔗 ${title}`;
+}
+
+// 滿額贈表單的綁團下拉（比照 renderSetEventOptions；編輯中的贈品綁了下拉沒有的團也要能保留）
+function renderGiftEventOptions(gift) {
+  const sel = document.getElementById('gEvent');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">不綁團（長期顯示）</option>';
+  const known = new Set(['']);
+  (PACKAGE_DATA.setEventChoices || []).forEach(e => {
+    known.add(e.id);
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    const range = (e.startDate && e.endDate) ? `（${formatAvailableFrom(e.startDate)}–${formatAvailableFrom(e.endDate)}）` : '';
+    opt.textContent = `${e.title || '未命名團購'}${range}`;
+    sel.appendChild(opt);
+  });
+  const selectedId = gift && gift.eventId ? gift.eventId : '';
+  if (selectedId && !known.has(selectedId)) {
+    const opt = document.createElement('option');
+    opt.value = selectedId;
+    opt.textContent = (gift.eventTitle || '（已下架或未發布的團）');
+    sel.appendChild(opt);
+  }
+  sel.value = selectedId;
+}
+
 let giftFormEditingId = null;
 
 function setGiftImagePreview(url) {
@@ -1723,6 +1826,7 @@ function openGiftForm(gift) {
   document.getElementById('gTitle').value = gift ? gift.title || '' : '';
   document.getElementById('gAmount').value = gift ? gift.amount || '' : '';
   document.getElementById('gNote').value = gift ? gift.note || '' : '';
+  renderGiftEventOptions(gift);
   document.getElementById('gImageUrl').value = gift ? gift.imageUrl || '' : '';
   setGiftImagePreview(gift ? gift.imageUrl || '' : '');
   document.getElementById('gImageUploadStatus').textContent = '';
@@ -1772,7 +1876,8 @@ document.getElementById('saveGiftBtn').addEventListener('click', async () => {
     title,
     amount,
     note: document.getElementById('gNote').value.trim(),
-    imageUrl: document.getElementById('gImageUrl').value.trim()
+    imageUrl: document.getElementById('gImageUrl').value.trim(),
+    eventId: document.getElementById('gEvent').value || ''
   };
   if (giftFormEditingId) payload.id = giftFormEditingId;
   try {

@@ -5257,9 +5257,14 @@
             <div class="pba-panel">
               <div class="pba-panel-title">📝 一般活動（一行一條）</div>
               <div class="pba-field">
+                <label>適用團購</label>
+                <select id="promoEventSel"></select>
+                <div id="promoScopeHint" style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;"></div>
+              </div>
+              <div class="pba-field">
                 <textarea id="promoTextarea" rows="5" placeholder="一行一條優惠，例如：&#10;滿 1500 免運&#10;加購延伸教材組 9 折&#10;前 50 名送貼紙"></textarea>
                 <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
-                  一行一條，存檔後整批覆蓋。開團期間會攤開顯示在繪本館頁面頂端的活動區；沒開團時則收在「下一團」按鈕點開的浮動視窗裡。清空存檔＝不顯示。
+                  一行一條，存檔後整批覆蓋「上面選的那一團」的活動；每一團可以各自不同。綁團的活動只在該團開團前／開團中顯示，結團自動隱藏（下一團的提早打好就會提早顯示在「下一團」視窗）；「🌐 長期活動」＝不綁團、恆顯示。清空存檔＝該團不顯示。
                 </div>
               </div>
               <div class="pba-form-actions" style="margin-top:8px; align-items:center;">
@@ -5287,6 +5292,13 @@
                 <div class="pba-field">
                   <label>備註（選填）</label>
                   <input type="text" id="gNote" placeholder="例：限量100份">
+                </div>
+                <div class="pba-field">
+                  <label>適用團購（選填）</label>
+                  <select id="gEvent"></select>
+                  <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                    綁團後只在該團開團前／開團中顯示，結團自動隱藏；不綁＝長期顯示。
+                  </div>
                 </div>
                 <div class="pba-field">
                   <label>圖片</label>
@@ -6523,7 +6535,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=10"></script>
+<script src="books.js?v=11"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

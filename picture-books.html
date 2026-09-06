@@ -1570,13 +1570,14 @@ function renderTopPurchase() {
       }
     }
 
-    const giftSection = buildGiftSection();
+    const giftSection = buildGiftSection(promoItemsFor('open', ALL_GIFTS));
     if (giftSection) box.appendChild(giftSection);
 
-    if (ALL_PROMOTIONS.length) {
+    const openPromos = promoItemsFor('open', ALL_PROMOTIONS);
+    if (openPromos.length) {
       const promoWrap = document.createElement('div');
       promoWrap.className = 'pb-top-active-promos';
-      ALL_PROMOTIONS.forEach(p => {
+      openPromos.forEach(p => {
         const line = document.createElement('div');
         line.className = 'pb-top-active-promo-line';
         line.textContent = `🎁 ${p.text}`;
@@ -1614,7 +1615,10 @@ function renderTopPurchase() {
   }
 
   const entries = [...upcoming.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  if (!entries.length && !ALL_PROMOTIONS.length && !ALL_GIFTS.length) { wrap.style.display = 'none'; return; }
+  // 沒開團時，按鈕/浮動視窗只會列「長期＋下一團」的優惠與滿額贈，所以有沒有東西可看也用同一組判斷
+  const upcomingPromos = promoItemsFor('upcoming', ALL_PROMOTIONS);
+  const upcomingGifts = promoItemsFor('upcoming', ALL_GIFTS);
+  if (!entries.length && !upcomingPromos.length && !upcomingGifts.length) { wrap.style.display = 'none'; return; }
 
   const next = entries[0] || null;
   const soon = next ? daysUntil(next[1]) <= 7 : false;
@@ -1717,9 +1721,16 @@ function pbFormatMoney(n) {
   return (Number(n) || 0).toLocaleString('en-US');
 }
 
-// 滿額贈橫滑卡片列（純展示，不可點擊）。ALL_GIFTS 空陣列時回傳 null，呼叫方自行決定不插入。
-function buildGiftSection() {
-  if (!ALL_GIFTS.length) return null;
+// 綁團過濾（2026-09-07）：後端只回「可見」的優惠/滿額贈，綁團的多帶 eventStatus（'open'＝當團、'upcoming'＝下一團）。
+// 沒有 eventStatus＝長期活動兩邊都列；開團活動區只列「長期＋當團」、「下一團」浮動視窗只列「長期＋下一團」，
+// 結團的後端就不會回來（自動下架）。
+function promoItemsFor(ctx, list) {
+  return (list || []).filter(it => it && (!it.eventStatus || it.eventStatus === ctx));
+}
+
+// 滿額贈橫滑卡片列（純展示，不可點擊）。gifts 空陣列時回傳 null，呼叫方自行決定不插入。
+function buildGiftSection(gifts) {
+  if (!gifts || !gifts.length) return null;
   const wrap = document.createElement('div');
   wrap.className = 'pb-gift-wrap';
 
@@ -1730,7 +1741,7 @@ function buildGiftSection() {
 
   const row = document.createElement('div');
   row.className = 'pb-gift-row';
-  ALL_GIFTS.forEach(g => row.appendChild(buildGiftItem(g)));
+  gifts.forEach(g => row.appendChild(buildGiftItem(g)));
   wrap.appendChild(row);
   return wrap;
 }
@@ -1812,7 +1823,7 @@ function openPromoModal() {
 
   const giftWrapEl = document.getElementById('pbPromoGiftWrap');
   giftWrapEl.innerHTML = '';
-  const giftSection = buildGiftSection();
+  const giftSection = buildGiftSection(promoItemsFor('upcoming', ALL_GIFTS));
   if (giftSection) {
     giftWrapEl.appendChild(giftSection);
     giftWrapEl.style.display = '';
@@ -1821,8 +1832,9 @@ function openPromoModal() {
   }
 
   listEl.innerHTML = '';
-  if (ALL_PROMOTIONS.length) {
-    ALL_PROMOTIONS.forEach(p => {
+  const modalPromos = promoItemsFor('upcoming', ALL_PROMOTIONS);
+  if (modalPromos.length) {
+    modalPromos.forEach(p => {
       const li = document.createElement('li');
       li.textContent = p.text;
       listEl.appendChild(li);
