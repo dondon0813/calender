@@ -895,12 +895,13 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
         <button class="btn primary" id="btnSaveDefault">存成我的預設</button>
         <button class="btn" id="btnCopySettings">複製設定 JSON</button>
       </div>
-      <p class="hint">調到滿意就按這個：以後「全部恢復預設」會回到這一版，不是回到我寫死的初始值。<span id="userDefState"></span></p>
+      <p class="hint">調到滿意就按這個（三種版面的目前狀態都會存起來）：以後「恢復預設」回到的就是這一版，不是我寫死的初始值。<span id="userDefState"></span></p>
       <p class="hint">「我的預設」會<b>自動存進系統</b>（要在這個瀏覽器登入過後台 admin.html）——換電腦、清掉瀏覽器，開站都會自動帶回同一份。沒登入就只存這台電腦。</p>
       <div class="btn-row">
-        <button class="btn" id="btnResetAll">全部恢復預設</button>
+        <button class="btn" id="btnResetMode">恢復預設（目前版面）</button>
         <button class="btn" id="btnClearDefault">清除我的預設</button>
       </div>
+      <p class="hint">「恢復預設」只影響<b>目前選的那個模式</b>——在結單提醒按＝只有結單提醒回到預設，行事曆與列表完全不動；三種模式共用的顏色與文案樣板也不會被動到。</p>
       <p class="hint">所有設定會自動存在這台電腦的瀏覽器裡，下個月打開直接沿用。</p>
     </fieldset>
 
@@ -3105,10 +3106,23 @@ function init() {
     monthEvents().forEach(ev => { delete EV_OVERRIDES[ev.id]; });
     saveEvents(); renderAll();
   });
-  document.getElementById('btnResetAll').addEventListener('click', () => {
-    if (!confirm('所有版面設定都會恢復預設（逐團微調與圖片會保留），確定嗎？')) return;
-    S = effectiveDefaults();
-    saveSettings(); syncControls(); renderPoster();
+  // 恢復預設＝只恢復「目前正在調的這個模式」的版面（2026-09-06 依雪莉要求改：
+  // 每張圖單獨調整，按鈕就只該影響正在調的那張）。其他兩個模式、
+  // 三模式共用的顏色與文案樣板一律不動。結單提醒的樣式/底色/標題等
+  // 專屬欄位算它自己的版面，一起回預設。
+  document.getElementById('btnResetMode').addEventListener('click', () => {
+    const modeName = S.mode === 'calendar' ? '每月行事曆' : S.mode === 'list' ? '開團列表' : '結單提醒';
+    if (!confirm(`「${modeName}」的版面會恢復預設（其他版面、顏色、文案都不動；逐團微調與圖片保留），確定嗎？`)) return;
+    const base = effectiveDefaults();
+    const src = (base.modes && base.modes[S.mode]) || DEFAULTS.modes[S.mode] || pickModeSettings(base);
+    PER_MODE_KEYS.forEach(k => { S[k] = src[k]; });
+    if (!S.modes) S.modes = {};
+    S.modes[S.mode] = Object.assign({}, src);
+    if (S.mode === 'reminder') {
+      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remgToday', 'remgOpen']
+        .forEach(k => { S[k] = base[k]; });
+    }
+    saveSettings(); syncControls(); renderAll();
   });
 
   // 本頁通常是後台 window.open 開的新分頁：能關就直接關回原分頁；
