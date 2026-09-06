@@ -315,14 +315,14 @@
     background: var(--ix-card-gray-bg);
     color: var(--ix-card-gray-text);
   }
-  /* 品牌小圖：去背圖直接貼在卡片左側、垂直置中（不加圓形底）；
-     沒有圖的團不出小圖，卡片長相照舊。文字仍然置中，所以左右各留一樣的空間，才不會歪一邊。 */
-  .gs-card.has-thumb { padding-left: 66px; padding-right: 66px; }
+  /* 品牌小圖：去背圖直接貼在卡片左側（不加圓形底），高度吃滿整張卡（上下各留 6px），
+     格子夠寬讓橫式 logo 也放得大；沒有圖的團不出小圖，卡片長相照舊。
+     文字仍然置中，所以左右各留一樣的空間，才不會歪一邊。 */
+  .gs-card.has-thumb { padding-left: 104px; padding-right: 104px; }
   .gs-thumb {
     position: absolute;
-    left: 10px; top: 50%;
-    transform: translateY(-50%);
-    width: 48px; height: 48px;
+    left: 12px; top: 6px; bottom: 6px;
+    width: 84px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -330,8 +330,8 @@
   .gs-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
   .gs-card.gs-card-gray .gs-thumb img { filter: grayscale(1); opacity: 0.75; }
   @media (max-width: 480px) {
-    .gs-card.has-thumb { padding-left: 56px; padding-right: 56px; }
-    .gs-thumb { width: 40px; height: 40px; left: 8px; }
+    .gs-card.has-thumb { padding-left: 76px; padding-right: 76px; }
+    .gs-thumb { width: 60px; left: 8px; top: 5px; bottom: 5px; }
   }
   .gs-card-name {
     font-size: 19px;
