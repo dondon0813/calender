@@ -7,6 +7,14 @@
 <title>行事曆圖產生器｜雪莉與朵栗</title>
 <link rel="stylesheet" href="shared.css">
 <style>
+/* 關掉手機瀏覽器的「文字自動放大」（font boosting）：圖是固定 1080px 再縮放預覽，
+   手機會自作聰明把縮小後的字放大，同一句在手機就多斷一行、換行位置跟電腦不同
+   （2026-09-06 雪莉回報：介紹兩行在手機變三行）。出圖 iframe 也會複製這段樣式，
+   所以手機下載的 PNG 換行也會跟電腦一致。 */
+html, body, .poster, .poster * {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 /* ============================================================
    calendar-poster.html — 行事曆貼文圖產生器（後台工具，不對外）
 
