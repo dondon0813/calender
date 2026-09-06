@@ -415,7 +415,8 @@ async function loadData() {
       const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
       const iconFb = c[19] ? String(c[19].v || '').trim() : '';
       const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
-      // X=折扣碼(idx23)　Y=折扣說明(idx24)
+      // W=去背小圖(idx22)　X=折扣碼(idx23)　Y=折扣說明(idx24)
+      const thumb = c[22] ? String(c[22].v || '').trim() : '';
       const discountCode = c[23] ? String(c[23].v || '').trim() : '';
       const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
       const start = parseDateStr(startRaw);
@@ -431,7 +432,7 @@ async function loadData() {
       events.push({
         id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird,
         color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published,
-        iconIg, iconTiktok, iconFb, iconEmail, discountCode, discountDesc
+        iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc
       });
     });
 
@@ -1965,6 +1966,7 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
   document.getElementById('evDiscountCodeInput').value = ev ? (ev.discountCode || '') : '';
   document.getElementById('evDiscountDescInput').value = ev ? (ev.discountDesc || '') : '';
+  evThumbSet(ev ? (ev.thumb || '') : '');
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
   document.getElementById('evBrandMatchInfo').style.display = 'none';
   document.getElementById('evBrandMatchInfo').innerHTML = '';
@@ -2001,6 +2003,117 @@ function closeEventEditModal() {
   document.getElementById('eventEditModal').classList.remove('show');
   eventEditCtx = null;
 }
+
+/* ===== 去背小圖選擇器（2026-09-06）=====
+   行事曆 W 欄（thumb_url）：這一檔要用哪張去背小圖。沒填＝前台自動用品牌庫的圖；
+   一個團有多張品項圖（例：UBMOM 有水壺 ubmom.webp 和雨衣 raincoat1.webp）就在這裡選。
+   圖源三個，合併去重：①品牌庫去背小圖（scope=blocks 的 brandThumbs）
+   ②圖片庫 Storage 的 brands/ 與 events/ 資料夾（沒有圖片庫權限就略過）
+   ③行事曆各檔已經用過的網址（涵蓋還在舊 repo、品牌庫沒收錄的變體圖）。 */
+let evThumbCurrent = '';
+let evThumbSources = null;   // 快取：[{url, label}]
+
+function evThumbSet(url) {
+  evThumbCurrent = String(url || '').trim();
+  const img = document.getElementById('evThumbImg');
+  const ph = document.getElementById('evThumbPh');
+  if (evThumbCurrent) {
+    img.src = evThumbCurrent;
+    img.style.display = '';
+    ph.style.display = 'none';
+  } else {
+    img.removeAttribute('src');
+    img.style.display = 'none';
+    ph.style.display = '';
+  }
+}
+
+async function evThumbCollectSources() {
+  if (evThumbSources) return evThumbSources;
+  const map = new Map();   // 去重 key＝去掉 query 的網址
+  const put = (url, label) => {
+    const u = String(url || '').trim();
+    if (!/^https?:\/\//i.test(u)) return;
+    const k = u.split('?')[0];
+    if (!map.has(k)) map.set(k, { url: u, label: label || u.split('/').pop().split('?')[0] });
+  };
+  // ① 品牌庫（免登入輕量端點）
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=blocks&t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    (data.brandThumbs || []).forEach(b => put(b['去背小圖'], b['品牌名稱']));
+  } catch (e) { /* 抓不到就略過 */ }
+  // ② 圖片庫 Storage brands/ 與 events/（沒有 imageLibrary 權限會回錯誤，略過）
+  for (const folder of ['brands', 'events']) {
+    try {
+      const out = await postTask({ type: 'image-list', path: folder });
+      if (out && out.success) (out.files || []).forEach(f => put(f.download_url, f.name));
+    } catch (e) { /* 略過 */ }
+  }
+  // ③ 行事曆已經用過的（涵蓋品牌庫沒收錄的變體圖，例如 raincoat1）
+  allEvents.forEach(ev => { if (ev.thumb) put(ev.thumb, ev.thumb.split('/').pop().split('?')[0]); });
+  evThumbSources = Array.from(map.values())
+    .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hant'));
+  return evThumbSources;
+}
+
+function evThumbRenderGrid(list, filter) {
+  const grid = document.getElementById('evThumbGrid');
+  grid.innerHTML = '';
+  const q = String(filter || '').trim().toLowerCase();
+  const cur = evThumbCurrent.split('?')[0];
+  let shown = 0;
+  list.forEach(item => {
+    if (q && item.label.toLowerCase().indexOf(q) === -1 &&
+        item.url.toLowerCase().indexOf(q) === -1) return;
+    shown++;
+    const cell = document.createElement('div');
+    cell.className = 'evtp-item' + (item.url.split('?')[0] === cur ? ' on' : '');
+    const box = document.createElement('div');
+    box.className = 'evtp-thumb';
+    const img = document.createElement('img');
+    img.src = item.url;
+    img.loading = 'lazy';
+    img.addEventListener('error', () => { cell.remove(); });
+    box.appendChild(img);
+    cell.appendChild(box);
+    const name = document.createElement('div');
+    name.className = 'evtp-name';
+    name.textContent = item.label;
+    cell.appendChild(name);
+    cell.addEventListener('click', () => {
+      evThumbSet(item.url);
+      closeEvThumbPicker();
+    });
+    grid.appendChild(cell);
+  });
+  if (!shown) grid.innerHTML = '<div class="task-empty">找不到符合的圖</div>';
+}
+
+async function openEvThumbPicker() {
+  document.getElementById('evThumbPickerModal').classList.add('show');
+  const grid = document.getElementById('evThumbGrid');
+  grid.innerHTML = '<div class="task-empty">載入圖庫中…</div>';
+  const search = document.getElementById('evThumbSearch');
+  search.value = '';
+  const list = await evThumbCollectSources();
+  evThumbRenderGrid(list, '');
+  search.oninput = () => evThumbRenderGrid(list, search.value);
+  // 手貼網址的備用欄
+  const urlIn = document.getElementById('evThumbUrlInput');
+  urlIn.value = '';
+  document.getElementById('evThumbUrlUseBtn').onclick = () => {
+    const u = urlIn.value.trim();
+    if (!u) return;
+    evThumbSet(u);
+    closeEvThumbPicker();
+  };
+}
+function closeEvThumbPicker() {
+  document.getElementById('evThumbPickerModal').classList.remove('show');
+}
+document.getElementById('evThumbPickBtn').addEventListener('click', openEvThumbPicker);
+document.getElementById('evThumbClearBtn').addEventListener('click', () => evThumbSet(''));
 
 document.getElementById('evSaveBtn').addEventListener('click', async () => {
   if (!eventEditCtx) return;
@@ -2042,11 +2155,12 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const endTime = allDay ? '' : getEvTimeValue('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput');
   const discountCode = document.getElementById('evDiscountCodeInput').value.trim();
   const discountDesc = document.getElementById('evDiscountDescInput').value.trim();
+  const thumbUrl = evThumbCurrent;
 
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
     allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime,
-    discountCode, discountDesc
+    thumbUrl, discountCode, discountDesc
   };
 
   const btn = document.getElementById('evSaveBtn');

@@ -626,7 +626,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   width: 100%;
 }
 .remg-item {
-  width: 6.2em;
+  width: var(--p-rem-itemw);   /* 「名稱寬度」滑桿：文字超過這個寬度才換行 */
   display: flex; flex-direction: column; align-items: center;
   gap: 0.12em;
 }
@@ -644,14 +644,14 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   max-width: 100%;
   word-break: keep-all; overflow-wrap: break-word;
 }
-.remg-name-line { display: block; }   /* 一行一個 div：｜斷行＋英文/中文邊界各自成行 */
-/* 簡短介紹：白色底色框，字色用「團字色」色票（跟卡片文字同一格可調） */
+.remg-name-line { display: block; }   /* 一行一個 div：｜斷行；超過「名稱寬度」才自動換行 */
+/* 簡短介紹：白色底色框（直角，雪莉指定不要圓角），字色用「團字色」色票 */
 .remg-note {
   background: rgba(255, 255, 255, 0.93);
   color: var(--p-chip-text);
   font-weight: 700;
   font-size: 0.42em; line-height: 1.35;
-  border-radius: 0.6em;
+  border-radius: 0;
   padding: 0.25em 0.7em;
   margin-top: 0.3em;
   max-width: 100%;
@@ -711,6 +711,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
       <div class="row rem-list-only"><label>副標</label><input type="text" id="tRemSub"></div>
       <div class="row rem-icon-only"><label>底色</label><input type="color" id="cRemBg"></div>
       <div class="row rem-icon-only"><label>左右間距</label><input type="range" id="rRemGapX" min="0" max="200" step="2"><input type="number" class="val" id="vRemGapX"></div>
+      <div class="row rem-icon-only"><label>名稱寬度</label><input type="range" id="rRemItemW" min="120" max="500" step="5"><input type="number" class="val" id="vRemItemW"></div>
       <div class="row rem-icon-only"><label>標題（上）</label><input type="text" id="tRemgToday"></div>
       <div class="row rem-icon-only"><label>標題（下）</label><input type="text" id="tRemgOpen"></div>
       <div class="rem-icon-only">
@@ -1014,6 +1015,7 @@ const DEFAULTS = {
   remSub: '要跟要快，晚了就沒有囉！',
   remBg: '#F2707E',              // 圖案式的實色底
   remGapX: 24,                   // 圖案式：兩排之間的左右間距（上下間距走「格子間距」）
+  remItemW: 260,                 // 圖案式：每團文字框寬度（px），名稱超過這個寬度才換行
   remgToday: '今日結單',         // 圖案式上區標題（今天結單的團）
   remgOpen: '現正開團中'         // 圖案式下區標題（其餘開團中的團）
 };
@@ -1405,6 +1407,7 @@ function renderPoster() {
   poster.classList.toggle('rem-solid', S.mode === 'reminder' && S.remStyle === 'icon');
   poster.style.setProperty('--p-rem-bg', S.remBg || '#F2707E');
   poster.style.setProperty('--p-rem-gapx', (typeof S.remGapX === 'number' ? S.remGapX : 24) + 'px');
+  poster.style.setProperty('--p-rem-itemw', (typeof S.remItemW === 'number' ? S.remItemW : 260) + 'px');
 
   poster.innerHTML = '';
 
@@ -1870,21 +1873,11 @@ function buildReminder() {
   return S.remStyle === 'icon' ? buildReminderIcons() : buildReminderList();
 }
 
-/* 圖案式的團名斷行：跟其他地方同一套「｜＝指定斷行點」，另外英文段跟中文段
-   各自成行（例：「ScienceBaby 磁力片」→ ScienceBaby／磁力片 兩行），名字才不會拖太長。
-   同一行裡連續的同語系詞維持在一起（「日/韓 中秋禮盒」不會被拆）。 */
+/* 圖案式的團名斷行（2026-09-06 改版）：跟其他地方同一套「｜＝指定斷行點」；
+   其餘交給「名稱寬度」滑桿——文字超過框寬才自動換行（在空白處斷、中文詞不拆字），
+   不再強制中英文各自成行。 */
 function remNameLines(s) {
-  const out = [];
-  nameLines(s).forEach(line => {
-    let cur = '', curCjk = null;
-    line.split(/\s+/).filter(Boolean).forEach(tok => {
-      const isCjk = /[㐀-鿿豈-﫿]/.test(tok);
-      if (cur && isCjk === curCjk) cur += ' ' + tok;
-      else { if (cur) out.push(cur); cur = tok; curCjk = isCjk; }
-    });
-    if (cur) out.push(cur);
-  });
-  return out;
+  return nameLines(s);
 }
 
 /* 圖案式：實色底＋白粗體兩區標題——上「今日結單」（今天結單的團）、
@@ -2896,7 +2889,8 @@ function syncControls() {
    'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop',
    'rDayTop|dayTop|vDayTop', 'rDaySize|daySize|vDaySize',
    'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH',
-   'rTextShift|textShift|vTextShift', 'rFs|fs|vFs', 'rRemGapX|remGapX|vRemGapX'].forEach(spec => {
+   'rTextShift|textShift|vTextShift', 'rFs|fs|vFs',
+   'rRemGapX|remGapX|vRemGapX', 'rRemItemW|remItemW|vRemItemW'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -2967,6 +2961,7 @@ function init() {
   bindText('tRemSub', 'remSub');
   bindColor('cRemBg', 'remBg');
   bindRange('rRemGapX', 'remGapX', 'vRemGapX');
+  bindRange('rRemItemW', 'remItemW', 'vRemItemW');
   bindText('tRemgToday', 'remgToday');
   bindText('tRemgOpen', 'remgOpen');
 
@@ -3130,7 +3125,7 @@ function init() {
     if (!S.modes) S.modes = {};
     S.modes[S.mode] = Object.assign({}, src);
     if (S.mode === 'reminder') {
-      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remgToday', 'remgOpen']
+      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remgToday', 'remgOpen']
         .forEach(k => { S[k] = base[k]; });
     }
     saveSettings(); syncControls(); renderAll();
