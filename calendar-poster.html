@@ -3196,6 +3196,17 @@ function init() {
   syncControls();
   applyPane();
   renderUserDefState();
+
+  /* 字型是非同步載入的：第一次畫圖時字型還沒到，autoFit 就用「替代字型」量寬度，
+     縮出來的字級與換行位置會跟字型已快取的裝置（電腦）不一樣，而且量完就定案。
+     手機第一次開就是這個情況（2026-09-06 雪莉回報：同一句在手機斷行位置不同）。
+     修法：任何一批字型載完就重畫一次——重畫時用正式字型重量，兩邊結果就一致。
+     （切到圖案式才會觸發 Tsuhsianti 下載，所以用 loadingdone 事件而不是只等 ready 一次） */
+  if (document.fonts) {
+    document.fonts.ready.then(() => renderPoster());
+    document.fonts.addEventListener('loadingdone', () => renderPoster());
+  }
+
   loadData();
 }
 
