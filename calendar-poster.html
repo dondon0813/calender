@@ -896,7 +896,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
         <button class="btn" id="btnCopySettings">複製設定 JSON</button>
       </div>
       <p class="hint">調到滿意就按這個：以後「全部恢復預設」會回到這一版，不是回到我寫死的初始值。<span id="userDefState"></span></p>
-      <p class="hint">「我的預設」只存在這台電腦。要讓<b>每台電腦、清掉瀏覽器之後</b>都是這一版，按「複製設定 JSON」把內容貼給 Claude，寫進程式的初始值就好。</p>
+      <p class="hint">「我的預設」會<b>自動存進系統</b>（要在這個瀏覽器登入過後台 admin.html）——換電腦、清掉瀏覽器，開站都會自動帶回同一份。沒登入就只存這台電腦。</p>
       <div class="btn-row">
         <button class="btn" id="btnResetAll">全部恢復預設</button>
         <button class="btn" id="btnClearDefault">清除我的預設</button>
@@ -2550,22 +2550,83 @@ function saveAssets() {
    之後「全部恢復預設」回到這一版，而不是回到程式裡寫死的初始值。
    （要讓別台電腦也是這一版的話，把設定值給我寫進 DEFAULTS。）*/
 let USER_DEFAULTS = null;
+let USERDEF_SYNC = '';   // 雲端同步狀態的一句話，接在 userDefState 後面顯示
 function effectiveDefaults() {
   return cloneSettings(Object.assign({}, DEFAULTS, USER_DEFAULTS || {}));
+}
+function getAdminToken() {
+  try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; }
 }
 function saveUserDefaults() {
   USER_DEFAULTS = cloneSettings(S);
   try { localStorage.setItem(LS_USERDEF, JSON.stringify(USER_DEFAULTS)); } catch (e) {}
+  pushUserDefaults();
   renderUserDefState();
 }
 function clearUserDefaults() {
   USER_DEFAULTS = null;
   try { localStorage.removeItem(LS_USERDEF); } catch (e) {}
+  // 雲端那份也一起清（沒登入就只清本機）
+  const token = getAdminToken();
+  if (token) {
+    settingCall({ type: 'setting-set', token, key: USERDEF_KEY, value: '' })
+      .then(out => { USERDEF_SYNC = (out && out.success) ? '（系統那份也清掉了）' : ''; renderUserDefState(); })
+      .catch(() => {});
+  }
   renderUserDefState();
 }
 function renderUserDefState() {
   const el = document.getElementById('userDefState');
-  if (el) el.textContent = USER_DEFAULTS ? '（目前已經有一份你的預設）' : '（目前用的是初始值）';
+  if (el) el.textContent = (USER_DEFAULTS ? '（目前已經有一份你的預設）' : '（目前用的是初始值）') + USERDEF_SYNC;
+}
+
+/* ---------- 「我的預設」雲端同步（2026-09-06）----------
+   存進系統（key_values namespace=appsetting，key=calposter.userdefaults）：
+   任何登入過後台的瀏覽器開站自動帶回，不再只存這台電腦。
+   規則：雲端有＝以雲端為準（蓋掉本機快取）；雲端沒有但本機有＝自動把本機那份搬上去
+  （一次性遷移）；沒登入／後端還沒 db push＝維持本機版並在狀態列說明。 */
+const USERDEF_KEY = 'calposter.userdefaults';
+
+async function settingCall(payload) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+async function pushUserDefaults() {
+  const token = getAdminToken();
+  if (!token) { USERDEF_SYNC = '（沒登入過後台，這份只存在這台電腦）'; renderUserDefState(); return; }
+  USERDEF_SYNC = '（存進系統中…）'; renderUserDefState();
+  try {
+    const out = await settingCall({ type: 'setting-set', token, key: USERDEF_KEY, value: JSON.stringify(USER_DEFAULTS) });
+    if (out && out.success) USERDEF_SYNC = '（已存進系統，別台電腦也會用這份 ✓）';
+    else if (out && out.notReady) USERDEF_SYNC = '（系統同步還沒啟用，先存這台電腦）';
+    else USERDEF_SYNC = '（存系統失敗：' + ((out && out.error) || '未知錯誤') + '，先存這台電腦）';
+  } catch (e) { USERDEF_SYNC = '（存系統失敗（網路），先存這台電腦）'; }
+  renderUserDefState();
+}
+
+async function fetchServerDefaults() {
+  const token = getAdminToken();
+  if (!token) return;   // 沒登入：維持本機行為，不吵
+  try {
+    const out = await settingCall({ type: 'setting-get', token, key: USERDEF_KEY });
+    if (!out || !out.success || !out.ready) return;   // 讀不到／還沒 db push：用本機版
+    if (out.value) {
+      try {
+        USER_DEFAULTS = JSON.parse(out.value);
+        try { localStorage.setItem(LS_USERDEF, out.value); } catch (e) {}
+        USERDEF_SYNC = '（已從系統同步）';
+        renderUserDefState();
+      } catch (e) { /* 雲端內容壞掉就不動本機 */ }
+    } else if (USER_DEFAULTS) {
+      // 雲端還沒有、這台有：自動把本機那份搬上去（她今天存的預設不會漏）
+      pushUserDefaults();
+    }
+  } catch (e) { /* 網路失敗：安靜用本機版 */ }
 }
 
 function loadStored() {
@@ -2802,6 +2863,7 @@ function syncControls() {
 
 function init() {
   loadStored();
+  fetchServerDefaults();   // 雲端的「我的預設」：非同步帶回，讀不到就維持本機版
   loadPresets();
   renderPresetList();
 
