@@ -2622,6 +2622,12 @@ async function fetchServerDefaults() {
         USER_DEFAULTS = JSON.parse(out.value);
         try { localStorage.setItem(LS_USERDEF, out.value); } catch (e) {}
         USERDEF_SYNC = '（已從系統同步）';
+        // 新裝置（本機沒有工作中的設定）：直接把雲端預設套到畫面上，
+        // 不用等下次重新整理才生效；已經在調整中的裝置不打擾
+        if (!HAD_STORED_SETTINGS) {
+          S = effectiveDefaults();
+          saveSettings(); syncControls(); renderAll();
+        }
         renderUserDefState();
       } catch (e) { /* 雲端內容壞掉就不動本機 */ }
     } else if (USER_DEFAULTS) {
@@ -2671,10 +2677,15 @@ async function fetchServerPresets() {
   } catch (e) { /* 網路失敗：安靜用本機版 */ }
 }
 
+let HAD_STORED_SETTINGS = false;   // 這台裝置本來就有工作中的設定？（新手機＝false）
 function loadStored() {
   try { USER_DEFAULTS = JSON.parse(localStorage.getItem(LS_USERDEF) || 'null'); } catch (e) { USER_DEFAULTS = null; }
   S = effectiveDefaults();
-  try { Object.assign(S, JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}')); } catch (e) {}
+  try {
+    const raw = localStorage.getItem(LS_SETTINGS);
+    HAD_STORED_SETTINGS = !!raw;
+    Object.assign(S, JSON.parse(raw || '{}'));
+  } catch (e) {}
   try { EV_OVERRIDES = JSON.parse(localStorage.getItem(LS_EVENTS) || '{}') || {}; } catch (e) {}
   migrateOverrides();   // 舊的單一套微調 → 原封不動複製成行事曆／列表兩套
   try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(LS_ASSETS) || '{}')); } catch (e) {}
