@@ -859,6 +859,16 @@ function resolveThumb(ev) {
 function thumbUrl(u) {
   return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
 }
+// 高度統一之下，超寬的圖（prepara 保鮮盒）會顯得特別大：寬高比>1.15 就把高度
+// 除以 √寬高比，視覺面積跟方形圖差不多；仍照比例完整顯示（與產生器同一套規則）
+function fitThumbByArea(img) {
+  const apply = () => {
+    const ar = img.naturalWidth / Math.max(1, img.naturalHeight);
+    if (ar > 1.15) img.style.height = (100 / Math.sqrt(ar)).toFixed(1) + '%';
+  };
+  if (img.complete && img.naturalWidth) apply();
+  else img.addEventListener('load', apply);
+}
 
 function buildCustomBlockEl(block) {
   const a = document.createElement('a');
@@ -1428,6 +1438,7 @@ function renderGroupList() {
       img.alt = '';
       img.loading = 'lazy';
       img.addEventListener('error', () => { tb.remove(); card.classList.remove('has-thumb'); });
+      fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
       tb.appendChild(img);
       card.appendChild(tb);
     }

@@ -1160,6 +1160,18 @@ function resolveThumb(ev) {
   });
   return (best && !tied) ? BRAND_THUMBS[best] : '';
 }
+/* 高度統一的小圖遇到「超寬」的圖（例：prepara 保鮮盒）會顯得特別大——
+   同高之下寬圖面積大很多。修正：寬高比超過 1.15 的圖把高度除以 √寬高比，
+   視覺面積就跟方形圖差不多；仍照比例完整顯示、不裁切（2026-09-07 雪莉回報）。 */
+function fitThumbByArea(img) {
+  const apply = () => {
+    const ar = img.naturalWidth / Math.max(1, img.naturalHeight);
+    if (ar > 1.15) img.style.height = (100 / Math.sqrt(ar)).toFixed(1) + '%';
+  };
+  if (img.complete && img.naturalWidth) apply();
+  else img.addEventListener('load', apply);
+}
+
 /* 品牌庫裡不少小圖還是舊的 dondon0813.github.io 網址，那個網域現在會 301 轉到
    sheridondon.com.tw，而 301 回應本身沒有 CORS 標頭——一般 <img> 跟著轉沒事，
    但下載 PNG 要 crossorigin 載圖，會直接被擋、圖變空白。改寫成正式網域就沒有轉址。 */
@@ -1985,6 +1997,7 @@ function buildReminderIcons() {
       img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=1';
       img.alt = '';
       img.addEventListener('error', fallback);
+      fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
       tb.appendChild(img);
     } else fallback();
     return tb;
@@ -2109,6 +2122,7 @@ function buildReminderList() {
             fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
             tb.appendChild(fb);
           });
+          fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
           tb.appendChild(img);
         } else {
           const fb = document.createElement('span');
