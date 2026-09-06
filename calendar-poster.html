@@ -625,7 +625,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   width: 100%;
 }
 .remg-item {
-  width: 5.4em;
+  width: 6.2em;
   display: flex; flex-direction: column; align-items: center;
   gap: 0.12em;
 }
@@ -640,9 +640,30 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   font-weight: 800;
   font-size: 0.58em; line-height: 1.25;
   color: #fff;
+  max-width: 100%;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+.remg-name-line { display: block; }   /* 一行一個 div：｜斷行＋英文/中文邊界各自成行 */
+/* 簡短介紹：白色底色框，字色用「團字色」色票（跟卡片文字同一格可調） */
+.remg-note {
+  background: rgba(255, 255, 255, 0.93);
+  color: var(--p-chip-text);
+  font-weight: 700;
+  font-size: 0.42em; line-height: 1.35;
+  border-radius: 0.6em;
+  padding: 0.25em 0.7em;
+  margin-top: 0.3em;
+  max-width: 100%;
+  box-sizing: border-box;
   word-break: keep-all; overflow-wrap: break-word;
 }
 .remg-empty { font-size: 0.75em; font-weight: 800; color: #fff; }
+
+/* 面板：各團簡短介紹輸入列 */
+.remnote-item { margin-bottom: 8px; }
+.remnote-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.remnote-item input { width: 100%; box-sizing: border-box; }
+.remnote-state { display: block; font-size: 11px; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -690,6 +711,10 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
       <div class="row rem-icon-only"><label>底色</label><input type="color" id="cRemBg"></div>
       <div class="row rem-icon-only"><label>標題（上）</label><input type="text" id="tRemgToday"></div>
       <div class="row rem-icon-only"><label>標題（下）</label><input type="text" id="tRemgOpen"></div>
+      <div class="rem-icon-only">
+        <p class="hint"><b>各團簡短介紹</b>（顯示在圖上團名下方的底色框，跟貼文 👉🏻 那句同一個庫）：留空＝用系統介紹庫的那句；還沒有介紹的團填一句，<b>離開輸入格就自動存進系統</b>，以後每次都自動帶出來（要先在這個瀏覽器登入過後台 admin.html）。</p>
+        <div id="remNoteList"></div>
+      </div>
       <p class="hint">兩種樣式都自動列出<b>今天還在開團</b>的團（延長過的看延長後日期）。<b>列表式</b>＝一團一條，帶小圖＋結單日（今天「今晚結單」、明天「明天結單」紅字）。<b>圖案式</b>＝整張實色底，白色粗體標題分兩區——上面「今日結單」（今天結單的團）、下面「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期；哪一區沒有團就自動不顯示。標題留空＝不顯示那行。小圖跟前台「現正開團中」同一套：行事曆該檔的小圖欄優先，其次品牌庫去背小圖，都沒有就用字首。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
     </fieldset>
 
@@ -1840,6 +1865,23 @@ function buildReminder() {
   return S.remStyle === 'icon' ? buildReminderIcons() : buildReminderList();
 }
 
+/* 圖案式的團名斷行：跟其他地方同一套「｜＝指定斷行點」，另外英文段跟中文段
+   各自成行（例：「ScienceBaby 磁力片」→ ScienceBaby／磁力片 兩行），名字才不會拖太長。
+   同一行裡連續的同語系詞維持在一起（「日/韓 中秋禮盒」不會被拆）。 */
+function remNameLines(s) {
+  const out = [];
+  nameLines(s).forEach(line => {
+    let cur = '', curCjk = null;
+    line.split(/\s+/).filter(Boolean).forEach(tok => {
+      const isCjk = /[㐀-鿿豈-﫿]/.test(tok);
+      if (cur && isCjk === curCjk) cur += ' ' + tok;
+      else { if (cur) out.push(cur); cur = tok; curCjk = isCjk; }
+    });
+    if (cur) out.push(cur);
+  });
+  return out;
+}
+
 /* 圖案式：實色底＋白粗體兩區標題——上「今日結單」（今天結單的團）、
    下「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期。 */
 function buildReminderIcons() {
@@ -1893,8 +1935,22 @@ function buildReminderIcons() {
       item.appendChild(thumbs);
       const name = document.createElement('div');
       name.className = 'remg-name';
-      name.textContent = groupNames(group, 'list').join('＋');
+      group.forEach(ev => {
+        remNameLines(displayName(ev, 'list')).forEach(line => {
+          const d = document.createElement('div');
+          d.className = 'remg-name-line';
+          d.textContent = line;
+          name.appendChild(d);
+        });
+      });
       item.appendChild(name);
+      // 簡短介紹（貼文 👉🏻 同一個庫；本月手動覆寫優先）：有才畫底色框，沒有就空著
+      groupNotes(group).forEach(note => {
+        const p = document.createElement('div');
+        p.className = 'remg-note';
+        p.textContent = note;
+        item.appendChild(p);
+      });
       grid.appendChild(item);
     });
     wrap.appendChild(grid);
@@ -2618,8 +2674,90 @@ async function exportPng() {
 
 function renderAll() {
   renderEvList();
+  renderRemNotes();
   renderPoster();
   renderCaption();
+}
+
+/* ============================================================
+   結單提醒（圖案式）：各團簡短介紹的編輯清單
+   跟貼文 👉🏻 那句同一個庫（品牌備註）：輸入存進本月覆寫（EV_OVERRIDES.note）
+   即時上圖；離開輸入格時，跟庫不一樣的那句自動 brand-note-set 存進系統，
+   下次（下個月、別台電腦）就會自動帶出來。
+   ============================================================ */
+
+function renderRemNotes() {
+  const box = document.getElementById('remNoteList');
+  if (!box) return;
+  box.innerHTML = '';
+  const groups = reminderGroups();
+  if (!groups.length) {
+    box.innerHTML = '<p class="hint">現在沒有開團中的團。</p>';
+    return;
+  }
+  groups.forEach(group => group.forEach(ev => {
+    const rec = ovOf(ev.id);
+    const item = document.createElement('div');
+    item.className = 'remnote-item';
+
+    const label = document.createElement('div');
+    label.className = 'remnote-name';
+    label.textContent = plainName(displayName(ev, 'list'));
+    item.appendChild(label);
+
+    const lib = brandNoteFor(plainName(displayName(ev, 'list'))) || brandNoteFor(ev.title);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = lib ? `${lib}（介紹庫，留空就用這句）` : '還沒有介紹——填一句，離開這格就自動存進系統';
+    input.value = rec.note || '';
+
+    const state = document.createElement('span');
+    state.className = 'remnote-state hint';
+
+    input.addEventListener('input', () => {
+      rec.note = input.value; saveEvents(); renderPoster(); renderCaption();
+    });
+    // change＝離開輸入格/按 Enter 才觸發，不會打字打到一半就狂打 API
+    input.addEventListener('change', () => {
+      autoSaveRemNote(ev, input.value, t => { state.textContent = t; });
+    });
+
+    item.appendChild(input);
+    item.appendChild(state);
+    box.appendChild(item);
+  }));
+}
+
+/* 自動把新介紹存進系統品牌備註庫（brand-note-set，跟「☁️ 同步新備註到系統」同一支）。
+   跟庫一樣＝不用存；沒登入後台＝只存本機並提示。 */
+async function autoSaveRemNote(ev, note, say) {
+  note = String(note || '').trim();
+  if (!note) { say(''); return; }
+  const name = plainName(displayName(ev, 'list'));
+  if (note === brandNoteFor(name) || note === brandNoteFor(ev.title)) { say(''); return; }
+  let token = '';
+  try { token = localStorage.getItem('admin_token') || ''; } catch (e) {}
+  if (!token) { say('（沒登入過後台，這句只存在這台電腦、只算這個月）'); return; }
+  say('（存進系統中…）');
+  const brand = nameLines(displayName(ev, 'list'))[0] || plainName(ev.title);
+  const key = normKey(brand.split(/[\s　/／、]/)[0] || brand);
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type: 'brand-note-set', token, brand, keys: [key], note })
+    });
+    const out = await res.json();
+    if (out && out.success) {
+      say(out.action === 'updated' ? '（已更新系統介紹庫 ✓）' : '（已存進系統介紹庫 ✓，以後自動帶出）');
+      await loadBrandNotes();   // 讓 placeholder／貼文立刻用新庫
+      renderCaption();
+    } else {
+      say('（存系統失敗：' + ((out && out.error) || '未知錯誤') + '——這句仍存在本機）');
+    }
+  } catch (e) {
+    say('（存系統失敗（網路）——這句仍存在本機）');
+  }
 }
 
 function syncControls() {
