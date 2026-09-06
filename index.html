@@ -315,22 +315,19 @@
     background: var(--ix-card-gray-bg);
     color: var(--ix-card-gray-text);
   }
-  /* 品牌小圖：白色圓圈貼在卡片左側、垂直置中；沒有圖的團不出圓圈，卡片長相照舊。
-     文字仍然置中，所以左右各留一樣的空間給圓圈，才不會歪一邊。 */
+  /* 品牌小圖：去背圖直接貼在卡片左側、垂直置中（不加圓形底）；
+     沒有圖的團不出小圖，卡片長相照舊。文字仍然置中，所以左右各留一樣的空間，才不會歪一邊。 */
   .gs-card.has-thumb { padding-left: 66px; padding-right: 66px; }
   .gs-thumb {
     position: absolute;
     left: 10px; top: 50%;
     transform: translateY(-50%);
     width: 48px; height: 48px;
-    border-radius: 50%;
-    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
   }
-  .gs-thumb img { max-width: 86%; max-height: 86%; object-fit: contain; display: block; }
+  .gs-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
   .gs-card.gs-card-gray .gs-thumb img { filter: grayscale(1); opacity: 0.75; }
   @media (max-width: 480px) {
     .gs-card.has-thumb { padding-left: 56px; padding-right: 56px; }
