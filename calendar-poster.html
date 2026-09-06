@@ -509,6 +509,60 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* 列表模式不分冷凍/冷藏（使用者要求），所以沒有 .list-row.hi；藍底只出現在行事曆的格子 */
+
+/* ---------- 結單提醒模式 ----------
+   面板：.rem-only 只在結單提醒模式出現、.rem-hide 在結單提醒模式藏起來
+   （都只作用在「產生圖片」這一側；產生貼文照舊，跟模式無關）。 */
+.rem-only { display: none; }
+body.pane-image.mode-reminder .rem-only { display: block; }
+body.pane-image.mode-reminder .rem-hide { display: none !important; }
+
+/* 圖：整塊置中在內容區（內縮四個滑桿照常有效，對 Canva 底圖用）。
+   字級以 .rem-wrap 的 font-size 為基準（em），autoFit 塞不下就整組縮小。 */
+.rem-wrap {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  gap: 0.35em;
+  overflow: hidden;
+}
+.rem-title {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 1.7em; line-height: 1.15;
+  color: var(--p-title-color);
+}
+.rem-date {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: 1.1em; line-height: 1.2;
+  color: var(--p-month-color);
+}
+.rem-sub { font-size: 0.62em; color: var(--p-date-color); }
+.rem-list {
+  display: flex; flex-direction: column;
+  align-self: stretch;
+  gap: var(--p-gap);
+  margin-top: 0.4em;
+}
+.rem-card {
+  background: var(--p-chip-bg);
+  border: 3px solid var(--p-chip-border);
+  border-radius: var(--p-radius);
+  color: var(--p-chip-text);
+  font-weight: 700;
+  line-height: var(--p-line-h);
+  padding: 0.45em 0.5em;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.18em;
+}
+.rem-card .rem-name { font-size: 1em; }
+.rem-card .rem-badge {
+  font-size: 0.58em;
+  background: var(--p-badge-bg); color: #fff;
+  border-radius: 999px;
+  padding: 0.1em 0.9em;
+}
+.rem-empty { font-size: 0.75em; color: var(--p-date-color); }
 </style>
 </head>
 <body>
@@ -532,7 +586,32 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   <!-- ================= 控制面板 ================= -->
   <aside class="panel">
 
-    <fieldset>
+    <fieldset data-pane="image">
+      <legend>模式</legend>
+      <div class="seg" id="segMode">
+        <button data-v="calendar" class="on">📅 每月行事曆</button>
+        <button data-v="list">📋 開團列表</button>
+        <button data-v="reminder">⏰ 結單提醒</button>
+      </div>
+      <p class="hint">「結單提醒」＝挑一個結單日，把那天結單的團做成 9:16 限動圖。</p>
+    </fieldset>
+
+    <fieldset data-pane="image" class="rem-only">
+      <legend>結單提醒</legend>
+      <div class="row">
+        <label>結單日</label>
+        <input type="date" id="remDate" style="flex:1;font-size:14px;">
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnRemToday">今天</button>
+        <button class="btn" id="btnRemTomorrow">明天</button>
+      </div>
+      <div class="row"><label>標題</label><input type="text" id="tRemTitle"></div>
+      <div class="row"><label>副標</label><input type="text" id="tRemSub"></div>
+      <p class="hint">會自動列出「結單日」當天結單的團（延長過的看延長後的日期）。標題或副標留空＝不顯示那一行。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
+    </fieldset>
+
+    <fieldset class="rem-hide">
       <legend>月份</legend>
       <div class="row">
         <label>月份</label>
@@ -559,28 +638,21 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       </div>
       <p class="hint">只影響畫面上的預覽大小，下載的圖一律是原尺寸（4:5＝1080×1350、9:16＝1080×1920）。</p>
       <div class="row">
-        <label>模式</label>
-        <div class="seg" id="segMode">
-          <button data-v="calendar" class="on">行事曆</button>
-          <button data-v="list">列表</button>
-        </div>
-      </div>
-      <div class="row">
         <label>尺寸</label>
         <div class="seg" id="segSize">
           <button data-v="4:5" class="on">4:5 貼文</button>
           <button data-v="9:16">9:16 限動</button>
         </div>
       </div>
-      <div class="row">
+      <div class="row rem-hide">
         <label>欄位</label>
         <div class="seg" id="segCols">
           <button data-v="5" class="on">週一～五</button>
           <button data-v="7">整週七天</button>
         </div>
       </div>
-      <p class="hint">「週一～五」是你原本 Canva 的版型。週末開團的團會自動移到前一個週五，並列在下面提醒你。</p>
-      <p class="hint"><b>行事曆與列表的版面各記各的</b>：尺寸、內容內縮、字級、間距、圓角、日期數字、標題大小與位置，兩個模式分開儲存，切換時各自回到自己那一套。顏色、標題文字、文案樣板則是共用。</p>
+      <p class="hint rem-hide">「週一～五」是你原本 Canva 的版型。週末開團的團會自動移到前一個週五，並列在下面提醒你。</p>
+      <p class="hint"><b>三種模式的版面各記各的</b>：尺寸、內容內縮、字級、間距、圓角、日期數字、標題大小與位置，每個模式分開儲存，切換時各自回到自己那一套。顏色、標題文字、文案樣板則是共用。</p>
       <div id="moveWarn"></div>
     </fieldset>
 
@@ -598,16 +670,16 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>內容 下</label><input type="range" id="rInsetB" min="0" max="600" step="2"><input type="number" class="val" id="vInsetB"></div>
       <div class="row"><label>內容 左</label><input type="range" id="rInsetL" min="0" max="400" step="2"><input type="number" class="val" id="vInsetL"></div>
       <div class="row"><label>內容 右</label><input type="range" id="rInsetR" min="0" max="400" step="2"><input type="number" class="val" id="vInsetR"></div>
-      <div class="row">
+      <div class="row rem-hide">
         <label>月份數字</label>
         <div class="seg" id="segMonthOv">
           <button data-v="off" class="on">不顯示</button>
           <button data-v="on">疊在底圖上</button>
         </div>
       </div>
-      <div class="row"><label>數字 X</label><input type="range" id="rMoX" min="0" max="1000" step="2"><input type="number" class="val" id="vMoX"></div>
-      <div class="row"><label>數字 Y</label><input type="range" id="rMoY" min="0" max="1800" step="2"><input type="number" class="val" id="vMoY"></div>
-      <div class="row"><label>數字大小</label><input type="range" id="rMoS" min="30" max="200" step="2"><input type="number" class="val" id="vMoS"></div>
+      <div class="row rem-hide"><label>數字 X</label><input type="range" id="rMoX" min="0" max="1000" step="2"><input type="number" class="val" id="vMoX"></div>
+      <div class="row rem-hide"><label>數字 Y</label><input type="range" id="rMoY" min="0" max="1800" step="2"><input type="number" class="val" id="vMoY"></div>
+      <div class="row rem-hide"><label>數字大小</label><input type="range" id="rMoS" min="30" max="200" step="2"><input type="number" class="val" id="vMoS"></div>
     </fieldset>
 
     <fieldset data-pane="image">
@@ -615,13 +687,13 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>字級縮放</label><input type="range" id="rFs" min="0.7" max="1.4" step="0.02"><input type="number" class="val" id="vFs"></div>
       <div class="row"><label>格子間距</label><input type="range" id="rGap" min="0" max="30" step="1"><input type="number" class="val" id="vGap"></div>
       <div class="row"><label>圓角</label><input type="range" id="rRadius" min="0" max="40" step="1"><input type="number" class="val" id="vRadius"></div>
-      <div class="row"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><input type="number" class="val" id="vDayTop"></div>
-      <div class="row"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><input type="number" class="val" id="vDaySize"></div>
-      <div class="row"><label>徽章間距</label><input type="range" id="rBadgeGap" min="0" max="40" step="1"><input type="number" class="val" id="vBadgeGap"></div>
+      <div class="row rem-hide"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><input type="number" class="val" id="vDayTop"></div>
+      <div class="row rem-hide"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><input type="number" class="val" id="vDaySize"></div>
+      <div class="row rem-hide"><label>徽章間距</label><input type="range" id="rBadgeGap" min="0" max="40" step="1"><input type="number" class="val" id="vBadgeGap"></div>
       <div class="row"><label>文字行距</label><input type="range" id="rLineH" min="0.9" max="2.2" step="0.02"><input type="number" class="val" id="vLineH"></div>
-      <div class="row"><label>文字上下</label><input type="range" id="rTextShift" min="-24" max="24" step="1"><input type="number" class="val" id="vTextShift"></div>
-      <p class="hint">「文字上下」是把團名整塊往上／往下挪，不會改變框的大小或位置（負的往上）。</p>
-      <p class="hint">日期數字往上調時，團的框會自動跟著往上補滿，不會留一條空白，也不會被數字壓到。</p>
+      <div class="row rem-hide"><label>文字上下</label><input type="range" id="rTextShift" min="-24" max="24" step="1"><input type="number" class="val" id="vTextShift"></div>
+      <p class="hint rem-hide">「文字上下」是把團名整塊往上／往下挪，不會改變框的大小或位置（負的往上）。</p>
+      <p class="hint rem-hide">日期數字往上調時，團的框會自動跟著往上補滿，不會留一條空白，也不會被數字壓到。</p>
     </fieldset>
 
     <fieldset data-pane="image">
@@ -636,7 +708,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
       <div class="row"><label>月份色</label><input type="color" id="cMonth"><label>標題色</label><input type="color" id="cTitle"></div>
     </fieldset>
 
-    <fieldset data-pane="image">
+    <fieldset data-pane="image" class="rem-hide">
       <legend>標題與頁尾（沒放底圖時才會顯示）</legend>
       <div class="row">
         <label>標題</label>
@@ -788,6 +860,12 @@ const DEFAULTS = {
       fs: 1, gap: 9, radius: 10, headH: 140, headTop: 38,
       dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0,
       titleImg: 'on', monthOverlay: false, moX: 90, moY: 60, moS: 92
+    },
+    reminder: {   // 結單提醒：9:16 限動用（標題畫在內容區裡，不用標題／頁尾）
+      size: '9:16', insetT: 300, insetB: 220, insetL: 90, insetR: 90,
+      fs: 1, gap: 22, radius: 26, headH: 140, headTop: 38,
+      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.1, textShift: 0,
+      titleImg: 'off', monthOverlay: false, moX: 90, moY: 60, moS: 92
     }
   },
   pane: 'image',            // 'image'＝產生圖片｜'text'＝產生貼文
@@ -818,7 +896,12 @@ const DEFAULTS = {
   capListTitle: '📅 {國字月}月團購行事曆',
   capOutro: '🎁 文末留言告訴我：\n這個月最期待哪一團？\n抽一位送神秘小禮物❤️',
   capTags: '#育兒日記 #新手媽媽',
-  capMode: 'full'           // 貼文版本：'full'＝每團帶 👉🏻 小介紹｜'brief'＝只列團名
+  capMode: 'full',          // 貼文版本：'full'＝每團帶 👉🏻 小介紹｜'brief'＝只列團名
+  // 結單提醒模式（三種模式共用外的自己那幾格）：remDate 空字串＝今天；
+  // 過去的日期開站時會自動清掉，不會一直卡在上次選的那天
+  remDate: '',
+  remTitle: '⏰ 結單倒數',
+  remSub: '要跟要快，晚了就沒有囉！'
 };
 
 // 列表模式的號碼圈配色（照 shared.css 的分類色盤循環）
@@ -986,7 +1069,11 @@ const OV_FIELDS = ['name', 'badge', 'hidden', 'mergePrev', 'cold'];
 const EMPTY_OV = {};
 
 function blankOv() { return { name: '', badge: '', hidden: false, mergePrev: false }; }
-function modeKey(mode) { return (mode || S.mode) === 'list' ? 'list' : 'calendar'; }
+// 結單提醒沒有自己的一套逐團微調：它跟貼文一樣一條一條列，直接吃「列表」那套
+function modeKey(mode) {
+  const m = mode || S.mode;
+  return (m === 'list' || m === 'reminder') ? 'list' : 'calendar';
+}
 
 function migrateOverrides() {
   let changed = false;
@@ -1170,9 +1257,10 @@ function renderPoster() {
   deco.className = 'poster-deco';
   poster.appendChild(deco);
 
-  poster.appendChild(buildHead());
+  // 結單提醒的標題直接畫在內容區裡（buildReminder），月曆式的標題／頁尾／月份浮水印都不用
+  if (S.mode !== 'reminder') poster.appendChild(buildHead());
 
-  if (ASSETS.bg && S.monthOverlay) {
+  if (S.mode !== 'reminder' && ASSETS.bg && S.monthOverlay) {
     const mo = document.createElement('div');
     mo.className = 'month-overlay';
     mo.style.left = S.moX + 'px';
@@ -1184,10 +1272,12 @@ function renderPoster() {
 
   const content = document.createElement('div');
   content.className = 'poster-content';
-  content.appendChild(S.mode === 'calendar' ? buildCalendar() : buildList());
+  content.appendChild(S.mode === 'calendar' ? buildCalendar()
+                    : S.mode === 'reminder' ? buildReminder()
+                    : buildList());
   poster.appendChild(content);
 
-  poster.appendChild(buildFoot());
+  if (S.mode !== 'reminder') poster.appendChild(buildFoot());
 
   autoFit();
   fitScaler();
@@ -1246,6 +1336,26 @@ function autoFit() {
       n.style.fontSize = fs + 'px';
     }
   });
+
+  // 結單提醒模式：所有元素都以 .rem-wrap 的字級為基準（em），
+  // 團太多塞不下就整組一起縮，比例不會亂掉。
+  // justify-content:center 的容器溢出時上緣被裁掉、scrollHeight 量不準，
+  // 所以改量「第一個到最後一個子元素的實際範圍」（預覽縮放兩邊同樣被縮，不影響比較）。
+  const remWrap = document.querySelector('#poster .rem-wrap');
+  if (remWrap && remWrap.children.length) {
+    const overflows = () => {
+      const kids = remWrap.children;
+      const top = kids[0].getBoundingClientRect().top;
+      const bottom = kids[kids.length - 1].getBoundingClientRect().bottom;
+      return (bottom - top) > remWrap.getBoundingClientRect().height + 1;
+    };
+    let fs = parseFloat(remWrap.style.fontSize) || 44;
+    let guard = 0;
+    while (guard++ < 60 && fs > 14 && overflows()) {
+      fs -= 1;
+      remWrap.style.fontSize = fs + 'px';
+    }
+  }
 }
 
 /* 月份標題圖：images/calendar/title-MM.webp（去背 webp，12 個月 × 標準／壓扁兩款）。
@@ -1567,6 +1677,107 @@ function buildList() {
   return grid;
 }
 
+/* ---------- 結單提醒模式 ----------
+   跟月份無關：從全部團購裡挑「結單日＝選的那天」的團（displayEnd 已含延長）。
+   團名／不顯示／同框／徽章吃「列表」那套逐團微調（跟貼文同一套）。 */
+
+const CN_WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+
+function todayStart() {
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+}
+// S.remDate 是 'YYYY-MM-DD'（date input 的值）；空字串＝今天
+function remDateObj() {
+  if (S.remDate) {
+    const p = String(S.remDate).split('-').map(Number);
+    if (p.length === 3 && p[0] > 2000) return new Date(p[0], p[1] - 1, p[2]);
+  }
+  return todayStart();
+}
+function remDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function reminderGroups() {
+  const day = remDateObj();
+  const evs = allEvents
+    .filter(ev => sameDay(ev.displayEnd, day) && !ovRead(ev.id, 'list').hidden)
+    .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
+  const groups = [];
+  evs.forEach(ev => {
+    const prev = groups[groups.length - 1];
+    if (ovRead(ev.id, 'list').mergePrev && prev && sameDay(prev[0].start, ev.start)) prev.push(ev);
+    else groups.push([ev]);
+  });
+  return groups;
+}
+
+function buildReminder() {
+  const wrap = document.createElement('div');
+  wrap.className = 'rem-wrap';
+  // 基準字級：所有 rem-* 元素都用 em，autoFit 塞不下時整組一起縮
+  wrap.style.fontSize = Math.round(44 * S.fs) + 'px';
+
+  const day = remDateObj();
+  const today = todayStart();
+  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+  if (String(S.remTitle || '').trim()) {
+    const t = document.createElement('div');
+    t.className = 'rem-title';
+    t.textContent = S.remTitle.trim();
+    wrap.appendChild(t);
+  }
+
+  const dt = document.createElement('div');
+  dt.className = 'rem-date';
+  const wd = `週${CN_WEEK[day.getDay()]}`;
+  dt.textContent = sameDay(day, today)    ? `今晚結單｜${fmtMD(day)}（${wd}）`
+                 : sameDay(day, tomorrow) ? `明天結單｜${fmtMD(day)}（${wd}）`
+                 : `${fmtMD(day)}（${wd}）結單`;
+  wrap.appendChild(dt);
+
+  if (String(S.remSub || '').trim()) {
+    const sub = document.createElement('div');
+    sub.className = 'rem-sub';
+    sub.textContent = S.remSub.trim();
+    wrap.appendChild(sub);
+  }
+
+  const groups = reminderGroups();
+  if (!groups.length) {
+    const empty = document.createElement('div');
+    empty.className = 'rem-empty';
+    empty.textContent = '這一天沒有結單的團';
+    wrap.appendChild(empty);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'rem-list';
+    groups.forEach(group => {
+      const card = document.createElement('div');
+      card.className = 'rem-card';
+      const name = document.createElement('div');
+      name.className = 'rem-name';
+      // 跟列表模式同一種寫法：一團一行、｜接回空白、同框用＋串起來
+      name.textContent = groupNames(group, 'list').join('＋');
+      card.appendChild(name);
+      const badge = group.map(e => ovRead(e.id, 'list').badge).find(Boolean);
+      if (badge) {
+        const b = document.createElement('div');
+        b.className = 'rem-badge';
+        b.textContent = badge;
+        card.appendChild(b);
+      }
+      list.appendChild(card);
+    });
+    wrap.appendChild(list);
+  }
+
+  document.getElementById('moveWarn').innerHTML = '';
+  return wrap;
+}
+
 /* ---------- 預覽縮放 ---------- */
 
 // 預覽縮放：S.zoom = 0 代表「自動符合寬度」，其他是百分比（只影響畫面，
@@ -1598,7 +1809,8 @@ function renderEvList() {
   box.innerHTML = '';
   const mk = modeKey(S.mode);
   const tag = document.getElementById('evModeTag');
-  if (tag) tag.textContent = mk === 'list' ? '列表' : '行事曆';
+  if (tag) tag.textContent = S.mode === 'reminder' ? '列表（結單提醒也吃這套）'
+                           : mk === 'list' ? '列表' : '行事曆';
   const evs = monthEvents();
   // 月初月底補位格裡的鄰月團（只有行事曆版面畫得到它們）
   const outs = mk === 'calendar' ? outMonthEvents() : [];
@@ -1763,6 +1975,9 @@ function switchMode(next) {
   S.modes[S.mode] = pickModeSettings(S);
   S.mode = next;
   if (S.modes[next]) Object.assign(S, S.modes[next]);
+  // 這個模式從來沒進去過（例：舊設定存檔裡沒有 reminder）就用程式的初始版面，
+  // 不要沿用上一個模式的數值——結單提醒預設 9:16，跟 4:5 的行事曆差很多
+  else if (DEFAULTS.modes[next]) Object.assign(S, DEFAULTS.modes[next]);
   saveSettings();
   syncControls();
   renderAll();
@@ -2145,7 +2360,9 @@ async function exportPng() {
     if (!blob) throw new Error('轉檔失敗');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `行事曆_${currentYear}-${String(currentMonth + 1).padStart(2, '0')}_${S.mode === 'calendar' ? '行事曆' : '列表'}_${S.size.replace(':', 'x')}.png`;
+    a.download = S.mode === 'reminder'
+      ? `結單提醒_${remDateStr(remDateObj())}_${S.size.replace(':', 'x')}.png`
+      : `行事曆_${currentYear}-${String(currentMonth + 1).padStart(2, '0')}_${S.mode === 'calendar' ? '行事曆' : '列表'}_${S.size.replace(':', 'x')}.png`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } catch (err) {
@@ -2168,6 +2385,8 @@ function renderAll() {
 }
 
 function syncControls() {
+  // 結單提醒模式：面板上跟月曆無關的區塊藏起來（.rem-hide）、自己的設定區亮出來（.rem-only）
+  document.body.classList.toggle('mode-reminder', S.mode === 'reminder');
   segSet('segMode', S.mode);
   segSet('segCapMode', S.capMode || 'full');
   segSet('segSize', S.size);
@@ -2188,16 +2407,20 @@ function syncControls() {
     if (val.tagName === 'INPUT') val.value = S[key];
     else val.textContent = S[key];
   });
-  ['tTitle1|title1', 'tTitle2|title2', 'tFoot|foot',
+  ['tTitle1|title1', 'tTitle2|title2', 'tFoot|foot', 'tRemTitle|remTitle', 'tRemSub|remSub',
    'tCapIntro|capIntro', 'tCapListTitle|capListTitle', 'tCapOutro|capOutro', 'tCapTags|capTags'].forEach(spec => {
     const [id, key] = spec.split('|');
     document.getElementById(id).value = S[key];
   });
+  const rd = document.getElementById('remDate');
+  if (rd) rd.value = remDateStr(remDateObj());
   applyPane();
 }
 
 function init() {
   loadStored();
+  // 上次選的結單日已經過了就自動清掉（空＝今天），開站不會停在過去的日期
+  if (S.remDate && remDateObj() < todayStart()) S.remDate = '';
   loadPresets();
   renderPresetList();
 
@@ -2237,6 +2460,22 @@ function init() {
   bindText('tTitle1', 'title1');
   bindText('tTitle2', 'title2');
   bindText('tFoot', 'foot');
+
+  // 結單提醒：日期＋標題／副標
+  bindText('tRemTitle', 'remTitle');
+  bindText('tRemSub', 'remSub');
+  const remDateEl = document.getElementById('remDate');
+  const setRemDate = v => {
+    S.remDate = v || '';
+    remDateEl.value = remDateStr(remDateObj());
+    saveSettings(); renderPoster();
+  };
+  remDateEl.addEventListener('change', () => setRemDate(remDateEl.value));
+  document.getElementById('btnRemToday').addEventListener('click', () => setRemDate(remDateStr(todayStart())));
+  document.getElementById('btnRemTomorrow').addEventListener('click', () => {
+    const t = todayStart();
+    setRemDate(remDateStr(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)));
+  });
 
   bindCapText('tCapIntro', 'capIntro');
   bindCapText('tCapListTitle', 'capListTitle');
