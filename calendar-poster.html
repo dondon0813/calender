@@ -689,8 +689,9 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 .remnote-item { margin-bottom: 8px; }
 .remnote-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .remnote-name { font-size: 12px; font-weight: 700; flex: 1 1 auto; min-width: 0; }
-.remnote-w { width: 72px; flex: none; font-size: 12px; }
-.remnote-item input { width: 100%; box-sizing: border-box; }
+/* 介紹輸入格滿版；格寬數字欄固定小格（選擇器要壓過下面那條 input 通則） */
+.remnote-item input[type="text"] { width: 100%; box-sizing: border-box; }
+.remnote-item input.remnote-w { width: 72px; flex: none; font-size: 12px; box-sizing: border-box; }
 .remnote-state { display: block; font-size: 11px; margin-top: 2px; }
 </style>
 </head>
