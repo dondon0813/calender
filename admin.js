@@ -1010,7 +1010,8 @@ function renderGroupStatusList(targetId) {
     // 點擊次數只算「現正開團中」這個頁面自己的（開團日／結團日／全部顯示頁面各自顯示自己的，不會混在這裡）。
     const cardKey = getMemoKey(ev);
     const cardSt = statsMap[cardKey] || { views: 0, clicks: 0 };
-    const cardClicks = sourceClickCount(cardKey, 'list');
+    // 前台 2026-07-27 起卡片點擊改記 src_now，舊資料在 src_list——兩個都算才不會漏
+    const cardClicks = sourceClickCount(cardKey, 'list') + sourceClickCount(cardKey, 'now');
 
     const statsBar = document.createElement('div');
     statsBar.className = 'gs-stats-bar';
