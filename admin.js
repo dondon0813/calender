@@ -61,7 +61,7 @@ let splitPersistReady = false;
 // 導致那行之後的最外層程式（initAppUI、漢堡選單監聽…）全部不執行，整頁變磚。
 // dispatch 保留當 myTasks 別名：兩分頁已合併成單一「任務」分頁（viewMyTasks），
 // 但殘留的 switchView('dispatch') 呼叫或使用者 localStorage 舊值仍要能正常導向。
-const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewMyTasks', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks', cardSub: 'viewCardSub', recipeDb: 'viewRecipeDb', schoolList: 'viewSchoolList', blog: 'viewBlog', fanAdmin: 'viewFanAdmin' };
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewMyTasks', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks', cardSub: 'viewCardSub', recipeDb: 'viewRecipeDb', schoolList: 'viewSchoolList', blog: 'viewBlog', fanAdmin: 'viewFanAdmin', hall: 'viewHall' };
 
 // ===== 開機期就會被讀到的模組層狀態，一律宣告在這裡 =====
 // 理由同上面 VIEW_ID_MAP：initAppUI() 會還原上次停留的分頁，於**最外層**同步呼叫
@@ -2375,8 +2375,8 @@ function switchView(name, target) {
   if (!VIEW_ID_MAP[name]) name = 'home';
   // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
   // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
-  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印', books: '繪本後台', recipeDb: '食譜資料庫', schoolList: '開學清單', blog: '文章管理', fanAdmin: '會員管理' };
-  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit' };
+  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印', books: '繪本後台', recipeDb: '食譜資料庫', schoolList: '開學清單', blog: '文章管理', fanAdmin: '會員管理', hall: '教材館' };
+  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'fanEdit' };
   if (VIEW_PERM[name] && !hasPerm(VIEW_PERM_KEY[name] || name)) {
     alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
@@ -2456,6 +2456,7 @@ function switchView(name, target) {
   if (name === 'schoolList') loadSchoolListView();
   if (name === 'blog') loadBlogView();
   if (name === 'fanAdmin') loadFanAdminView();
+  if (name === 'hall') loadHallView();
 }
 
 // ===== 寬螢幕雙欄工作區：側邊欄 / 右欄 / 拖曳分隔線 =====
