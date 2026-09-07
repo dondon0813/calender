@@ -24,6 +24,11 @@ const CS_CYCLE_LABEL = { daily: '每日', weekly: '每週', monthly: '每月', q
 const CS_CYCLE_PER = { daily: '日', weekly: '週', monthly: '月', quarterly: '季', yearly: '年', onetime: '' };
 const CS_CURRENCY_SYMBOL = { TWD: 'NT$', USD: 'US$', JPY: '¥', EUR: '€', CNY: 'CN¥', GBP: '£' };
 
+// 統計卡用的約略匯率（換算成台幣；只求量級對，不是即時匯率）
+const CS_TWD_RATE = { TWD: 1, USD: 32, JPY: 0.21, EUR: 35, CNY: 4.4, GBP: 41 };
+// 各週期換算成「每月幾次扣款」；一次性不算進每月/每年
+const CS_CYCLE_PER_MONTH = { daily: 365 / 12, weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, yearly: 1 / 12 };
+
 // ===== HTML 逃逸（自帶一份，不依賴 admin.js，同 books.js 的 pbaEscapeHtml）=====
 function csEscapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -101,6 +106,7 @@ function loadCardSubView(forceReload) {
   const alerts = document.getElementById('cardSubAlerts');
   area.innerHTML = '<div class="task-empty">讀取中…</div>';
   alerts.innerHTML = '';
+  document.getElementById('cardSubStats').innerHTML = '';
   csApiGet().then(data => {
     if (!data || !data.success) {
       area.innerHTML = '<div class="task-empty">讀取失敗：' + csEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
@@ -115,6 +121,7 @@ function loadCardSubView(forceReload) {
     CARD_SUB_CYCLE_READY = data.cycleReady !== false;
     CARD_SUB_LIST = Array.isArray(data.subscriptions) ? data.subscriptions : [];
     renderCardSubAlerts();
+    renderCardSubStats();
     renderCardSubList();
   }).catch(err => {
     area.innerHTML = '<div class="task-empty">讀取失敗：' + csEscapeHtml(err.message || '') + '</div>';
@@ -158,6 +165,65 @@ function renderCardSubAlerts() {
     html += '<div style="background:#fff6e6; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
       expiryLines.join('<br>') + '</div>';
   }
+  box.innerHTML = html;
+}
+
+// ===== 統計卡：每月/每年換算總額 =====
+// 有填「金額＋幣別＋週期」的訂閱才算得進來；一次性費用另列，不混進每月平均。
+function renderCardSubStats() {
+  const box = document.getElementById('cardSubStats');
+  if (!CARD_SUB_LIST.length) { box.innerHTML = ''; return; }
+
+  let monthlyTwd = 0;        // 每月換算總額（台幣）
+  let onetimeTwd = 0;        // 一次性費用合計（台幣）
+  let counted = 0;           // 算得進統計的筆數
+  let uncounted = 0;         // 金額或週期沒填、算不進來的筆數
+  const byCurrency = {};     // 各幣別的「每月」原幣小計，例 { USD: 45, TWD: 599 }
+
+  CARD_SUB_LIST.forEach(s => {
+    const amount = Number(s.feeAmount);
+    const rate = CS_TWD_RATE[s.feeCurrency];
+    if (s.feeAmount === null || s.feeAmount === undefined || s.feeAmount === '' || !isFinite(amount) || !rate) {
+      uncounted++;
+      return;
+    }
+    if (s.billingCycle === 'onetime') {
+      onetimeTwd += amount * rate;
+      counted++;
+      return;
+    }
+    const perMonth = CS_CYCLE_PER_MONTH[s.billingCycle];
+    if (!perMonth) { uncounted++; return; }
+    monthlyTwd += amount * rate * perMonth;
+    byCurrency[s.feeCurrency] = (byCurrency[s.feeCurrency] || 0) + amount * perMonth;
+    counted++;
+  });
+
+  if (!counted) { box.innerHTML = ''; return; }
+
+  const nt = n => 'NT$' + Math.round(n).toLocaleString('en-US');
+  const statBox = (label, value, sub) =>
+    '<div style="flex:1; min-width:150px; background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:10px; padding:10px 14px;">' +
+    '<div style="font-size:12px; color:var(--c-text-soft, #888);">' + label + '</div>' +
+    '<div style="font-size:20px; font-weight:800; margin-top:2px;">' + value + '</div>' +
+    (sub ? '<div style="font-size:11px; color:var(--c-text-soft, #888); margin-top:2px;">' + sub + '</div>' : '') +
+    '</div>';
+
+  // 各幣別每月小計（原幣），讓「約略匯率」有得對照
+  const ccyParts = Object.keys(byCurrency).map(c => {
+    const symbol = CS_CURRENCY_SYMBOL[c] || csEscapeHtml(c);
+    return symbol + byCurrency[c].toLocaleString('en-US', { maximumFractionDigits: 0 });
+  });
+
+  let html = '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
+    statBox('平均每月花費', nt(monthlyTwd) + '<span style="font-size:12px; font-weight:400;">／月</span>',
+      ccyParts.length > 1 ? '＝' + ccyParts.join('＋') : '') +
+    statBox('每年總花費', nt(monthlyTwd * 12) + '<span style="font-size:12px; font-weight:400;">／年</span>',
+      onetimeTwd ? '另有一次性費用約 ' + nt(onetimeTwd) : '') +
+    statBox('訂閱筆數', counted + '<span style="font-size:12px; font-weight:400;"> 筆</span>',
+      uncounted ? '另 ' + uncounted + ' 筆沒填金額，未計入' : '') +
+    '</div>' +
+    '<div style="font-size:11px; color:var(--c-text-soft, #999); margin-bottom:10px;">外幣以約略匯率換算台幣（美金 32、日圓 0.21、歐元 35、人民幣 4.4、英鎊 41），只求量級參考。</div>';
   box.innerHTML = html;
 }
 
