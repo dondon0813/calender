@@ -18,6 +18,7 @@ let CARD_SUB_LOADED = false;   // 第一次進分頁才拉，之後切回來用�
 let CARD_SUB_LIST = [];        // 最近一次 GET 的訂閱清單
 let CARD_SUB_EDIT_ID = null;   // 目前編輯中的訂閱 id；null＝新增中
 let CARD_SUB_CYCLE_READY = true; // migration 20260829000001 是否已 db push
+let CARD_SUB_STAFF_READY = true; // migration 20260907000002（員工訂閱兩欄）是否已 db push
 
 // 週期／幣別對照（值必須與後端 lib/legacy/subscriptions.ts 的白名單一致）
 const CS_CYCLE_LABEL = { daily: '每日', weekly: '每週', monthly: '每月', quarterly: '每季', yearly: '每年', onetime: '一次性' };
@@ -119,6 +120,7 @@ function loadCardSubView(forceReload) {
       return;
     }
     CARD_SUB_CYCLE_READY = data.cycleReady !== false;
+    CARD_SUB_STAFF_READY = data.staffReady !== false;
     CARD_SUB_LIST = Array.isArray(data.subscriptions) ? data.subscriptions : [];
     renderCardSubAlerts();
     renderCardSubStats();
@@ -141,7 +143,8 @@ function renderCardSubAlerts() {
         const what = s.autoRenew === false ? '到期（要手動處理）' : '自動扣款';
         const label = days < 0 ? ('已過期 ' + (-days) + ' 天') : (days === 0 ? ('今天' + what) : (days + ' 天後' + what));
         const fee = csFeeText(s);
-        billingLines.push('⏰ ' + csEscapeHtml(s.siteName) + (fee ? '（' + csEscapeHtml(fee) + '）' : '') +
+        const who = s.staffName ? '〔' + csEscapeHtml(s.staffName) + '〕' : '';
+        billingLines.push('⏰ ' + who + csEscapeHtml(s.siteName) + (fee ? '（' + csEscapeHtml(fee) + '）' : '') +
           '　' + label + '（' + csEscapeHtml(due) + '）');
       }
     }
@@ -156,6 +159,10 @@ function renderCardSubAlerts() {
   if (!CARD_SUB_CYCLE_READY) {
     html += '<div style="background:#fff6e6; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 週期／費用欄位尚未建立（migration 20260829000001），請先在 PowerShell 執行 npx supabase db push，否則這幾欄存不進去。</div>';
+  }
+  if (!CARD_SUB_STAFF_READY) {
+    html += '<div style="background:#fff6e6; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+      '⚠️ 員工訂閱欄位尚未建立（migration 20260907000002），請先在 PowerShell 執行 npx supabase db push，否則「使用人／付款方式」存不進去。</div>';
   }
   if (billingLines.length) {
     html += '<div style="background:#fdeceb; border:1px solid #f1998f; color:#b23a2e; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
@@ -174,7 +181,9 @@ function renderCardSubStats() {
   const box = document.getElementById('cardSubStats');
   if (!CARD_SUB_LIST.length) { box.innerHTML = ''; return; }
 
-  let monthlyTwd = 0;        // 每月換算總額（台幣）
+  let monthlyTwd = 0;        // 每月換算總額（台幣；含自己＋員工，兩種都是開銷）
+  let staffMonthlyTwd = 0;   // 其中員工訂閱的每月小計
+  let reimburseMonthlyTwd = 0; // 員工小計裡「代墊請款」的部分（每月要留的請款預算）
   let onetimeTwd = 0;        // 一次性費用合計（台幣）
   let counted = 0;           // 算得進統計的筆數
   let uncounted = 0;         // 金額或週期沒填、算不進來的筆數
@@ -194,7 +203,12 @@ function renderCardSubStats() {
     }
     const perMonth = CS_CYCLE_PER_MONTH[s.billingCycle];
     if (!perMonth) { uncounted++; return; }
-    monthlyTwd += amount * rate * perMonth;
+    const twdPerMonth = amount * rate * perMonth;
+    monthlyTwd += twdPerMonth;
+    if (s.staffName) {
+      staffMonthlyTwd += twdPerMonth;
+      if (s.payMethod === 'staff') reimburseMonthlyTwd += twdPerMonth;
+    }
     byCurrency[s.feeCurrency] = (byCurrency[s.feeCurrency] || 0) + amount * perMonth;
     counted++;
   });
@@ -222,6 +236,10 @@ function renderCardSubStats() {
       onetimeTwd ? '另有一次性費用約 ' + nt(onetimeTwd) : '') +
     statBox('訂閱筆數', counted + '<span style="font-size:12px; font-weight:400;"> 筆</span>',
       uncounted ? '另 ' + uncounted + ' 筆沒填金額，未計入' : '') +
+    (staffMonthlyTwd
+      ? statBox('其中員工訂閱', nt(staffMonthlyTwd) + '<span style="font-size:12px; font-weight:400;">／月</span>',
+          reimburseMonthlyTwd ? '含員工代墊請款約 ' + nt(reimburseMonthlyTwd) + '／月' : '全部由我付款')
+      : '') +
     '</div>' +
     '<div style="font-size:11px; color:var(--c-text-soft, #999); margin-bottom:10px;">外幣以約略匯率換算台幣（美金 32、日圓 0.21、歐元 35、人民幣 4.4、英鎊 41），只求量級參考。</div>';
   box.innerHTML = html;
@@ -249,8 +267,16 @@ function renderCardSubList() {
       ? csEscapeHtml(due) + (s.dueRolled ? '<span title="上次扣款日已過，依週期自動推算的下一次" style="margin-left:4px; opacity:.6;">🔄</span>' : '')
       : '—';
 
+    // 使用人欄：員工訂閱顯示名字，代墊請款再掛個徽章提醒「這筆錢是走請款流程」
+    const whoCell = s.staffName
+      ? csEscapeHtml(s.staffName) + (s.payMethod === 'staff'
+          ? '<br><span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#eef2ff; color:#3949ab; font-size:11px; white-space:nowrap;">🧾 代墊請款</span>'
+          : '')
+      : '<span style="opacity:.5;">自己</span>';
+
     return '<tr style="' + rowStyle + '" data-id="' + csEscapeHtml(s.id) + '">' +
       '<td style="padding:8px 10px; font-weight:800;">' + csEscapeHtml(s.siteName) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + whoCell + '</td>' +
       '<td style="padding:8px 10px;">' + csEscapeHtml(s.sitePurpose) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap;">' + csEscapeHtml(csFeeText(s)) + '</td>' +
       '<td style="padding:8px 10px;">' + renewBadge + '</td>' +
@@ -262,9 +288,9 @@ function renderCardSubList() {
       '</tr>';
   }).join('');
   area.innerHTML = '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
-    '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:820px;">' +
+    '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:900px;">' +
     '<thead><tr style="background:var(--c-bg-bottom); text-align:left;">' +
-    '<th style="padding:8px 10px;">網站</th><th style="padding:8px 10px;">用途</th><th style="padding:8px 10px;">費用</th>' +
+    '<th style="padding:8px 10px;">網站</th><th style="padding:8px 10px;">使用人</th><th style="padding:8px 10px;">用途</th><th style="padding:8px 10px;">費用</th>' +
     '<th style="padding:8px 10px;">續費</th><th style="padding:8px 10px;">下次扣款</th><th style="padding:8px 10px;">卡片</th>' +
     '<th style="padding:8px 10px;">銀行</th><th style="padding:8px 10px;">卡片到期</th><th style="padding:8px 10px;"></th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table></div>';
@@ -285,6 +311,8 @@ function openCardSubEditModal(rec) {
   const v = (id, val) => { document.getElementById(id).value = val === undefined || val === null ? '' : val; };
   v('cardSubSiteName', rec ? rec.siteName : '');
   v('cardSubSitePurpose', rec ? rec.sitePurpose : '');
+  v('cardSubStaffName', rec ? rec.staffName : '');
+  document.getElementById('cardSubPayMethod').value = (rec && rec.payMethod) || 'self';
   v('cardSubCardName', rec ? rec.cardName : '');
   v('cardSubBank', rec ? rec.bank : '');
   v('cardSubCardExpiry', rec ? rec.cardExpiry : '');
@@ -328,6 +356,8 @@ document.getElementById('cardSubSaveBtn').addEventListener('click', async () => 
   const payload = {
     siteName,
     sitePurpose: val('cardSubSitePurpose'),
+    staffName: val('cardSubStaffName'),
+    payMethod: document.getElementById('cardSubPayMethod').value,
     cardName: val('cardSubCardName'),
     bank: val('cardSubBank'),
     cardExpiry: val('cardSubCardExpiry'),

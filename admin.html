@@ -5930,6 +5930,19 @@
       <input type="text" id="cardSubSiteName" placeholder="例如：Netflix">
       <label for="cardSubSitePurpose">網站功能/用途</label>
       <input type="text" id="cardSubSitePurpose" placeholder="例如：追劇">
+
+      <label for="cardSubStaffName">使用人</label>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="cardSubStaffName" placeholder="留空＝自己；員工的訂閱填員工名字" style="flex:1; min-width:100px;">
+        <select id="cardSubPayMethod" style="flex:0 0 150px;">
+          <option value="self">💳 我付款</option>
+          <option value="staff">🧾 員工代墊請款</option>
+        </select>
+      </div>
+      <div style="font-size:12px; color:var(--c-text-light); margin-top:4px;">
+        員工自己刷卡、事後向你請款的訂閱選「員工代墊請款」；兩種統計時都算進你的開銷。
+      </div>
+
       <label for="cardSubCardName">卡片名稱</label>
       <input type="text" id="cardSubCardName" placeholder="暱稱＋末四碼，如：國泰 CUBE ・1234，不要填完整卡號">
       <label for="cardSubBank">銀行</label>
@@ -6541,7 +6554,7 @@
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
-<script src="subscriptions.js?v=3"></script>
+<script src="subscriptions.js?v=4"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=5"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
