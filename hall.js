@@ -426,7 +426,8 @@ async function hallSaveRules() {
   const rules = (HALL_EDIT.rules || []).map(r => ({
     eventLegacyId: (r.eventLegacyId || '').trim(),
     productMatch: (r.productMatch || '').trim(),
-    active: r.active !== false
+    active: r.active !== false,
+    includeFirst: r.includeFirst === true
   }));
   try {
     const res = await hallApiPost('fan-admin-hall-rule-set', { resourceId: HALL_EDIT.id, rules });
@@ -467,6 +468,7 @@ function hallRenderCodeRules() {
         ? '<input style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.codeRules[' + i + '].eventLegacyId=this.value">'
         : '') +
       '<input style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（必填）" oninput="HALL_EDIT.codeRules[' + i + '].productMatch=this.value">' +
+      '<label style="display:flex; align-items:center; gap:4px; font-size:12px;" title="勾選＝每組發1張碼（買1組送1張，適合下單者已由解鎖規則涵蓋的團）；不勾＝買n組發n−1張"><input type="checkbox"' + (r.includeFirst ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].includeFirst=this.checked"> 含第1組</label>' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].active=this.checked"> 啟用</label>' +
       '<button type="button" class="task-mini-btn" onclick="hallRemoveCodeRule(' + i + ')">✕</button>' +
     '</div>';
@@ -485,7 +487,7 @@ function hallCodeRuleEventChange(i, val) {
 }
 function hallAddCodeRuleRow() {
   if (!HALL_EDIT) return;
-  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true });
+  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true, includeFirst: false });
   hallRenderCodeRules();
 }
 function hallRemoveCodeRule(i) {
@@ -501,7 +503,8 @@ async function hallSaveCodeRules() {
   const rules = (HALL_EDIT.codeRules || []).map(r => ({
     eventLegacyId: (r.eventLegacyId || '').trim(),
     productMatch: (r.productMatch || '').trim(),
-    active: r.active !== false
+    active: r.active !== false,
+    includeFirst: r.includeFirst === true
   }));
   try {
     const res = await hallApiPost('fan-admin-hall-code-rule-set', { resourceId: HALL_EDIT.id, rules });
