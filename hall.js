@@ -8,6 +8,12 @@
 //   fan-admin-hall-rule-set    {resourceId, rules:[...]} 整批覆蓋 → {success, rules}
 //   fan-admin-hall-grant-add   {resourceId, memberNo, note} → {success, grant}
 //   fan-admin-hall-grant-delete {id}
+//   fan-admin-hall-code-rule-set {resourceId, rules:[{eventLegacyId, productMatch, active}]}
+//                              整批覆蓋 → {success, codeRules}（productMatch 必填，空的會被丟棄）
+//   fan-admin-hall-code-sync   {} → {success, stats:{ordersChecked, issued, revoked, reactivated,
+//                              warnings:[]}}（全租戶掃描，跟哪個資源無關；表未 push 回 tableReady:false）
+//   fan-admin-hall-codes-list  {resourceId} → {success, tableReady, codes:[{id, code, seq, status,
+//                              orderNo, buyerName, buyerEmail, redeemedBy, redeemedAt, createdAt}]}
 //   fan-admin-hall-upload-url  {resourceId, fileName} → {success, path, signedUrl, token}
 //                              （完整版檔案簽名直傳，PUT 之後再打 upsert 存 privatePath）
 //   fan-admin-hall-image-upload {filename, dataBase64} → {success, url}（封面/截圖）
@@ -166,12 +172,13 @@ function hallOpenEdit(i) {
         buyUrl: r.buyUrl || '', privatePath: r.privatePath || '', fileName: r.fileName || '',
         trialUrl: r.trialUrl || '', isPublished: !!r.isPublished, sort: r.sort || 0,
         rules: JSON.parse(JSON.stringify(r.rules || [])),
-        grants: JSON.parse(JSON.stringify(r.grants || []))
+        grants: JSON.parse(JSON.stringify(r.grants || [])),
+        codeRules: JSON.parse(JSON.stringify(r.codeRules || []))
       }
     : {
         id: null, slug: '', title: '', kind: 'game', isFree: false, intro: '', description: '',
         screenshots: [], coverUrl: '', eventId: '', eventTitle: '', buyUrl: '', privatePath: '',
-        fileName: '', trialUrl: '', isPublished: false, sort: 0, rules: [], grants: []
+        fileName: '', trialUrl: '', isPublished: false, sort: 0, rules: [], grants: [], codeRules: []
       };
   hallRenderEditor();
 }
@@ -294,6 +301,22 @@ function hallRenderEditor() {
         : '<div style="font-size:12px; color:var(--c-text-light);">請先儲存基本資料才能設定解鎖規則</div>') +
 
       '<hr style="margin:22px 0; border:none; border-top:1px solid var(--c-border);">' +
+      '<h4 style="margin:0 0 8px; font-size:14px;">🎟️ 兌換碼規則</h4>' +
+      '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:8px;">單筆訂單購買 n 組（n≥2）自動發 n−1 張可贈送兌換碼，買家在會員中心複製給朋友輸碼解鎖；每日收單自動產碼。</div>' +
+      (e.id
+        ? '<div id="hfCodeRules"></div>' +
+          '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">' +
+            '<button type="button" class="task-mini-btn" onclick="hallAddCodeRuleRow()">＋ 加一條</button>' +
+            '<button type="button" class="task-mini-btn" onclick="hallSaveCodeRules()">💾 儲存兌換碼規則</button>' +
+            '<button type="button" class="task-mini-btn" onclick="hallCodeSync()">🔄 立即同步產碼</button>' +
+            '<button type="button" class="task-mini-btn" onclick="hallToggleCodesList()">📋 查看兌換碼</button>' +
+          '</div>' +
+          '<div class="form-status" id="hfCodeRulesStatus"></div>' +
+          '<div class="form-status" id="hfCodeSyncStatus"></div>' +
+          '<div id="hfCodesList" style="display:none; margin-top:10px;"></div>'
+        : '<div style="font-size:12px; color:var(--c-text-light);">請先儲存基本資料才能設定兌換碼規則</div>') +
+
+      '<hr style="margin:22px 0; border:none; border-top:1px solid var(--c-border);">' +
       '<h4 style="margin:0 0 8px; font-size:14px;">🎟️ 手動開通</h4>' +
       (e.id
         ? '<div id="hfGrants"></div>' +
@@ -308,6 +331,7 @@ function hallRenderEditor() {
 
   hallRenderScreenshots();
   hallRenderRules();
+  hallRenderCodeRules();
   hallRenderGrants();
 }
 
@@ -416,6 +440,161 @@ async function hallSaveRules() {
   } catch (err) {
     statusEl.textContent = '儲存失敗：' + err.message;
     statusEl.className = 'form-status error';
+  }
+}
+
+// ===== 兌換碼規則 =====
+// 跟「解鎖規則」共用同一套下拉／自訂輸入寫法，差別是 productMatch 必填（後端會丟棄空的）。
+function hallRenderCodeRules() {
+  const box = document.getElementById('hfCodeRules');
+  if (!box || !HALL_EDIT) return;
+  const rules = HALL_EDIT.codeRules || [];
+  if (!rules.length) {
+    box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">還沒有兌換碼規則（沒規則就不會自動產碼）</div>';
+    return;
+  }
+  const knownLegacyIds = HALL_EVENT_CHOICES.map(c => c.legacyId);
+  box.innerHTML = rules.map((r, i) => {
+    const isCustom = !!r.eventLegacyId && knownLegacyIds.indexOf(r.eventLegacyId) === -1;
+    const options = ['<option value=""' + (!r.eventLegacyId ? ' selected' : '') + '>（任何團）</option>']
+      .concat(HALL_EVENT_CHOICES.map(c =>
+        '<option value="' + hallEscape(c.legacyId) + '"' + (c.legacyId === r.eventLegacyId ? ' selected' : '') + '>' + hallEscape(c.title) + '</option>'
+      ))
+      .concat(['<option value="__custom__"' + (isCustom ? ' selected' : '') + '>自訂輸入…</option>']);
+    return '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; border:1px dashed var(--c-border); border-radius:8px; padding:8px; margin-bottom:6px;">' +
+      '<select style="flex:1; min-width:140px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" onchange="hallCodeRuleEventChange(' + i + ', this.value)">' + options.join('') + '</select>' +
+      (isCustom
+        ? '<input style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.codeRules[' + i + '].eventLegacyId=this.value">'
+        : '') +
+      '<input style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（必填）" oninput="HALL_EDIT.codeRules[' + i + '].productMatch=this.value">' +
+      '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].active=this.checked"> 啟用</label>' +
+      '<button type="button" class="task-mini-btn" onclick="hallRemoveCodeRule(' + i + ')">✕</button>' +
+    '</div>';
+  }).join('');
+}
+function hallCodeRuleEventChange(i, val) {
+  if (!HALL_EDIT) return;
+  if (val === '__custom__') {
+    const cur = HALL_EDIT.codeRules[i].eventLegacyId;
+    const knownLegacyIds = HALL_EVENT_CHOICES.map(c => c.legacyId);
+    HALL_EDIT.codeRules[i].eventLegacyId = (cur && knownLegacyIds.indexOf(cur) === -1) ? cur : '';
+  } else {
+    HALL_EDIT.codeRules[i].eventLegacyId = val;
+  }
+  hallRenderCodeRules();
+}
+function hallAddCodeRuleRow() {
+  if (!HALL_EDIT) return;
+  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true });
+  hallRenderCodeRules();
+}
+function hallRemoveCodeRule(i) {
+  if (!HALL_EDIT) return;
+  HALL_EDIT.codeRules.splice(i, 1);
+  hallRenderCodeRules();
+}
+async function hallSaveCodeRules() {
+  if (!HALL_EDIT || !HALL_EDIT.id) return;
+  const statusEl = document.getElementById('hfCodeRulesStatus');
+  statusEl.textContent = '儲存中…';
+  statusEl.className = 'form-status';
+  const rules = (HALL_EDIT.codeRules || []).map(r => ({
+    eventLegacyId: (r.eventLegacyId || '').trim(),
+    productMatch: (r.productMatch || '').trim(),
+    active: r.active !== false
+  }));
+  try {
+    const res = await hallApiPost('fan-admin-hall-code-rule-set', { resourceId: HALL_EDIT.id, rules });
+    if (!res || !res.success) throw new Error((res && res.error) || '儲存失敗');
+    HALL_EDIT.codeRules = res.codeRules || [];
+    const idx = HALL_LIST.findIndex(x => x.id === HALL_EDIT.id);
+    if (idx >= 0) HALL_LIST[idx].codeRules = HALL_EDIT.codeRules;
+    statusEl.textContent = '已儲存';
+    statusEl.className = 'form-status';
+    hallRenderCodeRules();
+  } catch (err) {
+    statusEl.textContent = '儲存失敗：' + err.message;
+    statusEl.className = 'form-status error';
+  }
+}
+
+// ===== 立即同步產碼（全租戶掃描，跟目前編輯中的資源無關）=====
+async function hallCodeSync() {
+  const statusEl = document.getElementById('hfCodeSyncStatus');
+  if (!statusEl) return;
+  statusEl.textContent = '同步中…';
+  statusEl.className = 'form-status';
+  try {
+    const res = await hallApiPost('fan-admin-hall-code-sync', {});
+    if (res && res.tableReady === false) {
+      statusEl.textContent = '兌換碼資料表尚未建立（待 db push）';
+      statusEl.className = 'form-status error';
+      return;
+    }
+    if (!res || !res.success) throw new Error((res && res.error) || '同步失敗');
+    const s = res.stats || {};
+    let html = '核對 ' + (s.ordersChecked || 0) + ' 單｜補發 ' + (s.issued || 0) + '｜收回 ' + (s.revoked || 0) +
+      (s.reactivated ? '｜恢復 ' + s.reactivated : '');
+    if (Array.isArray(s.warnings) && s.warnings.length) {
+      html += '<ul style="margin:6px 0 0 18px; padding:0;">' + s.warnings.map(w => '<li>' + hallEscape(w) + '</li>').join('') + '</ul>';
+    }
+    statusEl.innerHTML = html;
+    statusEl.className = 'form-status';
+  } catch (err) {
+    statusEl.textContent = '同步失敗：' + err.message;
+    statusEl.className = 'form-status error';
+  }
+}
+
+// ===== 查看兌換碼（只看目前編輯中的資源）=====
+function hallToggleCodesList() {
+  const box = document.getElementById('hfCodesList');
+  if (!box) return;
+  if (box.style.display === 'none') {
+    box.style.display = '';
+    hallLoadCodesList();
+  } else {
+    box.style.display = 'none';
+  }
+}
+async function hallLoadCodesList() {
+  if (!HALL_EDIT || !HALL_EDIT.id) return;
+  const box = document.getElementById('hfCodesList');
+  if (!box) return;
+  box.innerHTML = '<div class="task-empty">讀取中…</div>';
+  try {
+    const res = await hallApiPost('fan-admin-hall-codes-list', { resourceId: HALL_EDIT.id });
+    if (res && res.tableReady === false) {
+      box.innerHTML = '<div class="task-empty">兌換碼資料表尚未建立（待 db push）</div>';
+      return;
+    }
+    if (!res || !res.success) throw new Error((res && res.error) || '讀取失敗');
+    const codes = Array.isArray(res.codes) ? res.codes : [];
+    if (!codes.length) {
+      box.innerHTML = '<div class="task-empty">尚未產生任何兌換碼</div>';
+      return;
+    }
+    const statusBadge = st => {
+      if (st === 'redeemed') return '<span style="background:#e0e0e0; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
+      if (st === 'revoked') return '<span style="background:#fdeceb; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
+      return '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">未使用</span>';
+    };
+    box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px;">' +
+      '<thead><tr style="text-align:left; border-bottom:1px solid var(--c-border);">' +
+        '<th style="padding:6px 8px;">碼</th><th style="padding:6px 8px;">狀態</th><th style="padding:6px 8px;">訂單編號</th>' +
+        '<th style="padding:6px 8px;">訂購人</th><th style="padding:6px 8px;">兌換者</th><th style="padding:6px 8px;">兌換時間</th>' +
+      '</tr></thead><tbody>' +
+      codes.map(c => '<tr style="border-bottom:1px solid var(--c-border);">' +
+        '<td style="padding:6px 8px; font-family:monospace; font-weight:700;">' + hallEscape(c.code) + '</td>' +
+        '<td style="padding:6px 8px;">' + statusBadge(c.status) + '</td>' +
+        '<td style="padding:6px 8px;">' + hallEscape(c.orderNo) + '</td>' +
+        '<td style="padding:6px 8px;">' + hallEscape(c.buyerName) + '</td>' +
+        '<td style="padding:6px 8px;">' + hallEscape(c.redeemedBy) + '</td>' +
+        '<td style="padding:6px 8px;">' + hallEscape(c.redeemedAt) + '</td>' +
+      '</tr>').join('') +
+      '</tbody></table></div>';
+  } catch (err) {
+    box.innerHTML = '<div class="task-empty">讀取失敗：' + hallEscape(err.message || '') + '</div>';
   }
 }
 
