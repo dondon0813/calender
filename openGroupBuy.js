@@ -8,6 +8,26 @@
 // 2026-09-04 起與 index.html 行事曆同一套點擊邏輯：食物團（recipeBrand）／繪本團（BOOK_TEAM_BRANDS）
 // ／有折扣碼的團，點小圖先跳選擇視窗（介紹／食譜大全／下單＋折扣碼點擊複製），其餘直接開團購連結。
 // 視窗樣式靠 shared.css 的 .modal-* 與色彩變數，其餘 .ogbgc-* 規則由本檔自行注入，不依賴各頁面的 CSS。
+// ===== 會員 App 內嵌模式（2026-09-09）=====
+// member.sheridondon.com.tw 會員頁的「首頁」分頁用 iframe 內嵌官網；站內連結若開新視窗，
+// PWA 會跳出帶網址列的瀏覽器、底部選單也會消失。內嵌時把「站內」target=_blank 連結改成
+// 原地開啟，外部連結（下單／IG 等）維持開新視窗。只在 iframe 裡生效，官網直接開完全不受影響。
+// 獨立 IIFE 放在最上面：就算頁面沒有開團橫列容器（下方主程式會提早 return）也要生效。
+// ⚠ index.html 沒載本檔，同一段程式在 index.html 底部有一份行內複本，改這裡要同步改那邊。
+(function () {
+  if (window.self === window.top) return;
+  document.addEventListener('click', function (e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[target="_blank"]') : null;
+    if (!a || !a.href) return;
+    try {
+      const host = new URL(a.href, location.href).hostname;
+      if (host === location.hostname || host === 'sheridondon.com.tw' || host === 'dondon0813.github.io') {
+        a.target = '_self';
+      }
+    } catch (err) { /* 非標準網址就不動 */ }
+  }, true);
+})();
+
 (function () {
   // 步驟5正式切換（2026-08-20）：改打新後端，回退＝revert 本 commit
   const APPS_SCRIPT_URL = 'https://dondon-platform.vercel.app/api/legacy';

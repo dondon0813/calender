@@ -1962,6 +1962,23 @@ if (!document.hidden) startAutoRefresh();
   const d = new Date();
   sendStat(`page_index_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, 'view');
 })();
+
+// ===== 會員 App 內嵌模式（2026-09-09）=====
+// 正本在 openGroupBuy.js 最上方（index.html 沒載那支所以放行內複本，改動要兩邊同步）：
+// 會員頁 iframe 內嵌時，站內 target=_blank 連結改原地開啟，避免 PWA 跳出網址列瀏覽器、底部選單消失。
+(function () {
+  if (window.self === window.top) return;
+  document.addEventListener('click', function (e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[target="_blank"]') : null;
+    if (!a || !a.href) return;
+    try {
+      const host = new URL(a.href, location.href).hostname;
+      if (host === location.hostname || host === 'sheridondon.com.tw' || host === 'dondon0813.github.io') {
+        a.target = '_self';
+      }
+    } catch (err) { /* 非標準網址就不動 */ }
+  }, true);
+})();
 </script>
 
 </body>
