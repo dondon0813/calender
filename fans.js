@@ -438,8 +438,10 @@ function loadFanRewards(force) {
 
 function faFillRewardsSelects(data) {
   const eventChoices = Array.isArray(data.eventChoices) ? data.eventChoices : [];
-  const currencies = (Array.isArray(data.currencies) ? data.currencies : []).filter(c => c.code !== 'star');
+  // 停用的幣別（active=false，例如先藏起來的繪本點數）不進下拉——後端存檔也會擋停用幣別
+  const currencies = (Array.isArray(data.currencies) ? data.currencies : []).filter(c => c.code !== 'star' && c.active !== false);
   const materials = Array.isArray(data.materials) ? data.materials : [];
+  const hallResources = Array.isArray(data.hallResources) ? data.hallResources : [];
 
   const eventOptions = '<option value="">（請選擇團）</option>' + eventChoices.map(ev =>
     '<option value="' + faEscapeHtml(ev.id) + '">' + faEscapeHtml(ev.title) +
@@ -459,7 +461,17 @@ function faFillRewardsSelects(data) {
   ).join('');
   document.getElementById('fanVruleMaterial').innerHTML =
     '<option value="">（不綁教材，只能折點）</option>' + materialOptionsNoBlank;
-  document.getElementById('fanShopMaterial').innerHTML = '<option value="">（請選擇教材）</option>' + materialOptionsNoBlank;
+  // 商城上架下拉：教材＋教材館遊戲同一個選單（值帶 m:/h: 前綴，faSaveShop 依前綴分流）
+  const shopMaterialOptions = materials.map(m =>
+    '<option value="m:' + faEscapeHtml(m.id) + '">' + faEscapeHtml(m.title) + (m.isPremium ? '（已私有）' : '') + '</option>'
+  ).join('');
+  const shopHallOptions = hallResources.map(h =>
+    '<option value="h:' + faEscapeHtml(h.id) + '">' + faEscapeHtml(h.title) + (h.isPublished ? '' : '（未發布）') + '</option>'
+  ).join('');
+  document.getElementById('fanShopMaterial').innerHTML =
+    '<option value="">（請選擇教材或遊戲）</option>' +
+    '<optgroup label="📚 教材">' + shopMaterialOptions + '</optgroup>' +
+    (shopHallOptions ? '<optgroup label="🎮 遊戲／教材館">' + shopHallOptions + '</optgroup>' : '');
   document.getElementById('fanGrantMaterial').innerHTML = '<option value="">（請選擇教材）</option>' + materialOptionsNoBlank;
 }
 
@@ -651,7 +663,7 @@ function renderFanShopList(shopItems) {
   area.innerHTML = '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
     '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:520px;">' +
     '<thead><tr style="background:var(--c-bg-bottom); text-align:left;">' +
-    '<th style="padding:8px 10px;">教材</th><th style="padding:8px 10px;">兌換價</th><th style="padding:8px 10px;">備註</th>' +
+    '<th style="padding:8px 10px;">商品（教材／遊戲）</th><th style="padding:8px 10px;">兌換價</th><th style="padding:8px 10px;">備註</th>' +
     '<th style="padding:8px 10px;"></th><th style="padding:8px 10px;"></th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
@@ -663,7 +675,7 @@ function faEditShop(id) {
   const s = (FAN_REWARDS_CFG.shopItems || []).find(x => String(x.id) === String(id));
   if (!s) return;
   document.getElementById('fanShopEditingId').value = s.id;
-  document.getElementById('fanShopMaterial').value = s.materialId;
+  document.getElementById('fanShopMaterial').value = s.hallResourceId ? ('h:' + s.hallResourceId) : ('m:' + s.materialId);
   document.getElementById('fanShopCurrency').value = s.currencyCode;
   document.getElementById('fanShopPrice').value = s.pointsPrice;
   document.getElementById('fanShopNote').value = s.note || '';
@@ -681,17 +693,21 @@ function faResetShopForm() {
 
 async function faSaveShop() {
   const id = document.getElementById('fanShopEditingId').value || '';
-  const materialId = document.getElementById('fanShopMaterial').value;
+  const picked = document.getElementById('fanShopMaterial').value; // m:<教材id> 或 h:<遊戲id>
   const currencyCode = document.getElementById('fanShopCurrency').value;
   const pointsPrice = Number(document.getElementById('fanShopPrice').value);
   const note = document.getElementById('fanShopNote').value.trim();
   const active = document.getElementById('fanShopActive').checked;
-  if (!materialId) { alert('請選擇教材'); return; }
+  if (!picked) { alert('請選擇教材或遊戲'); return; }
   if (!currencyCode) { alert('請選擇幣別'); return; }
-  const mat = (FAN_REWARDS_CFG.materials || []).find(m => m.id === materialId);
-  if (mat && !mat.isPremium && !confirm('加入商城後，「' + mat.title + '」會轉為會員專屬（私有），繪本館前台不再提供免費下載，確定繼續嗎？')) return;
+  const materialId = picked.startsWith('m:') ? picked.slice(2) : '';
+  const hallResourceId = picked.startsWith('h:') ? picked.slice(2) : '';
+  if (materialId) {
+    const mat = (FAN_REWARDS_CFG.materials || []).find(m => m.id === materialId);
+    if (mat && !mat.isPremium && !confirm('加入商城後，「' + mat.title + '」會轉為會員專屬（私有），繪本館前台不再提供免費下載，確定繼續嗎？')) return;
+  }
   try {
-    const res = await faApiPost('fan-admin-shop-upsert', { id, materialId, currencyCode, pointsPrice, note, active });
+    const res = await faApiPost('fan-admin-shop-upsert', { id, materialId, hallResourceId, currencyCode, pointsPrice, note, active });
     if (!res || !res.success) throw new Error((res && res.error) || '儲存失敗');
     alert('已儲存');
     faResetShopForm();
