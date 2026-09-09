@@ -506,7 +506,10 @@ function faEditRule(id) {
   const rule = (FAN_REWARDS_CFG.rules || []).find(r => String(r.id) === String(id));
   if (!rule) return;
   document.getElementById('fanRuleEditingId').value = rule.id;
-  document.getElementById('fanRuleEvent').value = rule.eventLegacyId;
+  // 非數字＝品牌規則 → 回填關鍵字欄；數字＝指定團 → 回填下拉
+  const isBrand = !/^\d+$/.test(String(rule.eventLegacyId));
+  document.getElementById('fanRuleBrand').value = isBrand ? rule.eventLegacyId : '';
+  document.getElementById('fanRuleEvent').value = isBrand ? '' : rule.eventLegacyId;
   document.getElementById('fanRuleCurrency').value = rule.currencyCode;
   document.getElementById('fanRuleRateAmount').value = rule.rateAmount;
   document.getElementById('fanRuleRatePoints').value = rule.ratePoints;
@@ -516,6 +519,7 @@ function faEditRule(id) {
 
 function faResetRuleForm() {
   document.getElementById('fanRuleEditingId').value = '';
+  document.getElementById('fanRuleBrand').value = '';
   document.getElementById('fanRuleEvent').value = '';
   document.getElementById('fanRuleCurrency').selectedIndex = 0;
   document.getElementById('fanRuleRateAmount').value = 100;
@@ -525,13 +529,18 @@ function faResetRuleForm() {
 }
 
 async function faSaveRule() {
-  const eventLegacyId = document.getElementById('fanRuleEvent').value;
+  // 品牌關鍵字優先（2026-09-09 雪莉定案「規則跟品牌」）：填了就存品牌規則，
+  // 團名含關鍵字的每一團自動適用；沒填才用指定團下拉
+  const brandKey = document.getElementById('fanRuleBrand').value.trim();
+  const eventLegacyId = brandKey || document.getElementById('fanRuleEvent').value;
   const currencyCode = document.getElementById('fanRuleCurrency').value;
   const rateAmount = Number(document.getElementById('fanRuleRateAmount').value);
   const ratePoints = Number(document.getElementById('fanRuleRatePoints').value);
   const note = document.getElementById('fanRuleNote').value.trim();
   const active = document.getElementById('fanRuleActive').checked;
-  if (!eventLegacyId) { alert('請選擇團'); return; }
+  if (brandKey && /^\d+$/.test(brandKey)) { alert('品牌關鍵字不能是純數字（會被當成團編號），請含品牌文字'); return; }
+  if (brandKey && document.getElementById('fanRuleEvent').value) { alert('品牌關鍵字與指定團只能擇一（要用指定團請先清空品牌關鍵字）'); return; }
+  if (!eventLegacyId) { alert('請填品牌關鍵字或選擇團'); return; }
   if (!currencyCode) { alert('請選擇幣別'); return; }
   try {
     const res = await faApiPost('fan-admin-rule-upsert', { eventLegacyId, currencyCode, rateAmount, ratePoints, active, note });

@@ -5520,9 +5520,12 @@
     <div style="font-size:12px; color:var(--c-text-light); margin-bottom:16px;">重算＝依目前規則對全部已歸戶訂單收斂入點/扣回（每日排程也會自動跑）</div>
 
     <h3 style="margin:24px 0 8px; font-size:15px;">📐 入點規則（哪個團的消費入哪種點數）</h3>
+    <div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">建議用「品牌關鍵字」設定：團名含關鍵字的每一團（含過去的團）自動適用，不用每團重設；指定單一團的規則優先於品牌規則。</div>
     <div id="fanRuleListArea"><div class="task-empty">讀取中…</div></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
       <input type="hidden" id="fanRuleEditingId" value="">
+      <input type="text" id="fanRuleBrand" placeholder="🏷️ 品牌關鍵字（例如 mideer）" style="min-width:180px;">
+      <span style="align-self:center; font-size:12px; color:var(--c-text-light);">或指定單一團→</span>
       <select id="fanRuleEvent" style="min-width:220px;"></select>
       <select id="fanRuleCurrency" style="min-width:120px;"></select>
       <label style="display:flex; align-items:center; gap:4px; font-size:13px;">每消費 $<input type="number" id="fanRuleRateAmount" value="100" style="width:80px;"></label>
@@ -6574,7 +6577,7 @@
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=4"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=6"></script>
+<script src="fans.js?v=7"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
