@@ -5488,12 +5488,14 @@
     </div><!-- /fanTabPanelUnclaimed -->
 
     <div class="pba-tab-panel" id="fanTabPanelMember" style="display:none;">
-    <h3 style="margin:24px 0 8px; font-size:15px;">🔍 會員查詢</h3>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-      <input type="text" id="fanMemberSearchInput" placeholder="會員編號／暱稱／email" style="flex:1; min-width:200px; max-width:360px;">
-      <button class="task-mini-btn" id="fanMemberSearchBtn">搜尋</button>
+    <h3 style="margin:24px 0 8px; font-size:15px;">👥 會員總覽</h3>
+    <div id="fanMemberStats" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
+      <input type="text" id="fanMemberSearchInput" placeholder="輸入編號／暱稱／email 即時過濾" style="flex:1; min-width:200px; max-width:360px;">
+      <div id="fanMemberFilters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+      <button class="task-mini-btn" id="fanMemberSearchBtn">🔄 重新整理</button>
     </div>
-    <div id="fanMemberArea"></div>
+    <div id="fanMemberArea"><div class="task-empty">讀取中…</div></div>
     </div><!-- /fanTabPanelMember -->
 
     <div class="pba-tab-panel" id="fanTabPanelCust" style="display:none;">
@@ -6577,7 +6579,7 @@
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=4"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=7"></script>
+<script src="fans.js?v=8"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=2"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->

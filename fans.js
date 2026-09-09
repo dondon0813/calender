@@ -166,51 +166,115 @@ async function faAssignOrder(orderId) {
   }
 }
 
-// ===== 會員查詢 =====
-async function faSearchMembers() {
-  const q = (document.getElementById('fanMemberSearchInput').value || '').trim();
+// ===== 會員總覽（2026-09-10 改版：不用搜尋直接看全清單＋統計＋篩選）=====
+let FAN_MEMBER_LIST = [];      // fan-admin-member-overview 的全清單快取
+let FAN_MEMBER_FILTER = 'all'; // 目前篩選鍵
+let FAN_MEMBER_LOADED = false;
+
+async function faLoadMemberOverview(force) {
   const area = document.getElementById('fanMemberArea');
-  if (!q) { area.innerHTML = '<div class="task-empty">請輸入會員編號／暱稱／email 搜尋</div>'; return; }
-  area.innerHTML = '<div class="task-empty">搜尋中…</div>';
+  if (FAN_MEMBER_LOADED && !force) return;
+  area.innerHTML = '<div class="task-empty">讀取中…</div>';
   try {
-    const data = await faApiPost('fan-admin-members', { q });
+    const data = await faApiPost('fan-admin-member-overview', {});
     if (!data || !data.success) {
-      area.innerHTML = '<div class="task-empty">搜尋失敗：' + faEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
+      area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
       return;
     }
     if (data.tableReady === false) {
       area.innerHTML = '<div class="task-empty">⚠️ 會員資料表尚未建立（待 db push）</div>';
       return;
     }
-    renderFanMemberList(Array.isArray(data.members) ? data.members : []);
+    FAN_MEMBER_LIST = Array.isArray(data.members) ? data.members : [];
+    FAN_MEMBER_LOADED = true;
+    renderFanMemberStats(data.stats || {});
+    renderFanMemberFilters();
+    renderFanMemberList();
   } catch (err) {
-    area.innerHTML = '<div class="task-empty">搜尋失敗：' + faEscapeHtml(err.message || '') + '</div>';
+    area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
   }
 }
 
-function renderFanMemberList(members) {
-  const area = document.getElementById('fanMemberArea');
-  if (!members.length) {
-    area.innerHTML = '<div class="task-empty">沒有符合的會員</div>';
-    return;
+function renderFanMemberStats(s) {
+  const box = document.getElementById('fanMemberStats');
+  const tile = (label, val) =>
+    '<div style="background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:10px; padding:8px 14px; text-align:center;">' +
+    '<div style="font-size:18px; font-weight:900;">' + faEscapeHtml(String(val ?? 0)) + '</div>' +
+    '<div style="font-size:11px; color:var(--c-text-light);">' + label + '</div></div>';
+  box.innerHTML =
+    tile('總註冊', s.total) + tile('本週新增', s.newThisWeek) + tile('有訂單', s.withOrders) +
+    tile('行銷同意', s.marketingConsent) + tile('填了生日', s.withBirthday) + tile('填了電話', s.withPhone) +
+    tile('填了LINE', s.withLine) + tile('填了寶貝', s.withChildren) + tile('綁多信箱', s.multiEmail);
+}
+
+const FAN_MEMBER_FILTER_DEFS = [
+  ['all', '全部'], ['orders', '🛒 有訂單'], ['new', '🆕 本週'], ['marketing', '✉️ 行銷同意'],
+  ['birthday', '🎂 生日'], ['phone', '📞 電話'], ['line', '💬 LINE'], ['children', '👶 寶貝'],
+];
+function renderFanMemberFilters() {
+  const box = document.getElementById('fanMemberFilters');
+  box.innerHTML = FAN_MEMBER_FILTER_DEFS.map(([key, label]) =>
+    '<button type="button" class="task-mini-btn fa-mem-filter" data-key="' + key + '"' +
+    (FAN_MEMBER_FILTER === key ? ' style="background:var(--c-primary); color:#fff;"' : '') + '>' + label + '</button>'
+  ).join('');
+  box.querySelectorAll('.fa-mem-filter').forEach(btn => btn.addEventListener('click', () => {
+    FAN_MEMBER_FILTER = btn.dataset.key;
+    renderFanMemberFilters();
+    renderFanMemberList();
+  }));
+}
+
+function faMemberMatchesFilter(m) {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 3600e3).toISOString();
+  switch (FAN_MEMBER_FILTER) {
+    case 'orders': return m.ordersCount > 0;
+    case 'new': return String(m.createdAt) >= weekAgo;
+    case 'marketing': return !!m.marketingConsent;
+    case 'birthday': return !!m.birthday;
+    case 'phone': return !!m.phone;
+    case 'line': return !!(m.lineId || m.lineNickname);
+    case 'children': return m.childrenCount > 0;
+    default: return true;
   }
-  const rows = members.map(m => {
-    const emails = (m.emails || []).map(e =>
-      faEscapeHtml(e.email) + (e.verified ? '' : '<span style="color:#a05a00;">（未驗證）</span>')
-    ).join('<br>') || '—';
+}
+
+function renderFanMemberList() {
+  const area = document.getElementById('fanMemberArea');
+  const q = (document.getElementById('fanMemberSearchInput').value || '').trim().toLowerCase();
+  const list = FAN_MEMBER_LIST.filter(m =>
+    faMemberMatchesFilter(m) &&
+    (!q || String(m.memberNo).toLowerCase().includes(q) ||
+      String(m.displayName).toLowerCase().includes(q) ||
+      String(m.primaryEmail).toLowerCase().includes(q))
+  );
+  if (!list.length) { area.innerHTML = '<div class="task-empty">沒有符合條件的會員</div>'; return; }
+  const rows = list.map(m => {
+    // 已填資料徽章：滑鼠移上去看內容
+    const badges = [];
+    if (m.birthday) badges.push('<span title="生日：' + faEscapeHtml(m.birthday) + '">🎂</span>');
+    if (m.phone) badges.push('<span title="電話：' + faEscapeHtml(m.phone) + '">📞</span>');
+    if (m.lineId || m.lineNickname) badges.push('<span title="LINE：' + faEscapeHtml([m.lineId, m.lineNickname].filter(Boolean).join('／')) + '">💬</span>');
+    if (m.childrenCount > 0) badges.push('<span title="寶貝 ' + m.childrenCount + ' 位">👶×' + m.childrenCount + '</span>');
+    if (m.marketingConsent) badges.push('<span title="同意收到行銷訊息">✉️</span>');
+    const emailNote = m.emailsCount > 1 ? '<span style="color:#a05a00; font-size:11px;">（+' + (m.emailsCount - 1) + ' 信箱）</span>' : '';
     return '<tr style="border-bottom:1px solid var(--c-line);">' +
       '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + faEscapeHtml(m.memberNo) + '</td>' +
-      '<td style="padding:8px 10px;">' + faEscapeHtml(m.displayName) + '</td>' +
-      '<td style="padding:8px 10px;">' + emails + '</td>' +
-      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(m.ordersCount) + '</td>' +
-      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(faMoney(m.totalSpent)) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(m.displayName) + '</td>' +
+      '<td style="padding:8px 10px;">' + faEscapeHtml(m.primaryEmail) + emailNote + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(String(m.createdAt || '').slice(0, 10)) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap; text-align:right;">' + faEscapeHtml(m.ordersCount) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap; text-align:right;">' + faEscapeHtml(faMoney(m.totalSpent)) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap; font-size:15px;">' + (badges.join(' ') || '<span style="color:var(--c-text-light); font-size:12px;">—</span>') + '</td>' +
       '</tr>';
   }).join('');
-  area.innerHTML = '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
-    '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:600px;">' +
+  area.innerHTML =
+    '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">顯示 ' + list.length + '／' + FAN_MEMBER_LIST.length + ' 位（依註冊新→舊）</div>' +
+    '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
+    '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:720px;">' +
     '<thead><tr style="background:var(--c-bg-bottom); text-align:left;">' +
-    '<th style="padding:8px 10px;">會員編號</th><th style="padding:8px 10px;">暱稱</th><th style="padding:8px 10px;">信箱</th>' +
-    '<th style="padding:8px 10px;">訂單數</th><th style="padding:8px 10px;">累積消費</th>' +
+    '<th style="padding:8px 10px;">編號</th><th style="padding:8px 10px;">暱稱</th><th style="padding:8px 10px;">主要信箱</th>' +
+    '<th style="padding:8px 10px;">註冊日</th><th style="padding:8px 10px; text-align:right;">訂單</th>' +
+    '<th style="padding:8px 10px; text-align:right;">累積消費</th><th style="padding:8px 10px;">已填資料</th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
@@ -353,6 +417,7 @@ function switchFanTab(tab, skipSave) {
     try { sessionStorage.setItem('fanAdminSubTab', tab); } catch (e) { /* 私密模式等情況忽略 */ }
   }
   if (tab === 'rewards') loadFanRewards(false);
+  if (tab === 'member') faLoadMemberOverview(false); // 切到會員總覽自動載入（有快取不重抓）
 }
 Object.keys(FAN_TAB_BTNS).forEach(key => {
   FAN_TAB_BTNS[key].addEventListener('click', () => switchFanTab(key));
@@ -367,8 +432,8 @@ Object.keys(FAN_TAB_BTNS).forEach(key => {
 // ===== DOM 事件掛載 =====
 document.getElementById('fanUnclaimedRefreshBtn').addEventListener('click', () => loadFanAdminView(true));
 document.getElementById('fanUnclaimedSearch').addEventListener('input', () => { if (FAN_TABLE_READY) renderFanUnclaimedList(); });
-document.getElementById('fanMemberSearchBtn').addEventListener('click', faSearchMembers);
-document.getElementById('fanMemberSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') faSearchMembers(); });
+document.getElementById('fanMemberSearchBtn').addEventListener('click', () => faLoadMemberOverview(true));
+document.getElementById('fanMemberSearchInput').addEventListener('input', () => { if (FAN_MEMBER_LOADED) renderFanMemberList(); });
 document.getElementById('fanCustLoadBtn').addEventListener('click', () => faLoadCustomers());
 document.getElementById('fanCustSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') faLoadCustomers(); });
 
