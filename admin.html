@@ -6066,6 +6066,8 @@
       <label for="evTitleInput">標題</label>
       <input type="text" id="evTitleInput" placeholder="例如：林貝兒米餅 開團">
       <div id="evBrandMatchInfo" style="display:none; margin-top:8px; background:#F0F6FF; border: 1px solid #C9DEFB; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#4a7fb5; line-height:1.7;"></div>
+      <!-- 開團前檢查清單：依團名比對品牌庫 openChecklist 自動帶出，勾選狀態存在事件上 -->
+      <div id="evChecklistBox" style="display:none; margin-top:8px; background:#FFF4F7; border:1px solid #F3C6D3; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#b25a76; line-height:1.7;"></div>
 
       <label>顏色（顯示全部列表中的底色）</label>
       <div class="ev-toggle-row" style="margin-top:0;">
@@ -6462,6 +6464,8 @@
       <input type="text" id="brandShopeeInput" placeholder="貼上這個品牌的蝦皮賣場／商品網址">
       <label for="brandPostTemplateInput">貼文文案模板（存了之後，這個品牌的開團活動彈窗會多一顆「產生貼文文案」按鈕；{網址}、{開團日}、{結團日}、{團名} 會自動換成當團資料）</label>
       <textarea id="brandPostTemplateInput" rows="8" placeholder="貼上這個品牌的開團貼文文案…&#10;可以用 {網址}、{開團日}、{結團日}、{團名} 當佔位符"></textarea>
+      <label for="brandOpenChecklistInput">📋 開團前檢查清單（一行一條；存了之後，排這個品牌的行事曆時會自動列出來給你逐項打勾確認）</label>
+      <textarea id="brandOpenChecklistInput" rows="4" placeholder="例如：&#10;確認團購價沒有比官網貴&#10;確認贈品內容跟上一團是否相同"></textarea>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="brandSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="brandDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -6554,7 +6558,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=16"></script>
+<script src="brandVendor.js?v=17"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
@@ -6615,7 +6619,7 @@
     <p style="font-size:11.5px; color:var(--c-text-soft); margin:10px 0 0;">圖源＝品牌庫去背小圖＋圖片庫（brands／events 資料夾）＋行事曆用過的圖。要加新的品項圖：到「🖼 圖片庫」上傳到 brands 或 events 資料夾，回來這裡就選得到。</p>
   </div>
 </div>
-<script src="admin.js?v=89"></script>
+<script src="admin.js?v=90"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

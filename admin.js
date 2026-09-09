@@ -39,6 +39,7 @@ let customBlocks = [];             // 【新】開團狀態清單的自訂區塊
 let socialLinks = {};              // 【新】品牌社群連結（IG／TikTok／FB／Email），顯示在現正開團中最上方
 let vendorDb = [];  // 【新】團購廠商資料庫（廠商/行銷公司）
 let brandDb = [];   // 【新】團購品牌資料庫（掛在廠商底下）
+let eventChecklistStates = {};  // 【新】各事件的開團前檢查清單勾選狀態 { 事件id: { "品牌名::項目": true } }
 
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
 const PR_STATUS_LIST = ['尚未選品', '選品中', '已選品', '已寄出', '已收到', '已拍攝'];
@@ -1481,6 +1482,7 @@ async function fetchMemos() {
     socialLinks = data.socialLinks || {};
     vendorDb = Array.isArray(data.vendorDb) ? data.vendorDb : [];
     brandDb = Array.isArray(data.brandDb) ? data.brandDb : [];
+    eventChecklistStates = (data.eventChecklistStates && typeof data.eventChecklistStates === 'object') ? data.eventChecklistStates : {};
     if (isViewShown('brandVendor')) renderBrandVendorView();
 
     renderGroupStatusList('calGroupList');
@@ -1972,6 +1974,8 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evBrandMatchInfo').style.display = 'none';
   document.getElementById('evBrandMatchInfo').innerHTML = '';
   if (!isNew) setTimeout(renderEvBrandMatchInfo, 0);
+  // 開團前檢查清單：reset=true 清掉上一個活動殘留的勾選畫面，只看這個活動已存的狀態
+  if (typeof bvRenderEvChecklist === 'function') setTimeout(() => bvRenderEvChecklist(true), 0);
 
   // 公關品狀態面板：要有活動 id 才存得了，新增活動（還沒存檔）時整塊藏起來
   document.getElementById('prPanel').style.display = isNew ? 'none' : '';
@@ -2164,14 +2168,27 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
     thumbUrl, discountCode, discountDesc
   };
 
+  // 開團前檢查清單：沒勾完先確認一次（提醒不強制擋）；清單沒顯示就不帶欄位、不動已存狀態
+  const ck = (typeof bvCollectEvChecklist_ === 'function') ? bvCollectEvChecklist_() : null;
+  if (ck && ck.unchecked > 0) {
+    if (!confirm('📋 開團前檢查清單還有 ' + ck.unchecked + ' 項沒打勾，確定要儲存嗎？')) return;
+  }
+  if (ck) payload.checklistState = ck.state;
+
   const btn = document.getElementById('evSaveBtn');
   btn.disabled = true;
   setFormStatus('evEditStatus', '儲存中…', '');
   try {
+    let addRes = null;
     if (eventEditCtx.isNew) {
-      await postTask(Object.assign({ type: 'event-add' }, payload));
+      addRes = await postTask(Object.assign({ type: 'event-add' }, payload));
     } else {
       await postTask(Object.assign({ type: 'event-update', id: eventEditCtx.ev.id }, payload));
+    }
+    // 勾選狀態後台包（fetchMemos）才會刷新，先把本地快取跟上，重開視窗才不會看到舊勾選
+    if (ck) {
+      const savedId = eventEditCtx.isNew ? (addRes && addRes.id) : eventEditCtx.ev.id;
+      if (savedId !== undefined && savedId !== null && savedId !== '') eventChecklistStates[String(savedId)] = ck.state;
     }
     const reopenDate = calEditSelectedDate;
     closeEventEditModal();

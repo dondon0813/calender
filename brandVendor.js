@@ -331,6 +331,7 @@ function openBrandEditModal(brand) {
   document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
   document.getElementById('brandShopeeInput').value = brand ? (brand.shopeeUrl || '') : '';
   document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
+  document.getElementById('brandOpenChecklistInput').value = brand ? (brand.openChecklist || '') : '';
   document.getElementById('brandEditModal').classList.add('show');
 }
 function closeBrandEditModal() {
@@ -359,7 +360,9 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     intro: document.getElementById('brandIntroInput').value.trim(),
     shopeeUrl: document.getElementById('brandShopeeInput').value.trim(),
     // 只修頭尾空白，內文換行是貼文排版的一部分，不能動
-    postTemplate: document.getElementById('brandPostTemplateInput').value.trim()
+    postTemplate: document.getElementById('brandPostTemplateInput').value.trim(),
+    // 一行一條，換行是清單分隔，不能動
+    openChecklist: document.getElementById('brandOpenChecklistInput').value.trim()
   };
   const btn = document.getElementById('brandSaveBtn');
   btn.disabled = true;
@@ -678,8 +681,68 @@ function renderEvBrandMatchInfo() {
 
 document.getElementById('evTitleInput').addEventListener('input', () => {
   clearTimeout(window._evBrandMatchTimer);
-  window._evBrandMatchTimer = setTimeout(renderEvBrandMatchInfo, 300);
+  window._evBrandMatchTimer = setTimeout(() => { renderEvBrandMatchInfo(); bvRenderEvChecklist(); }, 300);
 });
+
+// ===== 開團前檢查清單（2026-09-09）=====
+// 品牌庫每個品牌可存「開團前檢查清單」（openChecklist，一行一條）：這個品牌每次開團
+// 固定要確認的事（例：團購價比官網貴要先看）。排行事曆時依團名比對品牌自動列出，
+// 逐項打勾，勾選狀態存在事件上（checklistState，key＝品牌名::項目文字），
+// 由後台包 eventChecklistStates 帶回。清單原文永遠以品牌欄位為準——
+// 品牌改了清單，舊團會自動出現新的未勾項目。
+
+function bvChecklistItemsForTitle_(title) {
+  if (!title) return [];
+  const items = [];
+  bvBrandsInTitle_(title).forEach(brand => {
+    String(brand.openChecklist || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(text => {
+      items.push({ brand: brand.name, text, key: brand.name + '::' + text });
+    });
+  });
+  return items;
+}
+
+// reset=true（剛開編輯視窗）只看已存的勾選狀態；不帶（打字改標題重畫）保留畫面上已勾的
+function bvRenderEvChecklist(reset) {
+  const box = document.getElementById('evChecklistBox');
+  if (!box) return;
+  const domState = {};
+  if (!reset) {
+    box.querySelectorAll('input[data-ck]').forEach(cb => { domState[cb.getAttribute('data-ck')] = cb.checked; });
+  }
+  const title = document.getElementById('evTitleInput').value.trim();
+  const items = bvChecklistItemsForTitle_(title);
+  if (!items.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  const evId = (typeof eventEditCtx !== 'undefined' && eventEditCtx && !eventEditCtx.isNew) ? String(eventEditCtx.ev.id) : '';
+  const saved = (typeof eventChecklistStates !== 'undefined' && evId && eventChecklistStates[evId]) ? eventChecklistStates[evId] : {};
+  // 聯名團同時對到多個品牌時，每一條前面標品牌名才分得出是誰的檢查項
+  const multiBrand = new Set(items.map(i => i.brand)).size > 1;
+
+  box.innerHTML = '<div style="font-weight:900; margin-bottom:4px;">📋 開團前檢查清單</div>' +
+    items.map(i => {
+      const checked = Object.prototype.hasOwnProperty.call(domState, i.key) ? domState[i.key] : !!saved[i.key];
+      return '<label style="display:flex; align-items:flex-start; gap:6px; margin:4px 0; cursor:pointer;">' +
+        '<input type="checkbox" data-ck="' + escHtml(i.key) + '"' + (checked ? ' checked' : '') + ' style="width:auto; margin:3px 0 0;">' +
+        '<span>' + (multiBrand ? '［' + escHtml(i.brand) + '］' : '') + escHtml(i.text) + '</span></label>';
+    }).join('');
+  box.style.display = 'block';
+}
+
+// 收集勾選狀態給存檔用；清單沒顯示（比對不到品牌或品牌沒設清單）回 null＝payload 不帶欄位、不動已存狀態
+function bvCollectEvChecklist_() {
+  const box = document.getElementById('evChecklistBox');
+  if (!box || box.style.display === 'none') return null;
+  const cbs = box.querySelectorAll('input[data-ck]');
+  if (!cbs.length) return null;
+  const state = {};
+  let unchecked = 0;
+  cbs.forEach(cb => {
+    if (cb.checked) state[cb.getAttribute('data-ck')] = true;
+    else unchecked++;
+  });
+  return { state, unchecked, total: cbs.length };
+}
 
 // ===== 產生貼文文案 =====
 // 按鈕有兩顆：活動「檢視」彈窗（#evPostGenBtn，在 adminModal 裡）與品牌檢視彈窗（#brandDetailPostGenBtn）。
