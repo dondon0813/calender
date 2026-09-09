@@ -188,6 +188,7 @@ async function faLoadMemberOverview(force) {
     FAN_MEMBER_LIST = Array.isArray(data.members) ? data.members : [];
     FAN_MEMBER_LOADED = true;
     renderFanMemberStats(data.stats || {});
+    renderFanBirthdayReminders();
     renderFanMemberFilters();
     renderFanMemberList();
   } catch (err) {
@@ -204,12 +205,55 @@ function renderFanMemberStats(s) {
   box.innerHTML =
     tile('總註冊', s.total) + tile('本週新增', s.newThisWeek) + tile('有訂單', s.withOrders) +
     tile('行銷同意', s.marketingConsent) + tile('填了生日', s.withBirthday) + tile('填了電話', s.withPhone) +
-    tile('填了LINE', s.withLine) + tile('填了寶貝', s.withChildren) + tile('綁多信箱', s.multiEmail);
+    tile('填了LINE', s.withLine) + tile('填了寶貝', s.withChildren) + tile('綁多信箱', s.multiEmail) +
+    tile('已分級', s.tiered);
+}
+
+// ===== 生日提醒（只提醒「已分級標註」的會員：本人生日＋寶貝生日月，14 天內）=====
+// 會員生日格式 MM-DD 或 YYYY-MM-DD（取月日）；寶貝只有出生年月（YYYY-MM）＝以該月 1 號當提醒日。
+function faDaysUntil(md) {
+  const m = /^(\d{2})-(\d{2})$/.exec(md);
+  if (!m) return null;
+  const now = new Date();
+  const thisYear = new Date(now.getFullYear(), Number(m[1]) - 1, Number(m[2]));
+  const target = thisYear >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    ? thisYear : new Date(now.getFullYear() + 1, Number(m[1]) - 1, Number(m[2]));
+  return Math.round((target - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400e3);
+}
+function faChildAge(birthYm) {
+  const m = /^(\d{4})-(\d{2})$/.exec(String(birthYm || ''));
+  if (!m) return '';
+  const months = (new Date().getFullYear() - Number(m[1])) * 12 + (new Date().getMonth() + 1 - Number(m[2]));
+  if (months < 0) return '';
+  return months < 24 ? months + '個月' : Math.floor(months / 12) + '歲' + (months % 12 ? months % 12 + '個月' : '');
+}
+function renderFanBirthdayReminders() {
+  const box = document.getElementById('fanMemberBirthdays');
+  const lines = [];
+  for (const m of FAN_MEMBER_LIST) {
+    if (!m.adminTier) continue;
+    const who = m.memberNo + ' ' + m.displayName + '（' + m.adminTier + '）';
+    const bd = /(\d{2}-\d{2})$/.exec(String(m.birthday || ''));
+    if (bd) {
+      const d = faDaysUntil(bd[1]);
+      if (d !== null && d <= 14) lines.push({ d, html: '🎂 ' + faEscapeHtml(who) + ' 生日 ' + bd[1].replace('-', '/') + (d === 0 ? '（今天！）' : '（' + d + ' 天後）') });
+    }
+    (m.children || []).forEach((c, i) => {
+      const ym = /^(\d{4})-(\d{2})$/.exec(String(c.birthYm || ''));
+      if (!ym) return;
+      const d = faDaysUntil(ym[2] + '-01');
+      if (d !== null && d <= 14) lines.push({ d, html: '👶 ' + faEscapeHtml(who) + ' 寶貝' + (m.children.length > 1 ? (i + 1) : '') + ' 生日月 ' + Number(ym[2]) + ' 月（' + faEscapeHtml(faChildAge(c.birthYm) || '') + '）' + (d === 0 ? '（本月）' : '（' + d + ' 天後進入）') });
+    });
+  }
+  if (!lines.length) { box.innerHTML = ''; return; }
+  lines.sort((a, b) => a.d - b.d);
+  box.innerHTML = '<div style="background:#fff4f7; border:1.5px dashed var(--c-primary); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:2;">' +
+    '<b>🎁 生日提醒（已分級會員，14 天內）</b><br>' + lines.map(l => l.html).join('<br>') + '</div>';
 }
 
 const FAN_MEMBER_FILTER_DEFS = [
   ['all', '全部'], ['orders', '🛒 有訂單'], ['new', '🆕 本週'], ['marketing', '✉️ 行銷同意'],
-  ['birthday', '🎂 生日'], ['phone', '📞 電話'], ['line', '💬 LINE'], ['children', '👶 寶貝'],
+  ['birthday', '🎂 生日'], ['phone', '📞 電話'], ['line', '💬 LINE'], ['children', '👶 寶貝'], ['tiered', '⭐ 已分級'],
 ];
 function renderFanMemberFilters() {
   const box = document.getElementById('fanMemberFilters');
@@ -234,9 +278,12 @@ function faMemberMatchesFilter(m) {
     case 'phone': return !!m.phone;
     case 'line': return !!(m.lineId || m.lineNickname);
     case 'children': return m.childrenCount > 0;
+    case 'tiered': return !!m.adminTier;
     default: return true;
   }
 }
+
+let FAN_MEMBER_OPEN = ''; // 目前展開詳情的會員 userId
 
 function renderFanMemberList() {
   const area = document.getElementById('fanMemberArea');
@@ -249,7 +296,6 @@ function renderFanMemberList() {
   );
   if (!list.length) { area.innerHTML = '<div class="task-empty">沒有符合條件的會員</div>'; return; }
   const rows = list.map(m => {
-    // 已填資料徽章：滑鼠移上去看內容
     const badges = [];
     if (m.birthday) badges.push('<span title="生日：' + faEscapeHtml(m.birthday) + '">🎂</span>');
     if (m.phone) badges.push('<span title="電話：' + faEscapeHtml(m.phone) + '">📞</span>');
@@ -257,18 +303,23 @@ function renderFanMemberList() {
     if (m.childrenCount > 0) badges.push('<span title="寶貝 ' + m.childrenCount + ' 位">👶×' + m.childrenCount + '</span>');
     if (m.marketingConsent) badges.push('<span title="同意收到行銷訊息">✉️</span>');
     const emailNote = m.emailsCount > 1 ? '<span style="color:#a05a00; font-size:11px;">（+' + (m.emailsCount - 1) + ' 信箱）</span>' : '';
-    return '<tr style="border-bottom:1px solid var(--c-line);">' +
-      '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + faEscapeHtml(m.memberNo) + '</td>' +
-      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(m.displayName) + '</td>' +
+    const tierBadge = m.adminTier
+      ? ' <span style="background:var(--c-primary); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;">' + faEscapeHtml(m.adminTier) + '</span>' : '';
+    const open = FAN_MEMBER_OPEN === m.userId;
+    let html = '<tr class="fa-mem-row" data-uid="' + faEscapeHtml(m.userId) + '" style="border-bottom:1px solid var(--c-line); cursor:pointer;' + (open ? ' background:var(--c-bg-bottom);' : '') + '">' +
+      '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + (open ? '▾ ' : '▸ ') + faEscapeHtml(m.memberNo) + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(m.displayName) + tierBadge + '</td>' +
       '<td style="padding:8px 10px;">' + faEscapeHtml(m.primaryEmail) + emailNote + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(String(m.createdAt || '').slice(0, 10)) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap; text-align:right;">' + faEscapeHtml(m.ordersCount) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap; text-align:right;">' + faEscapeHtml(faMoney(m.totalSpent)) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap; font-size:15px;">' + (badges.join(' ') || '<span style="color:var(--c-text-light); font-size:12px;">—</span>') + '</td>' +
       '</tr>';
+    if (open) html += faMemberDetailRow(m);
+    return html;
   }).join('');
   area.innerHTML =
-    '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">顯示 ' + list.length + '／' + FAN_MEMBER_LIST.length + ' 位（依註冊新→舊）</div>' +
+    '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">顯示 ' + list.length + '／' + FAN_MEMBER_LIST.length + ' 位（依註冊新→舊，點列展開完整資料與分級標註）</div>' +
     '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
     '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:720px;">' +
     '<thead><tr style="background:var(--c-bg-bottom); text-align:left;">' +
@@ -276,6 +327,59 @@ function renderFanMemberList() {
     '<th style="padding:8px 10px;">註冊日</th><th style="padding:8px 10px; text-align:right;">訂單</th>' +
     '<th style="padding:8px 10px; text-align:right;">累積消費</th><th style="padding:8px 10px;">已填資料</th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  area.querySelectorAll('.fa-mem-row').forEach(tr => tr.addEventListener('click', () => {
+    FAN_MEMBER_OPEN = FAN_MEMBER_OPEN === tr.dataset.uid ? '' : tr.dataset.uid;
+    renderFanMemberList();
+  }));
+  const saveBtn = document.getElementById('faMemTierSaveBtn');
+  if (saveBtn) saveBtn.addEventListener('click', (e) => { e.stopPropagation(); faSaveMemberTier(saveBtn.dataset.uid); });
+  const detail = area.querySelector('.fa-mem-detail');
+  if (detail) detail.addEventListener('click', (e) => e.stopPropagation());
+}
+
+// 展開列：完整個資＋分級標註編輯（前台看不到分級，僅後台）
+function faMemberDetailRow(m) {
+  const kids = (m.children || []).map((c, i) =>
+    '寶貝' + (i + 1) + '：' + faEscapeHtml(c.gender || '') + '・' + faEscapeHtml(c.birthYm || '未填年月') +
+    (faChildAge(c.birthYm) ? '（' + faEscapeHtml(faChildAge(c.birthYm)) + '）' : '')
+  ).join('<br>') || '—';
+  const emails = (m.emails || []).map(e => faEscapeHtml(e.email) + (e.isPrimary ? '（主要）' : '')).join('<br>') || '—';
+  const info = (label, val) =>
+    '<div style="min-width:160px;"><div style="font-size:11px; color:var(--c-text-light);">' + label + '</div>' +
+    '<div style="font-weight:700;">' + (val || '—') + '</div></div>';
+  return '<tr class="fa-mem-detail"><td colspan="7" style="padding:12px 16px; background:#fffaf5; border-bottom:2px solid var(--c-line);">' +
+    '<div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:10px;">' +
+    info('🎂 生日', faEscapeHtml(m.birthday)) +
+    info('📞 電話', faEscapeHtml(m.phone)) +
+    info('💬 LINE 帳號', faEscapeHtml(m.lineId)) +
+    info('💬 社群暱稱', faEscapeHtml(m.lineNickname)) +
+    info('✉️ 行銷同意', m.marketingConsent ? '✅ 同意' : '未同意') +
+    info('👶 寶貝', kids) +
+    info('📧 綁定信箱', emails) +
+    '</div>' +
+    '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; border-top:1px dashed var(--c-border-light); padding-top:10px;">' +
+    '<span style="font-size:12px; font-weight:800;">⭐ 分級標註（僅後台可見）</span>' +
+    '<input type="text" id="faMemTierInput" list="faMemTierPresets" value="' + faEscapeHtml(m.adminTier) + '" placeholder="例如 VIP／高級" style="width:120px;">' +
+    '<datalist id="faMemTierPresets"><option value="VIP"><option value="高級"><option value="一般"><option value="黑名單"></datalist>' +
+    '<input type="text" id="faMemNoteInput" value="' + faEscapeHtml(m.adminNote) + '" placeholder="內部備註（客人看不到）" style="flex:1; min-width:200px;">' +
+    '<button type="button" class="task-mini-btn" id="faMemTierSaveBtn" data-uid="' + faEscapeHtml(m.userId) + '">💾 儲存</button>' +
+    '</div>' +
+    '</td></tr>';
+}
+
+async function faSaveMemberTier(userId) {
+  const tier = (document.getElementById('faMemTierInput').value || '').trim();
+  const note = (document.getElementById('faMemNoteInput').value || '').trim();
+  try {
+    const res = await faApiPost('fan-admin-member-tier-set', { userId, adminTier: tier, adminNote: note });
+    if (!res || !res.success) throw new Error((res && res.error) || '儲存失敗');
+    const m = FAN_MEMBER_LIST.find(x => x.userId === userId);
+    if (m) { m.adminTier = tier; m.adminNote = note; }
+    renderFanBirthdayReminders();
+    renderFanMemberList();
+  } catch (err) {
+    alert('儲存失敗：' + err.message);
+  }
 }
 
 // ===== 顧客分析 =====
