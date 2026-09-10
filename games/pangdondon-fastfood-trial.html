@@ -76,7 +76,7 @@
   /* ---------- UI ---------- */
   /* 聲音/模式圓鈕:永遠在最上層可點 */
   #mute-btn, #mode-btn { position:absolute; z-index:7; border:none; border-radius:50%; background:rgba(255,255,255,.9) center/cover no-repeat; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.18); text-align:center; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
-  #mode-btn { left:2.6rem; bottom:2.6rem; width:12rem; height:12rem; font-size:5.4rem; line-height:12rem; }   /* 廚房↔餐廳,左下 */
+  #mode-btn { left:2.6rem; bottom:2.6rem; width:15.6rem; height:15.6rem; font-size:7rem; line-height:15.6rem; }   /* 廚房↔餐廳,左下,再放大 1.3x */
   #mute-btn { right:2.6rem; bottom:2.6rem; width:12rem; height:12rem; font-size:5.4rem; line-height:12rem; }  /* 聲音開關,右下,同大小 */
   #mute-btn:active, #mode-btn:active { transform:scale(.92); }
   /* 用圖片按鈕時去掉底色 */
@@ -99,7 +99,7 @@
   .kitchen-recipe { display:flex; flex-direction:column-reverse; align-items:center; gap:.6rem; background:#fff7ec; border:.5rem solid #ffd9a0; border-radius:3rem; padding:2rem 2.6rem; }
   .kitchen-recipe .rlabel { order:99; font-size:2.4rem; font-weight:700; color:#a56a4a; margin-bottom:.4rem; }
   .kitchen-recipe img { height:5.5rem; width:auto; max-width:22rem; object-fit:contain; }
-  #kitchen-finish { position:absolute; bottom:3rem; left:50%; transform:translateX(-50%); pointer-events:auto; border:none; cursor:pointer; background:none; padding:0; animation:promo-cta 1.3s ease-in-out infinite; }
+  #kitchen-finish { position:absolute; bottom:3rem; left:50%; transform:translateX(-50%); pointer-events:auto; border:none; cursor:pointer; background:none; padding:0; }
   #kitchen-finish img { height:15rem; display:block; filter:drop-shadow(0 1rem 2rem rgba(0,0,0,.3)); }
   #kitchen-finish:active { animation:none; transform:translateX(-50%) translateY(1rem); }
 
@@ -120,8 +120,8 @@
   #finish-btn.show { display:block; animation:btn-in .4s cubic-bezier(.3,1.6,.5,1); }
   @keyframes btn-in { from{transform:translateX(-50%) scale(.3); opacity:0;} to{transform:translateX(-50%) scale(1); opacity:1;} }
   #finish-btn:active { transform:translateX(-50%) translateY(1rem); box-shadow:0 .2rem 0 #d96f00, 0 .8rem 1.5rem rgba(0,0,0,.3); }
-  /* 素材包提供 FINISH 按鈕圖時,拿掉預設樣式改用圖片 */
-  #finish-btn.img-btn { background:none; box-shadow:none; padding:0; }
+  /* 素材包提供 FINISH 按鈕圖時,拿掉預設樣式改用圖片(transition:none 避免合成層 drop-shadow 方框) */
+  #finish-btn.img-btn { background:none; box-shadow:none; padding:0; transition:none; border-radius:0; }
   #finish-btn.img-btn:active { box-shadow:none; }
   #finish-btn.img-btn img { height:16rem; display:block; filter:drop-shadow(0 1rem 2rem rgba(0,0,0,.3)); }
   /* 素材包提供破關畫面圖時,整張滿版、點任意處再玩一次 */
