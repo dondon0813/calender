@@ -93,9 +93,10 @@
   #kitchen-play { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
   #kitchen-hud { position:absolute; top:2rem; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.92); border-radius:3rem; padding:1rem 3rem; font-size:3.4rem; font-weight:800; color:#5a4632; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); }
   .kitchen-card { position:absolute; top:10rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:3rem; background:rgba(255,255,255,.9); border-radius:4rem; padding:2.4rem 3.5rem; box-shadow:0 1rem 3rem rgba(0,0,0,.2); max-width:92%; }
-  .kitchen-target { display:flex; flex-direction:column; align-items:center; gap:1rem; }
-  .kitchen-target .ktitle { font-size:3rem; font-weight:800; color:#e8618c; }
+  .kitchen-target { display:flex; flex-direction:column; align-items:center; gap:1.2rem; }
   .kitchen-target img { width:26rem; max-height:26rem; object-fit:contain; filter:drop-shadow(0 .8rem 1.6rem rgba(0,0,0,.18)); }
+  /* 料理名稱:深咖啡色圓體 */
+  .kitchen-target .kname { font-family:"dondon-round","Yuanti TC","YouYuan",system-ui,sans-serif; font-size:3.6rem; font-weight:900; color:#5a3410; letter-spacing:.3rem; }
   .kitchen-recipe { display:flex; flex-direction:column-reverse; align-items:center; gap:.6rem; background:#fff7ec; border:.5rem solid #ffd9a0; border-radius:3rem; padding:2rem 2.6rem; }
   .kitchen-recipe .rlabel { order:99; font-size:2.4rem; font-weight:700; color:#a56a4a; margin-bottom:.4rem; }
   .kitchen-recipe img { height:5.5rem; width:auto; max-width:22rem; object-fit:contain; }
@@ -117,8 +118,8 @@
   #game-title { position:absolute; top:2rem; left:2.6rem; background:rgba(255,255,255,.9); border-radius:3rem; padding:1.2rem 2.6rem; font-size:3.4rem; font-weight:800; color:#5a4632; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); }
 
   #finish-btn { position:absolute; bottom:3rem; left:50%; transform:translateX(-50%); pointer-events:auto; border:none; cursor:pointer; font-family:inherit; font-size:6rem; font-weight:900; letter-spacing:1rem; color:#fff; background:linear-gradient(#ffb347,#ff8c1a); padding:2.2rem 10rem; border-radius:6rem; box-shadow:0 1.2rem 0 #d96f00, 0 1.8rem 3rem rgba(0,0,0,.3); transition:transform .1s, box-shadow .1s, opacity .3s; display:none; }
-  #finish-btn.show { display:block; animation:btn-in .4s cubic-bezier(.3,1.6,.5,1); }
-  @keyframes btn-in { from{transform:translateX(-50%) scale(.3); opacity:0;} to{transform:translateX(-50%) scale(1); opacity:1;} }
+  /* 不用 transform 進場動畫:那會把按鈕留在合成層,讓 img 的 drop-shadow 變成方形 */
+  #finish-btn.show { display:block; }
   #finish-btn:active { transform:translateX(-50%) translateY(1rem); box-shadow:0 .2rem 0 #d96f00, 0 .8rem 1.5rem rgba(0,0,0,.3); }
   /* 素材包提供 FINISH 按鈕圖時,拿掉預設樣式改用圖片(transition:none 避免合成層 drop-shadow 方框) */
   #finish-btn.img-btn { background:none; box-shadow:none; padding:0; transition:none; border-radius:0; }
@@ -218,7 +219,7 @@
   <div id="plusone-fx"></div>
   <div class="layer" id="fx-layer"></div>
   <div class="layer" id="screen-layer">
-    <div class="screen" id="menu-screen">
+    <div class="screen" id="menu-screen" style="visibility:hidden">
       <h1>🍽️ 噹噹點餐遊戲</h1>
       <div class="subtitle">選一間店開始玩吧!</div>
       <div id="pack-list"></div>
@@ -621,6 +622,7 @@ function renderMenu() {
   list.innerHTML = "";
   if (!DONDON.packs.length) {
     list.innerHTML = '<div style="font-size:3.5rem;color:#a00">找不到素材包,請檢查 games/packs.js</div>';
+    $("menu-screen").style.visibility = "visible";
     return;
   }
   let packs = DONDON.packs;
@@ -628,6 +630,7 @@ function renderMenu() {
     packs = DONDON.packs.filter(p => p.folder === urlGame);
     if (!packs.length) {
       list.innerHTML = `<div style="font-size:3.5rem;color:#a00">找不到遊戲「${urlGame}」,請檢查網址或 games/packs.js</div>`;
+      $("menu-screen").style.visibility = "visible";
       return;
     }
     /* 單一遊戲模式:標題換成該遊戲名,當作開始畫面;破關後只留「再玩一次」 */
@@ -639,9 +642,12 @@ function renderMenu() {
       const ms = $("menu-screen");
       ms.innerHTML = "";
       const img = document.createElement("img");
-      img.src = packBase(pack) + pack.startScreen;
       img.alt = pack.gameTitle || "";
       img.style.cssText = "position:absolute; inset:0; width:100%; height:100%; object-fit:cover; cursor:pointer;";
+      /* 開始圖載入完成才顯示,避免先閃出預設的「噹噹點餐遊戲」字樣 */
+      img.onload = () => { ms.style.visibility = "visible"; };
+      img.src = packBase(pack) + pack.startScreen;
+      if (img.complete) ms.style.visibility = "visible";
       ms.appendChild(img);
       ms.addEventListener("click", () => { SFX.unlock(); SFX.play("tap"); startGame(pack); });
       return;
@@ -649,6 +655,7 @@ function renderMenu() {
     document.querySelector("#menu-screen h1").textContent = (pack.menuIcon || "🍽️") + " " + (pack.gameTitle || "點餐遊戲");
     document.querySelector("#menu-screen .subtitle").textContent = "點一下開始玩!";
   }
+  $("menu-screen").style.visibility = "visible";
   packs.forEach(pack => {
     const btn = document.createElement("button");
     btn.className = "pack-card";
@@ -769,8 +776,8 @@ function nextKitchenRound() {
     <div id="kitchen-hud">🍔 ${state.kIndex} / ${state.kTotal}</div>
     <div class="kitchen-card">
       <div class="kitchen-target">
-        <div class="ktitle">做這個!</div>
         <img src="${base + prod.image}" alt="${prod.name}">
+        <div class="kname">${prod.name}</div>
       </div>
       <div class="kitchen-recipe">
         <div class="rlabel">配方(由下往上)</div>
