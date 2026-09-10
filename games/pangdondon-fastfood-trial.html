@@ -76,8 +76,8 @@
   /* ---------- UI ---------- */
   /* 聲音/模式圓鈕:永遠在最上層可點 */
   #mute-btn, #mode-btn { position:absolute; z-index:7; border:none; border-radius:50%; background:rgba(255,255,255,.9) center/cover no-repeat; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.18); text-align:center; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; }
-  #mode-btn { left:2.6rem; bottom:2.6rem; width:12rem; height:12rem; font-size:5.4rem; line-height:12rem; }   /* 廚房↔餐廳,左下,放大 1.5x */
-  #mute-btn { right:2.6rem; bottom:2.6rem; width:8rem; height:8rem; font-size:3.6rem; line-height:8rem; }        /* 聲音開關,右下 */
+  #mode-btn { left:2.6rem; bottom:2.6rem; width:12rem; height:12rem; font-size:5.4rem; line-height:12rem; }   /* 廚房↔餐廳,左下 */
+  #mute-btn { right:2.6rem; bottom:2.6rem; width:12rem; height:12rem; font-size:5.4rem; line-height:12rem; }  /* 聲音開關,右下,同大小 */
   #mute-btn:active, #mode-btn:active { transform:scale(.92); }
   /* 用圖片按鈕時去掉底色 */
   #mute-btn.img, #mode-btn.img { background-color:transparent; box-shadow:none; }
@@ -86,7 +86,7 @@
   #kitchen-start { padding:0; }
   /* START 移到正中偏下,專屬呼吸動畫(保持置中,不再被 translateX 推偏);padding 加大點擊範圍 */
   #kitchen-start-btn { position:absolute; left:50%; top:60%; transform:translate(-50%,-50%); border:none; background:none; cursor:pointer; padding:4rem; animation:start-pulse 1.3s ease-in-out infinite; }
-  #kitchen-start-btn img { width:44rem; height:auto; display:block; filter:drop-shadow(0 1rem 2.5rem rgba(0,0,0,.3)); }
+  #kitchen-start-btn img { width:34rem; height:auto; display:block; filter:drop-shadow(0 1rem 2.5rem rgba(0,0,0,.3)); }
   #kitchen-start-btn:active { animation:none; transform:translate(-50%,-50%) scale(.95); }
   @keyframes start-pulse { 0%,100%{ transform:translate(-50%,-50%) scale(1); } 50%{ transform:translate(-50%,-50%) scale(1.06); } }
 
@@ -107,9 +107,11 @@
   #plusone-fx { position:absolute; inset:0; z-index:6; display:none; align-items:center; justify-content:center; pointer-events:none; }
   #plusone-fx.show { display:flex; }
   #plusone-fx .po-wrap { display:flex; flex-direction:column; align-items:center; gap:1rem; animation:po-pop .5s cubic-bezier(.3,1.7,.5,1); }
+  #plusone-fx .po-wrap.leave { animation:po-float 1s ease-in forwards; }   /* 往上飄 + 淡化消失 */
   #plusone-fx .po-prod { width:24rem; max-height:24rem; object-fit:contain; filter:drop-shadow(0 1rem 2rem rgba(0,0,0,.25)); }
   #plusone-fx .po-plus { width:18rem; height:auto; margin-top:-4rem; }
   @keyframes po-pop { from{transform:scale(.3); opacity:0;} to{transform:scale(1); opacity:1;} }
+  @keyframes po-float { 0%{transform:translateY(0) scale(1); opacity:1;} 100%{transform:translateY(-16rem) scale(1.05); opacity:0;} }
 
   #hud { position:absolute; top:2rem; right:2.6rem; background:rgba(255,255,255,.9); border-radius:3rem; padding:1.2rem 2.6rem; font-size:3.4rem; font-weight:800; color:#5a4632; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); }
   #game-title { position:absolute; top:2rem; left:2.6rem; background:rgba(255,255,255,.9); border-radius:3rem; padding:1.2rem 2.6rem; font-size:3.4rem; font-weight:800; color:#5a4632; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); }
@@ -804,7 +806,9 @@ function showPlusOne(prod) {
       </div>`;
     fx.classList.add("show");
     burstParticles(["⭐","✨","🌟"], 12);
-    setTimeout(() => { fx.classList.remove("show"); resolve(); }, 1300);
+    const wrap = fx.querySelector(".po-wrap");
+    setTimeout(() => { if (wrap) wrap.classList.add("leave"); }, 800);   /* 停一下後往上飄+淡化 */
+    setTimeout(() => { fx.classList.remove("show"); resolve(); }, 1800);
   });
 }
 
