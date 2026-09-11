@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>📤 檔案交件匣｜雪莉與朵栗</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { background: #FFF7F9; margin: 0; font-family: "Noto Sans TC", sans-serif; color: #5A4A4F; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 1.4rem; color: #E56B8C; margin: 8px 0 4px; }
+  .sub { font-size: .85rem; color: #A08A90; margin-bottom: 20px; line-height: 1.6; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 2px 10px rgba(229,107,140,.08); margin-bottom: 18px; }
+  label { display: block; font-size: .85rem; font-weight: 700; margin: 10px 0 4px; }
+  input[type=text] { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid #F3D7DF; border-radius: 10px; font-size: .95rem; }
+  input[type=text]:focus { outline: none; border-color: #E56B8C; }
+  .dropzone { border: 2px dashed #F0BFCD; border-radius: 12px; padding: 26px 12px; text-align: center; color: #C39AA6; font-size: .9rem; cursor: pointer; margin-top: 12px; transition: background .15s; }
+  .dropzone.drag { background: #FDEFF3; border-color: #E56B8C; }
+  .btn { display: inline-block; background: #E56B8C; color: #fff; border: none; border-radius: 999px; padding: 10px 26px; font-size: .95rem; font-weight: 700; cursor: pointer; margin-top: 14px; }
+  .btn:disabled { background: #E9C6D0; cursor: default; }
+  .filelist { margin-top: 10px; font-size: .85rem; }
+  .filelist li { margin: 3px 0; }
+  #status { margin-top: 10px; font-size: .85rem; min-height: 1.2em; }
+  #status.err { color: #D8437A; }
+  #status.ok { color: #4CAF7D; }
+  .inbox-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #F3E0E6; font-size: .87rem; }
+  .inbox-item:last-child { border-bottom: none; }
+  .inbox-item .meta { flex: 1; min-width: 0; }
+  .inbox-item .fname { font-weight: 700; word-break: break-all; }
+  .inbox-item .note { color: #A08A90; font-size: .8rem; }
+  .inbox-item .del { background: none; border: none; color: #C9A0AC; cursor: pointer; font-size: .85rem; padding: 4px; }
+  .inbox-item .del:hover { color: #D8437A; }
+  #loginTip { background: #FDF0E4; border-radius: 12px; padding: 14px; font-size: .9rem; display: none; }
+  #loginTip a { color: #E56B8C; font-weight: 700; }
+  .empty { color: #C9A0AC; font-size: .85rem; text-align: center; padding: 14px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📤 檔案交件匣</h1>
+  <div class="sub">
+    把要交給系統處理的檔案上傳到這裡（Excel／CSV／截圖／PDF 都可以），並寫清楚這是什麼。<br>
+    這裡是<strong>臨時交件區</strong>：檔案處理完會被清掉，不是永久儲存空間。
+  </div>
+
+  <div id="loginTip">請先到 <a href="admin.html">後台</a> 登入，再回來這一頁（同一個瀏覽器就會自動帶登入狀態）。</div>
+
+  <div class="card" id="uploadCard">
+    <label for="noteInput">這批檔案是什麼？（必填）</label>
+    <input type="text" id="noteInput" maxlength="100" placeholder="例：禾流 8月團 客人email名單">
+    <div class="dropzone" id="dropzone">點這裡選檔案，或把檔案拖進來（可多選）</div>
+    <input type="file" id="fileInput" multiple style="display:none">
+    <ul class="filelist" id="pickedList"></ul>
+    <button class="btn" id="uploadBtn" disabled>上傳</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700; margin-bottom:6px;">目前交件匣裡的檔案</div>
+    <div id="inboxList"><div class="empty">載入中…</div></div>
+  </div>
+</div>
+
+<script>
+const API = "https://dondon-platform.vercel.app/api/legacy";
+function getToken() { try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; } }
+async function apiPost(type, payload) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ type: type, token: getToken() }, payload || {})) });
+  return res.json();
+}
+function fmtSize(n) {
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return Math.round(n / 1024) + ' KB';
+  return n + ' B';
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+let picked = [];
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+const btn = document.getElementById('uploadBtn');
+const statusEl = document.getElementById('status');
+
+dz.addEventListener('click', function () { fi.click(); });
+fi.addEventListener('change', function () { addFiles(fi.files); fi.value = ''; });
+dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', function () { dz.classList.remove('drag'); });
+dz.addEventListener('drop', function (e) { e.preventDefault(); dz.classList.remove('drag'); addFiles(e.dataTransfer.files); });
+
+function addFiles(list) {
+  for (let i = 0; i < list.length; i++) picked.push(list[i]);
+  renderPicked();
+}
+function renderPicked() {
+  const ul = document.getElementById('pickedList');
+  ul.innerHTML = picked.map(function (f, i) {
+    return '<li>' + esc(f.name) + '（' + fmtSize(f.size) + '）<button class="del" data-i="' + i + '" style="background:none;border:none;color:#C9A0AC;cursor:pointer;">✕</button></li>';
+  }).join('');
+  ul.querySelectorAll('button[data-i]').forEach(function (b) {
+    b.addEventListener('click', function () { picked.splice(Number(b.dataset.i), 1); renderPicked(); });
+  });
+  btn.disabled = picked.length === 0;
+}
+
+btn.addEventListener('click', async function () {
+  const note = document.getElementById('noteInput').value.trim();
+  if (!note) { setStatus('請先填寫「這批檔案是什麼」', true); return; }
+  if (!picked.length) return;
+  btn.disabled = true;
+  let ok = 0, fail = 0;
+  for (let i = 0; i < picked.length; i++) {
+    const f = picked[i];
+    setStatus('上傳中 ' + (i + 1) + '/' + picked.length + '：' + f.name);
+    try {
+      const init = await apiPost('inbox-upload-url', { note: note, fileName: f.name, size: f.size });
+      if (!init || init.success !== true) throw new Error((init && init.error) || '取得上傳網址失敗');
+      const put = await fetch(init.signedUrl, { method: 'PUT', headers: { 'Content-Type': f.type || 'application/octet-stream' }, body: f });
+      if (!put.ok) throw new Error('檔案上傳失敗（' + put.status + '）');
+      const commit = await apiPost('inbox-commit', { path: init.path, note: note, originalName: f.name, size: f.size });
+      if (!commit || commit.success !== true) throw new Error((commit && commit.error) || '登記失敗');
+      ok++;
+    } catch (err) {
+      fail++;
+      setStatus('「' + f.name + '」失敗：' + err.message, true);
+    }
+  }
+  if (!fail) { setStatus('完成！成功上傳 ' + ok + ' 個檔案 ✓', false, true); picked = []; renderPicked(); }
+  else setStatus('完成：成功 ' + ok + '、失敗 ' + fail + '（失敗的請重新選檔再傳一次）', true);
+  btn.disabled = picked.length === 0;
+  loadList();
+});
+
+function setStatus(msg, isErr, isOk) {
+  statusEl.textContent = msg;
+  statusEl.className = isErr ? 'err' : (isOk ? 'ok' : '');
+}
+
+async function loadList() {
+  const box = document.getElementById('inboxList');
+  try {
+    const res = await apiPost('inbox-list');
+    if (res && res.needLogin) {
+      document.getElementById('loginTip').style.display = 'block';
+      document.getElementById('uploadCard').style.display = 'none';
+      box.innerHTML = '<div class="empty">－</div>';
+      return;
+    }
+    if (!res || res.success !== true) throw new Error((res && res.error) || '載入失敗');
+    if (!res.files.length) { box.innerHTML = '<div class="empty">目前是空的</div>'; return; }
+    box.innerHTML = res.files.map(function (f) {
+      const d = new Date(f.at);
+      const when = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      return '<div class="inbox-item">' +
+        '<div class="meta"><div class="fname">' + esc(f.name) + '</div>' +
+        '<div class="note">' + esc(f.note) + '｜' + esc(f.uploader) + '｜' + when + '｜' + fmtSize(f.size) + '</div></div>' +
+        '<button class="del" data-path="' + esc(f.path) + '" title="刪除">🗑</button></div>';
+    }).join('');
+    box.querySelectorAll('button[data-path]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        if (!confirm('確定刪除這個檔案？')) return;
+        const res = await apiPost('inbox-delete', { path: b.dataset.path });
+        if (res && res.success) loadList();
+        else alert('刪除失敗：' + ((res && res.error) || '未知錯誤'));
+      });
+    });
+  } catch (err) {
+    box.innerHTML = '<div class="empty">載入失敗：' + esc(err.message) + '</div>';
+  }
+}
+loadList();
+</script>
+</body>
+</html>
