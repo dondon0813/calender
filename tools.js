@@ -61,11 +61,11 @@ function generateCopyGenText() {
   const dateLabel = `${m}/${d}`;
   const lines = [];
 
+  // 2026-09 起 FB 貼文政策不允許帶網址，文案一律只列團名不附連結
   if (closingToday.length) {
     lines.push(`✦ 今日結單 ${dateLabel} ✦`);
     closingToday.forEach(ev => {
       lines.push(plainTitle(ev.title || ''));   // 團名的「｜」在文案裡接回空白（plainTitle 在 admin.js）
-      lines.push(ev.url || '');
     });
   }
 
@@ -74,7 +74,6 @@ function generateCopyGenText() {
     lines.push('✦ 現正開團中✦');
     stillOpen.forEach(ev => {
       lines.push(plainTitle(ev.title || ''));   // 團名的「｜」在文案裡接回空白（plainTitle 在 admin.js）
-      lines.push(ev.url || '');
     });
   }
 
