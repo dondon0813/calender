@@ -116,9 +116,9 @@
 
   #hud { position:absolute; top:2rem; right:2.6rem; background:rgba(255,255,255,.9); border-radius:3rem; padding:1.2rem 2.6rem; font-size:3.4rem; font-weight:800; color:#5a4632; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); }
   /* 顧客進度小人版:底條 + 一排小人,置中頂端 */
-  #hud.icons { right:auto; left:50%; transform:translateX(-50%); background:none; box-shadow:none; padding:2.4rem 4rem; display:flex; gap:1.6rem; align-items:center; }
+  #hud.icons { top:2rem; right:2.6rem; left:auto; transform:none; background:none; box-shadow:none; padding:1.4rem 2.4rem; display:flex; gap:1rem; align-items:center; }
   #hud.icons::before { content:""; position:absolute; inset:0; background:var(--hud-bar) center/100% 100% no-repeat; z-index:-1; }
-  #hud.icons img { height:6.6rem; width:auto; display:block; }
+  #hud.icons img { height:4.2rem; width:auto; display:block; }
   #game-title { position:absolute; top:2rem; left:2.6rem; background:rgba(255,255,255,.9); border-radius:3rem; padding:1.2rem 2.6rem; font-size:3.4rem; font-weight:800; color:#5a4632; box-shadow:0 .5rem 1.5rem rgba(0,0,0,.15); }
 
   #finish-btn { position:absolute; bottom:3rem; left:50%; transform:translateX(-50%); pointer-events:auto; border:none; cursor:pointer; font-family:inherit; font-size:6rem; font-weight:900; letter-spacing:1rem; color:#fff; background:linear-gradient(#ffb347,#ff8c1a); padding:2.2rem 10rem; border-radius:6rem; box-shadow:0 1.2rem 0 #d96f00, 0 1.8rem 3rem rgba(0,0,0,.3); transition:transform .1s, box-shadow .1s, opacity .3s; display:none; }
