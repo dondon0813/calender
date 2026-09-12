@@ -2966,10 +2966,10 @@ function renderMatLibPanel() {
   const term = (document.getElementById('matLibSearch').value || '').trim().toLowerCase();
   const canEdit = typeof hasEditPerm !== 'function' || hasEditPerm('bookEdit');
   document.getElementById('matLibAddBtn').style.display = canEdit ? '' : 'none';
-  // 待確認按鈕：有待確認教材（或篩選中）才顯示，帶數量
+  // 待確認按鈕：常駐顯示帶數量（雪莉 09-13 指正：藏起來會找不到）
   const pendingCount = (PACKAGE_DATA.materialsLibrary || []).filter(m => m.visible === false).length;
   const pendBtn = document.getElementById('matLibPendingBtn');
-  pendBtn.style.display = (pendingCount || matLibPendingOnly) ? '' : 'none';
+  pendBtn.style.display = '';
   pendBtn.textContent = '🚧 待確認 ' + pendingCount;
   pendBtn.classList.toggle('on', matLibPendingOnly);
   const items = (PACKAGE_DATA.materialsLibrary || []).filter(m => {
