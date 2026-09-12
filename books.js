@@ -1144,7 +1144,8 @@ function renderMaterialList(materials) {
     const sharedSuffix = Array.isArray(m.bookIds) && m.bookIds.length > 1 ? ` ・ 📚 共用 ${m.bookIds.length} 本` : '';
     // 模板合成狀態：有平時版成品＝已合成；promoApplied＝目前前台掛的是開團版
     const tplSuffix = m.composedPlainUrl ? ` ・ 🎨 ${m.promoApplied ? '開團版' : '已合成'}` : '';
-    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載${sharedSuffix}${tplSuffix}`;
+    const hiddenPrefix = m.visible === false ? '🚧 未顯示 ・ ' : '';
+    sub.textContent = `${hiddenPrefix}${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載${sharedSuffix}${tplSuffix}`;
     info.appendChild(sub);
     item.appendChild(info);
 
@@ -1207,6 +1208,8 @@ function openMaterialForm(material, opts) {
   // 綁定類型／對象／標籤（2026-09-13 教材獨立化）
   mtlbInitBindUI(material);
   document.getElementById('mTags').value = material && Array.isArray(material.tags) ? material.tags.join(', ') : '';
+  // 顯示於前台：編輯帶回現值；新增預設不勾（雪莉定：上傳完最後確認再上架）
+  document.getElementById('mVisible').checked = material ? material.visible !== false : false;
   document.getElementById('materialFormModal').classList.add('show');
   document.getElementById('materialForm').classList.add('show');
   document.getElementById('mTitle').value = material ? material.title || '' : '';
@@ -1319,6 +1322,8 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
   const payload = {
     book_ids: bookIds,
     tags: mtlbTagsFromInput(),
+    // 顯示於前台（migration 20260913000004）：沒勾＝待確認，只有後台看得到
+    is_visible: document.getElementById('mVisible').checked,
     title,
     description: document.getElementById('mDescription').value,
     print_size: document.getElementById('mPrintSize').value.trim(),
@@ -2948,6 +2953,8 @@ function mtlbBindBadge(m) {
   return parts.join('・') || '✨ 獨立教材';
 }
 
+let matLibPendingOnly = false; // 「🚧 待確認」篩選（只列 is_visible=false 的教材）
+
 function renderMatLibPanel() {
   const listEl = document.getElementById('matLibList');
   if (!listEl) return;
@@ -2959,7 +2966,14 @@ function renderMatLibPanel() {
   const term = (document.getElementById('matLibSearch').value || '').trim().toLowerCase();
   const canEdit = typeof hasEditPerm !== 'function' || hasEditPerm('bookEdit');
   document.getElementById('matLibAddBtn').style.display = canEdit ? '' : 'none';
+  // 待確認按鈕：有待確認教材（或篩選中）才顯示，帶數量
+  const pendingCount = (PACKAGE_DATA.materialsLibrary || []).filter(m => m.visible === false).length;
+  const pendBtn = document.getElementById('matLibPendingBtn');
+  pendBtn.style.display = (pendingCount || matLibPendingOnly) ? '' : 'none';
+  pendBtn.textContent = '🚧 待確認 ' + pendingCount;
+  pendBtn.classList.toggle('on', matLibPendingOnly);
   const items = (PACKAGE_DATA.materialsLibrary || []).filter(m => {
+    if (matLibPendingOnly && m.visible !== false) return false;
     if (!term) return true;
     const boundTitles = (m.bookIds || []).map(id => {
       const b = (PACKAGE_DATA.books || []).find(x => x.id === id);
@@ -2969,7 +2983,8 @@ function renderMatLibPanel() {
   });
   listEl.innerHTML = '';
   if (!items.length) {
-    listEl.innerHTML = '<div class="task-empty">' + (term ? '找不到符合的教材' : '還沒有教材，點上面「＋新增教材」開始') + '</div>';
+    listEl.innerHTML = '<div class="task-empty">' +
+      (matLibPendingOnly ? '沒有待確認的教材 🎉' : term ? '找不到符合的教材' : '還沒有教材，點上面「＋新增教材」開始') + '</div>';
     return;
   }
   items.forEach(m => {
@@ -2994,7 +3009,9 @@ function renderMatLibPanel() {
     info.appendChild(title);
     const sub = document.createElement('div');
     sub.className = 'pba-material-sub';
-    const bits = [mtlbBindBadge(m)];
+    const bits = [];
+    if (m.visible === false) bits.push('🚧 未顯示（待確認）');
+    bits.push(mtlbBindBadge(m));
     if ((m.tags || []).length) bits.push(m.tags.map(t => '#' + t).join(' '));
     if (m.print_size) bits.push(m.print_size);
     if (m.premium) bits.push('💎 兌換專屬');
@@ -3005,6 +3022,24 @@ function renderMatLibPanel() {
     item.appendChild(info);
     const actions = document.createElement('div');
     actions.className = 'pba-material-actions';
+    if (canEdit && m.visible === false) {
+      // 一鍵上架：待確認教材看過沒問題直接顯示於前台，不用進表單
+      const pubBtn = document.createElement('button');
+      pubBtn.type = 'button';
+      pubBtn.className = 'pba-mini-btn';
+      pubBtn.textContent = '✅ 上架';
+      pubBtn.addEventListener('click', async () => {
+        pubBtn.disabled = true;
+        try {
+          const res = await apiPost('material-upsert', { id: m.id, is_visible: true });
+          if (!res || res.success !== true) { showToast('上架失敗：' + ((res && res.error) || '未知錯誤'), true); pubBtn.disabled = false; return; }
+          showToast('已顯示於前台');
+          await mtplReloadPackage();
+          renderMatLibPanel();
+        } catch (err) { pubBtn.disabled = false; }
+      });
+      actions.appendChild(pubBtn);
+    }
     if (canEdit) {
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
@@ -3034,6 +3069,10 @@ function renderMatLibPanel() {
 }
 
 document.getElementById('matLibSearch').addEventListener('input', renderMatLibPanel);
+document.getElementById('matLibPendingBtn').addEventListener('click', () => {
+  matLibPendingOnly = !matLibPendingOnly;
+  renderMatLibPanel();
+});
 document.getElementById('matLibAddBtn').addEventListener('click', () => {
   if (!PACKAGE_DATA) { showToast('資料還在載入，稍等一下', true); return; }
   openMaterialForm(null, { standalone: true });

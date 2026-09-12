@@ -5289,6 +5289,15 @@
                   <div class="pba-upload-status" id="mTplStatus"></div>
                 </div>
               </div>
+              <!-- 顯示於前台（migration 20260913000004）：新教材預設不勾＝待確認，做完最後確認再勾 -->
+              <div class="pba-field" style="border-top:1.5px dashed var(--c-border, #ddd); padding-top:10px;">
+                <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:14px;">
+                  <input type="checkbox" id="mVisible" style="width:auto;"> ✅ 顯示於前台
+                </label>
+                <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                  沒勾＝待確認：只有後台看得到（教材分頁的「🚧 待確認」清單），前台書/玩具視窗與教材館都不出現。確認沒問題再勾起來存檔。
+                </div>
+              </div>
               <div class="pba-form-actions">
                 <button type="button" class="pba-btn pba-btn-save" id="saveMaterialBtn">儲存教材</button>
                 <button type="button" class="pba-mini-btn" id="cancelMaterialBtn">取消</button>
@@ -5736,6 +5745,7 @@
     <div id="hallTabMat">
       <div class="pba-grid-toolbar">
         <button class="pba-add-btn" id="matLibAddBtn">＋ 新增教材</button>
+        <button type="button" class="pba-tab" id="matLibPendingBtn" style="display:none;">🚧 待確認</button>
         <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
           <input type="text" id="matLibSearch" placeholder="🔍 搜尋教材標題／標籤／綁定品項">
         </div>
@@ -6730,7 +6740,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=15"></script>
+<script src="books.js?v=16"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
