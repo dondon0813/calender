@@ -2272,13 +2272,11 @@ const PBA_TAB_PANELS = {
   manage: document.getElementById('pbaTabPanelManage'),
   promo: document.getElementById('pbaTabPanelPromo'),
   settings: document.getElementById('pbaTabPanelSettings'),
-  tpl: document.getElementById('pbaTabPanelTpl'),
 };
 const PBA_TAB_BTNS = {
   manage: document.getElementById('pbaTabBtnManage'),
   promo: document.getElementById('pbaTabBtnPromo'),
   settings: document.getElementById('pbaTabBtnSettings'),
-  tpl: document.getElementById('pbaTabBtnTpl'),
 };
 function switchPbaTab(tab) {
   Object.keys(PBA_TAB_PANELS).forEach(key => {
@@ -2287,12 +2285,10 @@ function switchPbaTab(tab) {
   });
   // 進設定頁時重繪兩份標籤清單：書可能剛在編輯表單改過勾選，本數/清單要反映最新狀態
   if (tab === 'settings') { renderCategoryManageList(); renderTypeManageList(); }
-  if (tab === 'tpl') renderTplPanel();
 }
 PBA_TAB_BTNS.manage.addEventListener('click', () => switchPbaTab('manage'));
 PBA_TAB_BTNS.promo.addEventListener('click', () => switchPbaTab('promo'));
 PBA_TAB_BTNS.settings.addEventListener('click', () => switchPbaTab('settings'));
-PBA_TAB_BTNS.tpl.addEventListener('click', () => switchPbaTab('tpl'));
 
 // ===================================================================
 // ===== 教材模板合成系統（docs/06，2026-09-13）=====
@@ -3154,26 +3150,35 @@ document.getElementById('matLibAddBtn').addEventListener('click', () => {
 // hall 資源區（hallResWrap）只有一份 DOM：切分頁時搬進該分頁的插槽，
 // 並設 hall.js 的 HALL_KIND_TAB（教材分頁＝file、其餘同名）重畫過濾後的清單。
 function setHallTab(tab) {
-  const map = { mat: 'Mat', game: 'Game', audio: 'Audio' };
+  const map = { mat: 'Mat', game: 'Game', audio: 'Audio', tpl: 'Tpl' };
   Object.keys(map).forEach(key => {
     document.getElementById('hallTab' + map[key]).style.display = key === tab ? '' : 'none';
     document.getElementById('hallTabBtn' + map[key]).classList.toggle('on', key === tab);
   });
   const wrap = document.getElementById('hallResWrap');
-  const slot = document.getElementById('hallResSlot' + map[tab]);
+  const slot = document.getElementById('hallResSlot' + map[tab]); // tpl 沒有資源插槽＝不搬
   if (wrap && slot && wrap.parentElement !== slot) slot.appendChild(wrap);
-  if (typeof HALL_KIND_TAB !== 'undefined') {
+  if (tab !== 'tpl' && typeof HALL_KIND_TAB !== 'undefined') {
     HALL_KIND_TAB = tab === 'mat' ? 'file' : tab;
     if (typeof hallRenderList === 'function' && typeof HALL_LOADED !== 'undefined' && HALL_LOADED) hallRenderList();
   }
   if (tab === 'mat') renderMatLibPanel();
+  if (tab === 'tpl') renderTplPanel();
 }
 document.getElementById('hallTabBtnMat').addEventListener('click', () => setHallTab('mat'));
 document.getElementById('hallTabBtnGame').addEventListener('click', () => setHallTab('game'));
 document.getElementById('hallTabBtnAudio').addEventListener('click', () => setHallTab('audio'));
-// 啟動時把 hall 資源區搬進預設的教材分頁插槽
+document.getElementById('hallTabBtnTpl').addEventListener('click', () => setHallTab('tpl'));
+// 啟動時：hall 資源區搬進預設的教材分頁插槽；模板設定面板從繪本後台搬進教材館
+// （2026-09-13 雪莉指正：模板管的是教材，該住教材館不是繪本館）
 (function mtlbInitHallResSlot() {
   const wrap = document.getElementById('hallResWrap');
   const slot = document.getElementById('hallResSlotMat');
   if (wrap && slot) slot.appendChild(wrap);
+  const tplPanel = document.getElementById('pbaTabPanelTpl');
+  const tplSlot = document.getElementById('hallTabTpl');
+  if (tplPanel && tplSlot) {
+    tplSlot.appendChild(tplPanel);
+    tplPanel.style.display = ''; // 外層 hallTabTpl 負責顯示切換，面板本身常駐顯示
+  }
 })();

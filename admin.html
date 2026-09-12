@@ -5060,7 +5060,6 @@
       <button type="button" class="pba-tab on" id="pbaTabBtnManage" data-pba-tab="manage">📖 繪本管理</button>
       <button type="button" class="pba-tab" id="pbaTabBtnPromo" data-pba-tab="promo">🎁 優惠活動</button>
       <button type="button" class="pba-tab" id="pbaTabBtnSettings" data-pba-tab="settings">⚙️ 繪本館設定</button>
-      <button type="button" class="pba-tab" id="pbaTabBtnTpl" data-pba-tab="tpl">🎨 教材模板</button>
     </div>
 
     <div class="pba-tab-panel" id="pbaTabPanelManage">
@@ -5771,6 +5770,7 @@
       <button type="button" class="pba-tab on" id="hallTabBtnMat">📄 教材</button>
       <button type="button" class="pba-tab" id="hallTabBtnGame">🎮 遊戲</button>
       <button type="button" class="pba-tab" id="hallTabBtnAudio">🎵 音檔</button>
+      <button type="button" class="pba-tab" id="hallTabBtnTpl">🎨 模板設定</button>
     </div>
     <div id="hallTabMat">
       <div class="pba-grid-toolbar">
@@ -5793,6 +5793,8 @@
     </div>
     <div id="hallTabGame" style="display:none;"><div id="hallResSlotGame"></div></div>
     <div id="hallTabAudio" style="display:none;"><div id="hallResSlotAudio"></div></div>
+    <!-- 模板設定面板：pbaTabPanelTpl 由 books.js 啟動時從繪本後台搬進來（2026-09-13 雪莉指正：模板管教材，該住教材館） -->
+    <div id="hallTabTpl" style="display:none;"></div>
     <!-- hall 資源區本體（hall.js 操作的 id 都在裡面；books.js 啟動時會搬進教材分頁插槽） -->
     <div id="hallResWrap">
       <div style="display:flex; gap:8px; margin-bottom:8px;">
@@ -6770,7 +6772,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=20"></script>
+<script src="books.js?v=21"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
