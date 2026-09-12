@@ -2443,34 +2443,42 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     }
   }
 
-  // 浮水印：右下角（caption 條上方），白字＋深色陰影亮底暗底都看得見；有 LOGO 排在文字左邊
-  if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
+  // 浮水印圖層：QR 左下、LOGO＋文字右下（都在 caption 條上方）
+  if (o.layers.watermark && (o.watermarkText || o.logoImg || o.qrImg)) {
     const size = Math.round(base * 0.022);
     const pad = Math.round(base * 0.014);
-    ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = 'left';
-    const text = o.watermarkText || '';
-    const tw = text ? ctx.measureText(text).width : 0;
-    const logoH = o.logoImg ? Math.round(size * 1.7) : 0;
-    const logoW = o.logoImg ? Math.round(logoH * (o.logoImg.width / o.logoImg.height)) : 0;
-    const gap = logoW && text ? Math.round(size * 0.4) : 0;
-    let x = W - pad - (tw + logoW + gap);
-    const y = H - captionH - pad;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
+    // IG QR：左下角（掃了把被轉傳的圖帶回 IG——docs/06 QR 存在的意義）
+    if (o.qrImg) {
+      const qrW = Math.max(90, Math.round(base * 0.10));
+      const qrH = Math.round(qrW * (o.qrImg.height / o.qrImg.width));
+      ctx.drawImage(o.qrImg, pad, H - captionH - pad - qrH, qrW, qrH);
+    }
+    // LOGO（雪莉的黑色手寫字透明 PNG）：右下角，加白色光暈讓深色底圖也看得見
+    let rightY = H - captionH - pad;
     if (o.logoImg) {
-      ctx.globalAlpha = 0.9;
-      ctx.drawImage(o.logoImg, x, y - logoH + Math.round(size * 0.25), logoW, logoH);
-      ctx.globalAlpha = 1;
-      x += logoW + gap;
+      const logoH = Math.round(base * 0.055);
+      const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,255,255,0.95)';
+      ctx.shadowBlur = Math.max(3, Math.round(logoH * 0.18));
+      ctx.drawImage(o.logoImg, W - pad - logoW, rightY - logoH, logoW, logoH);
+      ctx.drawImage(o.logoImg, W - pad - logoW, rightY - logoH, logoW, logoH); // 畫兩次加強光暈
+      ctx.restore();
+      rightY -= logoH + Math.round(size * 0.5);
     }
-    if (text) {
+    // 文字浮水印（LOGO 已含 IG 帳號，通常留空；有填就疊在 LOGO 上方）
+    if (o.watermarkText) {
+      ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'right';
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText(text, x, y);
+      ctx.fillText(o.watermarkText, W - pad, rightY);
+      ctx.restore();
+      ctx.textAlign = 'left';
     }
-    ctx.restore();
   }
 
   // 團購資訊：開團版限定，圖上方粉色橫幅（品牌色 #FF8FA3）
@@ -2512,7 +2520,8 @@ async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
   const s = mtplSettings();
   const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
-  const o = { frameImg, logoImg, layers, caption, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
+  const qrImg = layers.watermark && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
+  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0];
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
   const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
@@ -2554,13 +2563,14 @@ document.getElementById('mTplPreviewBtn').addEventListener('click', async () => 
     const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
     const s = mtplSettings();
     const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
+    const qrImg = layers.watermark && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
     const caption = {
       title: document.getElementById('mTitle').value.trim(),
       desc: document.getElementById('mDescription').value.trim()
     };
     const withPromo = layers.promo; // 有勾團購資訊就預覽開團版（資訊最滿的那版）
     const canvas = mtplComposeCanvas(src, {
-      frameImg, logoImg, layers, caption,
+      frameImg, logoImg, qrImg, layers, caption,
       watermarkText: s.watermarkText || '', promoText: s.promoText || ''
     }, withPromo);
     const pv = document.createElement('canvas');
@@ -2588,6 +2598,24 @@ function renderTplPanel() {
   document.getElementById('tplWatermarkText').value = s.watermarkText || '';
   document.getElementById('tplPromoText').value = s.promoText || '';
   document.getElementById('tplIgUrl').value = s.igUrl || '';
+
+  // LOGO／IG QR 目前檔案預覽（浮水印圖層會用到；要換圖找 Claude 重新上架）
+  const assetBox = document.getElementById('tplAssetPreview');
+  assetBox.innerHTML = '';
+  const assets = [];
+  if (s.logoUrl) assets.push({ label: '浮水印 LOGO', url: s.logoUrl, h: 44 });
+  if (s.qrUrl) assets.push({ label: 'IG QR', url: s.qrUrl, h: 72 });
+  assets.forEach(a => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'text-align:center; font-size:11px; color:var(--c-muted);';
+    const img = document.createElement('img');
+    img.src = a.url;
+    img.style.cssText = 'height:' + a.h + 'px; display:block; margin:0 auto 3px; border:1px solid var(--c-border, #ddd); border-radius:6px; background:#fff; padding:3px;';
+    wrap.appendChild(img);
+    wrap.appendChild(document.createTextNode(a.label));
+    assetBox.appendChild(wrap);
+  });
+  assetBox.style.display = assets.length ? 'flex' : 'none';
 
   // 規格清單
   const list = document.getElementById('tplSpecList');

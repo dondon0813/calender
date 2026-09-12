@@ -5458,9 +5458,11 @@
           </div>
         </div>
         <div class="pba-field">
-          <label>IG 網址（QR code 導向，之後啟用；先留空沒關係）</label>
+          <label>IG 網址</label>
           <input type="text" id="tplIgUrl" placeholder="https://www.instagram.com/…">
         </div>
+        <!-- LOGO/QR 目前檔案預覽（books.js renderTplPanel 填入；要換圖找 Claude 重新上架） -->
+        <div id="tplAssetPreview" style="display:none; align-items:flex-end; gap:14px; margin-bottom:10px;"></div>
         <button type="button" class="pba-btn pba-btn-save" id="tplSettingsSaveBtn">儲存共用素材</button>
         <div class="pba-upload-status" id="tplSettingsStatus"></div>
 
@@ -6668,7 +6670,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=12"></script>
+<script src="books.js?v=13"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
