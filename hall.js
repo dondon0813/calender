@@ -29,6 +29,7 @@ const HALL_MATERIALS_PAGE_BASE = 'https://dondon-platform.vercel.app/materials/'
 let HALL_LOADED = false;      // 第一次進分頁才拉，之後切回來用快取；「重新整理」強制重拉
 let HALL_TABLE_READY = true;  // 教材館資料表是否已 db push
 let HALL_LIST = [];           // 最近一次 fan-admin-hall-list 的 resources
+let HALL_KIND_TAB = 'file';   // 教材館子分頁過濾（file=教材分頁/game/audio；books.js setHallTab 控制）
 let HALL_EVENT_CHOICES = [];  // {id, legacyId, title, startDate, endDate}
 let HALL_EDIT = null;         // 編輯中的資源工作副本（含 rules/grants）；null＝顯示列表
 
@@ -109,14 +110,17 @@ function hallRenderList() {
   if (!area) return;
   if (editArea) editArea.style.display = 'none';
   area.style.display = '';
-  if (!HALL_LIST.length) {
-    area.innerHTML = '<div class="task-empty">還沒有任何資源，按上面的「＋ 新增資源」開始！</div>';
+  // 依教材館子分頁過濾（HALL_KIND_TAB 由 books.js setHallTab 控制：file/game/audio）；
+  // i 一律保留 HALL_LIST 原索引（hallOpenEdit/hallDeleteFromList 都吃它）
+  const rows = HALL_LIST.map((r, i) => ({ r, i })).filter(x => (x.r.kind || 'game') === HALL_KIND_TAB);
+  if (!rows.length) {
+    const kindName = HALL_KIND_TAB === 'file' ? '解鎖教材檔' : HALL_KIND_TAB === 'audio' ? '音檔' : '遊戲';
+    area.innerHTML = '<div class="task-empty">還沒有' + kindName + '資源，按上面的「＋ 新增資源」開始！</div>';
     return;
   }
-  const html = HALL_LIST.map((r, i) => {
-    const kindBadge = r.kind === 'game'
-      ? '<span style="background:#eef2ff; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">🎮 遊戲</span>'
-      : '<span style="background:#eef2ff; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">📄 檔案</span>';
+  const html = rows.map(({ r, i }) => {
+    const kindBadge = '<span style="background:#eef2ff; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
+      (r.kind === 'game' ? '🎮 遊戲' : r.kind === 'audio' ? '🎵 音檔' : '📄 檔案') + '</span>';
     const freeBadge = r.isFree
       ? '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">免費</span>'
       : '<span style="background:#fdeceb; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">付費</span>';
@@ -125,7 +129,7 @@ function hallRenderList() {
       : '<span style="background:#ccc; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">草稿</span>';
     const cover = r.coverUrl
       ? '<img src="' + hallEscape(r.coverUrl) + '" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex:none; background:#f5f5f5;">'
-      : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#f0f0f8; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : '📄') + '</div>';
+      : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#f0f0f8; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : r.kind === 'audio' ? '🎵' : '📄') + '</div>';
     const ruleCount = (r.rules || []).length;
     const grantCount = (r.grants || []).length;
     const pageUrl = HALL_MATERIALS_PAGE_BASE + encodeURIComponent(r.slug || '');
@@ -176,7 +180,8 @@ function hallOpenEdit(i) {
         codeRules: JSON.parse(JSON.stringify(r.codeRules || []))
       }
     : {
-        id: null, slug: '', title: '', kind: 'game', isFree: false, intro: '', description: '',
+        // 新增預設類型跟著目前子分頁（教材分頁＝file）
+        id: null, slug: '', title: '', kind: HALL_KIND_TAB || 'game', isFree: false, intro: '', description: '',
         screenshots: [], coverUrl: '', eventId: '', eventTitle: '', buyUrl: '', privatePath: '',
         fileName: '', trialUrl: '', isPublished: false, sort: 0, rules: [], grants: [], codeRules: []
       };
@@ -228,7 +233,8 @@ function hallRenderEditor() {
         label('類型') +
         '<select id="hfKind" style="' + inputStyle + '" onchange="hallKindChange(this.value)">' +
           '<option value="game"' + (e.kind === 'game' ? ' selected' : '') + '>🎮 遊戲</option>' +
-          '<option value="file"' + (e.kind === 'file' ? ' selected' : '') + '>📄 檔案</option>' +
+          '<option value="file"' + (e.kind === 'file' ? ' selected' : '') + '>📄 檔案（教材）</option>' +
+          '<option value="audio"' + (e.kind === 'audio' ? ' selected' : '') + '>🎵 音檔（播放頁，行為同遊戲）</option>' +
         '</select>' +
       '</div><div style="flex:1;">' +
         label('排序（數字越小越前面）') +

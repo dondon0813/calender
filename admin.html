@@ -5724,12 +5724,16 @@
     <div class="rpt-header-wrap">
       <h2 class="view-title">🎮 教材館</h2>
     </div>
-    <!-- 教材總管理（2026-09-13 雪莉定案）：教材庫（全部教材，含免費）＋數位資源（遊戲/付費解鎖）兩個子分頁 -->
+    <!-- 教材總管理（2026-09-13 雪莉定案二版）：前後台一致分三類＝📄 教材｜🎮 遊戲｜🎵 音檔。
+         教材分頁＝教材庫（book_materials 全部）＋下單解鎖教材檔（hall kind=file）；
+         遊戲/音檔分頁＝hall 資源依 kind 過濾。hall 資源區（hallResWrap）只有一份，
+         books.js setHallTab 把它搬進當前分頁的插槽並設 HALL_KIND_TAB 重畫清單。 -->
     <div class="pba-tabs" style="margin-bottom:10px;">
-      <button type="button" class="pba-tab on" id="hallTabBtnLib">📄 教材庫</button>
-      <button type="button" class="pba-tab" id="hallTabBtnRes">🎮 數位資源</button>
+      <button type="button" class="pba-tab on" id="hallTabBtnMat">📄 教材</button>
+      <button type="button" class="pba-tab" id="hallTabBtnGame">🎮 遊戲</button>
+      <button type="button" class="pba-tab" id="hallTabBtnAudio">🎵 音檔</button>
     </div>
-    <div id="hallTabLib">
+    <div id="hallTabMat">
       <div class="pba-grid-toolbar">
         <button class="pba-add-btn" id="matLibAddBtn">＋ 新增教材</button>
         <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
@@ -5740,8 +5744,17 @@
         這裡是全部教材的總表（繪本的、玩具的、獨立的都在）。從繪本／玩具的編輯畫面新增教材＝快速入口，存進來的是同一份資料。
       </div>
       <div id="matLibList"><div class="task-empty">讀取中…</div></div>
+      <hr class="pba-section-divider">
+      <div class="pba-panel-title">🔒 下單解鎖的教材檔案</div>
+      <div style="font-size:11.5px; color:var(--c-muted); margin:6px 0; line-height:1.6;">
+        綁團購商品、用兌換碼／點數開通的教材 PDF（雪花片、Numberblocks 這些）。
+      </div>
+      <div id="hallResSlotMat"></div>
     </div>
-    <div id="hallTabRes" style="display:none;">
+    <div id="hallTabGame" style="display:none;"><div id="hallResSlotGame"></div></div>
+    <div id="hallTabAudio" style="display:none;"><div id="hallResSlotAudio"></div></div>
+    <!-- hall 資源區本體（hall.js 操作的 id 都在裡面；books.js 啟動時會搬進教材分頁插槽） -->
+    <div id="hallResWrap">
       <div style="display:flex; gap:8px; margin-bottom:8px;">
         <button class="task-mini-btn" id="hallAddBtn">＋ 新增資源</button>
         <button class="task-mini-btn" id="hallRefreshBtn">🔄 重新整理</button>
@@ -6717,7 +6730,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=14"></script>
+<script src="books.js?v=15"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
@@ -6732,7 +6745,7 @@
 <!-- hall.js（教材館）：本次任務刻意不掛進 admin.js 的 VIEW_ID_MAP/switchView（範圍鎖定
      只改 admin.html＋新增 hall.js），因此嚴格說載入順序不受「開機還原分頁」規則影響；
      仍比照同批模組放在 admin.js 之前，維持慣例＋方便未來要收進正式分頁時比對。 -->
-<script src="hall.js?v=3"></script>
+<script src="hall.js?v=4"></script>
 <!-- 去背小圖選擇器（行事曆活動編輯用；樣式就近放這裡） -->
 <style>
   .ev-thumb-row { display: flex; align-items: center; gap: 8px; }

@@ -3039,13 +3039,30 @@ document.getElementById('matLibAddBtn').addEventListener('click', () => {
   openMaterialForm(null, { standalone: true });
 });
 
-// 教材館子分頁切換（📄 教材庫｜🎮 數位資源）
+// 教材館子分頁切換（📄 教材｜🎮 遊戲｜🎵 音檔，2026-09-13 雪莉定案：前後台同一套分類）
+// hall 資源區（hallResWrap）只有一份 DOM：切分頁時搬進該分頁的插槽，
+// 並設 hall.js 的 HALL_KIND_TAB（教材分頁＝file、其餘同名）重畫過濾後的清單。
 function setHallTab(tab) {
-  document.getElementById('hallTabLib').style.display = tab === 'lib' ? '' : 'none';
-  document.getElementById('hallTabRes').style.display = tab === 'res' ? '' : 'none';
-  document.getElementById('hallTabBtnLib').classList.toggle('on', tab === 'lib');
-  document.getElementById('hallTabBtnRes').classList.toggle('on', tab === 'res');
-  if (tab === 'lib') renderMatLibPanel();
+  const map = { mat: 'Mat', game: 'Game', audio: 'Audio' };
+  Object.keys(map).forEach(key => {
+    document.getElementById('hallTab' + map[key]).style.display = key === tab ? '' : 'none';
+    document.getElementById('hallTabBtn' + map[key]).classList.toggle('on', key === tab);
+  });
+  const wrap = document.getElementById('hallResWrap');
+  const slot = document.getElementById('hallResSlot' + map[tab]);
+  if (wrap && slot && wrap.parentElement !== slot) slot.appendChild(wrap);
+  if (typeof HALL_KIND_TAB !== 'undefined') {
+    HALL_KIND_TAB = tab === 'mat' ? 'file' : tab;
+    if (typeof hallRenderList === 'function' && typeof HALL_LOADED !== 'undefined' && HALL_LOADED) hallRenderList();
+  }
+  if (tab === 'mat') renderMatLibPanel();
 }
-document.getElementById('hallTabBtnLib').addEventListener('click', () => setHallTab('lib'));
-document.getElementById('hallTabBtnRes').addEventListener('click', () => setHallTab('res'));
+document.getElementById('hallTabBtnMat').addEventListener('click', () => setHallTab('mat'));
+document.getElementById('hallTabBtnGame').addEventListener('click', () => setHallTab('game'));
+document.getElementById('hallTabBtnAudio').addEventListener('click', () => setHallTab('audio'));
+// 啟動時把 hall 資源區搬進預設的教材分頁插槽
+(function mtlbInitHallResSlot() {
+  const wrap = document.getElementById('hallResWrap');
+  const slot = document.getElementById('hallResSlotMat');
+  if (wrap && slot) slot.appendChild(wrap);
+})();
