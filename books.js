@@ -20,6 +20,8 @@ let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
 let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
 let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
 let materialFormEditingBookIds = null; // 編輯中教材的掛載書單（教材庫；null＝新增或舊資料沒帶）
+let mtplPendingFile = null; // 教材模板：這次表單新選的原始「圖檔」（File，合成來源）
+let mtplPendingCleanPath = ''; // 教材模板：已直傳 materials-private 的乾淨原檔路徑
 let setFormEditingId = null; // 目前套組表單是編輯哪個套組（null＝新增）
 
 // ===== Toast =====
@@ -1117,12 +1119,28 @@ function renderMaterialList(materials) {
     const availablePrefix = m.available_from ? `${m.locked ? '🔒 ' : ''}${formatAvailableFrom(m.available_from)} 開放 ・ ` : '';
     // 教材庫：同一份教材掛幾本書（bookIds），共用時提示一下，下載數是全部書合併的
     const sharedSuffix = Array.isArray(m.bookIds) && m.bookIds.length > 1 ? ` ・ 📚 共用 ${m.bookIds.length} 本` : '';
-    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載${sharedSuffix}`;
+    // 模板合成狀態：有平時版成品＝已合成；promoApplied＝目前前台掛的是開團版
+    const tplSuffix = m.composedPlainUrl ? ` ・ 🎨 ${m.promoApplied ? '開團版' : '已合成'}` : '';
+    sub.textContent = `${availablePrefix}${printSizePrefix}${m.file_name || '未上傳檔案'} ・ ${formatBytes(m.file_size || 0)} ・ ⬇ ${Number(m.downloadCount) || 0} 次下載${sharedSuffix}${tplSuffix}`;
     info.appendChild(sub);
     item.appendChild(info);
 
     const actions = document.createElement('div');
     actions.className = 'pba-material-actions';
+    if (m.cleanPath) {
+      const rawBtn = document.createElement('button');
+      rawBtn.type = 'button';
+      rawBtn.className = 'pba-mini-btn';
+      rawBtn.textContent = '⬇ 原檔';
+      rawBtn.addEventListener('click', async () => {
+        try {
+          const res = await apiPost('material-clean-download-url', { id: m.id });
+          if (!res || res.success !== true) { showToast('取原檔失敗：' + ((res && res.error) || '未知錯誤'), true); return; }
+          window.open(res.url, '_blank');
+        } catch (err) { /* needLogin 已處理 */ }
+      });
+      actions.appendChild(rawBtn);
+    }
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'pba-mini-btn';
@@ -1178,6 +1196,7 @@ function openMaterialForm(material) {
   document.getElementById('mFileInput').value = '';
   document.getElementById('mThumbRemoveBg').value = 'none';
   pbiClearPending('mThumbPending');
+  mtplResetFormState(material);
 }
 
 function closeMaterialForm() {
@@ -1187,6 +1206,8 @@ function closeMaterialForm() {
   if (form) form.classList.remove('show');
   document.getElementById('mThumbRemoveBg').value = 'none';
   pbiClearPending('mThumbPending');
+  mtplPendingFile = null;
+  mtplPendingCleanPath = '';
 }
 
 function setMaterialThumbPreview(url) {
@@ -1259,6 +1280,8 @@ document.getElementById('mFileInput').addEventListener('change', async (e) => {
     document.getElementById('mFileSize').value = file.size;
     statusEl.textContent = `上傳完成：${file.name}（${formatBytes(file.size)}）`;
     showToast('教材檔案上傳完成');
+    // 教材模板：圖檔另傳一份乾淨原檔到私有 bucket（合成來源；PDF/壓縮檔不套模板照舊）
+    await mtplAfterFilePicked(file);
   } catch (err) {
     statusEl.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
     showToast('教材上傳失敗', true);
@@ -1287,6 +1310,40 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     sort: 0
   };
   if (materialFormEditingId) payload.id = materialFormEditingId;
+
+  // 教材模板合成（docs/06）：有勾圖層且有乾淨原檔 → 存檔前先在瀏覽器烤好兩版成品
+  if (PACKAGE_DATA && PACKAGE_DATA.mtplReady) {
+    const layers = mtplLayersState();
+    payload.spec_id = document.getElementById('mSpecSelect').value || '';
+    payload.frame_id = document.getElementById('mFrameSelect').value || '';
+    payload.layer_frame = layers.frame;
+    payload.layer_promo = layers.promo;
+    payload.layer_watermark = layers.watermark;
+    payload.layer_caption = layers.caption;
+    if (mtplPendingCleanPath) payload.clean_path = mtplPendingCleanPath;
+    if (layers.frame || layers.promo || layers.watermark || layers.caption) {
+      if (!mtplHasSource()) { showToast('要套模板需要先重新上傳原始圖檔（這份教材沒有乾淨原檔）', true); return; }
+      if (layers.frame && !payload.frame_id) { showToast('勾了「套框」但還沒選框', true); return; }
+      const saveBtn = document.getElementById('saveMaterialBtn');
+      saveBtn.disabled = true;
+      const st = document.getElementById('mTplStatus');
+      try {
+        st.textContent = '合成中…';
+        const composed = await mtplComposeAndUpload(bookIds, {
+          title,
+          desc: document.getElementById('mDescription').value.trim()
+        }, layers, payload.frame_id);
+        Object.assign(payload, composed, { composed_at: true });
+        st.textContent = '合成完成 ✓';
+      } catch (err) {
+        st.textContent = '合成失敗：' + (err && err.message ? err.message : '未知錯誤');
+        showToast('模板合成失敗，尚未儲存', true);
+        saveBtn.disabled = false;
+        return;
+      }
+      saveBtn.disabled = false;
+    }
+  }
 
   try {
     const res = await apiPost('material-upsert', payload);
@@ -2180,11 +2237,13 @@ const PBA_TAB_PANELS = {
   manage: document.getElementById('pbaTabPanelManage'),
   promo: document.getElementById('pbaTabPanelPromo'),
   settings: document.getElementById('pbaTabPanelSettings'),
+  tpl: document.getElementById('pbaTabPanelTpl'),
 };
 const PBA_TAB_BTNS = {
   manage: document.getElementById('pbaTabBtnManage'),
   promo: document.getElementById('pbaTabBtnPromo'),
   settings: document.getElementById('pbaTabBtnSettings'),
+  tpl: document.getElementById('pbaTabBtnTpl'),
 };
 function switchPbaTab(tab) {
   Object.keys(PBA_TAB_PANELS).forEach(key => {
@@ -2193,7 +2252,527 @@ function switchPbaTab(tab) {
   });
   // 進設定頁時重繪兩份標籤清單：書可能剛在編輯表單改過勾選，本數/清單要反映最新狀態
   if (tab === 'settings') { renderCategoryManageList(); renderTypeManageList(); }
+  if (tab === 'tpl') renderTplPanel();
 }
 PBA_TAB_BTNS.manage.addEventListener('click', () => switchPbaTab('manage'));
 PBA_TAB_BTNS.promo.addEventListener('click', () => switchPbaTab('promo'));
 PBA_TAB_BTNS.settings.addEventListener('click', () => switchPbaTab('settings'));
+PBA_TAB_BTNS.tpl.addEventListener('click', () => switchPbaTab('tpl'));
+
+// ===================================================================
+// ===== 教材模板合成系統（docs/06，2026-09-13）=====
+// 上傳乾淨原檔（materials-private），瀏覽器 canvas 合成「開團版＋平時版」兩份成品
+// （框＋浮水印文字/LOGO＋標題說明＋團購橫幅），公開下載的 file_url 指向其中一版；
+// 每日排程 mtpl-daily-flip.mjs 依開團狀態切換指向，不重合成。
+// 合成放瀏覽器端的原因：Vercel 無中文字型；預覽＝所見即所得。
+// ===================================================================
+
+const MTPL_FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif';
+
+function mtplSpecs() { return (PACKAGE_DATA && PACKAGE_DATA.materialSpecs) || []; }
+function mtplFrames() { return (PACKAGE_DATA && PACKAGE_DATA.materialFrames) || []; }
+function mtplSettings() { return (PACKAGE_DATA && PACKAGE_DATA.mtplSettings) || {}; }
+function mtplReady() { return !!(PACKAGE_DATA && PACKAGE_DATA.mtplReady); }
+function mtplSpecById(id) { return mtplSpecs().find(s => s.id === id) || null; }
+function mtplMaterialById(id) { return ((PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || []).find(m => m.id === id) || null; }
+
+function mtplLayersState() {
+  return {
+    frame: document.getElementById('mLayerFrame').checked,
+    promo: document.getElementById('mLayerPromo').checked,
+    watermark: document.getElementById('mLayerWatermark').checked,
+    caption: document.getElementById('mLayerCaption').checked
+  };
+}
+
+function mtplHasSource() {
+  if (mtplPendingFile) return true;
+  const m = materialFormEditingId ? mtplMaterialById(materialFormEditingId) : null;
+  return !!(m && m.cleanPath);
+}
+
+function mtplBookOpenNow(bookId) {
+  const b = ((PACKAGE_DATA && PACKAGE_DATA.books) || []).find(x => x.id === bookId);
+  return !!(b && b.purchase && b.purchase.status === 'open');
+}
+
+// ----- 表單狀態 -----
+
+function mtplFillSpecSelect(selectedId) {
+  const sel = document.getElementById('mSpecSelect');
+  sel.innerHTML = '<option value="">（選擇規格，或直接在下面手打）</option>';
+  mtplSpecs().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name + (s.widthMm && s.heightMm ? '（' + s.widthMm + '×' + s.heightMm + 'mm）' : '');
+    sel.appendChild(opt);
+  });
+  sel.value = selectedId || '';
+}
+
+function mtplSyncFrameSelect(selectedFrameId) {
+  const sel = document.getElementById('mFrameSelect');
+  const specId = document.getElementById('mSpecSelect').value;
+  const frames = mtplFrames().filter(f => !specId || f.specId === specId);
+  sel.innerHTML = '<option value="">（選擇框）</option>';
+  frames.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    const spec = mtplSpecById(f.specId);
+    opt.textContent = (f.name || '框') + (spec ? '（' + spec.name + '）' : '');
+    sel.appendChild(opt);
+  });
+  if (selectedFrameId && frames.some(f => f.id === selectedFrameId)) sel.value = selectedFrameId;
+}
+
+function mtplSyncFrameSelectVisibility() {
+  document.getElementById('mFrameSelectWrap').style.display =
+    document.getElementById('mLayerFrame').checked ? '' : 'none';
+}
+
+// openMaterialForm 收尾呼叫：帶回教材既有的模板設定；表未 push 整區隱藏
+function mtplResetFormState(material) {
+  mtplPendingFile = null;
+  mtplPendingCleanPath = '';
+  const block = document.getElementById('mTplBlock');
+  if (!block) return;
+  if (!mtplReady()) { block.style.display = 'none'; return; }
+  block.style.display = '';
+  mtplFillSpecSelect(material ? material.specId || '' : '');
+  document.getElementById('mLayerFrame').checked = material ? !!material.layerFrame : false;
+  document.getElementById('mLayerPromo').checked = material ? !!material.layerPromo : false;
+  document.getElementById('mLayerWatermark').checked = material ? !!material.layerWatermark : false;
+  document.getElementById('mLayerCaption').checked = material ? !!material.layerCaption : false;
+  mtplSyncFrameSelect(material ? material.frameId || '' : '');
+  mtplSyncFrameSelectVisibility();
+  document.getElementById('mTplPreviewWrap').style.display = 'none';
+  document.getElementById('mTplStatus').textContent = '';
+  // 舊教材沒有乾淨原檔＝不能合成，提示重新上傳（新增中或已有 clean 都不顯示）
+  document.getElementById('mTplNoClean').style.display = material && !material.cleanPath ? '' : 'none';
+}
+
+// mFileInput 上傳成功後呼叫：圖檔另傳乾淨原檔到私有 bucket（合成來源）
+async function mtplAfterFilePicked(file) {
+  if (!mtplReady()) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { mtplPendingFile = null; mtplPendingCleanPath = ''; return; }
+  const st = document.getElementById('mTplStatus');
+  try {
+    const res = await apiPost('material-clean-upload-url', { book_id: CURRENT_BOOK.id, file_name: file.name });
+    if (!res || res.success !== true) throw new Error((res && res.error) || '未知錯誤');
+    const put = await fetch(res.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+    if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
+    mtplPendingFile = file;
+    mtplPendingCleanPath = res.path;
+    document.getElementById('mTplNoClean').style.display = 'none';
+    st.textContent = '乾淨原檔已保存 ✓ 可勾選圖層合成';
+  } catch (err) {
+    st.textContent = '乾淨原檔上傳失敗：' + (err && err.message ? err.message : '未知錯誤') + '（仍可不套模板直接儲存）';
+  }
+}
+
+// ----- 圖片載入（fetch→blob→bitmap，避開 canvas 汙染；Storage CORS=*）-----
+
+async function mtplFetchBitmap(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('圖片載入失敗（' + res.status + '）');
+  return createImageBitmap(await res.blob());
+}
+
+async function mtplCleanBitmapById(materialId) {
+  const res = await apiPost('material-clean-download-url', { id: materialId });
+  if (!res || res.success !== true) throw new Error((res && res.error) || '取不到乾淨原檔');
+  return mtplFetchBitmap(res.url);
+}
+
+async function mtplGetFormSourceBitmap() {
+  if (mtplPendingFile) return createImageBitmap(mtplPendingFile);
+  if (materialFormEditingId) return mtplCleanBitmapById(materialFormEditingId);
+  throw new Error('沒有乾淨原檔');
+}
+
+async function mtplFrameBitmap(frameId) {
+  const f = mtplFrames().find(x => x.id === frameId);
+  if (!f) throw new Error('找不到選擇的框');
+  return mtplFetchBitmap(f.imageUrl);
+}
+
+// ----- 合成核心 -----
+
+function mtplTruncate(ctx, text, maxWidth) {
+  let t = String(text || '');
+  if (ctx.measureText(t).width <= maxWidth) return t;
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1);
+  return t + '…';
+}
+
+// o: {frameImg, logoImg, layers, caption:{title,desc}, watermarkText, promoText}；withPromo＝開團版
+function mtplComposeCanvas(srcImg, o, withPromo) {
+  const MAX_EDGE = 3000; // 成品長邊上限：兼顧列印畫質與檔案大小
+  let W = srcImg.width, H = srcImg.height;
+  const scale = Math.min(1, MAX_EDGE / Math.max(W, H));
+  W = Math.round(W * scale); H = Math.round(H * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H); // 透明 PNG 原檔墊白底（成品輸出 JPG）
+  ctx.drawImage(srcImg, 0, 0, W, H);
+  const base = Math.max(W, H);
+
+  if (o.layers.frame && o.frameImg) ctx.drawImage(o.frameImg, 0, 0, W, H);
+
+  // 標題與說明：疊在圖底部的半透明深色條（雪莉定案）
+  let captionH = 0;
+  if (o.layers.caption && (o.caption.title || o.caption.desc)) {
+    const titleSize = Math.round(base * 0.028);
+    const descSize = Math.round(base * 0.020);
+    const pad = Math.round(base * 0.016);
+    captionH = pad * 2 + titleSize + (o.caption.desc ? Math.round(descSize * 1.45) : 0);
+    ctx.fillStyle = 'rgba(30,30,30,0.60)';
+    ctx.fillRect(0, H - captionH, W, captionH);
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 ' + titleSize + 'px ' + MTPL_FONT;
+    ctx.fillText(mtplTruncate(ctx, o.caption.title, W - pad * 2), pad, H - captionH + pad);
+    if (o.caption.desc) {
+      ctx.font = '400 ' + descSize + 'px ' + MTPL_FONT;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      const descOneLine = String(o.caption.desc).replace(/\s*\n+\s*/g, '　');
+      ctx.fillText(mtplTruncate(ctx, descOneLine, W - pad * 2), pad, H - captionH + pad + titleSize + Math.round(descSize * 0.4));
+    }
+  }
+
+  // 浮水印：右下角（caption 條上方），白字＋深色陰影亮底暗底都看得見；有 LOGO 排在文字左邊
+  if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
+    const size = Math.round(base * 0.022);
+    const pad = Math.round(base * 0.014);
+    ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    const text = o.watermarkText || '';
+    const tw = text ? ctx.measureText(text).width : 0;
+    const logoH = o.logoImg ? Math.round(size * 1.7) : 0;
+    const logoW = o.logoImg ? Math.round(logoH * (o.logoImg.width / o.logoImg.height)) : 0;
+    const gap = logoW && text ? Math.round(size * 0.4) : 0;
+    let x = W - pad - (tw + logoW + gap);
+    const y = H - captionH - pad;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
+    if (o.logoImg) {
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(o.logoImg, x, y - logoH + Math.round(size * 0.25), logoW, logoH);
+      ctx.globalAlpha = 1;
+      x += logoW + gap;
+    }
+    if (text) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(text, x, y);
+    }
+    ctx.restore();
+  }
+
+  // 團購資訊：開團版限定，圖上方粉色橫幅（品牌色 #FF8FA3）
+  if (withPromo && o.promoText) {
+    const barH = Math.max(40, Math.round(H * 0.06));
+    const size = Math.round(barH * 0.42);
+    ctx.fillStyle = 'rgba(255,143,163,0.94)';
+    ctx.fillRect(0, 0, W, barH);
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 ' + size + 'px ' + MTPL_FONT;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    const oneLine = String(o.promoText).replace(/\s*\n+\s*/g, '　');
+    ctx.fillText(mtplTruncate(ctx, oneLine, W * 0.94), W / 2, Math.round(barH / 2) + 1);
+    ctx.textAlign = 'left';
+  }
+
+  return canvas;
+}
+
+function mtplCanvasBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('成品輸出失敗')), 'image/jpeg', 0.92);
+  });
+}
+
+async function mtplUploadComposed(bookId, variant, blob) {
+  const res = await apiPost('material-composed-upload-url', { book_id: bookId, variant, ext: 'jpg' });
+  if (!res || res.success !== true) throw new Error((res && res.error) || '取成品上傳網址失敗');
+  const put = await fetch(res.signedUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+  if (!put.ok) throw new Error('成品上傳失敗（' + put.status + '）');
+  return res.publicUrl;
+}
+
+// 烤兩版成品並上傳，回傳要併進 material-upsert payload 的欄位。
+// bookIds＝教材掛載書單（開團判定看任一本；成品路徑用第一本）；getSource＝來源圖取得函式
+async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource) {
+  const src = await (getSource || mtplGetFormSourceBitmap)();
+  const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
+  const s = mtplSettings();
+  const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
+  const o = { frameImg, logoImg, layers, caption, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
+  const pathBookId = bookIds[0];
+  const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
+  const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
+  let openUrl = '';
+  let openBlob = null;
+  if (layers.promo) {
+    openBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, true));
+    openUrl = await mtplUploadComposed(pathBookId, 'open', openBlob);
+  }
+  const openNow = Boolean(layers.promo && openUrl && bookIds.some(mtplBookOpenNow));
+  return {
+    file_url: openNow ? openUrl : plainUrl,
+    promo_applied: openNow,
+    composed_plain_url: plainUrl,
+    composed_open_url: openUrl,
+    file_size: (openNow && openBlob ? openBlob : plainBlob).size
+  };
+}
+
+// ----- 表單接線：規格連動、預覽 -----
+
+document.getElementById('mSpecSelect').addEventListener('change', () => {
+  const spec = mtplSpecById(document.getElementById('mSpecSelect').value);
+  if (spec) document.getElementById('mPrintSize').value = spec.name; // 選規格自動帶「建議尺寸」文字（前台顯示沿用 print_size，零改動）
+  mtplSyncFrameSelect(document.getElementById('mFrameSelect').value);
+});
+document.getElementById('mLayerFrame').addEventListener('change', mtplSyncFrameSelectVisibility);
+
+document.getElementById('mTplPreviewBtn').addEventListener('click', async () => {
+  const layers = mtplLayersState();
+  if (!(layers.frame || layers.promo || layers.watermark || layers.caption)) { showToast('先勾至少一個圖層', true); return; }
+  if (!mtplHasSource()) { showToast('請先上傳原始圖檔', true); return; }
+  const frameId = document.getElementById('mFrameSelect').value || '';
+  if (layers.frame && !frameId) { showToast('勾了「套框」但還沒選框', true); return; }
+  const st = document.getElementById('mTplStatus');
+  st.textContent = '產生預覽中…';
+  try {
+    const src = await mtplGetFormSourceBitmap();
+    const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
+    const s = mtplSettings();
+    const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
+    const caption = {
+      title: document.getElementById('mTitle').value.trim(),
+      desc: document.getElementById('mDescription').value.trim()
+    };
+    const withPromo = layers.promo; // 有勾團購資訊就預覽開團版（資訊最滿的那版）
+    const canvas = mtplComposeCanvas(src, {
+      frameImg, logoImg, layers, caption,
+      watermarkText: s.watermarkText || '', promoText: s.promoText || ''
+    }, withPromo);
+    const pv = document.createElement('canvas');
+    const scale = Math.min(1, 900 / canvas.width);
+    pv.width = Math.round(canvas.width * scale);
+    pv.height = Math.round(canvas.height * scale);
+    pv.getContext('2d').drawImage(canvas, 0, 0, pv.width, pv.height);
+    document.getElementById('mTplPreviewImg').src = pv.toDataURL('image/jpeg', 0.85);
+    document.getElementById('mTplPreviewLabel').textContent = withPromo
+      ? '預覽＝開團版（結團後前台自動換成沒有粉色橫幅的平時版）'
+      : '預覽＝平時版成品';
+    document.getElementById('mTplPreviewWrap').style.display = '';
+    st.textContent = '';
+  } catch (err) {
+    st.textContent = '預覽失敗：' + (err && err.message ? err.message : '未知錯誤');
+  }
+});
+
+// ----- 🎨 教材模板分頁 -----
+
+function renderTplPanel() {
+  const ready = mtplReady();
+  document.getElementById('tplNotReadyBanner').style.display = ready ? 'none' : '';
+  const s = mtplSettings();
+  document.getElementById('tplWatermarkText').value = s.watermarkText || '';
+  document.getElementById('tplPromoText').value = s.promoText || '';
+  document.getElementById('tplIgUrl').value = s.igUrl || '';
+
+  // 規格清單
+  const list = document.getElementById('tplSpecList');
+  list.innerHTML = '';
+  const specs = mtplSpecs();
+  if (!specs.length) {
+    list.innerHTML = '<div class="pba-empty-list">還沒有規格，先從下面新增（例：A4 直式 210×297）</div>';
+  }
+  specs.forEach(sp => {
+    const row = document.createElement('div');
+    row.className = 'cal-edit-day-row';
+    const name = document.createElement('span');
+    name.className = 'cal-edit-day-row-name';
+    const frameCount = mtplFrames().filter(f => f.specId === sp.id).length;
+    name.textContent = sp.name + (sp.widthMm && sp.heightMm ? '（' + sp.widthMm + '×' + sp.heightMm + 'mm）' : '') + '　🖼 ' + frameCount + ' 款框';
+    row.appendChild(name);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'pba-mini-btn danger';
+    del.textContent = '刪除';
+    del.addEventListener('click', async () => {
+      if (!confirm('確定要刪除規格「' + sp.name + '」嗎？（該規格底下的框會一起刪）')) return;
+      const res = await apiPost('material-spec-delete', { id: sp.id });
+      if (!res || res.success !== true) { showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true); return; }
+      await mtplReloadPackage();
+      renderTplPanel();
+    });
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+
+  // 框圖庫規格下拉（保留目前選擇）
+  const sel = document.getElementById('tplFrameSpecSelect');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  specs.forEach(sp => {
+    const opt = document.createElement('option');
+    opt.value = sp.id;
+    opt.textContent = sp.name;
+    sel.appendChild(opt);
+  });
+  if (prev && specs.some(sp => sp.id === prev)) sel.value = prev;
+  document.getElementById('tplSpecAddBtn').disabled = !ready;
+  document.getElementById('tplFrameFile').disabled = !ready || !specs.length;
+  renderTplFrameList();
+}
+
+function renderTplFrameList() {
+  const box = document.getElementById('tplFrameList');
+  box.innerHTML = '';
+  const specId = document.getElementById('tplFrameSpecSelect').value;
+  const frames = mtplFrames().filter(f => f.specId === specId);
+  if (!frames.length) {
+    box.innerHTML = '<div class="pba-empty-list">這個規格還沒有框，用下面的檔案欄上傳透明 PNG</div>';
+    return;
+  }
+  frames.forEach(f => {
+    const card = document.createElement('div');
+    card.style.cssText = 'width:110px; text-align:center;';
+    const img = document.createElement('img');
+    img.src = f.imageUrl;
+    img.style.cssText = 'width:100%; border:1px solid var(--c-border, #ddd); border-radius:8px; background:repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 0 0/16px 16px;';
+    card.appendChild(img);
+    const name = document.createElement('div');
+    name.style.cssText = 'font-size:11.5px; margin:4px 0; word-break:break-all;';
+    name.textContent = f.name || '框';
+    card.appendChild(name);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'pba-mini-btn danger';
+    del.textContent = '刪除';
+    del.addEventListener('click', async () => {
+      if (!confirm('確定要刪除框「' + (f.name || '框') + '」嗎？')) return;
+      const res = await apiPost('material-frame-delete', { id: f.id });
+      if (!res || res.success !== true) { showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true); return; }
+      await mtplReloadPackage();
+      renderTplPanel();
+    });
+    card.appendChild(del);
+    box.appendChild(card);
+  });
+}
+
+async function mtplReloadPackage() {
+  const pkg = await loadPackage();
+  if (pkg) PACKAGE_DATA = pkg;
+}
+
+document.getElementById('tplFrameSpecSelect').addEventListener('change', renderTplFrameList);
+
+document.getElementById('tplSettingsSaveBtn').addEventListener('click', async () => {
+  const st = document.getElementById('tplSettingsStatus');
+  st.textContent = '儲存中…';
+  try {
+    const res = await apiPost('material-tpl-settings-set', {
+      watermark_text: document.getElementById('tplWatermarkText').value.trim(),
+      promo_text: document.getElementById('tplPromoText').value.trim(),
+      ig_url: document.getElementById('tplIgUrl').value.trim()
+    });
+    if (!res || res.success !== true) { st.textContent = '儲存失敗：' + ((res && res.error) || '未知錯誤'); return; }
+    if (PACKAGE_DATA) PACKAGE_DATA.mtplSettings = res.settings;
+    st.textContent = '已儲存 ✓ 已合成的教材要按「重新產生全部成品」才會換上新文字';
+  } catch (err) { st.textContent = ''; }
+});
+
+document.getElementById('tplSpecAddBtn').addEventListener('click', async () => {
+  const name = document.getElementById('tplSpecName').value.trim();
+  if (!name) { showToast('請輸入規格名稱', true); return; }
+  const res = await apiPost('material-spec-add', {
+    name,
+    widthMm: Number(document.getElementById('tplSpecW').value) || 0,
+    heightMm: Number(document.getElementById('tplSpecH').value) || 0
+  });
+  if (!res || res.success !== true) { showToast('新增失敗：' + ((res && res.error) || '未知錯誤'), true); return; }
+  document.getElementById('tplSpecName').value = '';
+  document.getElementById('tplSpecW').value = '';
+  document.getElementById('tplSpecH').value = '';
+  await mtplReloadPackage();
+  renderTplPanel();
+  showToast('規格已新增');
+});
+
+document.getElementById('tplFrameFile').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const specId = document.getElementById('tplFrameSpecSelect').value;
+  const st = document.getElementById('tplFrameStatus');
+  if (!specId) { showToast('請先選規格', true); e.target.value = ''; return; }
+  if (!/^image\/png$/.test(file.type)) { showToast('框請用透明背景 PNG', true); e.target.value = ''; return; }
+  st.textContent = '上傳中…';
+  try {
+    const urlRes = await apiPost('material-frame-upload-url', { spec_id: specId, file_name: file.name });
+    if (!urlRes || urlRes.success !== true) throw new Error((urlRes && urlRes.error) || '未知錯誤');
+    const put = await fetch(urlRes.signedUrl, { method: 'PUT', headers: { 'Content-Type': 'image/png' }, body: file });
+    if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
+    const addRes = await apiPost('material-frame-add', {
+      spec_id: specId,
+      image_url: urlRes.publicUrl,
+      name: file.name.replace(/\.[^.]+$/, '')
+    });
+    if (!addRes || addRes.success !== true) throw new Error((addRes && addRes.error) || '登記失敗');
+    st.textContent = '框已上傳 ✓';
+    e.target.value = '';
+    await mtplReloadPackage();
+    renderTplPanel();
+  } catch (err) {
+    st.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
+  }
+});
+
+// 批次重產：所有有勾圖層＋有乾淨原檔的教材，用最新素材重烤兩版
+document.getElementById('tplRecomposeAllBtn').addEventListener('click', async () => {
+  if (!mtplReady()) { showToast('模板資料表尚未建立', true); return; }
+  const mats = ((PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || []).filter(m =>
+    (m.layerFrame || m.layerPromo || m.layerWatermark || m.layerCaption) && m.cleanPath);
+  if (!mats.length) { showToast('沒有勾模板合成的教材', true); return; }
+  if (!confirm('要用目前的框與文字設定，重新產生 ' + mats.length + ' 份教材的成品嗎？')) return;
+  const btn = document.getElementById('tplRecomposeAllBtn');
+  const st = document.getElementById('tplRecomposeStatus');
+  btn.disabled = true;
+  let ok = 0;
+  const fails = [];
+  for (let i = 0; i < mats.length; i++) {
+    const m = mats[i];
+    st.textContent = '處理中 ' + (i + 1) + '/' + mats.length + '：' + (m.title || '未命名');
+    try {
+      const layers = { frame: !!m.layerFrame, promo: !!m.layerPromo, watermark: !!m.layerWatermark, caption: !!m.layerCaption };
+      const bookIds = Array.isArray(m.bookIds) && m.bookIds.length ? m.bookIds : [];
+      if (!bookIds.length) throw new Error('沒有掛載書');
+      if (layers.frame && !m.frameId) throw new Error('勾了套框但沒選框');
+      const composed = await mtplComposeAndUpload(
+        bookIds,
+        { title: m.title || '', desc: m.description || '' },
+        layers,
+        m.frameId || '',
+        () => mtplCleanBitmapById(m.id)
+      );
+      const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
+      if (!res || res.success !== true) throw new Error((res && res.error) || '存檔失敗');
+      ok++;
+    } catch (err) {
+      fails.push((m.title || '未命名') + '：' + (err && err.message ? err.message : '未知錯誤'));
+    }
+  }
+  btn.disabled = false;
+  st.textContent = '完成：成功 ' + ok + ' 份' + (fails.length ? '、失敗 ' + fails.length + ' 份（' + fails.join('；') + '）' : '');
+  await mtplReloadPackage();
+});

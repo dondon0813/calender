@@ -5060,6 +5060,7 @@
       <button type="button" class="pba-tab on" id="pbaTabBtnManage" data-pba-tab="manage">📖 繪本管理</button>
       <button type="button" class="pba-tab" id="pbaTabBtnPromo" data-pba-tab="promo">🎁 優惠活動</button>
       <button type="button" class="pba-tab" id="pbaTabBtnSettings" data-pba-tab="settings">⚙️ 繪本館設定</button>
+      <button type="button" class="pba-tab" id="pbaTabBtnTpl" data-pba-tab="tpl">🎨 教材模板</button>
     </div>
 
     <div class="pba-tab-panel" id="pbaTabPanelManage">
@@ -5193,6 +5194,8 @@
               </div>
               <div class="pba-field">
                 <label>建議尺寸</label>
+                <!-- 尺寸規格下拉（教材模板系統，docs/06）：選了自動帶入下面文字欄；沒有想要的規格可直接手打 -->
+                <select id="mSpecSelect" style="margin-bottom:6px;"><option value="">（選擇規格，或直接在下面手打）</option></select>
                 <input type="text" id="mPrintSize" placeholder="例：A4 直式、A3 橫式、10×15cm 相片紙" maxlength="60">
               </div>
               <div class="pba-field">
@@ -5232,6 +5235,33 @@
                 <input type="hidden" id="mFileUrl">
                 <input type="hidden" id="mFileName">
                 <input type="hidden" id="mFileSize">
+              </div>
+              <!-- 教材模板合成（docs/06）：圖片教材可勾圖層，存檔時瀏覽器合成「開團版＋平時版」兩份成品 -->
+              <div class="pba-field" id="mTplBlock" style="display:none; border:1.5px dashed var(--c-border, #ddd); border-radius:12px; padding:10px;">
+                <label>🎨 模板合成（圖片教材適用）</label>
+                <div id="mTplNoClean" style="display:none; font-size:11.5px; color:#c0392b; line-height:1.6;">
+                  這份教材還沒有乾淨原檔（舊資料）。重新選一次「原始檔案」上傳後才能套模板。
+                </div>
+                <div id="mTplControls">
+                  <div style="display:flex; flex-wrap:wrap; gap:10px; font-size:13px; font-weight:700; margin-bottom:6px;">
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerFrame" style="width:auto;"> 套框</label>
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerWatermark" style="width:auto;"> 浮水印</label>
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerCaption" style="width:auto;"> 標題與說明</label>
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerPromo" style="width:auto;"> 團購資訊</label>
+                  </div>
+                  <div id="mFrameSelectWrap" style="display:none; margin-bottom:6px;">
+                    <select id="mFrameSelect"><option value="">（選擇框）</option></select>
+                  </div>
+                  <div style="font-size:11.5px; color:var(--c-muted); line-height:1.6; margin-bottom:6px;">
+                    浮水印＝共用設定的文字（之後可加 LOGO/QR）；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖上方的粉色橫幅、結團隔天自動拿掉（文字在「🎨 教材模板」分頁設定）。
+                  </div>
+                  <button type="button" class="pba-mini-btn" id="mTplPreviewBtn">🔍 產生預覽</button>
+                  <div id="mTplPreviewWrap" style="display:none; margin-top:8px;">
+                    <div id="mTplPreviewLabel" style="font-size:11.5px; color:var(--c-muted); margin-bottom:4px;"></div>
+                    <img id="mTplPreviewImg" style="max-width:100%; border-radius:10px; border:1px solid var(--c-border, #ddd);">
+                  </div>
+                  <div class="pba-upload-status" id="mTplStatus"></div>
+                </div>
               </div>
               <div class="pba-form-actions">
                 <button type="button" class="pba-btn pba-btn-save" id="saveMaterialBtn">儲存教材</button>
@@ -5407,6 +5437,71 @@
         </div>
       </div>
     </div><!-- /pbaTabPanelSettings -->
+
+    <!-- 教材模板（docs/06 教材模板合成系統；books.js 渲染） -->
+    <div class="pba-tab-panel" id="pbaTabPanelTpl" style="display:none;">
+      <div class="pba-panel" style="max-width:760px;">
+        <div id="tplNotReadyBanner" style="display:none; font-size:12px; color:#c0392b; margin-bottom:10px; line-height:1.6;">
+          ⚠ 模板資料表尚未建立（需先 npx supabase db push migration 20260913000001），下面的規格/框圖暫時無法新增。共用素材文字可以先填。
+        </div>
+
+        <div class="pba-panel-title">🖋 共用素材（全部教材共用）</div>
+        <div class="pba-field">
+          <label>浮水印文字</label>
+          <input type="text" id="tplWatermarkText" placeholder="例：雪莉與朵栗 @dondon0813" maxlength="60">
+        </div>
+        <div class="pba-field">
+          <label>教材宣傳文字（開團版印在圖上方粉色橫幅）</label>
+          <textarea id="tplPromoText" placeholder="例：🔥 禾流文創開團中！9/8–9/14 下單再送教材" style="min-height:56px;"></textarea>
+          <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+            每檔團開團前改這一句，再按下面「重新產生全部成品」，所有勾了「團購資訊」的教材會自動換上新文字。
+          </div>
+        </div>
+        <div class="pba-field">
+          <label>IG 網址（QR code 導向，之後啟用；先留空沒關係）</label>
+          <input type="text" id="tplIgUrl" placeholder="https://www.instagram.com/…">
+        </div>
+        <button type="button" class="pba-btn pba-btn-save" id="tplSettingsSaveBtn">儲存共用素材</button>
+        <div class="pba-upload-status" id="tplSettingsStatus"></div>
+
+        <hr class="pba-section-divider">
+
+        <div class="pba-panel-title">📐 尺寸規格</div>
+        <div style="font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;">
+          教材表單的「建議尺寸」下拉吃這份清單；框圖也按規格分開掛（框不跨規格縮放，會變形）。
+        </div>
+        <div id="tplSpecList"></div>
+        <div class="pba-cat-add-row">
+          <input type="text" id="tplSpecName" placeholder="規格名稱（例：A4 直式）" style="flex:2;">
+          <input type="number" id="tplSpecW" placeholder="寬mm" style="flex:1; min-width:70px;">
+          <input type="number" id="tplSpecH" placeholder="高mm" style="flex:1; min-width:70px;">
+          <button type="button" class="pba-mini-btn" id="tplSpecAddBtn">新增</button>
+        </div>
+
+        <hr class="pba-section-divider">
+
+        <div class="pba-panel-title">🖼 框圖庫</div>
+        <div style="font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;">
+          透明背景 PNG，請按該規格的比例製作（例：A4 直式＝210×297）。一個規格可放多款框。
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <label style="font-size:13px; font-weight:700;">規格</label>
+          <select id="tplFrameSpecSelect"></select>
+        </div>
+        <div id="tplFrameList" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px;"></div>
+        <input type="file" id="tplFrameFile" accept="image/png">
+        <div class="pba-upload-status" id="tplFrameStatus"></div>
+
+        <hr class="pba-section-divider">
+
+        <div class="pba-panel-title">🔁 重新產生成品</div>
+        <div style="font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;">
+          改了框、浮水印文字或宣傳文字之後按這裡：所有有勾模板合成的教材會用最新素材重烤「開團版＋平時版」，前台下載連結自動換新檔。
+        </div>
+        <button type="button" class="pba-btn pba-btn-save" id="tplRecomposeAllBtn">🔁 重新產生全部成品</button>
+        <div class="pba-upload-status" id="tplRecomposeStatus"></div>
+      </div>
+    </div><!-- /pbaTabPanelTpl -->
 
     <div id="pbaToast"></div>
   </div><!-- /viewBooks -->
@@ -6573,7 +6668,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=11"></script>
+<script src="books.js?v=12"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
