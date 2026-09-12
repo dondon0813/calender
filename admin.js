@@ -2393,7 +2393,7 @@ function switchView(name, target) {
   // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
   // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
   const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印', books: '繪本後台', recipeDb: '食譜資料庫', schoolList: '開學清單', blog: '文章管理', fanAdmin: '會員管理', hall: '教材館' };
-  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'fanEdit' };
+  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'bookEdit' };
   if (VIEW_PERM[name] && !hasPerm(VIEW_PERM_KEY[name] || name)) {
     alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
