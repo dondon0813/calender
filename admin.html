@@ -5280,14 +5280,24 @@
                   <div style="display:flex; flex-wrap:wrap; gap:10px; font-size:13px; font-weight:700; margin-bottom:6px;">
                     <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerFrame" style="width:auto;"> 套框</label>
                     <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerWatermark" style="width:auto;"> 浮水印</label>
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerQr" style="width:auto;"> QR CODE</label>
                     <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerCaption" style="width:auto;"> 標題與說明</label>
                     <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="checkbox" id="mLayerPromo" style="width:auto;"> 團購資訊</label>
                   </div>
                   <div id="mFrameSelectWrap" style="display:none; margin-bottom:6px;">
                     <select id="mFrameSelect"><option value="">（選擇框）</option></select>
                   </div>
+                  <!-- 浮水印位置（雪莉定案：左/中/右，都在圖底部；QR 固定右上角） -->
+                  <div id="mWmPosWrap" style="display:none; margin-bottom:6px;">
+                    <label style="font-size:12.5px; font-weight:700; margin-right:6px;">浮水印位置</label>
+                    <select id="mWmPos" style="width:auto;">
+                      <option value="left">左</option>
+                      <option value="center">中</option>
+                      <option value="right" selected>右</option>
+                    </select>
+                  </div>
                   <div style="font-size:11.5px; color:var(--c-muted); line-height:1.6; margin-bottom:6px;">
-                    浮水印＝共用設定的文字（之後可加 LOGO/QR）；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖上方的粉色橫幅、結團隔天自動拿掉（文字在「🎨 教材模板」分頁設定）。
+                    浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝固定右上角小圖；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖上方的粉色橫幅、結團隔天自動拿掉。共用素材在「🎨 教材模板」分頁設定。
                   </div>
                   <button type="button" class="pba-mini-btn" id="mTplPreviewBtn">🔍 產生預覽</button>
                   <div id="mTplPreviewWrap" style="display:none; margin-top:8px;">
@@ -5506,6 +5516,18 @@
         </div>
         <!-- LOGO/QR 目前檔案預覽（books.js renderTplPanel 填入；要換圖找 Claude 重新上架） -->
         <div id="tplAssetPreview" style="display:none; align-items:flex-end; gap:14px; margin-bottom:10px;"></div>
+        <!-- 浮水印圖/QR 圖自助上傳（2026-09-13 雪莉需求）：換圖直接在這裡傳，新檔名自動防快取 -->
+        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:10px;">
+          <div>
+            <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新浮水印圖（透明 PNG）</label>
+            <input type="file" id="tplLogoFile" accept="image/png,image/webp">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新 QR CODE 圖</label>
+            <input type="file" id="tplQrFile" accept="image/*">
+          </div>
+        </div>
+        <div class="pba-upload-status" id="tplAssetStatus"></div>
         <button type="button" class="pba-btn pba-btn-save" id="tplSettingsSaveBtn">儲存共用素材</button>
         <div class="pba-upload-status" id="tplSettingsStatus"></div>
 
@@ -6748,7 +6770,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=18"></script>
+<script src="books.js?v=19"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

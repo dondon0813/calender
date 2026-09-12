@@ -1347,9 +1347,11 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     payload.layer_frame = layers.frame;
     payload.layer_promo = layers.promo;
     payload.layer_watermark = layers.watermark;
+    payload.layer_qr = layers.qr;
+    payload.watermark_pos = document.getElementById('mWmPos').value;
     payload.layer_caption = layers.caption;
     if (mtplPendingCleanPath) payload.clean_path = mtplPendingCleanPath;
-    if (layers.frame || layers.promo || layers.watermark || layers.caption) {
+    if (mtplAnyLayer(layers)) {
       if (!mtplHasSource()) { showToast('要套模板需要先重新上傳原始圖檔（這份教材沒有乾淨原檔）', true); return; }
       if (layers.frame && !payload.frame_id) { showToast('勾了「套框」但還沒選框', true); return; }
       const saveBtn = document.getElementById('saveMaterialBtn');
@@ -1360,7 +1362,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
         const composed = await mtplComposeAndUpload(bookIds, {
           title,
           desc: document.getElementById('mDescription').value.trim()
-        }, layers, payload.frame_id);
+        }, layers, payload.frame_id, null, payload.watermark_pos);
         Object.assign(payload, composed, { composed_at: true });
         st.textContent = '合成完成 ✓';
       } catch (err) {
@@ -2314,8 +2316,13 @@ function mtplLayersState() {
     frame: document.getElementById('mLayerFrame').checked,
     promo: document.getElementById('mLayerPromo').checked,
     watermark: document.getElementById('mLayerWatermark').checked,
+    qr: document.getElementById('mLayerQr').checked,
     caption: document.getElementById('mLayerCaption').checked
   };
+}
+
+function mtplAnyLayer(layers) {
+  return layers.frame || layers.promo || layers.watermark || layers.qr || layers.caption;
 }
 
 function mtplHasSource() {
@@ -2361,6 +2368,8 @@ function mtplSyncFrameSelect(selectedFrameId) {
 function mtplSyncFrameSelectVisibility() {
   document.getElementById('mFrameSelectWrap').style.display =
     document.getElementById('mLayerFrame').checked ? '' : 'none';
+  document.getElementById('mWmPosWrap').style.display =
+    document.getElementById('mLayerWatermark').checked ? '' : 'none';
 }
 
 // openMaterialForm 收尾呼叫：帶回教材既有的模板設定；表未 push 整區隱藏
@@ -2375,6 +2384,8 @@ function mtplResetFormState(material) {
   document.getElementById('mLayerFrame').checked = material ? !!material.layerFrame : false;
   document.getElementById('mLayerPromo').checked = material ? !!material.layerPromo : false;
   document.getElementById('mLayerWatermark').checked = material ? !!material.layerWatermark : false;
+  document.getElementById('mLayerQr').checked = material ? !!material.layerQr : false;
+  document.getElementById('mWmPos').value = material && (material.watermarkPos === 'left' || material.watermarkPos === 'center') ? material.watermarkPos : 'right';
   document.getElementById('mLayerCaption').checked = material ? !!material.layerCaption : false;
   mtplSyncFrameSelect(material ? material.frameId || '' : '');
   mtplSyncFrameSelectVisibility();
@@ -2476,39 +2487,44 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     }
   }
 
-  // 浮水印圖層：QR 左下、LOGO＋文字右下（都在 caption 條上方）
-  if (o.layers.watermark && (o.watermarkText || o.logoImg || o.qrImg)) {
+  // QR CODE 圖層（獨立勾選，2026-09-13 雪莉定案）：固定右上角、尺寸＝長邊 5%（原 10% 縮半）；
+  // 開團版頂部有粉色橫幅時往下讓位
+  if (o.layers.qr && o.qrImg) {
+    const pad = Math.round(base * 0.014);
+    const qrW = Math.max(60, Math.round(base * 0.05));
+    const qrH = Math.round(qrW * (o.qrImg.height / o.qrImg.width));
+    const topOffset = withPromo && o.promoText ? Math.max(40, Math.round(H * 0.06)) + Math.round(pad * 0.5) : 0;
+    ctx.drawImage(o.qrImg, W - pad - qrW, pad + topOffset, qrW, qrH);
+  }
+
+  // 浮水印圖層（文字/手寫字 LOGO）：圖底部（caption 條上方），水平位置可選左/中/右
+  if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
     const size = Math.round(base * 0.022);
     const pad = Math.round(base * 0.014);
-    // IG QR：左下角（掃了把被轉傳的圖帶回 IG——docs/06 QR 存在的意義）
-    if (o.qrImg) {
-      const qrW = Math.max(90, Math.round(base * 0.10));
-      const qrH = Math.round(qrW * (o.qrImg.height / o.qrImg.width));
-      ctx.drawImage(o.qrImg, pad, H - captionH - pad - qrH, qrW, qrH);
-    }
-    // LOGO（雪莉的黑色手寫字透明 PNG）：右下角，加白色光暈讓深色底圖也看得見
-    let rightY = H - captionH - pad;
+    const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
+    let y = H - captionH - pad;
     if (o.logoImg) {
       const logoH = Math.round(base * 0.055);
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
+      const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
       ctx.save();
       ctx.shadowColor = 'rgba(255,255,255,0.95)';
       ctx.shadowBlur = Math.max(3, Math.round(logoH * 0.18));
-      ctx.drawImage(o.logoImg, W - pad - logoW, rightY - logoH, logoW, logoH);
-      ctx.drawImage(o.logoImg, W - pad - logoW, rightY - logoH, logoW, logoH); // 畫兩次加強光暈
+      ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH);
+      ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH); // 畫兩次加強白光暈（黑手寫字深色底也看得見）
       ctx.restore();
-      rightY -= logoH + Math.round(size * 0.5);
+      y -= logoH + Math.round(size * 0.5);
     }
-    // 文字浮水印（LOGO 已含 IG 帳號，通常留空；有填就疊在 LOGO 上方）
     if (o.watermarkText) {
       ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
       ctx.textBaseline = 'alphabetic';
-      ctx.textAlign = 'right';
+      ctx.textAlign = pos === 'left' ? 'left' : pos === 'center' ? 'center' : 'right';
+      const tx = pos === 'left' ? pad : pos === 'center' ? Math.round(W / 2) : W - pad;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.55)';
       ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText(o.watermarkText, W - pad, rightY);
+      ctx.fillText(o.watermarkText, tx, y);
       ctx.restore();
       ctx.textAlign = 'left';
     }
@@ -2548,13 +2564,13 @@ async function mtplUploadComposed(bookId, variant, blob) {
 
 // 烤兩版成品並上傳，回傳要併進 material-upsert payload 的欄位。
 // bookIds＝教材掛載書單（開團判定看任一本；成品路徑用第一本）；getSource＝來源圖取得函式
-async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource) {
+async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos) {
   const src = await (getSource || mtplGetFormSourceBitmap)();
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
   const s = mtplSettings();
   const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
-  const qrImg = layers.watermark && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
-  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
+  const qrImg = layers.qr && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
+  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
   const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
@@ -2582,10 +2598,11 @@ document.getElementById('mSpecSelect').addEventListener('change', () => {
   mtplSyncFrameSelect(document.getElementById('mFrameSelect').value);
 });
 document.getElementById('mLayerFrame').addEventListener('change', mtplSyncFrameSelectVisibility);
+document.getElementById('mLayerWatermark').addEventListener('change', mtplSyncFrameSelectVisibility);
 
 document.getElementById('mTplPreviewBtn').addEventListener('click', async () => {
   const layers = mtplLayersState();
-  if (!(layers.frame || layers.promo || layers.watermark || layers.caption)) { showToast('先勾至少一個圖層', true); return; }
+  if (!mtplAnyLayer(layers)) { showToast('先勾至少一個圖層', true); return; }
   if (!mtplHasSource()) { showToast('請先上傳原始圖檔', true); return; }
   const frameId = document.getElementById('mFrameSelect').value || '';
   if (layers.frame && !frameId) { showToast('勾了「套框」但還沒選框', true); return; }
@@ -2596,7 +2613,7 @@ document.getElementById('mTplPreviewBtn').addEventListener('click', async () => 
     const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
     const s = mtplSettings();
     const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
-    const qrImg = layers.watermark && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
+    const qrImg = layers.qr && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
     const caption = {
       title: document.getElementById('mTitle').value.trim(),
       desc: document.getElementById('mDescription').value.trim()
@@ -2604,6 +2621,7 @@ document.getElementById('mTplPreviewBtn').addEventListener('click', async () => 
     const withPromo = layers.promo; // 有勾團購資訊就預覽開團版（資訊最滿的那版）
     const canvas = mtplComposeCanvas(src, {
       frameImg, logoImg, qrImg, layers, caption,
+      watermarkPos: document.getElementById('mWmPos').value,
       watermarkText: s.watermarkText || '', promoText: s.promoText || ''
     }, withPromo);
     const pv = document.createElement('canvas');
@@ -2739,6 +2757,37 @@ async function mtplReloadPackage() {
 
 document.getElementById('tplFrameSpecSelect').addEventListener('change', renderTplFrameList);
 
+// 浮水印圖/QR 圖自助上傳（2026-09-13 雪莉需求）：簽名直傳 images bucket mtpl/（每次新檔名防 CDN 快取）
+// → 上傳完自動把新網址存進共用素材設定
+async function mtlbUploadTplAsset(asset, file) {
+  const st = document.getElementById('tplAssetStatus');
+  st.textContent = '上傳中…';
+  try {
+    const urlRes = await apiPost('material-tpl-asset-upload-url', { asset, file_name: file.name });
+    if (!urlRes || urlRes.success !== true) throw new Error((urlRes && urlRes.error) || '未知錯誤');
+    const put = await fetch(urlRes.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'image/png' }, body: file });
+    if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
+    const key = asset === 'qr' ? 'qr_url' : 'logo_url';
+    const setRes = await apiPost('material-tpl-settings-set', { [key]: urlRes.publicUrl });
+    if (!setRes || setRes.success !== true) throw new Error((setRes && setRes.error) || '設定儲存失敗');
+    if (PACKAGE_DATA) PACKAGE_DATA.mtplSettings = setRes.settings;
+    st.textContent = (asset === 'qr' ? 'QR CODE' : '浮水印圖') + '已更新 ✓ 已合成的教材要按「重新產生全部成品」才會換上新圖';
+    renderTplPanel();
+  } catch (err) {
+    st.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
+  }
+}
+document.getElementById('tplLogoFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) mtlbUploadTplAsset('logo', file);
+  e.target.value = '';
+});
+document.getElementById('tplQrFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) mtlbUploadTplAsset('qr', file);
+  e.target.value = '';
+});
+
 document.getElementById('tplSettingsSaveBtn').addEventListener('click', async () => {
   const st = document.getElementById('tplSettingsStatus');
   st.textContent = '儲存中…';
@@ -2803,7 +2852,7 @@ document.getElementById('tplFrameFile').addEventListener('change', async (e) => 
 document.getElementById('tplRecomposeAllBtn').addEventListener('click', async () => {
   if (!mtplReady()) { showToast('模板資料表尚未建立', true); return; }
   const mats = ((PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || []).filter(m =>
-    (m.layerFrame || m.layerPromo || m.layerWatermark || m.layerCaption) && m.cleanPath);
+    (m.layerFrame || m.layerPromo || m.layerWatermark || m.layerQr || m.layerCaption) && m.cleanPath);
   if (!mats.length) { showToast('沒有勾模板合成的教材', true); return; }
   if (!confirm('要用目前的框與文字設定，重新產生 ' + mats.length + ' 份教材的成品嗎？')) return;
   const btn = document.getElementById('tplRecomposeAllBtn');
@@ -2815,7 +2864,7 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
     const m = mats[i];
     st.textContent = '處理中 ' + (i + 1) + '/' + mats.length + '：' + (m.title || '未命名');
     try {
-      const layers = { frame: !!m.layerFrame, promo: !!m.layerPromo, watermark: !!m.layerWatermark, caption: !!m.layerCaption };
+      const layers = { frame: !!m.layerFrame, promo: !!m.layerPromo, watermark: !!m.layerWatermark, qr: !!m.layerQr, caption: !!m.layerCaption };
       const bookIds = Array.isArray(m.bookIds) ? m.bookIds : []; // 獨立教材＝空陣列照樣重產
       if (layers.frame && !m.frameId) throw new Error('勾了套框但沒選框');
       const composed = await mtplComposeAndUpload(
@@ -2823,7 +2872,8 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
         { title: m.title || '', desc: m.description || '' },
         layers,
         m.frameId || '',
-        () => mtplCleanBitmapById(m.id)
+        () => mtplCleanBitmapById(m.id),
+        m.watermarkPos || 'right'
       );
       const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
       if (!res || res.success !== true) throw new Error((res && res.error) || '存檔失敗');
