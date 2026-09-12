@@ -2504,7 +2504,7 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
     let y = H - captionH - pad;
     if (o.logoImg) {
-      const logoH = Math.round(base * 0.055);
+      const logoH = Math.round(base * 0.0275); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055）
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
       const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
       ctx.save();
