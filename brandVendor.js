@@ -556,14 +556,18 @@ function openBrandDetailModal(brand) {
   document.getElementById('brandDetailTitle').textContent = `🏷 ${brand.name}`;
 
   const lines = [];
-  const vendorName = vendorNamesOf_(brand);
+  const vendorObjs = (brand.vendorIds || []).map(vid => vendorDb.find(v => v.id === vid)).filter(Boolean);
   const dst = bvCoopState_(brand);
   lines.push(`<div><b>合作狀態：</b>${dst.text}${brand.ended && brand.endReason ? '（' + escHtml(brand.endReason) + '）' : ''}</div>`);
   // 品牌本身還在，但所屬廠商全結束了＝實際上接不到團，提示但不自動改品牌狀態
   if (!brand.ended && bvAllVendorsEnded_(brand)) {
     lines.push('<div style="color:var(--c-danger); font-weight:800;">⚠ 所屬廠商都已結束合作，這個品牌目前接不到團</div>');
   }
-  lines.push(`<div><b>所屬廠商：</b>${vendorName ? escHtml(vendorName) : '－'}</div>`);
+  // 廠商名稱做成連結，點了跳到廠商檢視彈窗（跟廠商彈窗點品牌跳品牌檢視對稱）
+  const vendorLinks = vendorObjs.map(v =>
+    `<a href="javascript:void(0)" class="bv-vendor-link" data-vid="${escHtml(v.id)}" style="color:#4a7fb5; font-weight:800;">${escHtml(v.name)}</a>`
+  ).join('、');
+  lines.push(`<div><b>所屬廠商：</b>${vendorLinks || '－'}</div>`);
   // 分潤沒填也要顯示「尚未登記」，不然會分不出「沒填」和「這個彈窗不顯示分潤」
   if (bvCanSeeCommission_()) {
     const commission = bvCommissionText_(brand);
@@ -576,6 +580,14 @@ function openBrandDetailModal(brand) {
   if (brand.shopeeUrl) lines.push(`<div><b>蝦皮連結：</b><a href="${escHtml(brand.shopeeUrl)}" target="_blank" rel="noopener noreferrer">${escHtml(brand.shopeeUrl)}</a></div>`);
   if (brand.note) lines.push(`<div><b>備註：</b>${escHtml(brand.note)}</div>`);
   document.getElementById('brandDetailBody').innerHTML = lines.join('');
+  document.querySelectorAll('#brandDetailBody .bv-vendor-link').forEach(a => {
+    a.addEventListener('click', () => {
+      const v = vendorDb.find(x => x.id === a.getAttribute('data-vid'));
+      if (!v) return;
+      closeBrandDetailModal();
+      openVendorDetailModal(v);
+    });
+  });
 
   bvRenderBrandGroupBuyLists_(brand);
 
