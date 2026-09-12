@@ -1207,6 +1207,7 @@ function openMaterialForm(material, opts) {
   materialFormEditingBookIds = material && Array.isArray(material.bookIds) ? material.bookIds.slice() : null;
   // 綁定類型／對象／標籤（2026-09-13 教材獨立化）
   mtlbInitBindUI(material);
+  mtlbFillBrandSelect(material ? material.brandId || '' : '');
   document.getElementById('mTags').value = material && Array.isArray(material.tags) ? material.tags.join(', ') : '';
   // 顯示於前台：編輯帶回現值；新增預設不勾（雪莉定：上傳完最後確認再上架）
   document.getElementById('mVisible').checked = material ? material.visible !== false : false;
@@ -1324,6 +1325,8 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     tags: mtlbTagsFromInput(),
     // 顯示於前台（migration 20260913000004）：沒勾＝待確認，只有後台看得到
     is_visible: document.getElementById('mVisible').checked,
+    // 團購品牌（migration 20260913000005）：品項未建檔時先綁品牌
+    brand_id: document.getElementById('mBrandSelect').value || '',
     title,
     description: document.getElementById('mDescription').value,
     print_size: document.getElementById('mPrintSize').value.trim(),
@@ -2935,6 +2938,24 @@ function mtlbTagsFromInput() {
   return document.getElementById('mTags').value.split(/[,，\s]+/).map(t => t.trim()).filter(Boolean);
 }
 
+// 團購品牌下拉（migration 20260913000005）：全部品牌，品項未建檔時先綁品牌用
+function mtlbFillBrandSelect(selectedId) {
+  const sel = document.getElementById('mBrandSelect');
+  sel.innerHTML = '<option value="">（不指定）</option>';
+  ((PACKAGE_DATA && PACKAGE_DATA.brands) || []).forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = b.name;
+    sel.appendChild(opt);
+  });
+  sel.value = selectedId || '';
+}
+
+function mtlbBrandName(brandId) {
+  const b = ((PACKAGE_DATA && PACKAGE_DATA.brands) || []).find(x => x.id === brandId);
+  return b ? b.name : '';
+}
+
 document.getElementById('mBindType').addEventListener('change', () => {
   mtlbFillBindItems(document.getElementById('mBindType').value, mtlbSelectedBindIds());
   mtlbSyncBindVisibility();
@@ -2944,13 +2965,14 @@ document.getElementById('mBindType').addEventListener('change', () => {
 
 function mtlbBindBadge(m) {
   const ids = Array.isArray(m.bookIds) ? m.bookIds : [];
-  if (!ids.length) return '✨ 獨立教材';
+  const brandSuffix = m.brandId && mtlbBrandName(m.brandId) ? `・🏷 ${mtlbBrandName(m.brandId)}` : '';
+  if (!ids.length) return (brandSuffix ? `🏷 ${mtlbBrandName(m.brandId)}（品項未建檔）` : '✨ 獨立教材');
   let books = 0, toys = 0;
   ids.forEach(id => { const k = mtlbItemKind(id); if (k === 'toy') toys++; else if (k === 'book') books++; });
   const parts = [];
   if (books) parts.push(`📚 ${books} 本`);
   if (toys) parts.push(`🧸 ${toys} 件`);
-  return parts.join('・') || '✨ 獨立教材';
+  return (parts.join('・') || '✨ 獨立教材') + brandSuffix;
 }
 
 let matLibPendingOnly = false; // 「🚧 待確認」篩選（只列 is_visible=false 的教材）

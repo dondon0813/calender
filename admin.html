@@ -5206,6 +5206,14 @@
                   </div>
                 </div>
               </div>
+              <!-- 團購品牌（migration 20260913000005）：繪本/玩具還沒建檔時先綁品牌 -->
+              <div class="pba-field">
+                <label>團購品牌（選填）</label>
+                <select id="mBrandSelect"><option value="">（不指定）</option></select>
+                <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                  繪本／玩具還沒建檔時先選品牌：開團自動換版（模板的團購橫幅）和教材館的歸屬顯示會用它。之後綁上品項，這欄留著或改回不指定都行。
+                </div>
+              </div>
               <div class="pba-field">
                 <label>標籤（教材館篩選用；獨立教材建議填系列／年齡／節日）</label>
                 <input type="text" id="mTags" placeholder="例：數字系列, 3-6歲, 萬聖節（逗號分隔）">
@@ -6740,7 +6748,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=17"></script>
+<script src="books.js?v=18"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
