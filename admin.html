@@ -5068,6 +5068,11 @@
     <!-- 封面牆（預設畫面）：模擬前台書牆排列，直接拖曳小圖調整前台顯示順序 -->
     <div id="bookGridMode">
       <div class="pba-grid-toolbar">
+        <!-- 繪本/玩具切換（migration 20260913000002 kind）：同一張表兩個館，這裡只是過濾顯示 -->
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="pba-tab on" id="gridKindBook">📚 繪本</button>
+          <button type="button" class="pba-tab" id="gridKindToy">🧸 玩具</button>
+        </div>
         <button class="pba-add-btn" id="addBookBtn">＋ 新增繪本</button>
         <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
           <input type="text" id="bookSearchInput" placeholder="🔍 搜尋書名">
@@ -5092,7 +5097,8 @@
             <label>作者</label>
             <input type="text" id="fAuthor">
           </div>
-          <div class="pba-field">
+          <!-- 玩具沒有出版社：kind=toy 時整欄隱藏（books.js fillForm 控制） -->
+          <div class="pba-field" id="fPublisherWrap">
             <label>出版社</label>
             <input type="text" id="fPublisher">
           </div>
@@ -5183,7 +5189,27 @@
               <div id="materialLibraryList" style="max-height:260px; overflow-y:auto;"></div>
             </div>
 
+            <!-- 教材表單：books.js 啟動時會把這個節點搬成全域 modal（教材館分頁的教材庫也要能開） -->
             <div class="pba-material-form" id="materialForm">
+              <!-- 綁定類型先選（2026-09-13 雪莉定案）：選了才決定後面欄位；獨立教材＝不綁任何東西 -->
+              <div class="pba-field">
+                <label>綁定類型</label>
+                <select id="mBindType">
+                  <option value="book">📚 綁繪本</option>
+                  <option value="toy">🧸 綁玩具</option>
+                  <option value="none">✨ 獨立教材（節日／系列教材，不綁任何東西）</option>
+                </select>
+                <div id="mBindItemsWrap" style="margin-top:6px;">
+                  <select id="mBindItems" multiple size="5" style="width:100%;"></select>
+                  <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
+                    可多選（電腦按住 Ctrl 點選）。教材會顯示在勾選品項的介紹視窗裡。
+                  </div>
+                </div>
+              </div>
+              <div class="pba-field">
+                <label>標籤（教材館篩選用；獨立教材建議填系列／年齡／節日）</label>
+                <input type="text" id="mTags" placeholder="例：數字系列, 3-6歲, 萬聖節（逗號分隔）">
+              </div>
               <div class="pba-field">
                 <label>標題</label>
                 <input type="text" id="mTitle">
@@ -5697,12 +5723,33 @@
   <div class="view" id="viewHall">
     <div class="rpt-header-wrap">
       <h2 class="view-title">🎮 教材館</h2>
-      <button class="task-mini-btn" id="hallAddBtn">＋ 新增資源</button>
-      <button class="task-mini-btn" id="hallRefreshBtn">🔄 重新整理</button>
     </div>
-    <div id="hallBanner"></div>
-    <div id="hallListArea"><div class="task-empty">讀取中…</div></div>
-    <div id="hallEditArea" style="display:none;"></div>
+    <!-- 教材總管理（2026-09-13 雪莉定案）：教材庫（全部教材，含免費）＋數位資源（遊戲/付費解鎖）兩個子分頁 -->
+    <div class="pba-tabs" style="margin-bottom:10px;">
+      <button type="button" class="pba-tab on" id="hallTabBtnLib">📄 教材庫</button>
+      <button type="button" class="pba-tab" id="hallTabBtnRes">🎮 數位資源</button>
+    </div>
+    <div id="hallTabLib">
+      <div class="pba-grid-toolbar">
+        <button class="pba-add-btn" id="matLibAddBtn">＋ 新增教材</button>
+        <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
+          <input type="text" id="matLibSearch" placeholder="🔍 搜尋教材標題／標籤／綁定品項">
+        </div>
+      </div>
+      <div style="font-size:11.5px; color:var(--c-muted); margin:6px 0; line-height:1.6;">
+        這裡是全部教材的總表（繪本的、玩具的、獨立的都在）。從繪本／玩具的編輯畫面新增教材＝快速入口，存進來的是同一份資料。
+      </div>
+      <div id="matLibList"><div class="task-empty">讀取中…</div></div>
+    </div>
+    <div id="hallTabRes" style="display:none;">
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <button class="task-mini-btn" id="hallAddBtn">＋ 新增資源</button>
+        <button class="task-mini-btn" id="hallRefreshBtn">🔄 重新整理</button>
+      </div>
+      <div id="hallBanner"></div>
+      <div id="hallListArea"><div class="task-empty">讀取中…</div></div>
+      <div id="hallEditArea" style="display:none;"></div>
+    </div>
   </div><!-- /viewHall -->
 
   </div><!-- /paneLeft -->
@@ -6670,7 +6717,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=13"></script>
+<script src="books.js?v=14"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
@@ -6722,7 +6769,7 @@
     <p style="font-size:11.5px; color:var(--c-text-soft); margin:10px 0 0;">圖源＝品牌庫去背小圖＋圖片庫（brands／events 資料夾）＋行事曆用過的圖。要加新的品項圖：到「🖼 圖片庫」上傳到 brands 或 events 資料夾，回來這裡就選得到。</p>
   </div>
 </div>
-<script src="admin.js?v=90"></script>
+<script src="admin.js?v=91"></script>
 <script src="memo.js?v=5"></script>
 
 </body>

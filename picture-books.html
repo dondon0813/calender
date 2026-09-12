@@ -863,6 +863,16 @@
 <script>
 const BOOKS_API_URL = 'https://dondon-platform.vercel.app/api/books';
 
+// 玩具館模式（2026-09-13 雪莉定案）：picture-books.html?kind=toy＝同一頁的玩具視角——
+// 資料改吃公開包 toys 清單、標題換「玩具館」；繪本團行銷區（套組/優惠活動/滿額贈）不顯示。
+// 分類/類型/品牌篩選、介紹視窗、教材、影片、愛心、開團判定全部與繪本共用同一套。
+const TOY_MODE = new URLSearchParams(location.search).get('kind') === 'toy';
+if (TOY_MODE) {
+  document.title = '雪莉與朵栗 玩具館';
+  const ptEl = document.querySelector('.page-title');
+  if (ptEl) ptEl.textContent = '🧸 玩具館';
+}
+
 let ALL_BOOKS = [];
 let ALL_CATEGORIES = [];
 let ALL_TYPES = [];
@@ -917,12 +927,13 @@ async function loadBooks() {
     const data = await res.json();
     if (!data || data.success !== true) throw new Error((data && data.error) || '載入失敗');
 
-    ALL_BOOKS = data.books || [];
+    ALL_BOOKS = (TOY_MODE ? data.toys : data.books) || [];
     ALL_CATEGORIES = (data.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0));
     ALL_TYPES = data.types || [];
-    ALL_PROMOTIONS = (data.promotions || []).filter(p => p && p.text);
-    ALL_GIFTS = data.gifts || [];
-    ALL_SETS = data.sets || [];
+    // 套組/優惠活動/滿額贈是繪本團的行銷區，玩具館不顯示（空陣列＝各區自動隱藏）
+    ALL_PROMOTIONS = TOY_MODE ? [] : (data.promotions || []).filter(p => p && p.text);
+    ALL_GIFTS = TOY_MODE ? [] : (data.gifts || []);
+    ALL_SETS = TOY_MODE ? [] : (data.sets || []);
 
     const brandIdsUsed = new Set(ALL_BOOKS.map(b => b.brand_id).filter(Boolean));
     USED_BRANDS = (data.brands || []).filter(b => brandIdsUsed.has(b.id));

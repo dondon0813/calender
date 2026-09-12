@@ -2473,7 +2473,11 @@ function switchView(name, target) {
   if (name === 'schoolList') loadSchoolListView();
   if (name === 'blog') loadBlogView();
   if (name === 'fanAdmin') loadFanAdminView();
-  if (name === 'hall') loadHallView();
+  if (name === 'hall') {
+    loadHallView();
+    // 教材館「教材庫」子分頁（books.js；教材總管理 2026-09-13）
+    if (typeof renderMatLibPanel === 'function') renderMatLibPanel();
+  }
 }
 
 // ===== 寬螢幕雙欄工作區：側邊欄 / 右欄 / 拖曳分隔線 =====

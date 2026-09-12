@@ -18,6 +18,9 @@ const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
 
 let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
 let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
+let CURRENT_FORM_KIND = 'book'; // 品項表單目前的類型（book/toy；編輯＝該品項的 kind、新增＝當下牆別）
+let BOOK_GRID_KIND = 'book'; // 封面牆目前顯示哪個館（📚 繪本／🧸 玩具切換）
+let materialFormStandalone = false; // 教材表單從教材庫（教材館分頁）開啟＝true，存檔後刷新教材庫而非書
 let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
 let materialFormEditingBookIds = null; // 編輯中教材的掛載書單（教材庫；null＝新增或舊資料沒帶）
 let mtplPendingFile = null; // 教材模板：這次表單新選的原始「圖檔」（File，合成來源）
@@ -95,9 +98,11 @@ function renderBookList() {
   hintEl.textContent = term
     ? '搜尋中無法拖曳排序（清空搜尋後才是完整順序）'
     : '前台顯示順序＝這裡的順序。電腦按住封面拖曳、手機長按 0.3 秒後拖曳，放開自動儲存。';
-  const books = (PACKAGE_DATA.books || []).filter(b => !term || (b.title || '').toLowerCase().includes(term));
+  const books = (PACKAGE_DATA.books || [])
+    .filter(b => (b.kind || 'book') === BOOK_GRID_KIND) // 書牆/玩具牆只是同一張表的過濾
+    .filter(b => !term || (b.title || '').toLowerCase().includes(term));
   if (!books.length) {
-    listEl.innerHTML = '<div class="pba-empty-list">沒有符合的繪本</div>';
+    listEl.innerHTML = `<div class="pba-empty-list">沒有符合的${BOOK_GRID_KIND === 'toy' ? '玩具' : '繪本'}</div>`;
     return;
   }
   books.forEach(b => {
@@ -141,6 +146,17 @@ function renderBookList() {
 }
 
 document.getElementById('bookSearchInput').addEventListener('input', renderBookList);
+
+// 書牆／玩具牆切換
+function setGridKind(kind) {
+  BOOK_GRID_KIND = kind;
+  document.getElementById('gridKindBook').classList.toggle('on', kind === 'book');
+  document.getElementById('gridKindToy').classList.toggle('on', kind === 'toy');
+  document.getElementById('addBookBtn').textContent = kind === 'toy' ? '＋ 新增玩具' : '＋ 新增繪本';
+  renderBookList();
+}
+document.getElementById('gridKindBook').addEventListener('click', () => setGridKind('book'));
+document.getElementById('gridKindToy').addEventListener('click', () => setGridKind('toy'));
 
 // ---- 拖曳排序 ----
 // 點一下＝進編輯；拖曳（滑鼠移超過 6px；觸控長按 300ms，先動超過 10px＝在捲頁、放棄）＝改排序。
@@ -251,8 +267,9 @@ function showBookGrid() {
   renderBookList();
 }
 
-function openBookEditor(book) {
+function openBookEditor(book, kindForNew) {
   CURRENT_BOOK = book || null;
+  CURRENT_FORM_KIND = book ? (book.kind || 'book') : (kindForNew || BOOK_GRID_KIND);
   fillForm(book || null);
   renderMaterialsSection(book || null);
   document.getElementById('bookGridMode').style.display = 'none';
@@ -269,7 +286,8 @@ var BOOK_BRAND_WHITELIST = ['禾流文創', 'Kidsread點讀筆'];
 function renderBrandOptions() {
   const sel = document.getElementById('fBrand');
   sel.innerHTML = '<option value="">無</option>';
-  (PACKAGE_DATA.brands || []).filter(b => BOOK_BRAND_WHITELIST.includes(b.name)).forEach(b => {
+  // 白名單只限繪本（書團兩家）；玩具品牌很多（mideer/Classic World…），全部列出
+  (PACKAGE_DATA.brands || []).filter(b => CURRENT_FORM_KIND === 'toy' || BOOK_BRAND_WHITELIST.includes(b.name)).forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id;
     opt.textContent = b.name;
@@ -355,10 +373,14 @@ function selectBook(book) {
   openBookEditor(book);
 }
 
-document.getElementById('addBookBtn').addEventListener('click', () => openBookEditor(null));
+document.getElementById('addBookBtn').addEventListener('click', () => openBookEditor(null, BOOK_GRID_KIND));
 
 function fillForm(book) {
-  document.getElementById('formTitle').textContent = book ? '編輯繪本' : '新增繪本';
+  // 類型調整欄位（2026-09-13 雪莉定案）：玩具沒有出版社（作者欄本來就停用隱藏）；品牌下拉玩具不受書團白名單限制
+  const isToy = CURRENT_FORM_KIND === 'toy';
+  document.getElementById('formTitle').textContent = book ? (isToy ? '編輯玩具' : '編輯繪本') : (isToy ? '新增玩具' : '新增繪本');
+  document.getElementById('fPublisherWrap').style.display = isToy ? 'none' : '';
+  renderBrandOptions();
   document.getElementById('fTitle').value = book ? book.title || '' : '';
   document.getElementById('fAuthor').value = book ? book.author || '' : '';
   document.getElementById('fPublisher').value = book ? book.publisher || '' : '';
@@ -1025,8 +1047,9 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     cover_url: document.getElementById('fCoverUrl').value.trim()
   };
   if (CURRENT_BOOK) {
-    payload.id = CURRENT_BOOK.id; // 編輯不送 sort（partial update 不動原值，順序只在封面牆拖曳改）
+    payload.id = CURRENT_BOOK.id; // 編輯不送 sort（partial update 不動原值，順序只在封面牆拖曳改）；kind 建立後不可改、也不送
   } else {
+    payload.kind = CURRENT_FORM_KIND; // 只在新增時決定（book/toy，後端 update 一律忽略）
     // 新書預設排最前面：比現有最小 sort 再小 1（拖曳存檔會把全部重新編成 1..n，不會一直變小）
     const sorts = (PACKAGE_DATA.books || []).map(b => Number(b.sort) || 0);
     payload.sort = sorts.length ? Math.min.apply(null, sorts) - 1 : 0;
@@ -1176,10 +1199,15 @@ function formatBytes(n) {
 document.getElementById('addMaterialBtn').addEventListener('click', () => openMaterialForm(null));
 document.getElementById('cancelMaterialBtn').addEventListener('click', closeMaterialForm);
 
-function openMaterialForm(material) {
+function openMaterialForm(material, opts) {
+  materialFormStandalone = Boolean(opts && opts.standalone);
   materialFormEditingId = material ? material.id : null;
   // 編輯共用教材時要原封不動帶回 bookIds（只送 book_id 會把其他書的掛載洗掉）
   materialFormEditingBookIds = material && Array.isArray(material.bookIds) ? material.bookIds.slice() : null;
+  // 綁定類型／對象／標籤（2026-09-13 教材獨立化）
+  mtlbInitBindUI(material);
+  document.getElementById('mTags').value = material && Array.isArray(material.tags) ? material.tags.join(', ') : '';
+  document.getElementById('materialFormModal').classList.add('show');
   document.getElementById('materialForm').classList.add('show');
   document.getElementById('mTitle').value = material ? material.title || '' : '';
   document.getElementById('mDescription').value = material ? material.description || '' : '';
@@ -1202,6 +1230,9 @@ function openMaterialForm(material) {
 function closeMaterialForm() {
   materialFormEditingId = null;
   materialFormEditingBookIds = null;
+  materialFormStandalone = false;
+  const modal = document.getElementById('materialFormModal');
+  if (modal) modal.classList.remove('show');
   const form = document.getElementById('materialForm');
   if (form) form.classList.remove('show');
   document.getElementById('mThumbRemoveBg').value = 'none';
@@ -1220,12 +1251,8 @@ function setMaterialThumbPreview(url) {
 document.getElementById('mThumbFile').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  if (!CURRENT_BOOK) {
-    showToast('請先儲存書籍再上傳教材縮圖', true);
-    e.target.value = '';
-    return;
-  }
-  const bookId = CURRENT_BOOK.id;
+  // 獨立教材沒綁品項＝檔名前綴用 lib（縮圖走 images bucket，跟品項無關，只是命名）
+  const bookId = mtlbFirstBoundId() || 'lib';
   const matId = materialFormEditingId || Date.now();
   pbiHandleUpload({
     file,
@@ -1251,15 +1278,10 @@ document.getElementById('mFileInput').addEventListener('change', async (e) => {
     e.target.value = '';
     return;
   }
-  if (!CURRENT_BOOK) {
-    statusEl.textContent = '請先儲存書籍再上傳教材檔案';
-    showToast('請先儲存書籍', true);
-    e.target.value = '';
-    return;
-  }
   statusEl.textContent = '上傳中…';
   try {
-    const urlRes = await apiPost('material-upload-url', { book_id: CURRENT_BOOK.id, file_name: file.name });
+    // book_id 選填（教材獨立化）：獨立教材走後端 library/ 路徑
+    const urlRes = await apiPost('material-upload-url', { book_id: mtlbFirstBoundId(), file_name: file.name });
     if (!urlRes || urlRes.success !== true) {
       statusEl.textContent = '取得上傳網址失敗：' + ((urlRes && urlRes.error) || '未知錯誤');
       showToast('教材上傳失敗', true);
@@ -1289,16 +1311,14 @@ document.getElementById('mFileInput').addEventListener('change', async (e) => {
 });
 
 document.getElementById('saveMaterialBtn').addEventListener('click', async () => {
-  if (!CURRENT_BOOK) { showToast('請先儲存書籍', true); return; }
   const title = document.getElementById('mTitle').value.trim();
   if (!title) { showToast('請輸入教材標題', true); return; }
-  // 掛載書單：新增＝掛在目前這本書；編輯＝保留原本的掛載（共用教材不能被洗成單本），
-  // 保險再把目前這本書併進去（正常情況本來就在裡面）
-  const bookIds = materialFormEditingId && materialFormEditingBookIds
-    ? Array.from(new Set(materialFormEditingBookIds.concat(CURRENT_BOOK.id)))
-    : [CURRENT_BOOK.id];
+  // 掛載清單以表單的綁定 UI 為準（2026-09-13）：獨立教材＝空陣列；
+  // 跨類型的舊綁定（book/toy 混掛）由 mtlbFinalBindIds 保留不洗掉
+  const bookIds = mtlbFinalBindIds();
   const payload = {
     book_ids: bookIds,
+    tags: mtlbTagsFromInput(),
     title,
     description: document.getElementById('mDescription').value,
     print_size: document.getElementById('mPrintSize').value.trim(),
@@ -1352,7 +1372,12 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
       return;
     }
     showToast('教材已儲存');
-    await refreshCurrentBookAfterMaterialChange();
+    if (materialFormStandalone) {
+      await mtplReloadPackage();
+      renderMatLibPanel();
+    } else {
+      await refreshCurrentBookAfterMaterialChange();
+    }
     closeMaterialForm();
   } catch (err) { /* needLogin 已處理 */ }
 });
@@ -2357,7 +2382,7 @@ async function mtplAfterFilePicked(file) {
   if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { mtplPendingFile = null; mtplPendingCleanPath = ''; return; }
   const st = document.getElementById('mTplStatus');
   try {
-    const res = await apiPost('material-clean-upload-url', { book_id: CURRENT_BOOK.id, file_name: file.name });
+    const res = await apiPost('material-clean-upload-url', { book_id: mtlbFirstBoundId(), file_name: file.name });
     if (!res || res.success !== true) throw new Error((res && res.error) || '未知錯誤');
     const put = await fetch(res.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
     if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
@@ -2522,7 +2547,7 @@ async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource
   const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
   const qrImg = layers.watermark && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
   const o = { frameImg, logoImg, qrImg, layers, caption, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
-  const pathBookId = bookIds[0];
+  const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
   const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
   let openUrl = '';
@@ -2783,8 +2808,7 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
     st.textContent = '處理中 ' + (i + 1) + '/' + mats.length + '：' + (m.title || '未命名');
     try {
       const layers = { frame: !!m.layerFrame, promo: !!m.layerPromo, watermark: !!m.layerWatermark, caption: !!m.layerCaption };
-      const bookIds = Array.isArray(m.bookIds) && m.bookIds.length ? m.bookIds : [];
-      if (!bookIds.length) throw new Error('沒有掛載書');
+      const bookIds = Array.isArray(m.bookIds) ? m.bookIds : []; // 獨立教材＝空陣列照樣重產
       if (layers.frame && !m.frameId) throw new Error('勾了套框但沒選框');
       const composed = await mtplComposeAndUpload(
         bookIds,
@@ -2804,3 +2828,224 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
   st.textContent = '完成：成功 ' + ok + ' 份' + (fails.length ? '、失敗 ' + fails.length + ' 份（' + fails.join('；') + '）' : '');
   await mtplReloadPackage();
 });
+
+// ===================================================================
+// ===== 教材獨立化＋教材總管理（2026-09-13 雪莉定案）=====
+// 教材＝獨立實體：可綁繪本、綁玩具（picture_books.kind）、或不綁（獨立教材＝節日/系列）。
+// 教材表單搬成全域 modal（教材館分頁的「教材庫」也能開）；綁定類型先選，選了才決定
+// 後面的綁定對象選單。教材館分頁的教材庫＝全部教材總表（繪本後台的教材區＝快速入口）。
+// ===================================================================
+
+// 啟動時把 #materialForm 搬進全域 modal（原本內嵌在繪本編輯區，教材館分頁看不到）
+(function mtlbPromoteMaterialFormToModal() {
+  const form = document.getElementById('materialForm');
+  if (!form) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.id = 'materialFormModal';
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeMaterialForm(); });
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+  box.style.cssText = 'width:560px; max-width:96vw; max-height:92vh; overflow-y:auto;';
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close';
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', closeMaterialForm);
+  box.appendChild(closeBtn);
+  const h = document.createElement('h3');
+  h.textContent = '📄 教材';
+  box.appendChild(h);
+  form.style.border = 'none';
+  form.style.marginTop = '0';
+  form.style.padding = '0';
+  box.appendChild(form);
+  backdrop.appendChild(box);
+  document.body.appendChild(backdrop);
+})();
+
+// ----- 綁定類型／對象 -----
+
+function mtlbItemKind(id) {
+  const b = ((PACKAGE_DATA && PACKAGE_DATA.books) || []).find(x => x.id === id);
+  return b ? (b.kind || 'book') : null;
+}
+
+function mtlbSelectedBindIds() {
+  return Array.from(document.getElementById('mBindItems').selectedOptions).map(o => o.value);
+}
+
+function mtlbFillBindItems(type, selectedIds) {
+  const sel = document.getElementById('mBindItems');
+  sel.innerHTML = '';
+  if (type === 'none') return;
+  ((PACKAGE_DATA && PACKAGE_DATA.books) || [])
+    .filter(b => (b.kind || 'book') === type)
+    .forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = (b.is_published === false ? '（草稿）' : '') + (b.title || '未命名');
+      opt.selected = (selectedIds || []).indexOf(b.id) !== -1;
+      sel.appendChild(opt);
+    });
+}
+
+function mtlbSyncBindVisibility() {
+  document.getElementById('mBindItemsWrap').style.display =
+    document.getElementById('mBindType').value === 'none' ? 'none' : '';
+}
+
+// openMaterialForm 開頭呼叫：依教材現有綁定推類型並填選單
+function mtlbInitBindUI(material) {
+  const ids = material && Array.isArray(material.bookIds)
+    ? material.bookIds.slice()
+    : (!material && !materialFormStandalone && CURRENT_BOOK ? [CURRENT_BOOK.id] : []);
+  let type;
+  if (!ids.length) {
+    type = (!material && !materialFormStandalone && CURRENT_BOOK) ? (CURRENT_BOOK.kind || 'book') : 'none';
+  } else {
+    const kinds = ids.map(mtlbItemKind).filter(Boolean);
+    type = kinds.includes('toy') && !kinds.includes('book') ? 'toy' : 'book';
+  }
+  document.getElementById('mBindType').value = type;
+  mtlbFillBindItems(type, ids);
+  mtlbSyncBindVisibility();
+}
+
+// 存檔用最終掛載清單：獨立＝空；選單只列單一類型，原綁定裡「另一類型」的 id 保留不洗掉
+// （例：book/toy 混掛的教材在「綁繪本」模式編輯，玩具掛載原封不動）
+function mtlbFinalBindIds() {
+  const type = document.getElementById('mBindType').value;
+  if (type === 'none') return [];
+  const selected = mtlbSelectedBindIds();
+  const original = materialFormEditingBookIds || [];
+  const keepOther = original.filter(id => { const k = mtlbItemKind(id); return k && k !== type; });
+  return Array.from(new Set(keepOther.concat(selected)));
+}
+
+function mtlbFirstBoundId() {
+  return mtlbFinalBindIds()[0] || '';
+}
+
+function mtlbTagsFromInput() {
+  return document.getElementById('mTags').value.split(/[,，\s]+/).map(t => t.trim()).filter(Boolean);
+}
+
+document.getElementById('mBindType').addEventListener('change', () => {
+  mtlbFillBindItems(document.getElementById('mBindType').value, mtlbSelectedBindIds());
+  mtlbSyncBindVisibility();
+});
+
+// ----- 教材館「📄 教材庫」子分頁 -----
+
+function mtlbBindBadge(m) {
+  const ids = Array.isArray(m.bookIds) ? m.bookIds : [];
+  if (!ids.length) return '✨ 獨立教材';
+  let books = 0, toys = 0;
+  ids.forEach(id => { const k = mtlbItemKind(id); if (k === 'toy') toys++; else if (k === 'book') books++; });
+  const parts = [];
+  if (books) parts.push(`📚 ${books} 本`);
+  if (toys) parts.push(`🧸 ${toys} 件`);
+  return parts.join('・') || '✨ 獨立教材';
+}
+
+function renderMatLibPanel() {
+  const listEl = document.getElementById('matLibList');
+  if (!listEl) return;
+  if (!PACKAGE_DATA) {
+    listEl.innerHTML = '<div class="task-empty">讀取中…</div>';
+    loadPackage().then(pkg => { if (pkg) { PACKAGE_DATA = pkg; renderMatLibPanel(); } });
+    return;
+  }
+  const term = (document.getElementById('matLibSearch').value || '').trim().toLowerCase();
+  const canEdit = typeof hasEditPerm !== 'function' || hasEditPerm('bookEdit');
+  document.getElementById('matLibAddBtn').style.display = canEdit ? '' : 'none';
+  const items = (PACKAGE_DATA.materialsLibrary || []).filter(m => {
+    if (!term) return true;
+    const boundTitles = (m.bookIds || []).map(id => {
+      const b = (PACKAGE_DATA.books || []).find(x => x.id === id);
+      return b ? b.title : '';
+    });
+    return [m.title || '', (m.tags || []).join(' '), boundTitles.join(' ')].join(' ').toLowerCase().includes(term);
+  });
+  listEl.innerHTML = '';
+  if (!items.length) {
+    listEl.innerHTML = '<div class="task-empty">' + (term ? '找不到符合的教材' : '還沒有教材，點上面「＋新增教材」開始') + '</div>';
+    return;
+  }
+  items.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'pba-material-item';
+    if (m.thumb_url) {
+      const img = document.createElement('img');
+      img.className = 'pba-material-thumb';
+      img.src = m.thumb_url;
+      item.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pba-material-thumb placeholder';
+      ph.textContent = '📄';
+      item.appendChild(ph);
+    }
+    const info = document.createElement('div');
+    info.className = 'pba-material-info';
+    const title = document.createElement('div');
+    title.className = 'pba-material-title';
+    title.textContent = m.title || '未命名教材';
+    info.appendChild(title);
+    const sub = document.createElement('div');
+    sub.className = 'pba-material-sub';
+    const bits = [mtlbBindBadge(m)];
+    if ((m.tags || []).length) bits.push(m.tags.map(t => '#' + t).join(' '));
+    if (m.print_size) bits.push(m.print_size);
+    if (m.premium) bits.push('💎 兌換專屬');
+    bits.push(`⬇ ${Number(m.downloadCount) || 0}`);
+    if (m.composedPlainUrl) bits.push('🎨 已合成');
+    sub.textContent = bits.join(' ・ ');
+    info.appendChild(sub);
+    item.appendChild(info);
+    const actions = document.createElement('div');
+    actions.className = 'pba-material-actions';
+    if (canEdit) {
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'pba-mini-btn';
+      editBtn.textContent = '編輯';
+      editBtn.addEventListener('click', () => openMaterialForm(m, { standalone: true }));
+      actions.appendChild(editBtn);
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'pba-mini-btn danger';
+      delBtn.textContent = '刪除';
+      delBtn.addEventListener('click', async () => {
+        if (!confirm(`確定要刪除教材《${m.title || '未命名'}》嗎？會從所有綁定品項移除，整筆刪除無法復原。`)) return;
+        try {
+          const res = await apiPost('material-delete', { id: m.id });
+          if (!res || res.success !== true) { showToast('刪除失敗：' + ((res && res.error) || '未知錯誤'), true); return; }
+          showToast('已刪除');
+          await mtplReloadPackage();
+          renderMatLibPanel();
+        } catch (err) { /* needLogin 已處理 */ }
+      });
+      actions.appendChild(delBtn);
+    }
+    item.appendChild(actions);
+    listEl.appendChild(item);
+  });
+}
+
+document.getElementById('matLibSearch').addEventListener('input', renderMatLibPanel);
+document.getElementById('matLibAddBtn').addEventListener('click', () => {
+  if (!PACKAGE_DATA) { showToast('資料還在載入，稍等一下', true); return; }
+  openMaterialForm(null, { standalone: true });
+});
+
+// 教材館子分頁切換（📄 教材庫｜🎮 數位資源）
+function setHallTab(tab) {
+  document.getElementById('hallTabLib').style.display = tab === 'lib' ? '' : 'none';
+  document.getElementById('hallTabRes').style.display = tab === 'res' ? '' : 'none';
+  document.getElementById('hallTabBtnLib').classList.toggle('on', tab === 'lib');
+  document.getElementById('hallTabBtnRes').classList.toggle('on', tab === 'res');
+  if (tab === 'lib') renderMatLibPanel();
+}
+document.getElementById('hallTabBtnLib').addEventListener('click', () => setHallTab('lib'));
+document.getElementById('hallTabBtnRes').addEventListener('click', () => setHallTab('res'));
