@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雪莉與朵栗 玩中學</title>
+<meta name="description" content="跟著雪莉與朵栗，玩中學、學中玩：精選繪本與教具玩具，都幫你配好教材。">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* learn.html（玩中學入口頁，2026-09-13）專屬樣式。
+     共用的 reset / 版面 / 返回鈕 / 標題 / 開團橫列在 shared.css。
+     卡片風格抄 kids.html 的 home-card，但只有兩館所以改單欄大卡。 */
+
+  .home-subtitle {
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--c-brown);
+    font-weight: 700;
+    margin-bottom: 22px;
+  }
+
+  .learn-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .learn-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-radius: var(--r-xl, 22px);
+    padding: 22px 20px;
+    text-decoration: none;
+    border: 2px solid rgba(255, 255, 255, .75);
+    box-shadow: 0 6px 18px rgba(160, 120, 130, .16);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .learn-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(160, 120, 130, .22); }
+  .learn-card-books { background: linear-gradient(135deg, #ffe3ea, #ffd1dc); }
+  .learn-card-toys { background: linear-gradient(135deg, #dff3ec, #cdeae0); }
+  .learn-card-icon {
+    font-size: 46px;
+    line-height: 1;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .08));
+  }
+  .learn-card-body { flex: 1; min-width: 0; }
+  .learn-card-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #6d4c52;
+    margin-bottom: 4px;
+  }
+  .learn-card-desc {
+    font-size: 13px;
+    font-weight: 700;
+    color: #8a6a70;
+    line-height: 1.7;
+  }
+  .learn-card-arrow {
+    font-size: 20px;
+    color: #b98a94;
+    flex-shrink: 0;
+  }
+
+  .learn-note {
+    text-align: center;
+    font-size: 12px;
+    color: var(--c-muted, #a08a8f);
+    line-height: 1.8;
+    margin-bottom: 24px;
+  }
+</style>
+</head>
+<body>
+
+<a class="site-home-btn" href="recipes.html" title="回首頁" aria-label="回首頁">🏠</a>
+
+<div class="wrap">
+  <button class="back-btn" onclick="location.href='recipes.html'">← 返回主頁</button>
+
+  <div class="page-title-wrap">
+    <div class="page-title-badge">💗 雪莉與朵栗</div>
+    <div class="page-title">🎨 玩中學</div>
+  </div>
+
+  <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="learntop"></div>
+
+  <div class="home-subtitle">🌟 跟著雪莉與朵栗，玩中學、學中玩 🌟</div>
+
+  <div class="learn-cards">
+    <a class="learn-card learn-card-books" href="picture-books.html">
+      <div class="learn-card-icon">📚</div>
+      <div class="learn-card-body">
+        <div class="learn-card-title">繪本館</div>
+        <div class="learn-card-desc">精選繪本介紹｜試閱影片｜免費配套教材</div>
+      </div>
+      <div class="learn-card-arrow">➜</div>
+    </a>
+
+    <a class="learn-card learn-card-toys" href="picture-books.html?kind=toy">
+      <div class="learn-card-icon">🧸</div>
+      <div class="learn-card-body">
+        <div class="learn-card-title">玩具館</div>
+        <div class="learn-card-desc">教具與玩具介紹｜怎麼玩、玩什麼，教材直接印</div>
+      </div>
+      <div class="learn-card-arrow">➜</div>
+    </a>
+
+    <!-- 教材館第三卡：/materials 正式開放後解開這段（連結 https://dondon-platform.vercel.app/materials）
+    <a class="learn-card" style="background:linear-gradient(135deg,#fff3d6,#ffe9bd);" href="https://dondon-platform.vercel.app/materials">
+      <div class="learn-card-icon">📄</div>
+      <div class="learn-card-body">
+        <div class="learn-card-title">教材館</div>
+        <div class="learn-card-desc">全部教材一次逛：免費下載＋會員專屬</div>
+      </div>
+      <div class="learn-card-arrow">➜</div>
+    </a>
+    -->
+  </div>
+
+  <div class="learn-note">教材都可以免費下載列印，部分為會員專屬 💗</div>
+</div>
+
+<!-- 「現正開團中」置頂橫列（跨頁共用元件：容器 div 在上方、樣式在 shared.css） -->
+<script src="openGroupBuy.js?v=4"></script>
+
+<!-- 頁面瀏覽量統計：獨立區塊，不依賴本頁其他程式碼。key 白名單＝page_[a-z0-9]+_日期 -->
+<script>
+(function sendLearnPageview() {
+  const STATS_BACKEND_URL = 'https://dondon-platform.vercel.app/api/legacy';
+  const d = new Date();
+  const key = `page_learn_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const payload = JSON.stringify({ type: 'stat-view', key });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(STATS_BACKEND_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(STATS_BACKEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
+})();
+</script>
+
+</body>
+</html>
