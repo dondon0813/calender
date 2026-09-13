@@ -1349,6 +1349,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     payload.layer_watermark = layers.watermark;
     payload.layer_qr = layers.qr;
     payload.watermark_pos = document.getElementById('mWmPos').value;
+    payload.watermark_logo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
     payload.layer_caption = layers.caption;
     if (mtplPendingCleanPath) payload.clean_path = mtplPendingCleanPath;
     if (mtplAnyLayer(layers)) {
@@ -1362,7 +1363,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
         const composed = await mtplComposeAndUpload(bookIds, {
           title,
           desc: document.getElementById('mDescription').value.trim()
-        }, layers, payload.frame_id, null, payload.watermark_pos);
+        }, layers, payload.frame_id, null, payload.watermark_pos, payload.watermark_logo);
         Object.assign(payload, composed, { composed_at: true });
         st.textContent = '合成完成 ✓';
       } catch (err) {
@@ -2382,6 +2383,7 @@ function mtplResetFormState(material) {
   document.getElementById('mLayerWatermark').checked = material ? !!material.layerWatermark : false;
   document.getElementById('mLayerQr').checked = material ? !!material.layerQr : false;
   document.getElementById('mWmPos').value = material && (material.watermarkPos === 'left' || material.watermarkPos === 'center') ? material.watermarkPos : 'right';
+  document.getElementById('mWmLogo').value = material && material.watermarkLogo === 'light' ? 'light' : 'dark';
   document.getElementById('mLayerCaption').checked = material ? !!material.layerCaption : false;
   mtplSyncFrameSelect(material ? material.frameId || '' : '');
   mtplSyncFrameSelectVisibility();
@@ -2504,10 +2506,11 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
       const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
       ctx.save();
-      ctx.shadowColor = 'rgba(255,255,255,0.95)';
+      // 深色字版＝白光暈（深色底也看得見）；白字版＝淡黑陰影（彩色/淺色底也看得見）
+      ctx.shadowColor = o.watermarkLogo === 'light' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.95)';
       ctx.shadowBlur = Math.max(3, Math.round(logoH * 0.18));
       ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH);
-      ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH); // 畫兩次加強白光暈（黑手寫字深色底也看得見）
+      ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH); // 畫兩次加強光暈
       ctx.restore();
       y -= logoH + Math.round(size * 0.5);
     }
@@ -2560,13 +2563,19 @@ async function mtplUploadComposed(bookId, variant, blob) {
 
 // 烤兩版成品並上傳，回傳要併進 material-upsert payload 的欄位。
 // bookIds＝教材掛載書單（開團判定看任一本；成品路徑用第一本）；getSource＝來源圖取得函式
-async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos) {
+// 浮水印 LOGO 版本 → 圖檔網址（該版沒上傳就退回另一版，不會整個沒浮水印）
+function mtplLogoUrlFor(s, variant) {
+  return variant === 'light' ? (s.logoLightUrl || s.logoUrl || '') : (s.logoUrl || s.logoLightUrl || '');
+}
+
+async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos, watermarkLogo) {
   const src = await (getSource || mtplGetFormSourceBitmap)();
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
   const s = mtplSettings();
-  const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
+  const logoUrl = mtplLogoUrlFor(s, watermarkLogo);
+  const logoImg = layers.watermark && logoUrl ? await mtplFetchBitmap(logoUrl).catch(() => null) : null;
   const qrImg = layers.qr && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
-  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
+  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkLogo, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
   const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
@@ -2608,7 +2617,9 @@ document.getElementById('mTplPreviewBtn').addEventListener('click', async () => 
     const src = await mtplGetFormSourceBitmap();
     const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
     const s = mtplSettings();
-    const logoImg = layers.watermark && s.logoUrl ? await mtplFetchBitmap(s.logoUrl).catch(() => null) : null;
+    const wmLogo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
+    const logoUrl = mtplLogoUrlFor(s, wmLogo);
+    const logoImg = layers.watermark && logoUrl ? await mtplFetchBitmap(logoUrl).catch(() => null) : null;
     const qrImg = layers.qr && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
     const caption = {
       title: document.getElementById('mTitle').value.trim(),
@@ -2618,6 +2629,7 @@ document.getElementById('mTplPreviewBtn').addEventListener('click', async () => 
     const canvas = mtplComposeCanvas(src, {
       frameImg, logoImg, qrImg, layers, caption,
       watermarkPos: document.getElementById('mWmPos').value,
+      watermarkLogo: wmLogo,
       watermarkText: s.watermarkText || '', promoText: s.promoText || ''
     }, withPromo);
     const pv = document.createElement('canvas');
@@ -2650,14 +2662,15 @@ function renderTplPanel() {
   const assetBox = document.getElementById('tplAssetPreview');
   assetBox.innerHTML = '';
   const assets = [];
-  if (s.logoUrl) assets.push({ label: '浮水印 LOGO', url: s.logoUrl, h: 44 });
-  if (s.qrUrl) assets.push({ label: 'IG QR', url: s.qrUrl, h: 72 });
+  if (s.logoUrl) assets.push({ label: '浮水印 LOGO（咖啡字）', url: s.logoUrl, h: 44, bg: '#fff' });
+  if (s.logoLightUrl) assets.push({ label: '浮水印 LOGO（白字）', url: s.logoLightUrl, h: 44, bg: '#b9a99a' }); // 白字版放有色底才看得到
+  if (s.qrUrl) assets.push({ label: 'IG QR', url: s.qrUrl, h: 72, bg: '#fff' });
   assets.forEach(a => {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'text-align:center; font-size:11px; color:var(--c-muted);';
     const img = document.createElement('img');
     img.src = a.url;
-    img.style.cssText = 'height:' + a.h + 'px; display:block; margin:0 auto 3px; border:1px solid var(--c-border, #ddd); border-radius:6px; background:#fff; padding:3px;';
+    img.style.cssText = 'height:' + a.h + 'px; display:block; margin:0 auto 3px; border:1px solid var(--c-border, #ddd); border-radius:6px; background:' + a.bg + '; padding:3px;';
     wrap.appendChild(img);
     wrap.appendChild(document.createTextNode(a.label));
     assetBox.appendChild(wrap);
@@ -2763,11 +2776,11 @@ async function mtlbUploadTplAsset(asset, file) {
     if (!urlRes || urlRes.success !== true) throw new Error((urlRes && urlRes.error) || '未知錯誤');
     const put = await fetch(urlRes.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'image/png' }, body: file });
     if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
-    const key = asset === 'qr' ? 'qr_url' : 'logo_url';
+    const key = asset === 'qr' ? 'qr_url' : asset === 'logo_light' ? 'logo_light_url' : 'logo_url';
     const setRes = await apiPost('material-tpl-settings-set', { [key]: urlRes.publicUrl });
     if (!setRes || setRes.success !== true) throw new Error((setRes && setRes.error) || '設定儲存失敗');
     if (PACKAGE_DATA) PACKAGE_DATA.mtplSettings = setRes.settings;
-    st.textContent = (asset === 'qr' ? 'QR CODE' : '浮水印圖') + '已更新 ✓ 已合成的教材要按「重新產生全部成品」才會換上新圖';
+    st.textContent = (asset === 'qr' ? 'QR CODE' : asset === 'logo_light' ? '浮水印圖（白字）' : '浮水印圖（咖啡字）') + '已更新 ✓ 已合成的教材要按「重新產生全部成品」才會換上新圖';
     renderTplPanel();
   } catch (err) {
     st.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
@@ -2776,6 +2789,11 @@ async function mtlbUploadTplAsset(asset, file) {
 document.getElementById('tplLogoFile').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (file) mtlbUploadTplAsset('logo', file);
+  e.target.value = '';
+});
+document.getElementById('tplLogoLightFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) mtlbUploadTplAsset('logo_light', file);
   e.target.value = '';
 });
 document.getElementById('tplQrFile').addEventListener('change', (e) => {
@@ -2869,7 +2887,8 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
         layers,
         m.frameId || '',
         () => mtplCleanBitmapById(m.id),
-        m.watermarkPos || 'right'
+        m.watermarkPos || 'right',
+        m.watermarkLogo === 'light' ? 'light' : 'dark'
       );
       const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
       if (!res || res.success !== true) throw new Error((res && res.error) || '存檔失敗');

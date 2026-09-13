@@ -5294,6 +5294,12 @@
                       <option value="center">中</option>
                       <option value="right" selected>右</option>
                     </select>
+                    <!-- 浮水印 LOGO 版本（2026-09-13 雪莉需求：有時底色是有顏色的） -->
+                    <label style="font-size:12.5px; font-weight:700; margin:0 6px 0 12px;">LOGO 版本</label>
+                    <select id="mWmLogo" style="width:auto;">
+                      <option value="dark" selected>咖啡字（白底/淺底）</option>
+                      <option value="light">白字（彩色底/深底）</option>
+                    </select>
                   </div>
                   <div style="font-size:11.5px; color:var(--c-muted); line-height:1.6; margin-bottom:6px;">
                     浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝固定右上角小圖；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖上方的粉色橫幅、結團隔天自動拿掉。共用素材在「🎨 教材模板」分頁設定。
@@ -5518,8 +5524,12 @@
         <!-- 浮水印圖/QR 圖自助上傳（2026-09-13 雪莉需求）：換圖直接在這裡傳，新檔名自動防快取 -->
         <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:10px;">
           <div>
-            <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新浮水印圖（透明 PNG）</label>
+            <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新浮水印圖・咖啡字（透明 PNG）</label>
             <input type="file" id="tplLogoFile" accept="image/png,image/webp">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新浮水印圖・白字（透明 PNG）</label>
+            <input type="file" id="tplLogoLightFile" accept="image/png,image/webp">
           </div>
           <div>
             <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新 QR CODE 圖</label>
@@ -6772,7 +6782,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=21"></script>
+<script src="books.js?v=22"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
