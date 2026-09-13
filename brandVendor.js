@@ -424,6 +424,29 @@ function openVendorDetailModal(vendor) {
   document.getElementById('vendorDetailBody').innerHTML = lines.join('');
 
   const brands = brandDb.filter(b => (b.vendorIds || []).indexOf(vendor.id) !== -1);
+
+  // 未來已排定的開團＝底下所有品牌的未來團合併；聯名團會同時比對到同廠商的兩個品牌，依事件 id 去重，依開團日排序
+  const upcomingEl = document.getElementById('vendorDetailUpcomingList');
+  if (upcomingEl) {
+    const seen = new Set();
+    const upcoming = [];
+    brands.forEach(b => {
+      getBrandGroupBuys_(b).upcoming.forEach(ev => {
+        const key = ev.id != null ? 'id:' + ev.id : 'x:' + ev.title + '|' + ev.start;
+        if (seen.has(key)) return;
+        seen.add(key);
+        upcoming.push(ev);
+      });
+    });
+    upcoming.sort((a, b) => a.start - b.start);
+    upcomingEl.innerHTML = '';
+    if (!upcoming.length) {
+      upcomingEl.innerHTML = '<div class="task-empty">目前沒有排定中的開團</div>';
+    } else {
+      upcoming.forEach(ev => upcomingEl.appendChild(renderBrandGroupBuyRow_(ev, closeVendorDetailModal)));
+    }
+  }
+
   const listEl = document.getElementById('vendorDetailBrandList');
   listEl.innerHTML = '';
   if (!brands.length) {
@@ -502,7 +525,8 @@ function getBrandGroupBuys_(brand) {
   const past = matched.filter(ev => startOfDay(ev.displayEnd) < todayStart).sort((a, b) => b.start - a.start);
   return { upcoming, past };
 }
-function renderBrandGroupBuyRow_(ev) {
+// closeModal：點團之前要關掉的彈窗（品牌檢視／廠商檢視共用這個列樣式）
+function renderBrandGroupBuyRow_(ev, closeModal) {
   const row = document.createElement('div');
   row.className = 'cal-edit-day-row';
   const dateLabel = isSameDate(ev.start, ev.displayEnd) ? fmtSingleDate(ev.start) : (fmtSingleDate(ev.start) + '－' + fmtSingleDate(ev.displayEnd));
@@ -514,7 +538,7 @@ function renderBrandGroupBuyRow_(ev) {
   if (!ev.fromAccounting) {
     row.style.cursor = 'pointer';
     row.addEventListener('click', () => {
-      closeBrandDetailModal();
+      (closeModal || closeBrandDetailModal)();
       if (brandVendorEditMode) openEventEditModal(ev);
       else openAdminModal(ev);
     });
