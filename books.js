@@ -2652,9 +2652,13 @@ async function mtplRenderPreview(manual) {
     : !mtplHasSource() ? '請先上傳原始圖檔'
     : layers.frame && !frameId ? '勾了「套框」但還沒選框' : '';
   const seq = ++mtplPreviewSeq;
+  // 預覽自己寫的狀態字（進行中／失敗）才清，不動「合成完成 ✓」等其他訊息
+  const clearOwnStatus = () => {
+    if (st.textContent === '產生預覽中…' || st.textContent.indexOf('預覽失敗：') === 0) st.textContent = '';
+  };
   if (problem) {
     if (manual) showToast(problem, true);
-    else wrap.style.display = 'none';
+    else { wrap.style.display = 'none'; clearOwnStatus(); }
     return;
   }
   const firstLoad = wrap.style.display === 'none';
@@ -2689,7 +2693,7 @@ async function mtplRenderPreview(manual) {
       ? '預覽＝開團版（結團後前台自動換成沒有粉色橫幅的平時版）'
       : '預覽＝平時版成品') + '・改選項會自動更新';
     wrap.style.display = '';
-    if (st.textContent === '產生預覽中…') st.textContent = '';
+    clearOwnStatus();
   } catch (err) {
     if (seq !== mtplPreviewSeq) return;
     st.textContent = '預覽失敗：' + (err && err.message ? err.message : '未知錯誤');
