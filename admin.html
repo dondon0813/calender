@@ -4282,6 +4282,7 @@
     <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
     <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
     <button class="sn-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
+    <button class="sn-item" data-view="lottery" data-perm="lotteryEdit">🎁 抽獎管理</button>
     <button class="sn-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
     <button class="sn-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
     <button class="sn-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
@@ -4338,6 +4339,7 @@
           <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
           <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
           <button class="menu-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
+          <button class="menu-item" data-view="lottery" data-perm="lotteryEdit">🎁 抽獎管理</button>
           <button class="menu-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
           <button class="menu-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
           <button class="menu-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
@@ -5618,6 +5620,87 @@
     <div id="cardSubListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewCardSub -->
 
+  <!-- ===== 抽獎管理（lottery.js；抽獎活動＋得獎人，原本只能直接改試算表）===== -->
+  <style>
+    .lot-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+    @media (max-width:720px){ .lot-tiles{ grid-template-columns:1fr 1fr; } }
+    .lot-tile{ background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:12px; padding:10px 14px; cursor:pointer; }
+    .lot-tile .lot-tile-n{ font-size:24px; font-weight:800; line-height:1; }
+    .lot-tile .lot-tile-l{ font-size:12px; color:var(--c-text-soft); margin-top:2px; }
+    .lot-tile.await .lot-tile-n{ color:var(--c-cat-1); }
+    .lot-tile.ready .lot-tile-n{ color:var(--c-cat-4); }
+    .lot-tile.vendor .lot-tile-n{ color:var(--c-cat-3); }
+    .lot-tile.month .lot-tile-n{ color:var(--c-primary); }
+    .lot-tile.on{ outline:2px solid var(--c-primary); }
+    .lot-filters{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
+    .lot-filters select, .lot-filters input[type="text"]{
+      border:1px solid var(--c-border); background:#fff; border-radius:8px; padding:5px 10px; font-size:13px; font-family:inherit;
+    }
+    .lot-filters input[type="text"]{ min-width:220px; flex:1; }
+    .lot-seg{ margin-left:auto; display:flex; border:1px solid var(--c-border); border-radius:999px; overflow:hidden; }
+    .lot-seg span{ padding:5px 14px; font-size:12.5px; color:var(--c-text-soft); cursor:pointer; }
+    .lot-seg span.on{ background:var(--c-primary); color:#fff; font-weight:700; }
+    .lot-cards{ display:flex; flex-direction:column; gap:12px; }
+    .lot-card{ border:1px solid var(--c-border-light); border-radius:12px; background:var(--c-bg-bottom); overflow:hidden; }
+    .lot-card-head{ display:flex; gap:12px; align-items:center; padding:12px 14px; cursor:pointer; }
+    .lot-thumb-img{ height:44px; width:auto; max-width:80px; flex:none; border-radius:8px; object-fit:contain; background:#fff; }
+    .lot-thumb-fallback{ height:44px; width:44px; flex:none; border-radius:10px; background:linear-gradient(135deg,#FFD3B6,#FF8FA3); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
+    .lot-head-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+    .lot-head-title{ font-size:16px; font-weight:800; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .lot-head-title a{ color:var(--c-text); text-decoration:none; border-bottom:1px dashed var(--c-border); }
+    .lot-meta{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12.5px; color:var(--c-text-soft); align-items:center; }
+    .lot-meta .lot-kw{ background:#fff; border:1px solid var(--c-border-light); border-radius:6px; padding:1px 7px; font-size:12px; }
+    .lot-meta .lot-warn{ color:var(--c-cat-1); font-weight:700; }
+    .lot-progress{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px; min-width:120px; }
+    .lot-progress-txt{ font-size:12px; color:var(--c-text-soft); }
+    .lot-bar{ width:120px; height:7px; border-radius:999px; background:var(--c-border-light); overflow:hidden; display:flex; }
+    .lot-bar i{ display:block; height:100%; }
+    .lot-caret{ font-size:11px; color:var(--c-muted, var(--c-text-soft)); }
+    .lot-card-body{ border-top:1px solid var(--c-border-light); overflow-x:auto; }
+    .lot-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
+    .lot-table th{ text-align:left; font-weight:600; color:var(--c-text-soft); padding:7px 9px; border-bottom:1px solid var(--c-border-light); white-space:nowrap; }
+    .lot-table td{ padding:7px 9px; border-bottom:1px solid var(--c-border-light); vertical-align:middle; white-space:nowrap; }
+    .lot-table tr:last-child td{ border-bottom:0; }
+    .lot-table tr.lot-row-redrawn td{ color:var(--c-muted, #999); }
+    .lot-table tr.lot-row-redrawn td.lot-td-prize, .lot-table tr.lot-row-redrawn td.lot-td-who{ text-decoration:line-through; }
+    .lot-mask{ cursor:default; }
+    .lot-eye{ cursor:pointer; margin-left:4px; opacity:.6; }
+    .lot-empty-cell{ color:var(--c-muted, #bbb); }
+    .lot-card-foot{ display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--c-border-light); flex-wrap:wrap; }
+    .lot-card-foot .lot-spacer{ flex:1; }
+    .lot-status-sel{
+      border:none; border-radius:999px; padding:3px 20px 3px 10px; font-size:12px; font-weight:700; cursor:pointer;
+      appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23ffffff'/></svg>");
+      background-repeat:no-repeat; background-position:right 6px center; background-size:8px 5px;
+    }
+    .lot-status-sel.lot-s-pending{ background-color:#EFE9E3; color:#7d6b5d; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%237d6b5d'/></svg>"); }
+    .lot-status-sel.lot-s-awaiting_info{ background-color:var(--c-cat-1); color:#fff; }
+    .lot-status-sel.lot-s-info_ready{ background-color:var(--c-cat-4); color:#fff; }
+    .lot-status-sel.lot-s-handed_to_vendor{ background-color:var(--c-cat-3); color:#fff; }
+    .lot-status-sel.lot-s-done{ background-color:var(--c-cat-2); color:#fff; }
+    .lot-status-sel.lot-s-redrawn{ background-color:var(--c-cat-5); color:#fff; opacity:.65; }
+    .lot-bar-done{ background:var(--c-cat-2); } .lot-bar-vendor{ background:var(--c-cat-3); } .lot-bar-ready{ background:var(--c-cat-4); } .lot-bar-await{ background:var(--c-cat-1); } .lot-bar-pending{ background:#d8cfc4; }
+    .lot-todo-stuck{ font-variant-numeric:tabular-nums; color:var(--c-cat-1); font-weight:700; }
+    .lot-next-btn{ font-size:12px; color:var(--c-primary); font-weight:700; cursor:pointer; background:none; border:none; padding:0; margin-right:8px; }
+    .lot-next-btn.danger{ color:#c0392b; }
+    .lot-form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+    .lot-form-grid .lot-field-full{ grid-column:1/-1; }
+    .lot-winner-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+    .lot-winner-row input{ flex:1; min-width:0; }
+    .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#EFE9E3; color:#7d6b5d; }
+  </style>
+  <div class="view" id="viewLottery">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">🎁 抽獎管理</h2>
+      <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
+      <button class="task-mini-btn" id="lotRefreshBtn">🔄 重新整理</button>
+    </div>
+    <div id="lotBanner"></div>
+    <div id="lotTiles" class="lot-tiles"></div>
+    <div id="lotFilters" class="lot-filters"></div>
+    <div id="lotBody"><div class="task-empty">讀取中…</div></div>
+  </div><!-- /viewLottery -->
+
   <!-- ===== 食譜資料庫（sheetdb.js；食譜/食材/成品，原本只能直接改試算表）===== -->
   <div class="view" id="viewRecipeDb">
     <div class="rpt-header-wrap">
@@ -6250,6 +6333,115 @@
   </div>
 </div>
 
+<!-- ===== 抽獎管理：新增／編輯活動 modal（lottery.js）＝新增時活動＋得獎人快速輸入、編輯時只有活動欄位 ===== -->
+<div class="modal-backdrop" id="lotteryDrawModal" onclick="if(event.target===this) closeLotteryDrawModal()">
+  <div class="modal-box" style="width:min(640px, 94vw); max-height:90vh; overflow-y:auto;">
+    <button class="modal-close" onclick="closeLotteryDrawModal()">✕</button>
+    <h3 id="lotDrawModalTitle">➕ 新增抽獎</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="lotDrawEventSelect">行事曆的團（選了自動帶入品牌、日期）</label>
+      <select id="lotDrawEventSelect"></select>
+
+      <label for="lotDrawTitleInput">活動標題 *</label>
+      <input type="text" id="lotDrawTitleInput" placeholder="例如：午茶夫人 9 月團">
+
+      <label for="lotDrawBrandSelect">贊助方（品牌）</label>
+      <select id="lotDrawBrandSelect"></select>
+
+      <label for="lotDrawDateInput">抽獎日</label>
+      <input type="date" id="lotDrawDateInput">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:6px; font-weight:400;">
+        <input type="checkbox" id="lotDrawDateUncertain" style="width:auto; margin:0;">
+        <span>⚠ 年份不確定（匯入舊資料才會用到；後台會顯示提醒）</span>
+      </label>
+
+      <label for="lotDrawKeywordInput">L 關鍵字</label>
+      <input type="text" id="lotDrawKeywordInput" placeholder="例如：午茶">
+
+      <label for="lotDrawShipBySelect">寄送方式</label>
+      <select id="lotDrawShipBySelect">
+        <option value="self">自寄</option>
+        <option value="vendor">廠商寄</option>
+        <option value="none">不用寄（折扣／整單免費）</option>
+      </select>
+
+      <label for="lotDrawNoteInput">備註</label>
+      <textarea id="lotDrawNoteInput" rows="2" placeholder="例如：廠商要訂單編號才出貨"></textarea>
+
+      <div id="lotDrawWinnerSection">
+        <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid var(--c-border-light); padding-top:12px; margin-top:14px;">
+          <h4 style="margin:0; font-size:14px;">得獎人</h4>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="task-mini-btn" id="lotAddWinnerRowBtn">＋ 加一列</button>
+            <button type="button" class="task-mini-btn" id="lotPasteToggleBtn">📋 貼上模式</button>
+          </div>
+        </div>
+        <div id="lotPasteBox" style="display:none; margin-top:8px;">
+          <textarea id="lotPasteArea" rows="4" placeholder="一行一位，獎品與得獎人用 Tab 或兩個空格隔開，例如：&#10;香草奶茶 一盒　@milk_tea_mom" style="width:100%; box-sizing:border-box; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px;"></textarea>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+            <button type="button" class="task-mini-btn" id="lotPasteParseBtn">拆成表格</button>
+            <span id="lotPasteParseStatus" style="font-size:12px; color:var(--c-text-soft);"></span>
+          </div>
+        </div>
+        <p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:8px 0;">狀態一律先設為「待聯絡」；姓名電話地址之後在得獎人列點「編輯」再填。</p>
+        <div id="lotWinnerRows" style="margin-top:6px;"></div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="lotDrawSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="lotDrawDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除活動</button>
+      </div>
+      <div class="form-status" id="lotDrawFormStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 抽獎管理：新增／編輯得獎人 modal（lottery.js）＝獎品、狀態、個資、寄送資訊全在這裡 ===== -->
+<div class="modal-backdrop" id="lotteryWinnerModal" onclick="if(event.target===this) closeLotteryWinnerModal()">
+  <div class="modal-box" style="width:min(460px, 94vw); max-height:90vh; overflow-y:auto;">
+    <button class="modal-close" onclick="closeLotteryWinnerModal()">✕</button>
+    <h3 id="lotWinnerModalTitle">➕ 新增得獎人</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="lotWinnerPrizeInput">獎品 *</label>
+      <input type="text" id="lotWinnerPrizeInput" placeholder="例如：禮盒 x1">
+      <label for="lotWinnerHandleInput">得獎人暱稱／帳號</label>
+      <input type="text" id="lotWinnerHandleInput" placeholder="LINE 或 IG 帳號">
+      <label for="lotWinnerStatusSel">狀態</label>
+      <select id="lotWinnerStatusSel">
+        <option value="pending">待聯絡</option>
+        <option value="awaiting_info">待回填資料</option>
+        <option value="info_ready">待寄出</option>
+        <option value="handed_to_vendor">廠商寄送中</option>
+        <option value="done">已完成</option>
+        <option value="redrawn">已重抽</option>
+      </select>
+
+      <label for="lotWinnerNameInput">姓名</label>
+      <input type="text" id="lotWinnerNameInput">
+      <label for="lotWinnerPhoneInput">電話</label>
+      <input type="text" id="lotWinnerPhoneInput">
+      <label for="lotWinnerAddressInput">地址</label>
+      <input type="text" id="lotWinnerAddressInput">
+      <label for="lotWinnerOrderNoInput">訂單編號</label>
+      <input type="text" id="lotWinnerOrderNoInput">
+      <label for="lotWinnerShippingFeeInput">運費</label>
+      <input type="text" id="lotWinnerShippingFeeInput" placeholder="數字／免運／廠商付">
+      <label for="lotWinnerShippedAtInput">寄出日</label>
+      <input type="date" id="lotWinnerShippedAtInput">
+      <label for="lotWinnerSponsorNoteInput">贊助方備註</label>
+      <input type="text" id="lotWinnerSponsorNoteInput" placeholder="贊助方與活動品牌不同時才填">
+      <label for="lotWinnerMemoInput">備註</label>
+      <textarea id="lotWinnerMemoInput" rows="2"></textarea>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="lotWinnerSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn danger" id="lotWinnerDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
+      </div>
+      <div class="form-status" id="lotWinnerFormStatus"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 食譜資料庫／開學清單：共用編輯 modal（sheetdb.js 依資料種類動態產表單欄位） ===== -->
 <div class="modal-backdrop" id="sheetDbEditModal" onclick="if(event.target===this) closeSheetDbEditModal()">
   <div class="modal-box" style="width:min(520px, 94vw); max-height:88vh; overflow-y:auto;">
@@ -6858,7 +7050,9 @@
     <p style="font-size:11.5px; color:var(--c-text-soft); margin:10px 0 0;">圖源＝品牌庫去背小圖＋圖片庫（brands／events 資料夾）＋行事曆用過的圖。要加新的品項圖：到「🖼 圖片庫」上傳到 brands 或 events 資料夾，回來這裡就選得到。</p>
   </div>
 </div>
-<script src="admin.js?v=92"></script>
+<!-- lottery.js（抽獎管理）必須排在 admin.js 之前：開機還原分頁若停在 lottery，會同步呼叫 loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
+<script src="lottery.js?v=1"></script>
+<script src="admin.js?v=93"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
