@@ -350,8 +350,9 @@ function renderLotteryCards() {
       if (!winners.length) return;
       visible.push({ draw, winners });
     });
-    // 依抽獎日新到舊排（沒有日期的排最後）
-    visible.sort((a, b) => (b.draw.drawDate || '').localeCompare(a.draw.drawDate || ''));
+    // 雪莉定：由久到近（越上面越舊）；沒有日期的排最前；虛擬卡用結團日當日期
+    const lotKey = (x) => x.pending ? (x.pending.endDate || '') : (x.draw.drawDate || '');
+    visible.sort((a, b) => lotKey(a).localeCompare(lotKey(b)));
   }
 
   if (!visible.length) {
