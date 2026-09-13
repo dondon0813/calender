@@ -5313,8 +5313,19 @@
                     </select>
                     <div id="mPromoStyleNote" style="display:none; font-size:11.5px; color:#c0392b; margin-top:4px;">⚠ 資料庫還沒更新，顏色與位置暫時存不進去（預覽與下載測試照常）</div>
                   </div>
+                  <!-- QR CODE 位置四角可選（2026-09-13 雪莉需求） -->
+                  <div id="mQrPosWrap" style="display:none; margin-bottom:6px;">
+                    <label style="font-size:12.5px; font-weight:700; margin-right:6px;">QR CODE 位置</label>
+                    <select id="mQrPos" style="width:auto;">
+                      <option value="tl">左上</option>
+                      <option value="tr" selected>右上</option>
+                      <option value="bl">左下</option>
+                      <option value="br">右下</option>
+                    </select>
+                    <div id="mQrPosNote" style="display:none; font-size:11.5px; color:#c0392b; margin-top:4px;">⚠ 資料庫還沒更新，QR 位置暫時存不進去（預覽與下載測試照常）</div>
+                  </div>
                   <div style="font-size:11.5px; color:var(--c-muted); line-height:1.6; margin-bottom:6px;">
-                    浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝固定右上角小圖；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖下方的一行字（無底色，顏色/位置在上面選）、結團隔天自動拿掉，文字內容在「🎨 模板設定」的「團購資訊文字」填。
+                    浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝小圖，四個角可選（放下方時會自動避開浮水印/團購資訊）；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖下方的一行字（無底色，顏色/位置在上面選）、結團隔天自動拿掉，文字內容在「🎨 模板設定」的「團購資訊文字」填。
                   </div>
                   <button type="button" class="pba-mini-btn" id="mTplPreviewBtn">🔍 重新整理預覽</button>
                   <button type="button" class="pba-mini-btn" id="mTplDownloadBtn" title="用目前設定產生完整解析度的成品下載到電腦看（不會存檔）">⬇ 下載測試檔</button>
@@ -6795,7 +6806,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=26"></script>
+<script src="books.js?v=27"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

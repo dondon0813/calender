@@ -1362,6 +1362,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     payload.watermark_logo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
     payload.promo_color = mtplPromoColorValue();
     payload.promo_pos = mtplPromoPosValue();
+    payload.qr_pos = mtplQrPosValue();
     payload.layer_caption = layers.caption;
     if (mtplPendingCleanPath) payload.clean_path = mtplPendingCleanPath;
     if (mtplAnyLayer(layers)) {
@@ -1376,7 +1377,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
           title,
           desc: document.getElementById('mDescription').value.trim()
         }, layers, payload.frame_id, null, payload.watermark_pos, payload.watermark_logo,
-        { color: payload.promo_color, pos: payload.promo_pos });
+        { color: payload.promo_color, pos: payload.promo_pos, qrPos: payload.qr_pos, longEdgeMm: mtplLongEdgeMm(payload.spec_id) });
         Object.assign(payload, composed, { composed_at: true });
         st.textContent = '合成完成 ✓';
       } catch (err) {
@@ -2382,6 +2383,21 @@ function mtplSyncFrameSelectVisibility() {
     document.getElementById('mLayerWatermark').checked ? '' : 'none';
   document.getElementById('mPromoStyleWrap').style.display =
     document.getElementById('mLayerPromo').checked ? '' : 'none';
+  document.getElementById('mQrPosWrap').style.display =
+    document.getElementById('mLayerQr').checked ? '' : 'none';
+}
+
+// QR 位置四角表單值（tl/tr/bl/br），不認得一律右上
+function mtplQrPosValue() {
+  const v = document.getElementById('mQrPos').value;
+  return v === 'tl' || v === 'bl' || v === 'br' ? v : 'tr';
+}
+
+// 規格長邊公釐數（團購資訊字級換算 pt 用）；沒選規格或規格沒填尺寸＝A4 長邊 297mm
+function mtplLongEdgeMm(specId) {
+  const spec = specId ? mtplSpecById(specId) : null;
+  const longMm = spec ? Math.max(Number(spec.widthMm) || 0, Number(spec.heightMm) || 0) : 0;
+  return longMm > 0 ? longMm : 297;
 }
 
 // 團購資訊文字樣式（顏色/位置）表單值，格式不對一律回預設
@@ -2418,6 +2434,9 @@ function mtplResetFormState(material) {
   const libForReady = (PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || [];
   document.getElementById('mPromoStyleNote').style.display =
     libForReady.length && libForReady[0].promoStyleReady === false ? '' : 'none';
+  document.getElementById('mQrPos').value = material && ['tl', 'bl', 'br'].includes(material.qrPos) ? material.qrPos : 'tr';
+  document.getElementById('mQrPosNote').style.display =
+    libForReady.length && libForReady[0].qrPosReady === false ? '' : 'none';
   document.getElementById('mLayerCaption').checked = material ? !!material.layerCaption : false;
   mtplSyncFrameSelect(material ? material.frameId || '' : '');
   mtplSyncFrameSelectVisibility();
@@ -2542,20 +2561,30 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     }
   }
 
-  // QR CODE 圖層（獨立勾選，2026-09-13 雪莉定案）：固定右上角、尺寸＝長邊 5%（原 10% 縮半）
+  // QR CODE 圖層（獨立勾選）：尺寸＝長邊 5%；位置四角可選（2026-09-13 雪莉：tl/tr/bl/br，預設右上）。
+  // 下方兩角＝貼在標題說明條上方；記下範圍讓底部的團購資訊/浮水印水平重疊時往上讓
+  let qrBox = null;
   if (o.layers.qr && o.qrImg) {
     const pad = Math.round(base * 0.014);
     const qrW = Math.max(60, Math.round(base * 0.05));
     const qrH = Math.round(qrW * (o.qrImg.height / o.qrImg.width));
-    ctx.drawImage(o.qrImg, W - pad - qrW, pad, qrW, qrH);
+    const qp = o.qrPos === 'tl' || o.qrPos === 'bl' || o.qrPos === 'br' ? o.qrPos : 'tr';
+    const qx = qp === 'tl' || qp === 'bl' ? pad : W - pad - qrW;
+    const qy = qp === 'tl' || qp === 'tr' ? pad : H - captionH - pad - qrH;
+    ctx.drawImage(o.qrImg, qx, qy, qrW, qrH);
+    if (qp === 'bl' || qp === 'br') qrBox = { x0: qx - pad, x1: qx + qrW + pad, top: qy };
   }
+  // 底部元素的「地板」y：水平範圍 [x0,x1] 跟下方 QR 重疊就抬到 QR 上緣
+  const clearQr = (floorY, x0, x1) =>
+    qrBox && x1 > qrBox.x0 && x0 < qrBox.x1 && floorY > qrBox.top ? qrBox.top : floorY;
 
   // 底部由下往上疊：標題說明條 → 團購資訊文字 → 浮水印（各自選左/中/右，垂直錯開不會互蓋）
   let bottomY = H - captionH;
 
   // 團購資訊：開團版限定。2026-09-13 雪莉改：不要底色、放圖下方、顏色與位置每份教材自選
   if (withPromo && o.promoText) {
-    const size = Math.round(base * 0.024);
+    // 字級＝印出來約 10pt（2026-09-13 雪莉）：10pt＝3.53mm，依規格長邊公釐數換算成像素（沒選規格當 A4 297mm）
+    const size = Math.max(12, Math.round(base * (10 * 25.4 / 72) / (o.longEdgeMm || 297)));
     const pad = Math.round(base * 0.014);
     const pos = o.promoPos === 'left' || o.promoPos === 'right' ? o.promoPos : 'center';
     ctx.font = '800 ' + size + 'px ' + MTPL_FONT;
@@ -2564,7 +2593,11 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     ctx.fillStyle = /^#[0-9A-Fa-f]{6}$/.test(o.promoColor || '') ? o.promoColor : '#FF8FA3';
     const oneLine = String(o.promoText).replace(/\s*\n+\s*/g, '　');
     const tx = pos === 'left' ? pad : pos === 'center' ? Math.round(W / 2) : W - pad;
-    ctx.fillText(mtplTruncate(ctx, oneLine, W - pad * 2), tx, bottomY - pad);
+    const promoLine = mtplTruncate(ctx, oneLine, W - pad * 2);
+    const promoW = ctx.measureText(promoLine).width;
+    const promoX0 = pos === 'left' ? pad : pos === 'center' ? W / 2 - promoW / 2 : W - pad - promoW;
+    bottomY = clearQr(bottomY, promoX0, promoX0 + promoW);
+    ctx.fillText(promoLine, tx, bottomY - pad);
     ctx.textAlign = 'left';
     bottomY -= pad + size;
   }
@@ -2574,9 +2607,15 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const size = Math.round(base * 0.022);
     const pad = Math.round(base * 0.014);
     const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
-    let y = bottomY - pad;
+    // 浮水印整塊（LOGO 與文字取較寬者）的水平範圍，用來判斷要不要讓位給下方 QR
+    const wmLogoW = o.logoImg ? Math.round(Math.round(base * 0.033) * (o.logoImg.width / o.logoImg.height)) : 0;
+    ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
+    const wmTextW = o.watermarkText ? ctx.measureText(o.watermarkText).width : 0;
+    const wmW = Math.max(wmLogoW, wmTextW);
+    const wmX0 = pos === 'left' ? pad : pos === 'center' ? (W - wmW) / 2 : W - pad - wmW;
+    let y = clearQr(bottomY, wmX0, wmX0 + wmW) - pad;
     if (o.logoImg) {
-      const logoH = Math.round(base * 0.0275); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055）
+      const logoH = Math.round(base * 0.033); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055→0.0275），同日再放大 120%（→0.033）
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
       const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
       // 不加光暈（2026-09-13 雪莉：外光暈怪）——貓咪 LOGO 自帶粗外框，底色深淺改由「LOGO 版本」咖啡字/白字自選
@@ -2622,7 +2661,8 @@ function mtplLogoUrlFor(s, variant) {
   return variant === 'light' ? (s.logoLightUrl || s.logoUrl || '') : (s.logoUrl || s.logoLightUrl || '');
 }
 
-// promoStyle＝{color, pos}：團購資訊文字顏色與底部位置（缺省＝粉色置中）
+// promoStyle＝{color, pos, qrPos, longEdgeMm}：團購資訊文字顏色與底部位置（缺省＝粉色置中）＋QR 四角位置（缺省＝右上）
+// ＋規格長邊公釐（團購資訊字級 10pt 換算，缺省＝A4 297）
 async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos, watermarkLogo, promoStyle) {
   const src = await (getSource || mtplGetFormSourceBitmap)();
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
@@ -2631,7 +2671,8 @@ async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource
   const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
   const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
   const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkLogo,
-    promoColor: (promoStyle && promoStyle.color) || '#FF8FA3', promoPos: (promoStyle && promoStyle.pos) || 'center', watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
+    promoColor: (promoStyle && promoStyle.color) || '#FF8FA3', promoPos: (promoStyle && promoStyle.pos) || 'center',
+    qrPos: (promoStyle && promoStyle.qrPos) || 'tr', longEdgeMm: (promoStyle && promoStyle.longEdgeMm) || 297, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
   const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
@@ -2704,6 +2745,8 @@ async function mtplFormComposeInputs() {
       watermarkLogo: wmLogo,
       promoColor: mtplPromoColorValue(),
       promoPos: mtplPromoPosValue(),
+      qrPos: mtplQrPosValue(),
+      longEdgeMm: mtplLongEdgeMm(document.getElementById('mSpecSelect').value || ''),
       watermarkText: s.watermarkText || '', promoText: s.promoText || ''
     }
   };
@@ -2796,7 +2839,8 @@ async function mtplDownloadTest() {
 document.getElementById('mTplDownloadBtn').addEventListener('click', mtplDownloadTest);
 // 放在 mSpecSelect/mLayerFrame 既有 listener 之後註冊＝框下拉同步完才重畫
 document.getElementById('mLayerPromo').addEventListener('change', mtplSyncFrameSelectVisibility);
-['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo', 'mPromoPos']
+document.getElementById('mLayerQr').addEventListener('change', mtplSyncFrameSelectVisibility);
+['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo', 'mPromoPos', 'mQrPos']
   .forEach(id => document.getElementById(id).addEventListener('change', () => mtplSchedulePreview()));
 // 顏色選擇器拖動中是 input 事件，放開才是 change：兩個都接，拖著就能看到顏色變化
 document.getElementById('mPromoColor').addEventListener('input', () => mtplSchedulePreview(150));
@@ -3045,7 +3089,7 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
         () => mtplCleanBitmapById(m.id),
         m.watermarkPos || 'right',
         m.watermarkLogo === 'light' ? 'light' : 'dark',
-        { color: m.promoColor || '#FF8FA3', pos: m.promoPos || 'center' }
+        { color: m.promoColor || '#FF8FA3', pos: m.promoPos || 'center', qrPos: m.qrPos || 'tr', longEdgeMm: mtplLongEdgeMm(m.specId) }
       );
       const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
       if (!res || res.success !== true) throw new Error((res && res.error) || '存檔失敗');
