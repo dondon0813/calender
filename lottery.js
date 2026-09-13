@@ -18,6 +18,8 @@ let LOTTERY_DRAWS = [];
 let LOTTERY_STATS = {};
 let LOTTERY_EVENT_CHOICES = [];
 let LOTTERY_BRAND_CHOICES = [];
+let LOTTERY_PENDING_DRAWS = [];   // 「待抽」來源 2：結團滿 2 週還沒建抽獎的虛擬卡（docs/09 §4.5）
+let LOTTERY_SKIPPED_EVENTS = [];  // 「這團不抽」略過清單（{eventId,title}[]，篩選區底部可還原）
 let LOTTERY_TABLE_READY = true;
 let LOTTERY_CAN_EDIT = true;          // hasEditPerm('lotteryEdit') 的快取，每次載入/渲染時重算
 let LOTTERY_VIEW = 'cards';           // 'cards'｜'todo'
@@ -36,6 +38,7 @@ const LOT_SHIP_BY_LABEL = { self: '自寄', vendor: '廠商寄', none: '不用�
 // 篩選 chips：待聯絡刻意不列（§4.1 原文只有這六顆，全部／待回填／待寄出／廠商寄送中／已完成／已重抽）
 const LOT_FILTER_CHIPS = [
   { key: 'all', label: '全部' },
+  { key: 'pending_draw', label: '待抽' },
   { key: 'awaiting_info', label: '待回填' },
   { key: 'info_ready', label: '待寄出' },
   { key: 'handed_to_vendor', label: '廠商寄送中' },
@@ -145,6 +148,8 @@ function loadLotteryView(forceReload) {
     LOTTERY_STATS = data.stats || {};
     LOTTERY_EVENT_CHOICES = Array.isArray(data.eventChoices) ? data.eventChoices : [];
     LOTTERY_BRAND_CHOICES = Array.isArray(data.brandChoices) ? data.brandChoices : [];
+    LOTTERY_PENDING_DRAWS = Array.isArray(data.pendingDraws) ? data.pendingDraws : [];
+    LOTTERY_SKIPPED_EVENTS = Array.isArray(data.skippedEvents) ? data.skippedEvents : [];
     LOTTERY_CAN_EDIT = typeof hasEditPerm !== 'function' || hasEditPerm('lotteryEdit');
     document.getElementById('lotAddDrawBtn').style.display = LOTTERY_CAN_EDIT ? '' : 'none';
     renderLotteryBanner();
@@ -187,6 +192,7 @@ function renderLotteryTiles() {
     tile('awaiting_info', 'await', s.awaitingInfo, '待回填資料') +
     tile('info_ready', 'ready', s.infoReady, '待寄出') +
     tile('handed_to_vendor', 'vendor', s.handedToVendor, '廠商寄送中') +
+    tile('pending_draw', 'pending', s.awaitingDraw, '待抽') +
     tile('month', 'month', s.drawsThisMonth, '本月抽獎團數');
   box.querySelectorAll('.lot-tile').forEach(el => {
     el.addEventListener('click', () => {
@@ -218,12 +224,18 @@ function renderLotteryFilters() {
     '<option value="' + lotEscapeHtml(b.id) + '"' + (LOTTERY_FILTER.brand === b.id ? ' selected' : '') + '>' + lotEscapeHtml(b.name) + '</option>'
   ).join('');
 
+  const skipCount = (LOTTERY_SKIPPED_EVENTS || []).length;
+  const skipHtml = skipCount
+    ? '<div class="lot-skip-wrap"><span class="lot-skip-toggle" id="lotSkipToggle">已略過 ' + skipCount + ' 團 ▾</span><div id="lotSkipList" class="lot-skip-list" style="display:none;"></div></div>'
+    : '';
+
   box.innerHTML =
     chipsHtml +
     '<select id="lotBrandSelect">' + brandOptions + '</select>' +
     '<select id="lotYearSelect">' + yearOptions + '</select>' +
     '<input type="text" id="lotSearchInput" placeholder="搜尋 團名／獎品／得獎人／姓名／訂單編號" value="' + lotEscapeHtml(LOTTERY_FILTER.q) + '">' +
-    '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依團</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>';
+    '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依團</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>' +
+    skipHtml;
 
   box.querySelectorAll('[data-chip]').forEach(el => {
     el.addEventListener('click', () => {
@@ -235,9 +247,20 @@ function renderLotteryFilters() {
   box.querySelectorAll('[data-seg]').forEach(el => {
     el.addEventListener('click', () => {
       LOTTERY_VIEW = el.dataset.seg;
-      renderLotteryFilters(); renderLotteryBody();
+      // 「待抽」chip 是依團視圖專屬（待辦清單頂端本來就固定顯示待抽列），切到待辦清單時重置避免篩到空
+      if (LOTTERY_VIEW === 'todo' && LOTTERY_FILTER.status === 'pending_draw') LOTTERY_FILTER.status = 'all';
+      renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
     });
   });
+  const skipToggle = document.getElementById('lotSkipToggle');
+  if (skipToggle) {
+    skipToggle.addEventListener('click', () => {
+      const listEl = document.getElementById('lotSkipList');
+      const show = listEl.style.display === 'none';
+      listEl.style.display = show ? '' : 'none';
+      if (show) renderLotterySkipList(listEl);
+    });
+  }
   document.getElementById('lotBrandSelect').addEventListener('change', function () {
     LOTTERY_FILTER.brand = this.value; renderLotteryBody();
   });
@@ -272,6 +295,23 @@ function lotMatchesWinner(draw, w) {
   return true;
 }
 
+// 篩選區底部「已略過 N 團」展開列表：可「還原」（POST lottery-event-unskip）
+function renderLotterySkipList(listEl) {
+  listEl.innerHTML = (LOTTERY_SKIPPED_EVENTS || []).map(x =>
+    '<div class="lot-skip-row">' +
+      '<span>' + lotEscapeHtml(x.title || '(找不到團名，可能已刪除)') + '</span>' +
+      (LOTTERY_CAN_EDIT ? '<button class="lot-next-btn" data-role="unskip-event" data-event-id="' + lotEscapeHtml(x.eventId) + '">還原</button>' : '') +
+    '</div>'
+  ).join('') || '<div class="lot-empty-cell">（空）</div>';
+  listEl.querySelectorAll('[data-role="unskip-event"]').forEach(el => {
+    el.addEventListener('click', () => {
+      lotApiPost('lottery-event-unskip', { eventId: el.dataset.eventId }).then(res => {
+        if (res && res.success) loadLotteryView(true); else alert('還原失敗：' + ((res && res.error) || '未知錯誤'));
+      });
+    });
+  });
+}
+
 // ===== 主體渲染 =====
 function renderLotteryBody() {
   if (LOTTERY_VIEW === 'todo') renderLotteryTodo();
@@ -280,23 +320,89 @@ function renderLotteryBody() {
 
 function renderLotteryCards() {
   const box = document.getElementById('lotBody');
+  const pendingMode = LOTTERY_FILTER.status === 'pending_draw';
   const visible = [];
-  LOTTERY_DRAWS.forEach(draw => {
-    if (!lotMatchesDrawScope(draw)) return;
-    const winners = (draw.winners || []).filter(w => lotMatchesWinner(draw, w));
-    if (!winners.length) return;
-    visible.push({ draw, winners });
-  });
-  // 依抽獎日新到舊排（沒有日期的排最後）
-  visible.sort((a, b) => (b.draw.drawDate || '').localeCompare(a.draw.drawDate || ''));
+
+  if (pendingMode) {
+    // 來源 2：虛擬卡（結團滿 2 週還沒建抽獎，docs/09 §4.5）——其他 chip 下不出現
+    LOTTERY_PENDING_DRAWS.forEach(p => visible.push({ pending: p }));
+    // 來源 1：已建 draw 但 0 位非 redrawn 得獎人
+    LOTTERY_DRAWS.forEach(draw => {
+      if (!lotMatchesDrawScope(draw)) return;
+      const nonRedrawn = (draw.winners || []).filter(w => w.status !== 'redrawn');
+      if (nonRedrawn.length) return;
+      const q = LOTTERY_FILTER.q.toLowerCase();
+      if (q) {
+        const hay = [draw.title, draw.eventTitle].map(x => String(x || '')).join(' ').toLowerCase();
+        if (hay.indexOf(q) === -1) return;
+      }
+      visible.push({ draw, winners: [] });
+    });
+  } else {
+    LOTTERY_DRAWS.forEach(draw => {
+      if (!lotMatchesDrawScope(draw)) return;
+      const winners = (draw.winners || []).filter(w => lotMatchesWinner(draw, w));
+      if (!winners.length) return;
+      visible.push({ draw, winners });
+    });
+    // 依抽獎日新到舊排（沒有日期的排最後）
+    visible.sort((a, b) => (b.draw.drawDate || '').localeCompare(a.draw.drawDate || ''));
+  }
 
   if (!visible.length) {
-    box.innerHTML = '<div class="task-empty">沒有符合條件的抽獎活動</div>';
+    box.innerHTML = '<div class="task-empty">' + (pendingMode ? '目前沒有待抽的團 🎉' : '沒有符合條件的抽獎活動') + '</div>';
     return;
   }
 
-  box.innerHTML = '<div class="lot-cards">' + visible.map(v => lotCardHtml(v.draw, v.winners)).join('') + '</div>';
+  box.innerHTML = '<div class="lot-cards">' + visible.map(v => v.pending ? lotPendingCardHtml(v.pending) : lotCardHtml(v.draw, v.winners)).join('') + '</div>';
   lotBindCardEvents(box);
+}
+
+// 「待抽」來源 2 的虛擬卡：團名／結團日／已結團 N 天／品牌小圖＋「建立抽獎」「這團不抽」
+function lotPendingCardHtml(p) {
+  const thumb = p.brandThumb
+    ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(p.brandThumb) + '" alt="">'
+    : '<div class="lot-thumb-fallback">' + lotEscapeHtml(((p.brandName || p.title || '?').trim().charAt(0)) || '?') + '</div>';
+  const metaParts = ['<span>結團 ' + lotFmtMD(p.endDate) + '</span>', '<span class="lot-warn">已結團 ' + p.daysSinceEnd + ' 天</span>'];
+  if (p.brandName) metaParts.push('<span>贊助：' + lotEscapeHtml(p.brandName) + '</span>');
+  return '<div class="lot-card lot-card-pending">' +
+    '<div class="lot-card-head">' +
+      thumb +
+      '<div class="lot-head-main">' +
+        '<div class="lot-head-title"><span>' + lotEscapeHtml(p.title) + '</span></div>' +
+        '<div class="lot-meta">' + metaParts.join('') + '</div>' +
+      '</div>' +
+    '</div>' +
+    (LOTTERY_CAN_EDIT ? (
+      '<div class="lot-card-foot">' +
+        '<button class="task-mini-btn" data-role="pending-create" data-event-id="' + lotEscapeHtml(p.eventId) + '">＋ 建立抽獎</button>' +
+        '<button class="task-mini-btn danger" data-role="pending-skip" data-event-id="' + lotEscapeHtml(p.eventId) + '">這團不抽</button>' +
+      '</div>'
+    ) : '') +
+  '</div>';
+}
+
+// 「建立抽獎」「這團不抽」事件委派：依團卡片區與待辦清單頂端都會用到
+function lotBindPendingActions(box) {
+  box.querySelectorAll('[data-role="pending-create"]').forEach(el => {
+    el.addEventListener('click', ev => {
+      if (ev) ev.stopPropagation();
+      const eventId = el.dataset.eventId;
+      const p = (LOTTERY_PENDING_DRAWS || []).find(x => x.eventId === eventId);
+      if (!p) return;
+      const brandMatch = LOTTERY_BRAND_CHOICES.find(b => b.name === p.brandName);
+      openLotteryDrawModal(null, { eventId: p.eventId, title: p.title, brandId: brandMatch ? brandMatch.id : '', drawDate: lotToday() });
+    });
+  });
+  box.querySelectorAll('[data-role="pending-skip"]').forEach(el => {
+    el.addEventListener('click', ev => {
+      if (ev) ev.stopPropagation();
+      if (!confirm('確定這團不用抽獎嗎？（之後可在篩選區「已略過」清單裡還原）')) return;
+      lotApiPost('lottery-event-skip', { eventId: el.dataset.eventId }).then(res => {
+        if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
+      });
+    });
+  });
 }
 
 function lotHasUnfinished(draw) {
@@ -413,8 +519,11 @@ function renderLotteryTodo() {
   });
   rows.sort((a, b) => (a.draw.drawDate || '').localeCompare(b.draw.drawDate || ''));
 
+  const pendingHtml = lotTodoPendingHtml();
+
   if (!rows.length) {
-    box.innerHTML = '<div class="task-empty">目前沒有待辦事項 🎉</div>';
+    box.innerHTML = pendingHtml + '<div class="task-empty">目前沒有待辦事項 🎉</div>';
+    lotBindPendingActions(box);
     return;
   }
 
@@ -444,11 +553,31 @@ function renderLotteryTodo() {
     '</tr>';
   }).join('');
 
-  box.innerHTML = '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
+  box.innerHTML = pendingHtml + '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
     '<table class="lot-table" style="min-width:680px;">' +
     '<thead><tr><th>團</th><th>獎品</th><th>得獎人</th><th>狀態</th><th>卡了</th><th>下一步</th></tr></thead>' +
     '<tbody>' + trHtml + '</tbody></table></div>';
   lotBindTodoEvents(box);
+  lotBindPendingActions(box);
+}
+
+// 待辦清單視圖頂端「待抽」列（docs/09 §4.5：來源 2，下一步＝建立抽獎；不受篩選 chip 影響，固定顯示）
+function lotTodoPendingHtml() {
+  if (!LOTTERY_PENDING_DRAWS || !LOTTERY_PENDING_DRAWS.length) return '';
+  const rows = LOTTERY_PENDING_DRAWS.map(p =>
+    '<tr>' +
+      '<td>' + lotEscapeHtml(p.title) + '</td>' +
+      '<td>結團 ' + lotFmtMD(p.endDate) + '（' + p.daysSinceEnd + ' 天前）</td>' +
+      '<td>' + (p.brandName ? lotEscapeHtml(p.brandName) : '<span class="lot-empty-cell">—</span>') + '</td>' +
+      '<td>' + (LOTTERY_CAN_EDIT ? '<button class="lot-next-btn" data-role="pending-create" data-event-id="' + lotEscapeHtml(p.eventId) + '">建立抽獎 ›</button>' : '') + '</td>' +
+    '</tr>'
+  ).join('');
+  return '<div class="lot-todo-pending">' +
+    '<div class="lot-todo-pending-title">⏰ 待抽（結團滿 2 週還沒建抽獎）</div>' +
+    '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:10px;">' +
+      '<table class="lot-table" style="min-width:520px;"><thead><tr><th>團</th><th>結團</th><th>品牌</th><th>下一步</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '</div>' +
+  '</div>';
 }
 
 // ===== 卡片區事件委派 =====
@@ -519,6 +648,7 @@ function lotBindCardEvents(box) {
   box.querySelectorAll('[data-role="delete-draw"]').forEach(el => {
     el.addEventListener('click', ev => { ev.stopPropagation(); lotDeleteDraw(el.dataset.drawId); });
   });
+  lotBindPendingActions(box);
 }
 
 function lotBindTodoEvents(box) {
@@ -590,9 +720,12 @@ function lotJumpToEvent(eventId) {
 }
 
 // ===== 新增／編輯抽獎 modal =====
-function openLotteryDrawModal(draw) {
+// prefill：只在 draw=null（新增）時用，來自「待抽」虛擬卡的「＋建立抽獎」鈕（docs/09 §4.5），
+// 預帶 {eventId,title,brandId,drawDate}；不是既有活動，不會把 LOTTERY_EDIT_DRAW_ID 設成別的 id。
+function openLotteryDrawModal(draw, prefill) {
   LOTTERY_EDIT_DRAW_ID = draw ? draw.id : null;
   const isNew = !draw;
+  const pf = (!draw && prefill) ? prefill : null;
   document.getElementById('lotDrawModalTitle').textContent = isNew ? '➕ 新增抽獎' : '✏️ 編輯活動';
   document.getElementById('lotDrawDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
   document.getElementById('lotDrawWinnerSection').style.display = isNew ? '' : 'none';
@@ -601,20 +734,21 @@ function openLotteryDrawModal(draw) {
   let evOptions = '<option value="">（不綁行事曆／自填標題）</option>' + LOTTERY_EVENT_CHOICES.map(c =>
     '<option value="' + lotEscapeHtml(c.id) + '">' + lotEscapeHtml(c.title) + '（' + lotFmtMD(c.startDate) + '~' + lotFmtMD(c.endDate) + '）</option>'
   ).join('');
-  if (draw && draw.eventId && !LOTTERY_EVENT_CHOICES.some(c => c.id === draw.eventId)) {
-    evOptions += '<option value="' + lotEscapeHtml(draw.eventId) + '">（目前綁定的團，已超過下拉範圍）</option>';
+  const boundEventId = draw ? draw.eventId : (pf ? pf.eventId : '');
+  if (boundEventId && !LOTTERY_EVENT_CHOICES.some(c => c.id === boundEventId)) {
+    evOptions += '<option value="' + lotEscapeHtml(boundEventId) + '">（目前綁定的團，已超過下拉範圍）</option>';
   }
   evSel.innerHTML = evOptions;
-  evSel.value = draw ? (draw.eventId || '') : '';
+  evSel.value = boundEventId || '';
 
   const brandSel = document.getElementById('lotDrawBrandSelect');
   brandSel.innerHTML = '<option value="">（不指定）</option>' + LOTTERY_BRAND_CHOICES.map(b =>
     '<option value="' + lotEscapeHtml(b.id) + '">' + lotEscapeHtml(b.name) + '</option>'
   ).join('');
-  brandSel.value = draw ? (draw.brandId || '') : '';
+  brandSel.value = draw ? (draw.brandId || '') : (pf ? (pf.brandId || '') : '');
 
-  document.getElementById('lotDrawTitleInput').value = draw ? (draw.title || '') : '';
-  document.getElementById('lotDrawDateInput').value = draw ? (draw.drawDate || '') : '';
+  document.getElementById('lotDrawTitleInput').value = draw ? (draw.title || '') : (pf ? (pf.title || '') : '');
+  document.getElementById('lotDrawDateInput').value = draw ? (draw.drawDate || '') : (pf ? (pf.drawDate || '') : '');
   document.getElementById('lotDrawDateUncertain').checked = !!(draw && draw.dateUncertain);
   document.getElementById('lotDrawKeywordInput').value = draw ? (draw.lineKeyword || '') : '';
   document.getElementById('lotDrawShipBySelect').value = draw ? (draw.shipBy || 'self') : 'self';

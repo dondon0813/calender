@@ -5622,7 +5622,7 @@
 
   <!-- ===== 抽獎管理（lottery.js；抽獎活動＋得獎人，原本只能直接改試算表）===== -->
   <style>
-    .lot-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+    .lot-tiles{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:12px; }
     @media (max-width:720px){ .lot-tiles{ grid-template-columns:1fr 1fr; } }
     .lot-tile{ background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:12px; padding:10px 14px; cursor:pointer; }
     .lot-tile .lot-tile-n{ font-size:24px; font-weight:800; line-height:1; }
@@ -5630,6 +5630,7 @@
     .lot-tile.await .lot-tile-n{ color:var(--c-cat-1); }
     .lot-tile.ready .lot-tile-n{ color:var(--c-cat-4); }
     .lot-tile.vendor .lot-tile-n{ color:var(--c-cat-3); }
+    .lot-tile.pending .lot-tile-n{ color:var(--c-cat-5); }
     .lot-tile.month .lot-tile-n{ color:var(--c-primary); }
     .lot-tile.on{ outline:2px solid var(--c-primary); }
     .lot-filters{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
@@ -5688,6 +5689,16 @@
     .lot-winner-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
     .lot-winner-row input{ flex:1; min-width:0; }
     .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#EFE9E3; color:#7d6b5d; }
+    /* 「待抽」虛擬卡（docs/09 §4.5）：結團滿 2 週還沒建抽獎的團，卡頭無法展開（沒有得獎人表格） */
+    .lot-card-pending{ border-style:dashed; border-color:var(--c-cat-5); }
+    .lot-card-pending .lot-card-head{ cursor:default; }
+    .lot-todo-pending{ margin-bottom:14px; }
+    .lot-todo-pending-title{ font-size:12.5px; font-weight:700; color:var(--c-cat-5); margin-bottom:6px; }
+    /* 篩選區底部「已略過 N 團」小字展開清單，可「還原」（POST lottery-event-unskip） */
+    .lot-skip-wrap{ width:100%; font-size:11.5px; color:var(--c-text-soft); margin-top:2px; }
+    .lot-skip-toggle{ cursor:pointer; text-decoration:underline; }
+    .lot-skip-list{ margin-top:6px; border:1px solid var(--c-border-light); border-radius:8px; padding:6px 10px; background:var(--c-bg-bottom); max-width:420px; }
+    .lot-skip-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:3px 0; }
   </style>
   <div class="view" id="viewLottery">
     <div class="rpt-header-wrap">
@@ -7051,7 +7062,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理）必須排在 admin.js 之前：開機還原分頁若停在 lottery，會同步呼叫 loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=1"></script>
+<script src="lottery.js?v=2"></script>
 <script src="admin.js?v=93"></script>
 <script src="memo.js?v=5"></script>
 
