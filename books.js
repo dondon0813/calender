@@ -1360,6 +1360,8 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     payload.layer_qr = layers.qr;
     payload.watermark_pos = document.getElementById('mWmPos').value;
     payload.watermark_logo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
+    payload.promo_color = mtplPromoColorValue();
+    payload.promo_pos = mtplPromoPosValue();
     payload.layer_caption = layers.caption;
     if (mtplPendingCleanPath) payload.clean_path = mtplPendingCleanPath;
     if (mtplAnyLayer(layers)) {
@@ -1373,7 +1375,8 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
         const composed = await mtplComposeAndUpload(bookIds, {
           title,
           desc: document.getElementById('mDescription').value.trim()
-        }, layers, payload.frame_id, null, payload.watermark_pos, payload.watermark_logo);
+        }, layers, payload.frame_id, null, payload.watermark_pos, payload.watermark_logo,
+        { color: payload.promo_color, pos: payload.promo_pos });
         Object.assign(payload, composed, { composed_at: true });
         st.textContent = '合成完成 ✓';
       } catch (err) {
@@ -2377,6 +2380,18 @@ function mtplSyncFrameSelectVisibility() {
     document.getElementById('mLayerFrame').checked ? '' : 'none';
   document.getElementById('mWmPosWrap').style.display =
     document.getElementById('mLayerWatermark').checked ? '' : 'none';
+  document.getElementById('mPromoStyleWrap').style.display =
+    document.getElementById('mLayerPromo').checked ? '' : 'none';
+}
+
+// 團購資訊文字樣式（顏色/位置）表單值，格式不對一律回預設
+function mtplPromoColorValue() {
+  const v = String(document.getElementById('mPromoColor').value || '');
+  return /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : '#FF8FA3';
+}
+function mtplPromoPosValue() {
+  const v = document.getElementById('mPromoPos').value;
+  return v === 'left' || v === 'right' ? v : 'center';
 }
 
 // openMaterialForm 收尾呼叫：帶回教材既有的模板設定；表未 push 整區隱藏
@@ -2397,6 +2412,12 @@ function mtplResetFormState(material) {
   document.getElementById('mLayerQr').checked = material ? !!material.layerQr : false;
   document.getElementById('mWmPos').value = material && (material.watermarkPos === 'left' || material.watermarkPos === 'center') ? material.watermarkPos : 'right';
   document.getElementById('mWmLogo').value = material && material.watermarkLogo === 'light' ? 'light' : 'dark';
+  document.getElementById('mPromoColor').value = material && /^#[0-9A-Fa-f]{6}$/.test(material.promoColor || '') ? material.promoColor : '#FF8FA3';
+  document.getElementById('mPromoPos').value = material && (material.promoPos === 'left' || material.promoPos === 'right') ? material.promoPos : 'center';
+  // 團購資訊樣式欄位尚未 db push：選擇存不進去，提示一下（後台包教材 promoStyleReady===false）
+  const libForReady = (PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || [];
+  document.getElementById('mPromoStyleNote').style.display =
+    libForReady.length && libForReady[0].promoStyleReady === false ? '' : 'none';
   document.getElementById('mLayerCaption').checked = material ? !!material.layerCaption : false;
   mtplSyncFrameSelect(material ? material.frameId || '' : '');
   mtplSyncFrameSelectVisibility();
@@ -2521,22 +2542,39 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     }
   }
 
-  // QR CODE 圖層（獨立勾選，2026-09-13 雪莉定案）：固定右上角、尺寸＝長邊 5%（原 10% 縮半）；
-  // 開團版頂部有粉色橫幅時往下讓位
+  // QR CODE 圖層（獨立勾選，2026-09-13 雪莉定案）：固定右上角、尺寸＝長邊 5%（原 10% 縮半）
   if (o.layers.qr && o.qrImg) {
     const pad = Math.round(base * 0.014);
     const qrW = Math.max(60, Math.round(base * 0.05));
     const qrH = Math.round(qrW * (o.qrImg.height / o.qrImg.width));
-    const topOffset = withPromo && o.promoText ? Math.max(40, Math.round(H * 0.06)) + Math.round(pad * 0.5) : 0;
-    ctx.drawImage(o.qrImg, W - pad - qrW, pad + topOffset, qrW, qrH);
+    ctx.drawImage(o.qrImg, W - pad - qrW, pad, qrW, qrH);
   }
 
-  // 浮水印圖層（文字/手寫字 LOGO）：圖底部（caption 條上方），水平位置可選左/中/右
+  // 底部由下往上疊：標題說明條 → 團購資訊文字 → 浮水印（各自選左/中/右，垂直錯開不會互蓋）
+  let bottomY = H - captionH;
+
+  // 團購資訊：開團版限定。2026-09-13 雪莉改：不要底色、放圖下方、顏色與位置每份教材自選
+  if (withPromo && o.promoText) {
+    const size = Math.round(base * 0.024);
+    const pad = Math.round(base * 0.014);
+    const pos = o.promoPos === 'left' || o.promoPos === 'right' ? o.promoPos : 'center';
+    ctx.font = '800 ' + size + 'px ' + MTPL_FONT;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = pos;
+    ctx.fillStyle = /^#[0-9A-Fa-f]{6}$/.test(o.promoColor || '') ? o.promoColor : '#FF8FA3';
+    const oneLine = String(o.promoText).replace(/\s*\n+\s*/g, '　');
+    const tx = pos === 'left' ? pad : pos === 'center' ? Math.round(W / 2) : W - pad;
+    ctx.fillText(mtplTruncate(ctx, oneLine, W - pad * 2), tx, bottomY - pad);
+    ctx.textAlign = 'left';
+    bottomY -= pad + size;
+  }
+
+  // 浮水印圖層（文字/手寫字 LOGO）：疊在團購資訊（或 caption 條）上方，水平位置可選左/中/右
   if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
     const size = Math.round(base * 0.022);
     const pad = Math.round(base * 0.014);
     const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
-    let y = H - captionH - pad;
+    let y = bottomY - pad;
     if (o.logoImg) {
       const logoH = Math.round(base * 0.0275); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055）
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
@@ -2558,21 +2596,6 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
       ctx.restore();
       ctx.textAlign = 'left';
     }
-  }
-
-  // 團購資訊：開團版限定，圖上方粉色橫幅（品牌色 #FF8FA3）
-  if (withPromo && o.promoText) {
-    const barH = Math.max(40, Math.round(H * 0.06));
-    const size = Math.round(barH * 0.42);
-    ctx.fillStyle = 'rgba(255,143,163,0.94)';
-    ctx.fillRect(0, 0, W, barH);
-    ctx.fillStyle = '#fff';
-    ctx.font = '800 ' + size + 'px ' + MTPL_FONT;
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    const oneLine = String(o.promoText).replace(/\s*\n+\s*/g, '　');
-    ctx.fillText(mtplTruncate(ctx, oneLine, W * 0.94), W / 2, Math.round(barH / 2) + 1);
-    ctx.textAlign = 'left';
   }
 
   return canvas;
@@ -2599,14 +2622,16 @@ function mtplLogoUrlFor(s, variant) {
   return variant === 'light' ? (s.logoLightUrl || s.logoUrl || '') : (s.logoUrl || s.logoLightUrl || '');
 }
 
-async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos, watermarkLogo) {
+// promoStyle＝{color, pos}：團購資訊文字顏色與底部位置（缺省＝粉色置中）
+async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos, watermarkLogo, promoStyle) {
   const src = await (getSource || mtplGetFormSourceBitmap)();
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
   const s = mtplSettings();
   const logoUrl = mtplLogoUrlFor(s, watermarkLogo);
   const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
   const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
-  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkLogo, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
+  const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkLogo,
+    promoColor: (promoStyle && promoStyle.color) || '#FF8FA3', promoPos: (promoStyle && promoStyle.pos) || 'center', watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
   const plainUrl = await mtplUploadComposed(pathBookId, 'plain', plainBlob);
@@ -2677,6 +2702,8 @@ async function mtplFormComposeInputs() {
       },
       watermarkPos: document.getElementById('mWmPos').value,
       watermarkLogo: wmLogo,
+      promoColor: mtplPromoColorValue(),
+      promoPos: mtplPromoPosValue(),
       watermarkText: s.watermarkText || '', promoText: s.promoText || ''
     }
   };
@@ -2712,7 +2739,7 @@ async function mtplRenderPreview(manual) {
     pv.getContext('2d').drawImage(canvas, 0, 0, pv.width, pv.height);
     document.getElementById('mTplPreviewImg').src = pv.toDataURL('image/jpeg', 0.85);
     document.getElementById('mTplPreviewLabel').textContent = (withPromo
-      ? '預覽＝開團版（結團後前台自動換成沒有粉色橫幅的平時版）'
+      ? '預覽＝開團版（結團後前台自動換成沒有團購資訊文字的平時版）'
       : '預覽＝平時版成品') + '・改選項會自動更新';
     wrap.style.display = '';
     clearOwnStatus();
@@ -2768,8 +2795,12 @@ async function mtplDownloadTest() {
 }
 document.getElementById('mTplDownloadBtn').addEventListener('click', mtplDownloadTest);
 // 放在 mSpecSelect/mLayerFrame 既有 listener 之後註冊＝框下拉同步完才重畫
-['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo']
+document.getElementById('mLayerPromo').addEventListener('change', mtplSyncFrameSelectVisibility);
+['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo', 'mPromoPos']
   .forEach(id => document.getElementById(id).addEventListener('change', () => mtplSchedulePreview()));
+// 顏色選擇器拖動中是 input 事件，放開才是 change：兩個都接，拖著就能看到顏色變化
+document.getElementById('mPromoColor').addEventListener('input', () => mtplSchedulePreview(150));
+document.getElementById('mPromoColor').addEventListener('change', () => mtplSchedulePreview());
 ['mTitle', 'mDescription']
   .forEach(id => document.getElementById(id).addEventListener('input', () => mtplSchedulePreview(500)));
 
@@ -3013,7 +3044,8 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
         m.frameId || '',
         () => mtplCleanBitmapById(m.id),
         m.watermarkPos || 'right',
-        m.watermarkLogo === 'light' ? 'light' : 'dark'
+        m.watermarkLogo === 'light' ? 'light' : 'dark',
+        { color: m.promoColor || '#FF8FA3', pos: m.promoPos || 'center' }
       );
       const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
       if (!res || res.success !== true) throw new Error((res && res.error) || '存檔失敗');

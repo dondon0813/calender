@@ -5301,8 +5301,20 @@
                       <option value="light">白字（彩色底/深底）</option>
                     </select>
                   </div>
+                  <!-- 團購資訊文字樣式（2026-09-13 雪莉需求：不要底色、放圖下方，顏色與位置自選） -->
+                  <div id="mPromoStyleWrap" style="display:none; margin-bottom:6px;">
+                    <label style="font-size:12.5px; font-weight:700; margin-right:6px;">團購資訊顏色</label>
+                    <input type="color" id="mPromoColor" value="#FF8FA3" style="width:44px; height:30px; padding:0; vertical-align:middle; border:none; background:none;">
+                    <label style="font-size:12.5px; font-weight:700; margin:0 6px 0 12px;">位置</label>
+                    <select id="mPromoPos" style="width:auto;">
+                      <option value="left">左下</option>
+                      <option value="center" selected>中下</option>
+                      <option value="right">右下</option>
+                    </select>
+                    <div id="mPromoStyleNote" style="display:none; font-size:11.5px; color:#c0392b; margin-top:4px;">⚠ 資料庫還沒更新，顏色與位置暫時存不進去（預覽與下載測試照常）</div>
+                  </div>
                   <div style="font-size:11.5px; color:var(--c-muted); line-height:1.6; margin-bottom:6px;">
-                    浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝固定右上角小圖；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖上方的粉色橫幅、結團隔天自動拿掉。共用素材在「🎨 教材模板」分頁設定。
+                    浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝固定右上角小圖；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖下方的一行字（無底色，顏色/位置在上面選）、結團隔天自動拿掉，文字內容在「🎨 模板設定」的「團購資訊文字」填。
                   </div>
                   <button type="button" class="pba-mini-btn" id="mTplPreviewBtn">🔍 重新整理預覽</button>
                   <button type="button" class="pba-mini-btn" id="mTplDownloadBtn" title="用目前設定產生完整解析度的成品下載到電腦看（不會存檔）">⬇ 下載測試檔</button>
@@ -5510,7 +5522,7 @@
           <input type="text" id="tplWatermarkText" placeholder="例：雪莉與朵栗 @dondon0813" maxlength="60">
         </div>
         <div class="pba-field">
-          <label>教材宣傳文字（開團版印在圖上方粉色橫幅）</label>
+          <label>團購資訊文字（開團期間印在教材圖下方；顏色與位置在各教材的「團購資訊」選）</label>
           <textarea id="tplPromoText" placeholder="例：🔥 禾流文創開團中！9/8–9/14 下單再送教材" style="min-height:56px;"></textarea>
           <div style="font-size:11.5px; color:var(--c-muted); margin-top:4px; line-height:1.6;">
             每檔團開團前改這一句，再按下面「重新產生全部成品」，所有勾了「團購資訊」的教材會自動換上新文字。
@@ -5573,7 +5585,7 @@
 
         <div class="pba-panel-title">🔁 重新產生成品</div>
         <div style="font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;">
-          改了框、浮水印文字或宣傳文字之後按這裡：所有有勾模板合成的教材會用最新素材重烤「開團版＋平時版」，前台下載連結自動換新檔。
+          改了框、浮水印文字或團購資訊文字之後按這裡：所有有勾模板合成的教材會用最新素材重烤「開團版＋平時版」，前台下載連結自動換新檔。
         </div>
         <button type="button" class="pba-btn pba-btn-save" id="tplRecomposeAllBtn">🔁 重新產生全部成品</button>
         <div class="pba-upload-status" id="tplRecomposeStatus"></div>
@@ -6783,7 +6795,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=25"></script>
+<script src="books.js?v=26"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
