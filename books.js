@@ -2531,13 +2531,8 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
       const logoH = Math.round(base * 0.0275); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055）
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
       const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
-      ctx.save();
-      // 深色字版＝白光暈（深色底也看得見）；白字版＝淡黑陰影（彩色/淺色底也看得見）
-      ctx.shadowColor = o.watermarkLogo === 'light' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.95)';
-      ctx.shadowBlur = Math.max(3, Math.round(logoH * 0.18));
+      // 不加光暈（2026-09-13 雪莉：外光暈怪）——貓咪 LOGO 自帶粗外框，底色深淺改由「LOGO 版本」咖啡字/白字自選
       ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH);
-      ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH); // 畫兩次加強光暈
-      ctx.restore();
       y -= logoH + Math.round(size * 0.5);
     }
     if (o.watermarkText) {
