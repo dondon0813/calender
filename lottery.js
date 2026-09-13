@@ -325,7 +325,12 @@ function renderLotteryCards() {
 
   if (pendingMode) {
     // 來源 2：虛擬卡（結團滿 2 週還沒建抽獎，docs/09 §4.5）——其他 chip 下不出現
-    LOTTERY_PENDING_DRAWS.forEach(p => visible.push({ pending: p }));
+    // 搜尋框也要過濾虛擬卡（驗收建議：原本只過濾來源 1）
+    const pq = LOTTERY_FILTER.q.toLowerCase();
+    LOTTERY_PENDING_DRAWS.forEach(p => {
+      if (pq && !((p.title || '').toLowerCase().includes(pq) || (p.brandName || '').toLowerCase().includes(pq))) return;
+      visible.push({ pending: p });
+    });
     // 來源 1：已建 draw 但 0 位非 redrawn 得獎人
     LOTTERY_DRAWS.forEach(draw => {
       if (!lotMatchesDrawScope(draw)) return;
