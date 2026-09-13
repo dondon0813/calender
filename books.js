@@ -1151,6 +1151,16 @@ function renderMaterialList(materials) {
 
     const actions = document.createElement('div');
     actions.className = 'pba-material-actions';
+    // 已合成：開前台實際給人下載的那張（開團中＝開團版、否則平時版）
+    if (m.composedPlainUrl) {
+      const outBtn = document.createElement('button');
+      outBtn.type = 'button';
+      outBtn.className = 'pba-mini-btn';
+      outBtn.textContent = '👁 成品';
+      outBtn.title = '開啟前台實際下載的檔案' + (m.promoApplied ? '（目前是開團版）' : '');
+      outBtn.addEventListener('click', () => { window.open(m.file_url || m.composedPlainUrl, '_blank'); });
+      actions.appendChild(outBtn);
+    }
     if (m.cleanPath) {
       const rawBtn = document.createElement('button');
       rawBtn.type = 'button';
@@ -2636,16 +2646,48 @@ function mtplSchedulePreview(delay) {
   mtplPreviewTimer = setTimeout(() => { mtplRenderPreview(false); }, delay == null ? 250 : delay);
 }
 
+// 表單目前設定的合成條件檢查（預覽與下載測試共用）；回空字串＝可以合成
+function mtplFormProblem() {
+  const layers = mtplLayersState();
+  const frameId = document.getElementById('mFrameSelect').value || '';
+  return !mtplAnyLayer(layers) ? '先勾至少一個圖層'
+    : !mtplHasSource() ? '請先上傳原始圖檔'
+    : layers.frame && !frameId ? '勾了「套框」但還沒選框' : '';
+}
+
+// 表單目前設定 → mtplComposeCanvas 的輸入（預覽與下載測試共用＝兩者畫出同一張）
+async function mtplFormComposeInputs() {
+  const layers = mtplLayersState();
+  const frameId = document.getElementById('mFrameSelect').value || '';
+  const src = await mtplGetFormSourceBitmap();
+  const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
+  const s = mtplSettings();
+  const wmLogo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
+  const logoUrl = mtplLogoUrlFor(s, wmLogo);
+  const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
+  const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
+  return {
+    src,
+    layers,
+    o: {
+      frameImg, logoImg, qrImg, layers,
+      caption: {
+        title: document.getElementById('mTitle').value.trim(),
+        desc: document.getElementById('mDescription').value.trim()
+      },
+      watermarkPos: document.getElementById('mWmPos').value,
+      watermarkLogo: wmLogo,
+      watermarkText: s.watermarkText || '', promoText: s.promoText || ''
+    }
+  };
+}
+
 async function mtplRenderPreview(manual) {
   const block = document.getElementById('mTplBlock');
   if (!mtplReady() || !block || block.style.display === 'none') return;
   const wrap = document.getElementById('mTplPreviewWrap');
   const st = document.getElementById('mTplStatus');
-  const layers = mtplLayersState();
-  const frameId = document.getElementById('mFrameSelect').value || '';
-  const problem = !mtplAnyLayer(layers) ? '先勾至少一個圖層'
-    : !mtplHasSource() ? '請先上傳原始圖檔'
-    : layers.frame && !frameId ? '勾了「套框」但還沒選框' : '';
+  const problem = mtplFormProblem();
   const seq = ++mtplPreviewSeq;
   // 預覽自己寫的狀態字（進行中／失敗）才清，不動「合成完成 ✓」等其他訊息
   const clearOwnStatus = () => {
@@ -2659,25 +2701,10 @@ async function mtplRenderPreview(manual) {
   const firstLoad = wrap.style.display === 'none';
   if (manual || firstLoad) st.textContent = '產生預覽中…';
   try {
-    const src = await mtplGetFormSourceBitmap();
-    const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
-    const s = mtplSettings();
-    const wmLogo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
-    const logoUrl = mtplLogoUrlFor(s, wmLogo);
-    const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
-    const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
+    const { src, o, layers } = await mtplFormComposeInputs();
     if (seq !== mtplPreviewSeq) return; // 等載圖期間選項又改了：交給新的那次畫
-    const caption = {
-      title: document.getElementById('mTitle').value.trim(),
-      desc: document.getElementById('mDescription').value.trim()
-    };
     const withPromo = layers.promo; // 有勾團購資訊就預覽開團版（資訊最滿的那版）
-    const canvas = mtplComposeCanvas(src, {
-      frameImg, logoImg, qrImg, layers, caption,
-      watermarkPos: document.getElementById('mWmPos').value,
-      watermarkLogo: wmLogo,
-      watermarkText: s.watermarkText || '', promoText: s.promoText || ''
-    }, withPromo);
+    const canvas = mtplComposeCanvas(src, o, withPromo);
     const pv = document.createElement('canvas');
     const scale = Math.min(1, 900 / canvas.width);
     pv.width = Math.round(canvas.width * scale);
@@ -2696,6 +2723,50 @@ async function mtplRenderPreview(manual) {
 }
 
 document.getElementById('mTplPreviewBtn').addEventListener('click', () => { mtplRenderPreview(true); });
+
+// 下載測試檔（2026-09-13 雪莉需求：想看下載下來長怎樣）：用表單目前設定烤「完整解析度」成品，
+// 跟儲存時上傳、前台下載的是同一支合成＋同 JPEG 畫質；不上傳、不存檔。有勾團購資訊就平時版＋開團版各一張。
+function mtplTriggerDownload(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+async function mtplDownloadTest() {
+  if (!mtplReady()) return;
+  const problem = mtplFormProblem();
+  if (problem) { showToast(problem, true); return; }
+  const btn = document.getElementById('mTplDownloadBtn');
+  const st = document.getElementById('mTplStatus');
+  btn.disabled = true;
+  st.textContent = '產生下載測試檔中…';
+  try {
+    const { src, o, layers } = await mtplFormComposeInputs();
+    const base = (document.getElementById('mTitle').value.trim() || '教材').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40);
+    const variants = layers.promo ? [[false, '平時版'], [true, '開團版']] : [[false, '成品']];
+    let sizeNote = '';
+    for (let i = 0; i < variants.length; i++) {
+      const [withPromo, label] = variants[i];
+      const canvas = mtplComposeCanvas(src, o, withPromo);
+      const blob = await mtplCanvasBlob(canvas);
+      mtplTriggerDownload(blob, base + '-' + label + '-測試.jpg');
+      if (!sizeNote) sizeNote = canvas.width + '×' + canvas.height + 'px、' + formatBytes(blob.size);
+      if (i < variants.length - 1) await new Promise(r => setTimeout(r, 600)); // 連續兩個下載稍微隔開，避免瀏覽器吃掉第二個
+    }
+    st.textContent = '已下載測試檔 ✓（' + sizeNote + '；跟儲存後前台下載的同一張、同畫質，沒有存檔也沒有上傳）'
+      + (variants.length > 1 ? ' 若只看到一個檔案，請允許瀏覽器「下載多個檔案」' : '');
+  } catch (err) {
+    st.textContent = '下載測試失敗：' + (err && err.message ? err.message : '未知錯誤');
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById('mTplDownloadBtn').addEventListener('click', mtplDownloadTest);
 // 放在 mSpecSelect/mLayerFrame 既有 listener 之後註冊＝框下拉同步完才重畫
 ['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo']
   .forEach(id => document.getElementById(id).addEventListener('change', () => mtplSchedulePreview()));
@@ -3163,6 +3234,16 @@ function renderMatLibPanel() {
     item.appendChild(info);
     const actions = document.createElement('div');
     actions.className = 'pba-material-actions';
+    // 已合成：開前台實際給人下載的那張（開團中＝開團版、否則平時版）
+    if (m.composedPlainUrl) {
+      const outBtn = document.createElement('button');
+      outBtn.type = 'button';
+      outBtn.className = 'pba-mini-btn';
+      outBtn.textContent = '👁 成品';
+      outBtn.title = '開啟前台實際下載的檔案' + (m.promoApplied ? '（目前是開團版）' : '');
+      outBtn.addEventListener('click', () => { window.open(m.file_url || m.composedPlainUrl, '_blank'); });
+      actions.appendChild(outBtn);
+    }
     if (canEdit && m.visible === false) {
       // 一鍵上架：待確認教材看過沒問題直接顯示於前台，不用進表單
       const pubBtn = document.createElement('button');

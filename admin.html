@@ -5305,6 +5305,7 @@
                     浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝固定右上角小圖；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖上方的粉色橫幅、結團隔天自動拿掉。共用素材在「🎨 教材模板」分頁設定。
                   </div>
                   <button type="button" class="pba-mini-btn" id="mTplPreviewBtn">🔍 重新整理預覽</button>
+                  <button type="button" class="pba-mini-btn" id="mTplDownloadBtn" title="用目前設定產生完整解析度的成品下載到電腦看（不會存檔）">⬇ 下載測試檔</button>
                   <div id="mTplPreviewWrap" style="display:none; margin-top:8px;">
                     <div id="mTplPreviewLabel" style="font-size:11.5px; color:var(--c-muted); margin-bottom:4px;"></div>
                     <img id="mTplPreviewImg" style="max-width:100%; border-radius:10px; border:1px solid var(--c-border, #ddd);">
@@ -6782,7 +6783,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=15"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=24"></script>
+<script src="books.js?v=25"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
