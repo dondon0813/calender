@@ -28,6 +28,17 @@ let LOTTERY_EDIT_DRAW_ID = null;      // 目前 lotteryDrawModal 編輯中的活
 let LOTTERY_WINNER_EDIT = null;       // { drawId, winnerId }；winnerId=null＝新增
 const LOTTERY_EXPANDED_OVERRIDE = {}; // 使用者手動展開/收合過的卡片，drawId -> true/false，蓋過自動展開規則
 
+// 排序方向：'asc'=依日期 遠→近（預設）｜'desc'=依日期 近→遠。localStorage key: lottery_sort_dir
+function lotLoadSortDir() {
+  try {
+    return localStorage.getItem('lottery_sort_dir') === 'desc' ? 'desc' : 'asc';
+  } catch (e) { return 'asc'; }
+}
+function lotSaveSortDir(v) {
+  try { localStorage.setItem('lottery_sort_dir', v); } catch (e) {}
+}
+let LOTTERY_SORT_DIR = lotLoadSortDir();
+
 // 狀態機（§3）：代碼 -> 顯示名／CSS 修飾字／進度條顏色 class
 const LOT_STATUS_LABEL = {
   pending: '待聯絡', awaiting_info: '待回填資料', info_ready: '待寄出',
@@ -103,11 +114,36 @@ function lotFmtMD(dateStr) {
   if (!m) return dateStr;
   return Number(m[2]) + '/' + Number(m[3]);
 }
-// 卡頭抽獎日顯示：日期確定＝完整 YYYY-MM-DD；不確定＝只顯示 M/D＋⚠ 提醒
+// YYYY-MM-DD -> 「YYYY年M月」／單純「M月」（估算日期只到月，別顯示 1 號像真的）
+function lotFmtYM(dateStr) {
+  if (!dateStr) return '';
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})/);
+  return m ? (m[1] + '年' + Number(m[2]) + '月') : dateStr;
+}
+function lotFmtM(dateStr) {
+  if (!dateStr) return '';
+  const m = String(dateStr).match(/^\d{4}-(\d{2})/);
+  return m ? (Number(m[1]) + '月') : dateStr;
+}
+// 年份下拉／篩選共用：一律用 sortDate 的年份（封存判定也用 sortDate），sortDate 為 null 才退回 drawDate
+// 年份（驗收抓到：原本下拉用 drawDate 年份、跟封存判定的 sortDate 不同基準，選 2025 會混進綁了 2026
+// 行事曆團的非封存卡，且不該封存的年份還會出現在選項裡，2026-09-14 修）
+function lotDrawYearKey(draw) {
+  const d = draw.sortDate || draw.drawDate;
+  return d ? String(d).slice(0, 4) : '';
+}
+// 卡頭抽獎日顯示：日期確定＝完整「抽獎日 YYYY-MM-DD」；不確定（估算值）＝只到月「約 YYYY年M月 ⚠」
 function lotFmtDrawDate(draw) {
   if (!draw.drawDate) return '';
-  if (draw.dateUncertain) return '⚠ 抽獎日 ' + lotFmtMD(draw.drawDate) + '（年份待確認）';
+  if (draw.dateUncertain) return '約 ' + lotFmtYM(draw.drawDate) + ' ⚠';
   return '抽獎日 ' + draw.drawDate;
+}
+// 團名最前面手打的日期前綴（雪莉排團習慣，如「8/26-9/1 冊子中秋禮盒」「9/17 - 9/23 賽爸爸鬆餅粉」）；
+// 分隔符接受 - – ~ 到，前後可有空白；抓不到回 null
+function lotParseTitleDateRange(title) {
+  if (!title) return null;
+  const m = String(title).match(/^\s*(\d{1,2}\/\d{1,2})\s*[-–~到]\s*(\d{1,2}\/\d{1,2})/);
+  return m ? { a: m[1], b: m[2] } : null;
 }
 // 距今天數（今天－dateStr），用於待辦清單「卡了幾天」；解析不了回 null
 function lotDaysSince(dateStr) {
@@ -227,6 +263,28 @@ function renderLotteryTiles() {
 }
 
 // ===== 篩選列 =====
+// 排序方向不比對日期欄位（雪莉抓到：sortDate 跟她試算表排列不一致造成日期亂）。
+// 後端回的 draws 順序＝雪莉試算表的列序（由久到近）＝asc 基準；desc＝把已篩好的陣列整個反轉。
+function lotApplyDir(items) {
+  return LOTTERY_SORT_DIR === 'desc' ? items.slice().reverse() : items;
+}
+// 待辦清單用：items 是攤平的「每列一位得獎人」，同一團的列本來就相鄰（依 draws 原順序 push）。
+// desc 只反轉「團」的順序，團內得獎人列相對順序不變（不是整陣列 reverse，否則會連組內也反過來）。
+function lotApplyDirGrouped(items, groupKeyFn) {
+  if (LOTTERY_SORT_DIR !== 'desc') return items;
+  const groups = [];
+  const groupIndex = new Map();
+  items.forEach(item => {
+    const key = groupKeyFn(item);
+    if (!groupIndex.has(key)) { groupIndex.set(key, groups.length); groups.push([]); }
+    groups[groupIndex.get(key)].push(item);
+  });
+  return groups.reverse().reduce((acc, g) => acc.concat(g), []);
+}
+function lotSortDirLabel() {
+  return LOTTERY_SORT_DIR === 'desc' ? '📅 近→遠 ↓' : '📅 遠→近 ↑';
+}
+
 function renderLotteryFilters() {
   const box = document.getElementById('lotFilters');
   const chipKeys = LOTTERY_VIEW === 'todo' ? LOT_TODO_CHIPS : LOT_FILTER_CHIPS.map(c => c.key);
@@ -234,8 +292,8 @@ function renderLotteryFilters() {
     '<span class="acct-tab' + (LOTTERY_FILTER.status === c.key ? ' on' : '') + '" data-chip="' + c.key + '">' + c.label + '</span>'
   ).join('');
 
-  // 年份下拉排除封存（docs/09 §4.6 第 4 點）
-  const years = Array.from(new Set(LOTTERY_DRAWS.filter(d => !d.archived).map(d => d.drawDate ? String(d.drawDate).slice(0, 4) : '').filter(Boolean))).sort().reverse();
+  // 年份下拉排除封存（docs/09 §4.6 第 4 點）；年份一律用 sortDate（跟封存判定同基準，見 lotDrawYearKey）
+  const years = Array.from(new Set(LOTTERY_DRAWS.filter(d => !d.archived).map(lotDrawYearKey).filter(Boolean))).sort().reverse();
   const yearOptions = '<option value="">年份：全部</option>' + years.map(y => '<option value="' + y + '"' + (LOTTERY_FILTER.year === y ? ' selected' : '') + '>' + y + '</option>').join('');
   const brandOptions = '<option value="">品牌：全部</option>' + LOTTERY_BRAND_CHOICES.map(b =>
     '<option value="' + lotEscapeHtml(b.id) + '"' + (LOTTERY_FILTER.brand === b.id ? ' selected' : '') + '>' + lotEscapeHtml(b.name) + '</option>'
@@ -252,6 +310,7 @@ function renderLotteryFilters() {
     '<select id="lotYearSelect">' + yearOptions + '</select>' +
     '<input type="text" id="lotSearchInput" placeholder="搜尋 團名／獎品／得獎人／姓名／訂單編號" value="' + lotEscapeHtml(LOTTERY_FILTER.q) + '">' +
     '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依團</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>' +
+    '<button class="task-mini-btn" id="lotSortDirBtn" type="button">' + lotSortDirLabel() + '</button>' +
     skipHtml;
 
   box.querySelectorAll('[data-chip]').forEach(el => {
@@ -269,6 +328,11 @@ function renderLotteryFilters() {
       if (LOTTERY_VIEW === 'todo' && (LOTTERY_FILTER.status === 'pending_draw' || LOTTERY_FILTER.status === 'archived')) LOTTERY_FILTER.status = 'all';
       renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
     });
+  });
+  document.getElementById('lotSortDirBtn').addEventListener('click', () => {
+    LOTTERY_SORT_DIR = LOTTERY_SORT_DIR === 'asc' ? 'desc' : 'asc';
+    lotSaveSortDir(LOTTERY_SORT_DIR);
+    renderLotteryFilters(); renderLotteryBody();
   });
   const skipToggle = document.getElementById('lotSkipToggle');
   if (skipToggle) {
@@ -296,7 +360,7 @@ function renderLotteryFilters() {
 // ===== 篩選比對 =====
 function lotMatchesDrawScope(draw) {
   if (LOTTERY_FILTER.brand && draw.brandId !== LOTTERY_FILTER.brand) return false;
-  if (LOTTERY_FILTER.year && (!draw.drawDate || String(draw.drawDate).slice(0, 4) !== LOTTERY_FILTER.year)) return false;
+  if (LOTTERY_FILTER.year && lotDrawYearKey(draw) !== LOTTERY_FILTER.year) return false;
   if (LOTTERY_FILTER.monthOnly) {
     const ym = lotToday().slice(0, 7);
     if (!draw.drawDate || String(draw.drawDate).slice(0, 7) !== ym) return false;
@@ -340,17 +404,11 @@ function renderLotteryCards() {
   const box = document.getElementById('lotBody');
   const pendingMode = LOTTERY_FILTER.status === 'pending_draw';
   const archivedMode = LOTTERY_FILTER.status === 'archived';
-  const visible = [];
+  let visible = [];
 
   if (pendingMode) {
-    // 來源 2：虛擬卡（結團滿 2 週還沒建抽獎，docs/09 §4.5）——其他 chip 下不出現
-    // 搜尋框也要過濾虛擬卡（驗收建議：原本只過濾來源 1）
-    const pq = LOTTERY_FILTER.q.toLowerCase();
-    LOTTERY_PENDING_DRAWS.forEach(p => {
-      if (pq && !((p.title || '').toLowerCase().includes(pq) || (p.brandName || '').toLowerCase().includes(pq))) return;
-      visible.push({ pending: p });
-    });
-    // 來源 1：已建 draw 但 0 位非 redrawn 得獎人（封存排除，docs/09 §4.6 第 4 點）
+    // 來源 1：已建 draw 但 0 位非 redrawn 得獎人（封存排除，docs/09 §4.6 第 4 點）——排在虛擬卡之前（asc 基準）
+    const realCards = [];
     LOTTERY_DRAWS.forEach(draw => {
       if (draw.archived) return;
       if (!lotMatchesDrawScope(draw)) return;
@@ -361,17 +419,18 @@ function renderLotteryCards() {
         const hay = [draw.title, draw.eventTitle].map(x => String(x || '')).join(' ').toLowerCase();
         if (hay.indexOf(q) === -1) return;
       }
-      visible.push({ draw, winners: [] });
+      realCards.push({ draw, winners: [] });
     });
-    // 兩個來源插入同一序列，由久到近：虛擬卡用結團日 endDate、真實卡用後端算好的 sortDate（§4.6 第 3 點）
-    visible.sort((a, b) => {
-      const ak = a.pending ? (a.pending.endDate || '') : (a.draw.sortDate || '');
-      const bk = b.pending ? (b.pending.endDate || '') : (b.draw.sortDate || '');
-      if (ak === bk) return 0;
-      if (!ak) return -1;
-      if (!bk) return 1;
-      return ak < bk ? -1 : 1;
+    // 來源 2：虛擬卡（結團滿 2 週還沒建抽獎，docs/09 §4.5，沒有列序）——固定放在真卡之後；
+    // 搜尋框也要過濾虛擬卡（驗收建議：原本只過濾來源 1）
+    const virtualCards = [];
+    const pq = LOTTERY_FILTER.q.toLowerCase();
+    LOTTERY_PENDING_DRAWS.forEach(p => {
+      if (pq && !((p.title || '').toLowerCase().includes(pq) || (p.brandName || '').toLowerCase().includes(pq))) return;
+      virtualCards.push({ pending: p });
     });
+    // asc 基準＝真卡（依 draws 原順序）在前、虛擬卡在後；desc＝整個反轉（虛擬卡因此排最前）
+    visible = lotApplyDir(realCards.concat(virtualCards));
   } else if (archivedMode) {
     // 「📦 封存」chip：只列 archived 卡，搜尋可用、品牌下拉可用；其餘篩選（年份／本月）對封存無意義故不套用
     const q = LOTTERY_FILTER.q.toLowerCase();
@@ -388,7 +447,8 @@ function renderLotteryCards() {
       }
       visible.push({ draw, winners: draw.winners || [] });
     });
-    // 完全信任後端順序（LOTTERY_DRAWS 已依 sortDate asc 排好）
+    // 後端順序＝雪莉試算表列序（asc 基準），依 LOTTERY_SORT_DIR 整個反轉
+    visible = lotApplyDir(visible);
   } else {
     LOTTERY_DRAWS.forEach(draw => {
       if (draw.archived) return; // 其他 chip 一律排除封存（docs/09 §4.6 第 4 點）
@@ -397,7 +457,8 @@ function renderLotteryCards() {
       if (!winners.length) return;
       visible.push({ draw, winners });
     });
-    // 完全信任後端順序（LOTTERY_DRAWS 已依 sortDate asc 排好，docs/09 §4.6 第 1/3 點）
+    // 後端順序＝雪莉試算表列序（asc 基準，docs/09 §4.6 第 1/3 點），依 LOTTERY_SORT_DIR 整個反轉
+    visible = lotApplyDir(visible);
   }
 
   if (!visible.length) {
@@ -464,12 +525,19 @@ function lotHasUnfinished(draw) {
   return (draw.winners || []).some(w => w.status !== 'done' && w.status !== 'redrawn');
 }
 
-// 卡頭日期徽章（docs/09 §4.6 第 2 點）：綁團＝事件 M/D–M/D；沒綁但有抽獎日＝「抽獎 M/D」；都沒有＝「無日期」灰
+// 卡頭日期徽章，優先序（雪莉補充需求 2026-09-14）：
+// ①團名開頭手打的日期前綴（如「8/26-9/1 冊子中秋禮盒」）→ 照原文顯示 ②綁團＝事件 M/D–M/D
+// ③沒綁但有抽獎日＝「抽獎 M/D」（不確定日期顯示「約 M月」）④都沒有＝「無日期」灰
 function lotDateBadgeHtml(draw) {
+  const titleRange = lotParseTitleDateRange(draw.title);
+  if (titleRange) {
+    return '<span class="lot-date-badge">' + titleRange.a + '–' + titleRange.b + '</span>';
+  }
   if (draw.eventStartDate && draw.eventEndDate) {
     return '<span class="lot-date-badge">' + lotFmtMD(draw.eventStartDate) + '–' + lotFmtMD(draw.eventEndDate) + '</span>';
   }
   if (draw.drawDate) {
+    if (draw.dateUncertain) return '<span class="lot-date-badge">約 ' + lotFmtM(draw.drawDate) + '</span>';
     return '<span class="lot-date-badge">抽獎 ' + lotFmtMD(draw.drawDate) + '</span>';
   }
   return '<span class="lot-date-badge lot-date-badge-empty">無日期</span>';
@@ -489,13 +557,18 @@ function lotCardHtml(draw, winners, isArchived) {
 
   const thumb = draw.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(draw.brandThumb) + '" alt="">' : '';
 
-  const titleLabel = lotEscapeHtml(draw.eventTitle || draw.title || '(未命名活動)');
+  // 標題照雪莉原文（draw.title，常含她手打的日期前綴），不用 eventTitle 取代（雪莉需求 2026-09-14）
+  const titleLabel = lotEscapeHtml(draw.title || draw.eventTitle || '(未命名活動)');
   const titleHtml = draw.eventId
     ? '<a href="#" class="lot-event-link" data-event-id="' + lotEscapeHtml(draw.eventId) + '">' + titleLabel + '</a>'
     : '<span>' + titleLabel + '</span>';
 
   const metaParts = [];
   if (draw.brandName) metaParts.push('<span>贊助：' + lotEscapeHtml(draw.brandName) + '</span>');
+  // eventTitle 存在且與 title 不同時，meta 小字附註行事曆團名（原文有時跟她排團時的行事曆標題不同）
+  if (draw.eventTitle && draw.eventTitle !== draw.title) {
+    metaParts.push('<span class="lot-cal-note">行事曆：' + lotEscapeHtml(draw.eventTitle) + '</span>');
+  }
   const dateTxt = lotFmtDrawDate(draw);
   if (dateTxt) metaParts.push('<span class="' + (draw.dateUncertain ? 'lot-warn' : '') + '">' + dateTxt + '</span>');
   if (draw.lineKeyword) metaParts.push('<span class="lot-kw">L關鍵字：' + lotEscapeHtml(draw.lineKeyword) + '</span>');
@@ -586,7 +659,7 @@ function lotWinnerRowHtml(draw, w) {
 // ===== 待辦清單視圖 =====
 function renderLotteryTodo() {
   const box = document.getElementById('lotBody');
-  const rows = [];
+  let rows = [];
   LOTTERY_DRAWS.forEach(draw => {
     if (draw.archived) return; // 封存排除待辦清單（docs/09 §4.6 第 4 點）
     if (!lotMatchesDrawScope(draw)) return;
@@ -596,7 +669,9 @@ function renderLotteryTodo() {
       rows.push({ draw, w });
     });
   });
-  // 完全信任後端順序（LOTTERY_DRAWS 已依 sortDate asc 排好，docs/09 §4.6 第 1/3 點）
+  // 後端順序＝雪莉試算表列序（asc 基準，docs/09 §4.6 第 1/3 點）；desc 只反轉「團」的順序，
+  // 同一團內得獎人維持原順序（lotApplyDirGrouped，避免整陣列 reverse 連組內也反過來）
+  rows = lotApplyDirGrouped(rows, r => r.draw.id);
 
   const pendingHtml = lotTodoPendingHtml();
 
@@ -623,7 +698,7 @@ function renderLotteryTodo() {
       }
     }
     return '<tr>' +
-      '<td>' + lotEscapeHtml(draw.eventTitle || draw.title) + '</td>' +
+      '<td>' + lotEscapeHtml(draw.title || draw.eventTitle) + '</td>' +
       lotPrizeCellHtml(w.prize) +
       '<td>' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : '<span class="lot-empty-cell">—</span>') + '</td>' +
       '<td><span class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" style="display:inline-block; cursor:default;">' + LOT_STATUS_LABEL[w.status] + '</span></td>' +
