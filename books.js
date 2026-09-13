@@ -2373,6 +2373,9 @@ function mtplSyncFrameSelectVisibility() {
 function mtplResetFormState(material) {
   mtplPendingFile = null;
   mtplPendingCleanPath = '';
+  mtplResetSourceCache();
+  clearTimeout(mtplPreviewTimer);
+  mtplPreviewSeq++; // 上一份教材還在畫的預覽作廢
   const block = document.getElementById('mTplBlock');
   if (!block) return;
   if (!mtplReady()) { block.style.display = 'none'; return; }
@@ -2391,6 +2394,7 @@ function mtplResetFormState(material) {
   document.getElementById('mTplStatus').textContent = '';
   // 舊教材沒有乾淨原檔＝不能合成，提示重新上傳（新增中或已有 clean 都不顯示）
   document.getElementById('mTplNoClean').style.display = material && !material.cleanPath ? '' : 'none';
+  mtplSchedulePreview(0); // 既有教材有勾圖層＋有原檔 → 開表單就直接顯示預覽
 }
 
 // mFileInput 上傳成功後呼叫：圖檔另傳乾淨原檔到私有 bucket（合成來源）
@@ -2405,8 +2409,10 @@ async function mtplAfterFilePicked(file) {
     if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
     mtplPendingFile = file;
     mtplPendingCleanPath = res.path;
+    mtplResetSourceCache();
     document.getElementById('mTplNoClean').style.display = 'none';
     st.textContent = '乾淨原檔已保存 ✓ 可勾選圖層合成';
+    mtplSchedulePreview(0); // 換了原圖：已勾圖層就立刻重畫
   } catch (err) {
     st.textContent = '乾淨原檔上傳失敗：' + (err && err.message ? err.message : '未知錯誤') + '（仍可不套模板直接儲存）';
   }
@@ -2426,16 +2432,36 @@ async function mtplCleanBitmapById(materialId) {
   return mtplFetchBitmap(res.url);
 }
 
+// 即時預覽用快取：框/LOGO/QR 網址每次上傳都是新檔名＝同網址內容不變，可放心快取；
+// 表單原檔（新選的檔或該教材乾淨原檔）開表單時快取一份，改選項重畫不必重下載
+const mtplAssetCache = new Map();
+function mtplAssetBitmap(url) {
+  if (!mtplAssetCache.has(url)) {
+    mtplAssetCache.set(url, mtplFetchBitmap(url).catch(err => { mtplAssetCache.delete(url); throw err; }));
+  }
+  return mtplAssetCache.get(url);
+}
+
+let mtplSrcCacheKey = null;
+let mtplSrcCachePromise = null;
+function mtplResetSourceCache() { mtplSrcCacheKey = null; mtplSrcCachePromise = null; }
+
 async function mtplGetFormSourceBitmap() {
-  if (mtplPendingFile) return createImageBitmap(mtplPendingFile);
-  if (materialFormEditingId) return mtplCleanBitmapById(materialFormEditingId);
-  throw new Error('沒有乾淨原檔');
+  const key = mtplPendingFile || (materialFormEditingId ? 'id:' + materialFormEditingId : null);
+  if (!key) throw new Error('沒有乾淨原檔');
+  if (key !== mtplSrcCacheKey || !mtplSrcCachePromise) {
+    const p = mtplPendingFile ? createImageBitmap(mtplPendingFile) : mtplCleanBitmapById(materialFormEditingId);
+    mtplSrcCacheKey = key;
+    mtplSrcCachePromise = p;
+    p.catch(() => { if (mtplSrcCachePromise === p) mtplResetSourceCache(); }); // 失敗不快取，下次重試
+  }
+  return mtplSrcCachePromise;
 }
 
 async function mtplFrameBitmap(frameId) {
   const f = mtplFrames().find(x => x.id === frameId);
   if (!f) throw new Error('找不到選擇的框');
-  return mtplFetchBitmap(f.imageUrl);
+  return mtplAssetBitmap(f.imageUrl);
 }
 
 // ----- 合成核心 -----
@@ -2573,8 +2599,8 @@ async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
   const s = mtplSettings();
   const logoUrl = mtplLogoUrlFor(s, watermarkLogo);
-  const logoImg = layers.watermark && logoUrl ? await mtplFetchBitmap(logoUrl).catch(() => null) : null;
-  const qrImg = layers.qr && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
+  const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
+  const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
   const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkLogo, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
   const plainBlob = await mtplCanvasBlob(mtplComposeCanvas(src, o, false));
@@ -2605,22 +2631,43 @@ document.getElementById('mSpecSelect').addEventListener('change', () => {
 document.getElementById('mLayerFrame').addEventListener('change', mtplSyncFrameSelectVisibility);
 document.getElementById('mLayerWatermark').addEventListener('change', mtplSyncFrameSelectVisibility);
 
-document.getElementById('mTplPreviewBtn').addEventListener('click', async () => {
-  const layers = mtplLayersState();
-  if (!mtplAnyLayer(layers)) { showToast('先勾至少一個圖層', true); return; }
-  if (!mtplHasSource()) { showToast('請先上傳原始圖檔', true); return; }
-  const frameId = document.getElementById('mFrameSelect').value || '';
-  if (layers.frame && !frameId) { showToast('勾了「套框」但還沒選框', true); return; }
+// 即時預覽（2026-09-13 雪莉需求：不用每次按產生）：圖層勾選/框/浮水印位置與版本/標題說明一改就自動重畫。
+// 素材圖與原檔有快取（只有第一次下載），重畫只是本機 canvas；seq 丟掉「畫到一半選項又改了」的舊結果。
+// manual＝按「重新整理預覽」鈕：條件不足時跳提示；自動模式條件不足就只收起預覽不吵人。
+let mtplPreviewTimer = null;
+let mtplPreviewSeq = 0;
+function mtplSchedulePreview(delay) {
+  clearTimeout(mtplPreviewTimer);
+  mtplPreviewTimer = setTimeout(() => { mtplRenderPreview(false); }, delay == null ? 250 : delay);
+}
+
+async function mtplRenderPreview(manual) {
+  const block = document.getElementById('mTplBlock');
+  if (!mtplReady() || !block || block.style.display === 'none') return;
+  const wrap = document.getElementById('mTplPreviewWrap');
   const st = document.getElementById('mTplStatus');
-  st.textContent = '產生預覽中…';
+  const layers = mtplLayersState();
+  const frameId = document.getElementById('mFrameSelect').value || '';
+  const problem = !mtplAnyLayer(layers) ? '先勾至少一個圖層'
+    : !mtplHasSource() ? '請先上傳原始圖檔'
+    : layers.frame && !frameId ? '勾了「套框」但還沒選框' : '';
+  const seq = ++mtplPreviewSeq;
+  if (problem) {
+    if (manual) showToast(problem, true);
+    else wrap.style.display = 'none';
+    return;
+  }
+  const firstLoad = wrap.style.display === 'none';
+  if (manual || firstLoad) st.textContent = '產生預覽中…';
   try {
     const src = await mtplGetFormSourceBitmap();
     const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
     const s = mtplSettings();
     const wmLogo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
     const logoUrl = mtplLogoUrlFor(s, wmLogo);
-    const logoImg = layers.watermark && logoUrl ? await mtplFetchBitmap(logoUrl).catch(() => null) : null;
-    const qrImg = layers.qr && s.qrUrl ? await mtplFetchBitmap(s.qrUrl).catch(() => null) : null;
+    const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
+    const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
+    if (seq !== mtplPreviewSeq) return; // 等載圖期間選項又改了：交給新的那次畫
     const caption = {
       title: document.getElementById('mTitle').value.trim(),
       desc: document.getElementById('mDescription').value.trim()
@@ -2638,15 +2685,23 @@ document.getElementById('mTplPreviewBtn').addEventListener('click', async () => 
     pv.height = Math.round(canvas.height * scale);
     pv.getContext('2d').drawImage(canvas, 0, 0, pv.width, pv.height);
     document.getElementById('mTplPreviewImg').src = pv.toDataURL('image/jpeg', 0.85);
-    document.getElementById('mTplPreviewLabel').textContent = withPromo
+    document.getElementById('mTplPreviewLabel').textContent = (withPromo
       ? '預覽＝開團版（結團後前台自動換成沒有粉色橫幅的平時版）'
-      : '預覽＝平時版成品';
-    document.getElementById('mTplPreviewWrap').style.display = '';
-    st.textContent = '';
+      : '預覽＝平時版成品') + '・改選項會自動更新';
+    wrap.style.display = '';
+    if (st.textContent === '產生預覽中…') st.textContent = '';
   } catch (err) {
+    if (seq !== mtplPreviewSeq) return;
     st.textContent = '預覽失敗：' + (err && err.message ? err.message : '未知錯誤');
   }
-});
+}
+
+document.getElementById('mTplPreviewBtn').addEventListener('click', () => { mtplRenderPreview(true); });
+// 放在 mSpecSelect/mLayerFrame 既有 listener 之後註冊＝框下拉同步完才重畫
+['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo']
+  .forEach(id => document.getElementById(id).addEventListener('change', () => mtplSchedulePreview()));
+['mTitle', 'mDescription']
+  .forEach(id => document.getElementById(id).addEventListener('input', () => mtplSchedulePreview(500)));
 
 // ----- 🎨 教材模板分頁 -----
 
