@@ -1065,7 +1065,9 @@ function openAcctEditModal(rec) {
   v('acctRateNoteInput', rec ? rec.rateNote : '');
   v('acctCommissionInput', rec ? rec.commission : '');
   v('acctFeeInput', rec ? rec.fee : '');
-  v('acctStatusSelect', rec ? (rec.status || '待結算') : '待結算');
+  // 虛擬列（行事曆帶入、還沒建帳務）後端給的 status 是「未成團」佔位值，不能帶進表單——
+  // 否則回填業績沒改狀態就存成未成團（2026-09-15 R0578 等 4 團事故），回填一律預設「待結算」
+  v('acctStatusSelect', rec && !rec.isVirtual ? (rec.status || '待結算') : '待結算');
   v('acctReconStatusSelect', rec ? (rec.reconStatus || '') : (acctReconStatuses[0] || ''));
   v('acctPayToInput', rec ? rec.payTo : '');
   v('acctPayDateInput', rec ? rec.payDate : '');
