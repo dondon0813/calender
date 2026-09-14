@@ -50,6 +50,19 @@ function lotSaveSortDir(v) {
 }
 let LOTTERY_SORT_DIR = lotLoadSortDir();
 
+// 隱藏已完成開關：①②③區已全數完成（得獎人皆 done/redrawn）的項目預設隱藏，避免埋掉還要處理的。
+// localStorage key: lottery_hide_done（'1'=隱藏／'0'=不隱藏），預設隱藏。
+function lotLoadHideDone() {
+  try {
+    const v = localStorage.getItem('lottery_hide_done');
+    return v === null ? true : v !== '0';
+  } catch (e) { return true; }
+}
+function lotSaveHideDone(v) {
+  try { localStorage.setItem('lottery_hide_done', v ? '1' : '0'); } catch (e) {}
+}
+let LOTTERY_HIDE_DONE = lotLoadHideDone();
+
 // 狀態機（§3）：代碼 -> 顯示名／CSS 修飾字
 const LOT_STATUS_LABEL = {
   pending: '待聯絡', awaiting_info: '待回填資料', info_ready: '待寄出',
@@ -306,6 +319,10 @@ function renderLotteryFilters() {
   const showToggleHtml = LOTTERY_VIEW === 'cards'
     ? '<span class="lot-toggle-chip' + (LOTTERY_SHOW_NO_LOTTERY ? ' on' : '') + '" id="lotShowNoLotteryToggle">🙈 已標不抽（' + noLotteryCount + '）</span>'
     : '';
+  const hideDoneCount = LOTTERY_VIEW === 'cards' ? lotComputeHideDoneCount() : 0;
+  const hideDoneToggleHtml = LOTTERY_VIEW === 'cards'
+    ? '<span class="lot-toggle-chip' + (LOTTERY_HIDE_DONE ? ' on' : '') + '" id="lotHideDoneToggle">✅ 隱藏已完成（' + hideDoneCount + '）</span>'
+    : '';
 
   box.innerHTML =
     chipsHtml +
@@ -314,7 +331,8 @@ function renderLotteryFilters() {
     '<input type="text" id="lotSearchInput" placeholder="搜尋 R號／團名／獎品／得獎人／姓名／訂單編號" value="' + lotEscapeHtml(LOTTERY_FILTER.q) + '">' +
     '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依分區</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>' +
     '<button class="task-mini-btn" id="lotSortDirBtn" type="button">' + lotSortDirLabel() + '</button>' +
-    showToggleHtml;
+    showToggleHtml +
+    hideDoneToggleHtml;
 
   box.querySelectorAll('[data-chip]').forEach(el => {
     el.addEventListener('click', () => {
@@ -340,6 +358,14 @@ function renderLotteryFilters() {
   if (showToggleEl) {
     showToggleEl.addEventListener('click', () => {
       LOTTERY_SHOW_NO_LOTTERY = !LOTTERY_SHOW_NO_LOTTERY;
+      renderLotteryFilters(); renderLotteryBody();
+    });
+  }
+  const hideDoneToggleEl = document.getElementById('lotHideDoneToggle');
+  if (hideDoneToggleEl) {
+    hideDoneToggleEl.addEventListener('click', () => {
+      LOTTERY_HIDE_DONE = !LOTTERY_HIDE_DONE;
+      lotSaveHideDone(LOTTERY_HIDE_DONE);
       renderLotteryFilters(); renderLotteryBody();
     });
   }
@@ -380,6 +406,19 @@ function lotWinnerStatusFilterOk(w) {
   return w.status === s;
 }
 
+// ===== 隱藏已完成：一場抽獎「已完成」＝至少 1 位得獎人，且全部得獎人狀態為 done／redrawn =====
+function lotDrawCompleted(d) {
+  const winners = d.winners || [];
+  return winners.length > 0 && winners.every(w => w.status === 'done' || w.status === 'redrawn');
+}
+// 搜尋中或直接篩選 done／redrawn 狀態時，隱藏規則失效（不然會篩出空結果）
+function lotHideDoneBypassed() {
+  return !!lotSearchQuery() || LOTTERY_FILTER.status === 'done' || LOTTERY_FILTER.status === 'redrawn';
+}
+function lotHideDoneActive() {
+  return LOTTERY_HIDE_DONE && !lotHideDoneBypassed();
+}
+
 // ===== ①團購抽獎：一個帳務團一張卡（或虛擬「待抽」卡／已標不抽列）=====
 function lotZoneGroupbuyItems() {
   const items = [];
@@ -392,11 +431,14 @@ function lotZoneGroupbuyItems() {
   });
   return items;
 }
-function lotFilterGroupbuyItems(items) {
+function lotFilterGroupbuyItems(items, opts) {
   const q = lotSearchQuery();
+  const applyHideDone = !opts || opts.hideDone !== false;
   const winnerStatusActive = ['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn'].indexOf(LOTTERY_FILTER.status) !== -1;
   return items.filter(it => {
     if (it.type === 'nolottery' && !LOTTERY_SHOW_NO_LOTTERY) return false;
+    // 「已標不抽」「待抽」兩種虛擬卡片永不因「已完成」被隱藏，只有 type='real' 且全部抽獎都已完成才隱藏
+    if (it.type === 'real' && applyHideDone && lotHideDoneActive() && it.draws.every(lotDrawCompleted)) return false;
     if (LOTTERY_FILTER.year && String(it.team.recordDate || '').slice(0, 4) !== LOTTERY_FILTER.year) return false;
     if (LOTTERY_FILTER.brand && it.team.brandId !== LOTTERY_FILTER.brand) return false;
     if (LOTTERY_FILTER.status === 'pending_draw' && it.type === 'real') return false;
@@ -416,10 +458,12 @@ function lotFilterGroupbuyItems(items) {
 }
 
 // ===== ②非團購／③特殊抽獎專區：依建立時間 =====
-function lotFilterSimpleZoneDraws(draws) {
+function lotFilterSimpleZoneDraws(draws, opts) {
   const q = lotSearchQuery();
+  const applyHideDone = !opts || opts.hideDone !== false;
   const winnerStatusActive = ['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn'].indexOf(LOTTERY_FILTER.status) !== -1;
   return draws.filter(d => {
+    if (applyHideDone && lotHideDoneActive() && lotDrawCompleted(d)) return false;
     if (LOTTERY_FILTER.brand && d.brandId !== LOTTERY_FILTER.brand) return false;
     if (LOTTERY_FILTER.status === 'pending_draw' || LOTTERY_FILTER.status === 'unpaired') return false;
     if (winnerStatusActive && !(d.winners || []).some(w => w.status === LOTTERY_FILTER.status)) return false;
@@ -443,6 +487,19 @@ function lotFilterUnpairedDraws(draws) {
     }
     return true;
   });
+}
+
+// 「隱藏已完成」篩選列 chip 的數字：①②③區在套用其他篩選條件（品牌/年份/狀態/搜尋）之後、
+// 套用隱藏已完成規則「前」vs「後」的項目數差＝目前被這條規則藏起來的數量（④待配對不受規則影響，不計入）
+function lotComputeHideDoneCount() {
+  const zone1Items = lotZoneGroupbuyItems();
+  const zone1Without = lotFilterGroupbuyItems(zone1Items, { hideDone: false }).length;
+  const zone1With = lotFilterGroupbuyItems(zone1Items, { hideDone: true }).length;
+  const nonGroupbuyDraws = LOTTERY_DRAWS.filter(d => d.section === 'non_groupbuy');
+  const specialDraws = LOTTERY_DRAWS.filter(d => d.section === 'special');
+  const zone23Without = lotFilterSimpleZoneDraws(nonGroupbuyDraws, { hideDone: false }).length + lotFilterSimpleZoneDraws(specialDraws, { hideDone: false }).length;
+  const zone23With = lotFilterSimpleZoneDraws(nonGroupbuyDraws, { hideDone: true }).length + lotFilterSimpleZoneDraws(specialDraws, { hideDone: true }).length;
+  return (zone1Without - zone1With) + (zone23Without - zone23With);
 }
 
 function lotRenderZone(key, label, items, itemRenderer) {
@@ -554,7 +611,7 @@ function lotDrawBlockHtml(draw, opts) {
       metaParts.join('') +
     '</div>' +
     '<div style="overflow-x:auto;"><table class="lot-table lot-table-fixed">' +
-      '<colgroup><col style="width:200px"><col style="width:130px"><col style="width:120px"><col style="width:90px"><col style="width:130px"><col style="width:150px"><col style="width:80px"><col style="width:70px"><col><col style="width:110px"></colgroup>' +
+      '<colgroup><col style="width:200px"><col style="width:130px"><col style="width:120px"><col style="width:90px"><col style="width:130px"><col style="width:150px"><col style="width:80px"><col style="width:70px"><col style="width:220px"><col style="width:220px"></colgroup>' +
       '<thead><tr><th>獎品</th><th>得獎人</th><th>狀態</th><th>姓名</th><th>電話</th><th>地址</th><th>寄出日</th><th>運費</th><th>備註</th><th></th></tr></thead>' +
       '<tbody>' + rowsHtml + '</tbody>' +
     '</table></div>' +
@@ -691,7 +748,7 @@ function lotWinnerRowHtml(drawId, w) {
     '<td>' + addressCell + '</td>' +
     '<td>' + (w.shippedAt ? lotEscapeHtml(w.shippedAt) : '<span class="lot-empty-cell">—</span>') + '</td>' +
     '<td>' + (w.shippingFee ? lotEscapeHtml(w.shippingFee) : '<span class="lot-empty-cell">—</span>') + '</td>' +
-    '<td>' + (w.memo ? lotEscapeHtml(w.memo) : '<span class="lot-empty-cell">—</span>') + '</td>' +
+    '<td class="lot-td-memo">' + (w.memo ? '<div class="lot-prize-clamp" title="' + lotEscapeHtml(w.memo) + '">' + lotEscapeHtml(w.memo) + '</div>' : '<span class="lot-empty-cell">—</span>') + '</td>' +
     '<td style="white-space:nowrap;">' + actions + '</td>' +
   '</tr>';
 }
