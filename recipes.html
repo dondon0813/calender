@@ -1267,9 +1267,6 @@
       <div class="page-title">👶 育兒小幫手</div>
     </div>
 
-    <!-- 置頂開團宣傳：有食譜的品牌開團中才出現（renderRecipePromos） -->
-    <div class="rcp-promo-slot" id="promoSlotHome" style="display:none;"></div>
-
     <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="recipes"></div>
 
     <div style="text-align:center; margin: 4px 0 20px;">
@@ -3019,12 +3016,11 @@ function renderRecipePromos() {
     if (st.status === 'open' && isValidUrl(st.url)) opens.push({ st, n }); // 整列＝下單連結，沒連結的團不顯示
   });
   opens.sort((a, b) => a.st.displayEnd - b.st.displayEnd); // 快結單的排前面
-  ['promoSlotHome', 'promoSlotRecipes'].forEach(slotId => {
-    const slot = document.getElementById(slotId);
-    slot.innerHTML = '';
-    opens.forEach(({ st }) => slot.appendChild(buildPromoCard(st)));
-    slot.style.display = opens.length ? 'block' : 'none';
-  });
+  // 只放「觀看食譜」頂端（雪莉 09-14 定：首頁不放）
+  const slot = document.getElementById('promoSlotRecipes');
+  slot.innerHTML = '';
+  opens.forEach(({ st }) => slot.appendChild(buildPromoCard(st)));
+  slot.style.display = opens.length ? 'block' : 'none';
 }
 
 // 一團一條細長列，整列就是「前往下單」連結；有折扣碼的團先跳折扣碼視窗（視窗裡再前往下單）
