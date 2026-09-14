@@ -5661,11 +5661,11 @@
        見 dondon-platform docs/09-lottery-design.md §11）===== -->
   <style>
     .lot-tiles{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
-    .lot-tiles-grid{ flex:1; min-width:280px; display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
-    @media (max-width:720px){ .lot-tiles-grid{ grid-template-columns:1fr 1fr; } }
-    .lot-tile{ background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:12px; padding:10px 14px; cursor:pointer; }
+    /* 摘要磚：寬度不夠就自動換行（原本固定 6 欄，窄視窗／分割畫面時「待回填資料」被切掉） */
+    .lot-tiles-grid{ flex:1; min-width:0; width:100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(108px, 1fr)); gap:10px; }
+    .lot-tile{ min-width:0; background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:12px; padding:10px 12px; cursor:pointer; }
     .lot-tile .lot-tile-n{ font-size:24px; font-weight:800; line-height:1; }
-    .lot-tile .lot-tile-l{ font-size:12px; color:var(--c-text-soft); margin-top:2px; }
+    .lot-tile .lot-tile-l{ font-size:12px; color:var(--c-text-soft); margin-top:2px; white-space:nowrap; }
     .lot-tile.await .lot-tile-n{ color:var(--c-cat-1); }
     .lot-tile.ready .lot-tile-n{ color:var(--c-cat-4); }
     .lot-tile.vendor .lot-tile-n{ color:var(--c-cat-3); }
