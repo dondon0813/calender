@@ -337,7 +337,8 @@
     padding: 12px 16px;
     margin: 0 0 20px;
   }
-  .home-changelog-title { font-family: var(--font-round); font-weight: 800; font-size: 15px; color: var(--c-brown); margin-bottom: 4px; }
+  .home-changelog-title { font-family: var(--font-round); font-weight: 800; font-size: 15px; color: var(--c-brown); margin-bottom: 4px; text-align: center; }
+  .home-changelog-star { font-size: 11px; margin: 0 6px; vertical-align: 2px; }
   .home-changelog-list { list-style: none; margin: 0; padding: 0; }
   .home-changelog-list li {
     display: flex; gap: 10px;
@@ -1294,7 +1295,7 @@
 
     <!-- 雪莉更新日誌（2026-09-14）：後台「📣 更新日誌」分頁輸入，GET scope=changelog 最新 5 條；沒資料整塊藏 -->
     <div class="home-changelog" id="homeChangelog" style="display:none;">
-      <div class="home-changelog-title">📣 雪莉更新日誌</div>
+      <div class="home-changelog-title"><span class="home-changelog-star">⭐</span>雪莉更新日誌<span class="home-changelog-star">⭐</span></div>
       <ul class="home-changelog-list" id="homeChangelogList"></ul>
     </div>
 
