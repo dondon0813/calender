@@ -281,6 +281,60 @@
     gap: 5px;
   }
 
+  /* 食譜收藏（2026-09-14，會員功能）：卡片右上角愛心、視窗收藏鈕、「已收藏」篩選 chip */
+  .recipe-reco-card { position: relative; }
+  .rrc-fav {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    width: 34px; height: 34px; padding: 0;
+    border: none; border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 2px 6px rgba(181,117,90,0.25);
+    font-size: 17px; line-height: 34px; cursor: pointer;
+  }
+  .rrc-fav.on { background: var(--c-pink-bg); }
+  .rrc-fav:active { transform: scale(0.88); }
+  .rec-fav-wrap { text-align: center; margin: -2px 0 10px; }
+  .rec-fav-btn {
+    font-family: inherit; font-size: 14px; font-weight: 800;
+    color: var(--c-pink-deep); background: #fff;
+    border: 2px solid var(--c-primary); border-radius: var(--r-pill);
+    padding: 7px 18px; cursor: pointer;
+  }
+  .rec-fav-btn.on { background: var(--c-pink-bg); }
+  .chip.chip-fav { border-color: var(--c-primary); color: var(--c-pink-deep); }
+  .chip.chip-fav.active { color: #fff; }
+
+  /* 置頂開團宣傳（2026-09-14）：有食譜的品牌開團中自動出現，結團自動消失 */
+  .rcp-promo-slot { margin: 0 0 16px; }
+  .rcp-promo-card {
+    background: linear-gradient(135deg, var(--c-pink-bg-2) 0%, var(--c-gold-gradient) 100%);
+    border: 2px solid var(--c-primary);
+    border-radius: 20px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 6px 16px rgba(255,143,163,0.25);
+  }
+  .rcp-promo-head { display: flex; align-items: center; gap: 12px; }
+  .rcp-promo-thumb { height: 52px; width: auto; flex: 0 0 auto; }
+  .rcp-promo-info { flex: 1; min-width: 0; }
+  .rcp-promo-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 800; color: #fff;
+    background: var(--c-primary); border-radius: var(--r-pill); padding: 3px 10px;
+  }
+  .rcp-promo-badge .home-calendar-dot { width: 7px; height: 7px; }
+  .rcp-promo-brand { font-family: var(--font-round); font-weight: 800; font-size: 19px; color: var(--c-pink-deep); margin-top: 4px; }
+  .rcp-promo-date { font-size: 12.5px; font-weight: 700; color: var(--c-text-soft); }
+  .rcp-promo-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .rcp-promo-btn {
+    flex: 1; text-align: center; font-family: inherit;
+    font-weight: 800; font-size: 14px; text-decoration: none;
+    border: 2px solid var(--c-primary); border-radius: var(--r-pill);
+    padding: 10px 6px; cursor: pointer;
+  }
+  .rcp-promo-btn.primary { background: var(--c-primary); color: #fff; }
+  .rcp-promo-btn.ghost { background: #fff; color: var(--c-pink-deep); }
+
   @media (max-width: 420px) {
     .ing-tile-name { font-size: 10px; }
   }
@@ -1219,6 +1273,9 @@
       <div class="page-title">👶 育兒小幫手</div>
     </div>
 
+    <!-- 置頂開團宣傳：有食譜的品牌開團中才出現（renderRecipePromos） -->
+    <div class="rcp-promo-slot" id="promoSlotHome" style="display:none;"></div>
+
     <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="recipes"></div>
 
     <div style="text-align:center; margin: 4px 0 20px;">
@@ -1341,7 +1398,10 @@
   <!-- 觀看食譜畫面 -->
   <div id="recipesView" style="display:none;">
     <button class="back-btn" id="backFromRecipes">← 返回首頁</button>
+    <div class="rcp-promo-slot" id="promoSlotRecipes" style="display:none;"></div>
     <div class="filter-section">
+      <div class="filter-label">我的收藏</div>
+      <div class="filter-chips" id="recFavChips"></div>
       <div class="filter-label">品牌</div>
       <div class="filter-chips" id="recBrandChips"></div>
       <div class="filter-label">適合月齡</div>
@@ -1416,6 +1476,7 @@
     </div>
 
     <h2 class="rc-title" id="recModalTitle"></h2>
+    <div class="rec-fav-wrap"><button type="button" class="rec-fav-btn" id="recFavBtn">🤍 收藏這道食譜</button></div>
 
     <div class="rc-subtitle" id="recModalSubtitle" style="display:none;"></div>
 
@@ -1575,6 +1636,9 @@ const urlParams = new URLSearchParams(window.location.search);
 const presetBrand = urlParams.get('brand') || '';
 const presetViewRaw = urlParams.get('view'); // null 代表完全沒帶參數，要停在首頁
 const presetView = presetViewRaw || 'ingredients';
+// ?recipe=rcpNNN：直接打開那道食譜（會員中心收藏庫、收藏登入後跳回用）；favDone=1＝剛從會員頁登入收藏回來
+const presetRecipeId = urlParams.get('recipe') || '';
+const presetFavDone = urlParams.get('favDone') === '1';
 
 // ===== 日期輔助（跟客人版行事曆共用邏輯） =====
 function parseDateStr(s) {
@@ -1627,6 +1691,12 @@ async function loadAll() {
     initFilters();
     renderIngredients();
     renderRecipes();
+    RECIPE_DATA_READY = true;
+    renderRecipePromos();
+    if (presetRecipeId) {
+      const presetRecipe = RECIPES.find(r => r['食譜ID'] === presetRecipeId);
+      if (presetRecipe) openRecipeModal(presetRecipe);
+    }
   } catch (err) {
     statusEl.style.display = 'block';
     statusEl.textContent = '資料載入失敗，請稍後重新整理再試一次';
@@ -1651,6 +1721,11 @@ async function loadRecipeDb() {
     if (name && intro) BRAND_INTRO[name] = intro;
     const shopee = String(b['蝦皮連結'] || '').trim();
     if (name && isValidUrl(shopee)) BRAND_SHOPEE[name] = shopee;
+  });
+  BRAND_THUMBS = {};
+  (data.brandThumbs || []).forEach(t => {
+    const name = String(t['品牌名稱'] || '').trim();
+    if (name && t['去背小圖']) BRAND_THUMBS[name] = String(t['去背小圖']);
   });
   INGREDIENTS = (data.ingredients || []).filter(i => i['食材ID']);
   RECIPES = (data.recipes || []).filter(r => r['食譜ID']);
@@ -1699,7 +1774,7 @@ function getBrandStatus(brandName) {
     // evKey 格式須與 index.html 的 getStatKey 完全一致：${id}_${YYYY-M-D}（月/日不補零、本地時區）
     const s = openEvent.start;
     const evKey = `${openEvent.id}_${s.getFullYear()}-${s.getMonth() + 1}-${s.getDate()}`;
-    return { brand: brandName, status: 'open', url: openEvent.url, evKey, shopeeUrl, discountCode: openEvent.discountCode || '', discountDesc: openEvent.discountDesc || '' };
+    return { brand: brandName, status: 'open', url: openEvent.url, evKey, shopeeUrl, discountCode: openEvent.discountCode || '', discountDesc: openEvent.discountDesc || '', displayEnd: openEvent.displayEnd };
   }
   const future = matches
     .filter(ev => startOfDay(ev.start) > today)
@@ -1980,9 +2055,20 @@ function buildAutoStepImageUrl(mainImgUrl, stepNumber) {
 
 // ===== 選擇食材：隨機基本食材（沒選品牌、沒打搜尋文字時顯示） =====
 function pickRandomBasicIngredients() {
-  const pool = ingredientsOfType('食材');
-  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  RANDOM_BASIC_INGREDIENTS = shuffled.slice(0, 6);
+  // 隨機 8 個（2026-09-14 雪莉定，原本 6 個）：只抽「點下去至少有一道食譜」的食材，
+  // 比對規則跟圖磚篩選完全同一套（顯示名稱＝簡稱第一個、recipeKeysMatchSelection_）；
+  // 同一個顯示名稱只算一次（圖磚本來就會合併同名），才能保證真的出現 8 顆
+  const categoryLookup = buildIngredientCategoryLookup_();
+  const recipeKeyLists = RECIPES.map(r => getRecipeIngredientKeys(r));
+  const seenKeys = new Set();
+  const candidates = [];
+  ingredientsOfType('食材').forEach(ing => {
+    const key = ingredientFilterKey(ing);
+    if (!key || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    if (recipeKeyLists.some(keys => recipeKeysMatchSelection_(keys, key, categoryLookup))) candidates.push(ing);
+  });
+  RANDOM_BASIC_INGREDIENTS = candidates.sort(() => Math.random() - 0.5).slice(0, 8);
 }
 
 // ===== 篩選標籤初始化 =====
@@ -2025,6 +2111,9 @@ function initFilters() {
     });
     recAgeChipsEl.appendChild(chip);
   });
+
+  // 觀看食譜的「❤️ 已收藏」篩選（會員功能）
+  renderFavChip();
 
   // 選擇食材的搜尋/篩選圖磚 + 已選擇食材標籤
   renderSelectedIngredientChips();
@@ -2316,6 +2405,7 @@ function renderRecipes() {
   const categoryLookup = recSelectedIngredients.length ? buildIngredientCategoryLookup_() : null;
 
   let items = RECIPES.filter(r => {
+    if (recOnlyFav && !FAV.ids.has(r['食譜ID'])) return false;
     if (recSearchText) {
       if (!String(r['食譜名稱'] || '').includes(recSearchText)) return false;
     }
@@ -2333,9 +2423,12 @@ function renderRecipes() {
     return true;
   });
 
-  titleEl.textContent = `🍽 食譜推薦（共 ${items.length} 道）`;
+  titleEl.textContent = recOnlyFav ? `❤️ 我收藏的食譜（共 ${items.length} 道）` : `🍽 食譜推薦（共 ${items.length} 道）`;
 
   if (!items.length) {
+    emptyEl.textContent = (recOnlyFav && !FAV.ids.size)
+      ? '還沒有收藏的食譜——點食譜卡右上角的 🤍 就能收藏'
+      : '這個篩選條件下沒有找到食譜';
     emptyEl.style.display = 'block';
     return;
   }
@@ -2350,6 +2443,15 @@ function renderRecipes() {
     img.src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
     img.onerror = () => { img.src = PLACEHOLDER_IMG; };
     card.appendChild(img);
+
+    const favBtn = document.createElement('button');
+    favBtn.type = 'button';
+    favBtn.className = 'rrc-fav';
+    favBtn.dataset.rid = recipe['食譜ID'];
+    favBtn.setAttribute('aria-label', '收藏食譜');
+    paintFavBtn(favBtn, recipe['食譜ID'], true);
+    favBtn.addEventListener('click', e => { e.stopPropagation(); toggleRecipeFav(recipe); });
+    card.appendChild(favBtn);
 
     const body = document.createElement('div');
     body.className = 'rrc-body';
@@ -2520,6 +2622,8 @@ function openIngredientModal(item) {
 
 // ===== 食譜彈窗 =====
 function openRecipeModal(recipe) {
+  currentModalRecipe = recipe;
+  updateRecFavBtn();
   // 大圖改為單張成品照片（不是整張海報），標題文字改用程式另外顯示在圖片下方
   document.getElementById('recModalImg').src = isValidUrl(recipe['成品圖片網址']) ? recipe['成品圖片網址'] : PLACEHOLDER_IMG;
   document.getElementById('recModalImg').onerror = function() { this.src = PLACEHOLDER_IMG; };
@@ -2883,10 +2987,10 @@ function applyInitialRoute() {
   // 完全沒帶網址參數（直接打開 recipes.html）才停在首頁；
   // 從客人版行事曆帶 brand/view 參數點進來的話，直接跳到對應畫面
   // 這一步只負責切換畫面，不需要等資料載入完成
-  if (!presetBrand && presetViewRaw === null) {
+  if (!presetBrand && presetViewRaw === null && !presetRecipeId) {
     switchView('home');
   } else {
-    switchView(presetView === 'recipes' ? 'recipes' : 'ingredients');
+    switchView(presetView === 'recipes' || presetRecipeId ? 'recipes' : 'ingredients');
   }
 }
 
@@ -2901,8 +3005,274 @@ function applyPresetBrandFilter() {
 // 網頁一打開就先決定要顯示哪一頁（首頁 / 食材介紹 / 觀看食譜），
 // 這一步不需要等資料載入完成，所以要在 loadAll() 之前就執行，
 // 避免資料讀取完成後又把使用者已經手動點開的畫面切回首頁
+// ===== 置頂開團宣傳（2026-09-14）=====
+// 「有食譜的品牌」正在開團就自動出現在首頁與觀看食譜頂端，結團（含延長）自動消失，不必每團手動設定。
+// 有食譜的品牌＝至少一道食譜的食材對到該品牌（getRecipeBrands）；開團判定沿用 getBrandStatus。
+let BRAND_THUMBS = {};
+let RECIPE_DATA_READY = false;
+
+function promoThumbUrl(u) {
+  // 品牌庫還存舊 github.io 網址，301 轉址會讓圖載入不穩，一律改寫成正式網域直連（同 index.html thumbUrl）
+  return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
+}
+
+function renderRecipePromos() {
+  const recipeCount = new Map();
+  RECIPES.forEach(r => getRecipeBrands(r).forEach(b => recipeCount.set(b, (recipeCount.get(b) || 0) + 1)));
+  const opens = [];
+  recipeCount.forEach((n, brand) => {
+    const st = getBrandStatus(brand);
+    if (st.status === 'open') opens.push({ st, n });
+  });
+  opens.sort((a, b) => a.st.displayEnd - b.st.displayEnd); // 快結單的排前面
+  ['promoSlotHome', 'promoSlotRecipes'].forEach(slotId => {
+    const slot = document.getElementById(slotId);
+    slot.innerHTML = '';
+    opens.forEach(({ st, n }) => slot.appendChild(buildPromoCard(st, n)));
+    slot.style.display = opens.length ? 'block' : 'none';
+  });
+}
+
+function buildPromoCard(st, recipeCount) {
+  const card = document.createElement('div');
+  card.className = 'rcp-promo-card';
+
+  const head = document.createElement('div');
+  head.className = 'rcp-promo-head';
+  if (BRAND_THUMBS[st.brand]) {
+    const img = document.createElement('img');
+    img.className = 'rcp-promo-thumb';
+    img.src = promoThumbUrl(BRAND_THUMBS[st.brand]);
+    img.alt = st.brand;
+    img.onerror = () => img.remove();
+    head.appendChild(img);
+  }
+  const info = document.createElement('div');
+  info.className = 'rcp-promo-info';
+  const badge = document.createElement('span');
+  badge.className = 'rcp-promo-badge';
+  badge.innerHTML = '<span class="home-calendar-dot"></span>現正開團中';
+  info.appendChild(badge);
+  const brandEl = document.createElement('div');
+  brandEl.className = 'rcp-promo-brand';
+  brandEl.textContent = st.brand;
+  info.appendChild(brandEl);
+  if (st.displayEnd) {
+    const dateEl = document.createElement('div');
+    dateEl.className = 'rcp-promo-date';
+    const daysLeft = Math.round((startOfDay(st.displayEnd) - startOfDay(new Date())) / 86400000);
+    dateEl.textContent = daysLeft <= 0 ? '⏰ 今天結單！' : `結單日 ${fmtSingleDate(st.displayEnd)}（剩 ${daysLeft} 天）`;
+    info.appendChild(dateEl);
+  }
+  head.appendChild(info);
+  card.appendChild(head);
+
+  const actions = document.createElement('div');
+  actions.className = 'rcp-promo-actions';
+  const recipeBtn = document.createElement('button');
+  recipeBtn.type = 'button';
+  recipeBtn.className = 'rcp-promo-btn ghost';
+  recipeBtn.textContent = `📖 看食譜（${recipeCount} 道）`;
+  recipeBtn.addEventListener('click', () => {
+    recSelectedBrands = [st.brand];
+    recOnlyFav = false;
+    initFilters();
+    renderRecipes();
+    switchView('recipes');
+    window.scrollTo(0, 0);
+  });
+  actions.appendChild(recipeBtn);
+  if (isValidUrl(st.url)) {
+    const orderBtn = document.createElement('a');
+    orderBtn.className = 'rcp-promo-btn primary';
+    orderBtn.href = st.url;
+    orderBtn.target = '_blank';
+    orderBtn.rel = 'noopener noreferrer';
+    orderBtn.textContent = '🛒 前往下單';
+    orderBtn.addEventListener('click', () => {
+      if (st.evKey) sendStat(st.evKey + '_src_recipespromo', 'click');
+      if (st.discountCode) rcpCopyCode(st.discountCode);
+    });
+    actions.appendChild(orderBtn);
+  }
+  card.appendChild(actions);
+
+  if (st.discountCode) card.appendChild(buildRcpDiscountBlock(st.discountCode, st.discountDesc || '', st.brand));
+  return card;
+}
+
+// ===== 食譜收藏（2026-09-14，會員功能）=====
+// 粉絲登入 token 存在 member.sheridondon.com.tw，官網不同網域讀不到 → 隱藏 iframe 載入 /fan-bridge，
+// 用 postMessage 代問（token 不離開會員網域；橋接頁只回登入狀態＋收藏的食譜ID）。
+// 資料＝後端 fan_favorites（item_type=recipe、item_id=食譜ID），會員中心「收藏庫」看得到同一份。
+const MEMBER_ORIGIN = 'https://member.sheridondon.com.tw';
+const FAV = { ready: false, loggedIn: false, ids: new Set() };
+let recOnlyFav = false;
+let currentModalRecipe = null;
+let favBridgeWin = null;
+let favReqSeq = 0;
+const favPending = new Map();
+const favBusy = new Set();
+let favBridgeReadyResolve;
+const favBridgeReady = new Promise(resolve => { favBridgeReadyResolve = resolve; });
+let favStateResolve;
+const favStateLoaded = new Promise(resolve => { favStateResolve = resolve; });
+let favLoginRecipeId = '';
+
+window.addEventListener('message', e => {
+  if (e.origin !== MEMBER_ORIGIN || !e.data || e.source !== favBridgeWin) return;
+  if (e.data.src === 'dd-fav-ready') { favBridgeReadyResolve(); return; }
+  if (e.data.src === 'dd-fav-reply' && favPending.has(e.data.id)) {
+    const done = favPending.get(e.data.id);
+    favPending.delete(e.data.id);
+    done(e.data);
+  }
+});
+
+function favRpc(msg, timeoutMs) {
+  return new Promise(resolve => {
+    const id = ++favReqSeq;
+    const timer = setTimeout(() => { favPending.delete(id); resolve({ success: false, timeout: true }); }, timeoutMs || 10000);
+    favPending.set(id, data => { clearTimeout(timer); resolve(data); });
+    favBridgeReady.then(() => {
+      try { favBridgeWin.postMessage(Object.assign({ src: 'dd-fav', id }, msg), MEMBER_ORIGIN); } catch (err) { /* 等逾時 */ }
+    });
+  });
+}
+
+function initFavBridge() {
+  const ifr = document.createElement('iframe');
+  ifr.src = MEMBER_ORIGIN + '/fan-bridge';
+  ifr.title = '會員收藏連線';
+  ifr.setAttribute('aria-hidden', 'true');
+  ifr.tabIndex = -1;
+  ifr.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(ifr);
+  favBridgeWin = ifr.contentWindow;
+  favRpc({ op: 'state', itemType: 'recipe' }, 12000).then(res => {
+    FAV.ready = true;
+    FAV.loggedIn = !!res.loggedIn;
+    FAV.ids = new Set(res.favorites || []);
+    favStateResolve();
+    refreshFavUi();
+    if (presetFavDone) {
+      // 會員頁已經幫忙收藏好了；這裡還是讀不到登入狀態＝這個瀏覽器擋了跨頁同步，引導去收藏庫看
+      if (!FAV.loggedIn) alert('已經幫你收藏好囉 ❤️\n這個瀏覽器無法在官網同步顯示，可以到會員中心「收藏庫」查看。');
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('favDone');
+        history.replaceState(null, '', u.toString());
+      } catch (err) { /* 忽略 */ }
+    }
+  });
+}
+
+function paintFavBtn(btn, recipeId, compact) {
+  const on = FAV.ids.has(recipeId);
+  btn.classList.toggle('on', on);
+  btn.textContent = compact ? (on ? '❤️' : '🤍') : (on ? '❤️ 已收藏' : '🤍 收藏這道食譜');
+}
+
+function updateRecFavBtn() {
+  const btn = document.getElementById('recFavBtn');
+  if (btn && currentModalRecipe) paintFavBtn(btn, currentModalRecipe['食譜ID'], false);
+}
+
+function renderFavChip() {
+  const el = document.getElementById('recFavChips');
+  if (!el) return;
+  el.innerHTML = '';
+  const n = RECIPES.filter(r => FAV.ids.has(r['食譜ID'])).length;
+  const chip = makeChip(FAV.loggedIn ? `❤️ 已收藏（${n}）` : '❤️ 已收藏', recOnlyFav, async () => {
+    if (!FAV.ready) await favStateLoaded;
+    if (!FAV.loggedIn) { openFavLogin(''); return; }
+    recOnlyFav = !recOnlyFav;
+    renderFavChip();
+    renderRecipes();
+  });
+  chip.classList.add('chip-fav');
+  el.appendChild(chip);
+}
+
+function refreshFavUi() {
+  document.querySelectorAll('.rrc-fav[data-rid]').forEach(b => paintFavBtn(b, b.dataset.rid, true));
+  updateRecFavBtn();
+  if (!RECIPE_DATA_READY) return;
+  renderFavChip();
+  if (recOnlyFav) renderRecipes();
+}
+
+async function toggleRecipeFav(recipe) {
+  const id = recipe['食譜ID'];
+  if (!id || favBusy.has(id)) return;
+  favBusy.add(id); // 等登入狀態之前就佔住，防剛開頁連點兩下送出相反的 want
+  if (!FAV.ready) await favStateLoaded; // 還在確認登入狀態（最多十幾秒）
+  if (!FAV.loggedIn) { favBusy.delete(id); openFavLogin(id); return; }
+  const want = !FAV.ids.has(id);
+  setLocalFav(id, want); // 先變色，失敗再還原
+  const res = await favRpc({ op: 'toggle', itemType: 'recipe', itemId: id, want });
+  favBusy.delete(id);
+  if (res.success) { setLocalFav(id, !!res.favorited); return; }
+  if (res.needLogin) {
+    FAV.loggedIn = false;
+    recOnlyFav = false;
+    setLocalFav(id, !want);
+    openFavLogin(id);
+    return;
+  }
+  setLocalFav(id, !want);
+  alert('收藏沒有成功，請稍後再試一次 🙏');
+}
+
+function setLocalFav(id, on) {
+  if (on) FAV.ids.add(id); else FAV.ids.delete(id);
+  refreshFavUi();
+}
+
+function ensureFavLoginModal() {
+  let modal = document.getElementById('favLoginModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.id = 'favLoginModal';
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal('favLoginModal'); });
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:340px; text-align:center;">
+      <div style="font-size:40px; line-height:1.2;">❤️</div>
+      <h2 class="rc-title" style="margin-top:6px;">收藏喜歡的食譜</h2>
+      <div class="rc-subtitle" style="display:block;">登入會員就能收藏食譜，之後在會員中心「收藏庫」隨時找得到 🩷<br>還沒有帳號？免費註冊很快就好。</div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button type="button" class="action-btn" id="favLoginGo">登入／註冊會員</button>
+        <button type="button" class="action-btn action-btn-alt" id="favLoginCancel">先不要</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal); // 放在食譜彈窗之後＝疊在上面
+  modal.querySelector('#favLoginCancel').addEventListener('click', () => closeModal('favLoginModal'));
+  modal.querySelector('#favLoginGo').addEventListener('click', () => {
+    let url = MEMBER_ORIGIN + '/member';
+    if (favLoginRecipeId) {
+      // 登入完成後會員頁自動收藏這道，並跳回食譜頁打開它
+      const back = 'https://sheridondon.com.tw/recipes.html?recipe=' + encodeURIComponent(favLoginRecipeId) + '&favDone=1';
+      url += '?fav=' + encodeURIComponent('recipe:' + favLoginRecipeId) + '&back=' + encodeURIComponent(back);
+    }
+    // 在會員中心 App 裡（iframe）要換掉整個頁面，不然會員頁會被塞進 iframe 裡
+    try { window.top.location.href = url; } catch (err) { window.location.href = url; }
+  });
+  return modal;
+}
+
+function openFavLogin(recipeId) {
+  favLoginRecipeId = recipeId || '';
+  ensureFavLoginModal().classList.add('show');
+}
+
+document.getElementById('recFavBtn').addEventListener('click', () => {
+  if (currentModalRecipe) toggleRecipeFav(currentModalRecipe);
+});
+
 applyInitialRoute();
 loadAll();
+initFavBridge();
 
 // 頁面瀏覽量統計：每次載入送一次，key 格式與 index.html 的 getStatKey 同款日期組法（本地時區、月/日不補零）
 (function sendRecipesPageview() {
