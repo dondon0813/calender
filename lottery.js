@@ -45,7 +45,17 @@ function lotLoadUnopenedCollapsed() {
 function lotSaveUnopenedCollapsed(v) {
   try { localStorage.setItem('lottery_unopened_collapsed', v ? '1' : '0'); } catch (e) {}
 }
-let LOTTERY_SECTION_COLLAPSED = { groupbuy: false, non_groupbuy: false, special: false, unpaired: false, unopened: lotLoadUnopenedCollapsed() };
+// 「舊資料（已結案）」區同樣預設收合，狀態存 localStorage key lottery_archived_collapsed（同 unopened 的做法）。
+function lotLoadArchivedCollapsed() {
+  try {
+    const v = localStorage.getItem('lottery_archived_collapsed');
+    return v === null ? true : v !== '0';
+  } catch (e) { return true; }
+}
+function lotSaveArchivedCollapsed(v) {
+  try { localStorage.setItem('lottery_archived_collapsed', v ? '1' : '0'); } catch (e) {}
+}
+let LOTTERY_SECTION_COLLAPSED = { groupbuy: false, non_groupbuy: false, special: false, unpaired: false, unopened: lotLoadUnopenedCollapsed(), archived: lotLoadArchivedCollapsed() };
 let LOTTERY_EDIT_DRAW_ID = null;   // 目前 lotteryDrawModal 編輯中的活動 id；null＝新增
 let LOTTERY_WINNER_EDIT = null;    // { drawId, winnerId }；winnerId=null＝新增
 const LOTTERY_EXPANDED_OVERRIDE = {}; // 使用者手動展開/收合過的團卡／抽獎卡，key -> true/false，蓋過自動展開規則
@@ -298,8 +308,11 @@ function lotPrizeCellHtml(prize) {
 }
 
 // ===== 資料存取小工具 =====
+// 已結案（archived===true）的抽獎一律排除在外——這是唯一的團卡/badge 資料來源，
+// 排除在這裡等於同時讓①團購抽獎卡片與 lotBadgeForAcctRow（帳務明細列小標）都不會再看到它。
+// 舊後端沒有 archived 欄位＝undefined＝視同 false，行為不變。
 function lotDrawsForAcct(acctId) {
-  return LOTTERY_DRAWS.filter(d => d.section === 'groupbuy' && d.acctId === acctId);
+  return LOTTERY_DRAWS.filter(d => d.section === 'groupbuy' && d.acctId === acctId && !d.archived);
 }
 function lotTeamByAcctId(acctId) {
   return LOTTERY_ACCT_TEAMS.find(t => t.acctId === acctId) || null;
@@ -602,6 +615,20 @@ function lotFilterUnpairedDraws(draws) {
   });
 }
 
+// ===== 📦 舊資料（已結案）：archived===true，不分 section，全部攤平在這一區；
+// 不受「隱藏已完成」規則影響（呆帳寫死結案，不用再看完成度），只套品牌篩選＋搜尋 =====
+function lotFilterArchivedDraws(draws) {
+  const q = lotSearchQuery();
+  return draws.filter(d => {
+    if (LOTTERY_FILTER.brand && d.brandId !== LOTTERY_FILTER.brand) return false;
+    if (q) {
+      const hay = [d.title, d.brandName, d.sheetRef].concat((d.winners || []).map(lotWinnerHay)).map(x => String(x || '')).join(' ').toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+}
+
 // ===== 新增：🗓 未開團／帳務未建：section=groupbuy、acctId 為空、eventId 有值 =====
 // 跟①②③一樣受「隱藏已完成」規則影響（不像④待配對不受影響）；搜尋欄位額外含 eventTitle。
 function lotFilterUnopenedDraws(draws, opts) {
@@ -625,11 +652,11 @@ function lotComputeHideDoneCount() {
   const zone1Items = lotZoneGroupbuyItems();
   const zone1Without = lotFilterGroupbuyItems(zone1Items, { hideDone: false }).length;
   const zone1With = lotFilterGroupbuyItems(zone1Items, { hideDone: true }).length;
-  const nonGroupbuyDraws = LOTTERY_DRAWS.filter(d => d.section === 'non_groupbuy');
-  const specialDraws = LOTTERY_DRAWS.filter(d => d.section === 'special');
+  const nonGroupbuyDraws = LOTTERY_DRAWS.filter(d => d.section === 'non_groupbuy' && !d.archived);
+  const specialDraws = LOTTERY_DRAWS.filter(d => d.section === 'special' && !d.archived);
   const zone23Without = lotFilterSimpleZoneDraws(nonGroupbuyDraws, { hideDone: false }).length + lotFilterSimpleZoneDraws(specialDraws, { hideDone: false }).length;
   const zone23With = lotFilterSimpleZoneDraws(nonGroupbuyDraws, { hideDone: true }).length + lotFilterSimpleZoneDraws(specialDraws, { hideDone: true }).length;
-  const unopenedDraws = LOTTERY_DRAWS.filter(d => d.section === 'groupbuy' && !d.acctId && lotDrawHasEvent(d));
+  const unopenedDraws = LOTTERY_DRAWS.filter(d => d.section === 'groupbuy' && !d.acctId && !d.archived && lotDrawHasEvent(d));
   const zoneUnopenedWithout = lotFilterUnopenedDraws(unopenedDraws, { hideDone: false }).length;
   const zoneUnopenedWith = lotFilterUnopenedDraws(unopenedDraws, { hideDone: true }).length;
   return (zone1Without - zone1With) + (zone23Without - zone23With) + (zoneUnopenedWithout - zoneUnopenedWith);
@@ -655,9 +682,10 @@ function renderLotterySections() {
   if (!box) return;
 
   const groupbuyItems = lotApplyDir(lotFilterGroupbuyItems(lotZoneGroupbuyItems()).sort((a, b) => lotCompareLegacyId(a.team.legacyId, b.team.legacyId)));
-  const nonGroupbuyDraws = lotApplyDir(lotFilterSimpleZoneDraws(LOTTERY_DRAWS.filter(d => d.section === 'non_groupbuy')).slice().sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''))));
-  const specialDraws = lotApplyDir(lotFilterSimpleZoneDraws(LOTTERY_DRAWS.filter(d => d.section === 'special')).slice().sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''))));
-  const acctlessGroupbuyDraws = LOTTERY_DRAWS.filter(d => d.section === 'groupbuy' && !d.acctId);
+  const nonGroupbuyDraws = lotApplyDir(lotFilterSimpleZoneDraws(LOTTERY_DRAWS.filter(d => d.section === 'non_groupbuy' && !d.archived)).slice().sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''))));
+  const specialDraws = lotApplyDir(lotFilterSimpleZoneDraws(LOTTERY_DRAWS.filter(d => d.section === 'special' && !d.archived)).slice().sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''))));
+  const acctlessGroupbuyDraws = LOTTERY_DRAWS.filter(d => d.section === 'groupbuy' && !d.acctId && !d.archived);
+  const archivedDraws = lotApplyDir(lotFilterArchivedDraws(LOTTERY_DRAWS.filter(d => d.archived === true)).slice().sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''))));
   const unopenedDraws = lotApplyDir(lotFilterUnopenedDraws(acctlessGroupbuyDraws.filter(lotDrawHasEvent)).slice().sort((a, b) => {
     const da = String(a.eventStartDate || ''), db = String(b.eventStartDate || '');
     return da !== db ? da.localeCompare(db) : String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
@@ -670,6 +698,7 @@ function renderLotterySections() {
   if (lotZoneVisible('non_groupbuy')) parts.push(lotRenderZone('non_groupbuy', LOT_SECTION_LABEL.non_groupbuy, nonGroupbuyDraws, d => lotSimpleDrawCardHtml(d)));
   if (lotZoneVisible('special')) parts.push(lotRenderZone('special', LOT_SECTION_LABEL.special, specialDraws, d => lotSimpleDrawCardHtml(d)));
   if (lotZoneVisible('unpaired')) parts.push(lotRenderZone('unpaired', '🔗 待配對（團購但還沒綁帳務團）', unpairedDraws, d => lotUnpairedCardHtml(d)));
+  if (lotZoneVisible('archived')) parts.push(lotRenderZone('archived', '📦 舊資料（已結案）', archivedDraws, d => lotArchivedCardHtml(d)));
 
   box.innerHTML = parts.join('') || '<div class="task-empty">沒有符合條件的抽獎活動</div>';
   lotBindSectionEvents(box);
@@ -831,6 +860,10 @@ function lotUnpairedCardHtml(draw) {
       '</select>' +
     '</div>'
   ) : '';
+  // 呆帳寫死結案：不需要 LOTTERY_ACCT_READY（archived 不吃 acct 欄位），只要有編輯權限就能結案
+  const archiveBtnHtml = LOTTERY_CAN_EDIT
+    ? '<div class="lot-unpaired-bind"><button class="task-mini-btn" data-role="unpaired-archive" data-draw-id="' + lotEscapeHtml(draw.id) + '">📦 結案</button></div>'
+    : '';
 
   return '<div class="lot-card" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
     '<div class="lot-card-head" data-role="toggle-card" data-card-key="' + lotEscapeHtml(cardKey) + '">' +
@@ -846,6 +879,7 @@ function lotUnpairedCardHtml(draw) {
     (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
     bindHtml +
     eventBindHtml +
+    archiveBtnHtml +
   '</div>';
 }
 
@@ -881,6 +915,10 @@ function lotUnopenedCardHtml(draw) {
       unbindBtn +
     '</div>';
   }
+  // 呆帳寫死結案：不需要 LOTTERY_ACCT_READY，只要有編輯權限就能結案
+  const archiveBtnHtml = LOTTERY_CAN_EDIT
+    ? '<div class="lot-unpaired-bind"><button class="task-mini-btn" data-role="unopened-archive" data-draw-id="' + lotEscapeHtml(draw.id) + '">📦 結案</button></div>'
+    : '';
 
   return '<div class="lot-card" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
     '<div class="lot-card-head" data-role="toggle-card" data-card-key="' + lotEscapeHtml(cardKey) + '">' +
@@ -897,6 +935,37 @@ function lotUnopenedCardHtml(draw) {
     '</div>' +
     (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
     bindHtml +
+    archiveBtnHtml +
+  '</div>';
+}
+
+// ===== 📦 舊資料（已結案）：卡片沿用②③/④「簡單卡」骨架——標題／完整年份日期／sheetRef pill／
+// 得獎人表格（跟其他區同一顆 lotDrawBlockHtml，仍可編輯得獎人細節，唯一差別是多一顆「取消結案」）=====
+function lotArchivedCardHtml(draw) {
+  const total = (draw.winners || []).length;
+  const doneCount = (draw.winners || []).filter(w => w.status === 'done').length;
+  const cardKey = 'draw:' + draw.id;
+  const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : false;
+  const thumb = draw.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(draw.brandThumb) + '" alt="">' : '';
+  const metaParts = [];
+  if (draw.brandName) metaParts.push('<span>贊助：' + lotEscapeHtml(draw.brandName) + '</span>');
+  const dateTxt = lotFmtDrawDate(draw);
+  if (dateTxt) metaParts.push('<span class="' + (draw.dateUncertain ? 'lot-warn' : '') + '">' + dateTxt + '</span>');
+  metaParts.push('<span>' + total + ' 位得獎人</span>');
+
+  return '<div class="lot-card lot-card-archived" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
+    '<div class="lot-card-head" data-role="toggle-card" data-card-key="' + lotEscapeHtml(cardKey) + '">' +
+      thumb +
+      '<div class="lot-head-main">' +
+        '<div class="lot-head-title"><span>' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span>' +
+          (draw.sheetRef ? '<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
+        '</div>' +
+        '<div class="lot-meta">' + metaParts.join('') + '</div>' +
+      '</div>' +
+      '<div class="lot-progress"><span class="lot-progress-txt">' + doneCount + ' / ' + total + ' 已完成</span><span class="lot-caret">' + (expanded ? '▲ 收合' : '▼ 展開') + '</span></div>' +
+    '</div>' +
+    (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
+    (LOTTERY_CAN_EDIT ? '<div class="lot-card-foot"><button class="task-mini-btn" data-role="unarchive-draw" data-draw-id="' + lotEscapeHtml(draw.id) + '">↩️ 取消結案</button></div>' : '') +
   '</div>';
 }
 
@@ -971,6 +1040,7 @@ function renderLotteryTodo() {
   if (!box) return;
   let rows = [];
   LOTTERY_DRAWS.forEach(draw => {
+    if (draw.archived) return; // 呆帳結案：待辦清單也不再出現
     if (LOTTERY_FILTER.brand && draw.brandId !== LOTTERY_FILTER.brand) return;
     const team = draw.acctId ? lotTeamByAcctId(draw.acctId) : null;
     (draw.winners || []).forEach(w => {
@@ -1035,6 +1105,7 @@ function lotBindSectionEvents(box) {
       const key = el.dataset.zoneToggle;
       LOTTERY_SECTION_COLLAPSED[key] = !LOTTERY_SECTION_COLLAPSED[key];
       if (key === 'unopened') lotSaveUnopenedCollapsed(LOTTERY_SECTION_COLLAPSED[key]);
+      if (key === 'archived') lotSaveArchivedCollapsed(LOTTERY_SECTION_COLLAPSED[key]);
       renderLotterySections();
     });
   });
@@ -1195,6 +1266,27 @@ function lotBindSectionEvents(box) {
       ev.stopPropagation();
       if (!confirm('確定要解除這場抽獎跟行事曆團購的綁定嗎？（帳務團綁定不受影響）')) return;
       lotApiPost('lottery-draw-upsert', { id: el.dataset.drawId, eventId: '' }).then(res => {
+        if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
+      });
+    });
+  });
+  // 📦 結案（④待配對／🗓未開團卡皆有）：呆帳寫死收掉，之後只能在「舊資料（已結案）」取消
+  const archiveHandler = el => {
+    el.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (!confirm('結案後這筆不會出現在待配對與待辦，之後可在「舊資料（已結案）」取消。確定？')) return;
+      lotApiPost('lottery-draw-upsert', { id: el.dataset.drawId, archived: true }).then(res => {
+        if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
+      });
+    });
+  };
+  box.querySelectorAll('[data-role="unpaired-archive"]').forEach(archiveHandler);
+  box.querySelectorAll('[data-role="unopened-archive"]').forEach(archiveHandler);
+  // 📦 舊資料（已結案）區：取消結案
+  box.querySelectorAll('[data-role="unarchive-draw"]').forEach(el => {
+    el.addEventListener('click', ev => {
+      ev.stopPropagation();
+      lotApiPost('lottery-draw-upsert', { id: el.dataset.drawId, archived: false }).then(res => {
         if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
       });
     });
