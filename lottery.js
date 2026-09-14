@@ -450,6 +450,7 @@ function lotFilterGroupbuyItems(items, opts) {
     if (q) {
       const hay = [it.team.title, it.team.brandName, it.team.legacyId]
         .concat(it.draws.flatMap(d => (d.winners || []).map(lotWinnerHay)))
+        .concat(it.draws.map(d => d.sheetRef))
         .map(x => String(x || '')).join(' ').toLowerCase();
       if (hay.indexOf(q) === -1) return false;
     }
@@ -468,7 +469,7 @@ function lotFilterSimpleZoneDraws(draws, opts) {
     if (LOTTERY_FILTER.status === 'pending_draw' || LOTTERY_FILTER.status === 'unpaired') return false;
     if (winnerStatusActive && !(d.winners || []).some(w => w.status === LOTTERY_FILTER.status)) return false;
     if (q) {
-      const hay = [d.title, d.brandName].concat((d.winners || []).map(lotWinnerHay)).map(x => String(x || '')).join(' ').toLowerCase();
+      const hay = [d.title, d.brandName, d.sheetRef].concat((d.winners || []).map(lotWinnerHay)).map(x => String(x || '')).join(' ').toLowerCase();
       if (hay.indexOf(q) === -1) return false;
     }
     return true;
@@ -482,7 +483,7 @@ function lotFilterUnpairedDraws(draws) {
   return draws.filter(d => {
     if (LOTTERY_FILTER.brand && d.brandId !== LOTTERY_FILTER.brand) return false;
     if (q) {
-      const hay = [d.title, d.brandName].concat((d.winners || []).map(lotWinnerHay)).map(x => String(x || '')).join(' ').toLowerCase();
+      const hay = [d.title, d.brandName, d.sheetRef].concat((d.winners || []).map(lotWinnerHay)).map(x => String(x || '')).join(' ').toLowerCase();
       if (hay.indexOf(q) === -1) return false;
     }
     return true;
@@ -602,6 +603,7 @@ function lotDrawBlockHtml(draw, opts) {
   if (draw.lineKeyword) metaParts.push('<span class="lot-kw">L關鍵字：' + lotEscapeHtml(draw.lineKeyword) + '</span>');
   metaParts.push('<span>寄送：' + (LOT_SHIP_BY_LABEL[draw.shipBy] || '自寄') + '</span>');
   if (draw.note) metaParts.push('<span title="' + lotEscapeHtml(draw.note) + '">📝 有備註</span>');
+  if (draw.sheetRef) metaParts.push('<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>');
 
   const rowsHtml = (draw.winners || []).map(w => lotWinnerRowHtml(draw.id, w)).join('');
 
@@ -676,7 +678,9 @@ function lotUnpairedCardHtml(draw) {
     '<div class="lot-card-head" data-role="toggle-card" data-card-key="' + lotEscapeHtml(cardKey) + '">' +
       thumb +
       '<div class="lot-head-main">' +
-        '<div class="lot-head-title"><span>' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span></div>' +
+        '<div class="lot-head-title"><span>' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span>' +
+          (draw.sheetRef ? '<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
+        '</div>' +
         '<div class="lot-meta">' + metaParts.join('') + '</div>' +
       '</div>' +
       '<span class="lot-caret">' + (expanded ? '▲ 收合明細' : '▼ 展開明細') + '</span>' +
@@ -784,6 +788,7 @@ function renderLotteryTodo() {
     const stuck = lotDaysSince(draw.drawDate || (draw.createdAt || '').slice(0, 10));
     const stuckTxt = stuck === null ? '—' : (stuck < 0 ? '未到' : stuck + ' 天');
     const teamLabel = team ? (lotEscapeHtml(team.legacyId || '') + ' · ' + lotEscapeHtml(team.title || '')) : lotEscapeHtml(draw.title || '');
+    const sheetRefTxt = draw.sheetRef ? '<div><span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span></div>' : '';
     let nextBtns = '';
     if (LOTTERY_CAN_EDIT) {
       if (w.status === 'pending') {
@@ -798,7 +803,7 @@ function renderLotteryTodo() {
       }
     }
     return '<tr>' +
-      '<td>' + teamLabel + '</td>' +
+      '<td>' + teamLabel + sheetRefTxt + '</td>' +
       lotPrizeCellHtml(w.prize) +
       '<td>' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : '<span class="lot-empty-cell">—</span>') + '</td>' +
       '<td><span class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" style="display:inline-block; cursor:default;">' + LOT_STATUS_LABEL[w.status] + '</span></td>' +
