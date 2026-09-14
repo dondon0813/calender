@@ -329,6 +329,25 @@
   .rcp-promo-date { font-size: 11.5px; color: var(--c-muted); margin-top: 1px; }
   .rcp-promo-go { font-size: 12.5px; font-weight: 800; color: var(--c-primary-dark); white-space: nowrap; }
 
+  /* 雪莉更新日誌（首頁「現正開團中」按鈕下方，最新 5 條） */
+  .home-changelog {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-light);
+    border-radius: 18px;
+    padding: 12px 16px;
+    margin: 0 0 20px;
+  }
+  .home-changelog-title { font-family: var(--font-round); font-weight: 800; font-size: 15px; color: var(--c-brown); margin-bottom: 4px; }
+  .home-changelog-list { list-style: none; margin: 0; padding: 0; }
+  .home-changelog-list li {
+    display: flex; gap: 10px;
+    font-size: 13px; line-height: 1.6; color: var(--c-text);
+    padding: 5px 0; border-top: 1px dashed var(--c-line);
+  }
+  .home-changelog-list li:first-child { border-top: none; }
+  .home-changelog-date { flex: 0 0 44px; font-size: 12px; font-weight: 800; color: var(--c-pink-deep); }
+  .home-changelog-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
   @media (max-width: 420px) {
     .ing-tile-name { font-size: 10px; }
   }
@@ -1271,6 +1290,12 @@
 
     <div style="text-align:center; margin: 4px 0 20px;">
       <a class="home-calendar-btn" href="index.html"><span class="home-calendar-dot"></span>📅 現正開團中</a>
+    </div>
+
+    <!-- 雪莉更新日誌（2026-09-14）：後台「📣 更新日誌」分頁輸入，GET scope=changelog 最新 5 條；沒資料整塊藏 -->
+    <div class="home-changelog" id="homeChangelog" style="display:none;">
+      <div class="home-changelog-title">📣 雪莉更新日誌</div>
+      <ul class="home-changelog-list" id="homeChangelogList"></ul>
     </div>
 
     <div class="home-subtitle">🌸 選擇食材，發現美味食譜 🌸</div>
@@ -3281,9 +3306,40 @@ document.getElementById('recFavBtn').addEventListener('click', () => {
   if (currentModalRecipe) toggleRecipeFav(currentModalRecipe);
 });
 
+// ===== 雪莉更新日誌（2026-09-14）=====
+// 後台「📣 更新日誌」分頁輸入；這裡只抓最新 5 條（後端已限制），沒資料或表未建立就整塊藏起來。
+// 跟食譜資料分開抓：日誌掛了不影響食譜頁。同一天的多條只在第一條顯示日期。
+async function loadChangelog() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=changelog&t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    const entries = (data && data.success && Array.isArray(data.entries)) ? data.entries : [];
+    const box = document.getElementById('homeChangelog');
+    const list = document.getElementById('homeChangelogList');
+    list.innerHTML = '';
+    let prevDate = '';
+    entries.forEach(e => {
+      const li = document.createElement('li');
+      const dateEl = document.createElement('span');
+      dateEl.className = 'home-changelog-date';
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(e.date || ''));
+      if (m && e.date !== prevDate) dateEl.textContent = `${Number(m[2])}/${Number(m[3])}`;
+      prevDate = e.date;
+      const textEl = document.createElement('span');
+      textEl.className = 'home-changelog-text';
+      textEl.textContent = String(e.content || '');
+      li.appendChild(dateEl);
+      li.appendChild(textEl);
+      list.appendChild(li);
+    });
+    box.style.display = entries.length ? 'block' : 'none';
+  } catch (err) { /* 日誌載入失敗不影響頁面，安靜藏著 */ }
+}
+
 applyInitialRoute();
 loadAll();
 initFavBridge();
+loadChangelog();
 
 // 頁面瀏覽量統計：每次載入送一次，key 格式與 index.html 的 getStatKey 同款日期組法（本地時區、月/日不補零）
 (function sendRecipesPageview() {

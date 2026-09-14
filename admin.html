@@ -4287,6 +4287,7 @@
     <button class="sn-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
     <button class="sn-item" data-view="fanAdmin" data-perm="fanEdit">👥 會員管理</button>
     <button class="sn-item" data-view="hall" data-perm="bookEdit">🎮 教材館</button>
+    <button class="sn-item" data-view="changelog" data-perm="changelogEdit">📣 更新日誌</button>
     <div class="sn-group-title">工具</div>
     <button class="sn-item" data-view="tools">🧰 便利小工具</button>
     <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
@@ -4343,6 +4344,7 @@
           <button class="menu-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
           <button class="menu-item" data-view="fanAdmin" data-perm="fanEdit">👥 會員管理</button>
           <button class="menu-item" data-view="hall" data-perm="bookEdit">🎮 教材館</button>
+          <button class="menu-item" data-view="changelog" data-perm="changelogEdit">📣 更新日誌</button>
           <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
         </div>
       </div>
@@ -5631,6 +5633,29 @@
     <div id="cardSubStats"></div>
     <div id="cardSubListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewCardSub -->
+
+  <!-- ===== 雪莉更新日誌（changelog.js；官網育兒小幫手首頁顯示最新 5 條）===== -->
+  <div class="view" id="viewChangelog">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">📣 更新日誌</h2>
+      <button class="task-mini-btn" id="changelogRefreshBtn">🔄 重新整理</button>
+    </div>
+    <div id="changelogNotReady" style="display:none; background:#FFF6DD; border:1px solid #F0DBA0; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
+      ⚠️ 更新日誌資料表還沒建立，要先執行一次 db push 才能儲存。
+    </div>
+    <div style="background:#fff; border:1px solid #FFE3CC; border-radius:12px; padding:12px 14px; margin-bottom:16px;">
+      <div style="font-size:13px; color:#8a7462; margin-bottom:8px;">官網「育兒小幫手」首頁會顯示最新 5 條（新的日期在上面）。一行打一條，儲存會整批覆蓋那一天。</div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+        <label for="changelogDate" style="font-weight:700;">日期</label>
+        <input type="date" id="changelogDate" style="flex:0 0 auto;">
+        <button class="task-mini-btn" id="changelogTodayBtn" type="button">今天</button>
+      </div>
+      <textarea id="changelogLines" rows="5" placeholder="一行一條，例如：&#10;食譜頁新增收藏功能 ❤️&#10;上架燕麥南瓜粉蒸牛食譜" style="width:100%; box-sizing:border-box;"></textarea>
+      <button class="task-submit-btn" id="changelogSaveBtn" type="button">💾 儲存這一天</button>
+      <div class="form-status" id="changelogStatus"></div>
+    </div>
+    <div id="changelogListArea"><div class="task-empty">讀取中…</div></div>
+  </div><!-- /viewChangelog -->
 
   <!-- ===== 抽獎（lottery.js；抽獎活動＋得獎人；掛在帳務頁子分頁「🎁 抽獎」，綁帳務團／R號，
        見 dondon-platform docs/09-lottery-design.md §11）===== -->
@@ -7065,6 +7090,8 @@
 <script src="bgRemover.js?v=1"></script>
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=4"></script>
+<!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
+<script src="changelog.js?v=1"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=9"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
@@ -7113,7 +7140,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=9"></script>
-<script src="admin.js?v=94"></script>
+<script src="admin.js?v=95"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
