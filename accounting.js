@@ -626,7 +626,7 @@ function renderAcctRecon() {
     const detailHtml = r.isVirtual
       ? `<div class="acct-recon-detail">
           <div class="acct-recon-virtual-hint">📋 這團來自行事曆，還沒有帳務紀錄。請先回填業績（品牌、銷售金額…），存檔後才會進入對帳流程。</div>
-          <div class="acct-recon-actions"><button class="task-mini-btn acct-recon-fill">📋 回填業績</button></div>
+          <div class="acct-recon-actions"><button class="task-mini-btn acct-recon-fill">📋 回填業績</button>${acctLookupLinksHtml(r)}</div>
         </div>`
       : `<div class="acct-recon-detail">
         <div class="acct-recon-head"><span class="acct-rate">分潤 ${rateTxt}</span></div>
@@ -653,6 +653,7 @@ function renderAcctRecon() {
         <div class="acct-recon-actions">
           <button class="task-mini-btn acct-recon-save">💾 儲存</button>
           <button class="task-mini-btn acct-recon-next">下一階段 ▶</button>
+          ${acctLookupLinksHtml(r)}
           <span class="form-status acct-recon-msg"></span>
         </div>
       </div>`;
@@ -1025,6 +1026,44 @@ document.getElementById('acctBrandSelect').addEventListener('change', () => acct
 document.getElementById('acctVendorSelect').addEventListener('change', () => acctSyncCompanyOptions(false));
 
 // ----- 新增／編輯 -----
+// 團購後台快速連結。rec 可能沒有 adminUrl（舊後端、或這團行事曆沒填「後台網址」），
+// 值只信任 http(s) 開頭。單一欄位，但仍回陣列——呼叫端（清單拼接／DOM 組裝）不用跟著改。
+function acctLookupLinksList_(rec) {
+  const isValidUrl = (u) => typeof u === 'string' && /^https?:\/\//i.test(u);
+  return [
+    { url: rec && rec.adminUrl, label: '🔗 團購後台' },
+  ].filter(l => isValidUrl(l.url));
+}
+
+// 對帳分頁清單走 innerHTML 模板字串拼接（跟這一整段渲染邏輯一致），href 已限定 http(s) 開頭、
+// 仍用 escHtml 逃逸屬性值防雙引號跳脫。
+function acctLookupLinksHtml(rec) {
+  return acctLookupLinksList_(rec)
+    .map(l => `<a class="task-mini-btn" target="_blank" rel="noopener noreferrer" href="${escHtml(l.url)}">${escHtml(l.label)}</a>`)
+    .join('');
+}
+
+// acctEditModal 專用：DOM 直接組（href 用 property 設定、文字用 textContent，不經 innerHTML）。
+function renderAcctLookupLinks(box, rec) {
+  if (!box) return;
+  box.innerHTML = '';
+  const links = acctLookupLinksList_(rec);
+  if (!links.length) {
+    box.style.display = 'none';
+    return;
+  }
+  links.forEach(l => {
+    const a = document.createElement('a');
+    a.className = 'task-mini-btn';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.href = l.url;
+    a.textContent = l.label;
+    box.appendChild(a);
+  });
+  box.style.display = 'flex';
+}
+
 function openAcctEditModal(rec) {
   // 行事曆帶入、還沒有真實帳務紀錄的虛擬列（rec.isVirtual）：雖然有內容可以預填，
   // 但存檔時要當成新增（acct-add），不是編輯（acct-update）——資料庫裡本來就沒有這筆
@@ -1035,6 +1074,7 @@ function openAcctEditModal(rec) {
     !rec ? '📝 帳務補登' : rec.isVirtual ? '📋 回填業績' : '✏️ 編輯開團紀錄';
   document.getElementById('acctBackfillHint').style.display = !rec ? 'block' : 'none';
   document.getElementById('acctDeleteBtn').style.display = (!isNew && isAdmin) ? 'inline-block' : 'none';
+  renderAcctLookupLinks(document.getElementById('acctEditLinks'), rec);
   setFormStatus('acctEditStatus', '', '');
 
   // 品牌下拉：全部品牌都能選（新團可能是還沒開過的品牌），已結束的標出來
