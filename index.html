@@ -106,6 +106,51 @@
     flex-wrap: wrap;
   }
 
+  /* ===== 團購搜尋框（控制列最前面）===== */
+  .search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  #calSearchInput {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--c-border);
+    background: #fff;
+    color: var(--c-brown);
+    padding: 7px 30px 7px 14px;
+    width: 150px;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  #calSearchInput::placeholder { color: var(--c-muted-light); }
+  #calSearchInput::-webkit-search-cancel-button,
+  #calSearchInput::-webkit-search-decoration { display: none; -webkit-appearance: none; }
+  #calSearchInput:focus { outline: none; border-color: var(--c-primary); }
+  .search-clear-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: var(--c-muted);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .search-clear-btn:hover { color: var(--c-brown); }
+  @media (max-width: 480px) {
+    .search-box { flex: 1 1 100%; order: -1; }
+    /* 手機上輸入框字級 < 16px 會被 iOS Safari 自動放大整頁，這裡固定 16px */
+    #calSearchInput { width: 100%; font-size: 16px; padding-top: 8px; padding-bottom: 8px; }
+  }
+
   /* 左上角複製網址按鈕（跟右上角回首頁按鈕對稱，見 shared.css .site-home-btn），
      用 fixed 定位浮在頁面上，不佔 header-row2 版面，不會擠到其他控制項 */
   .header-copy-url-btn {
@@ -281,6 +326,17 @@
   .group-list {
     padding: 4px 2px 8px;
   }
+  /* ===== 搜尋結果：跟現正開團中共用卡片樣式（見 buildGroupCard） ===== */
+  .search-results {
+    padding: 4px 2px 8px;
+  }
+  .search-results-header {
+    text-align: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--c-muted);
+    margin: 4px 0 14px;
+  }
   .gs-section-title {
     text-align: center;
     font-weight: 900;
@@ -292,6 +348,7 @@
   .gs-title-closing { color: var(--ix-closing-title); }
   .gs-title-active { color: var(--ix-active-title); }
   .gs-title-ended { color: var(--ix-ended-text); }
+  .gs-title-upcoming { color: var(--ix-upcoming-border); }
   .gs-card {
     display: block;
     position: relative;
@@ -675,6 +732,10 @@
     <div class="month-num" id="monthNum">7月</div>
     <img class="title-img" id="titleImg" alt="雪莉與朵栗 團購行事曆" src="https://dondon0813.github.io/calender/images/title-logo.png">
     <div class="controls">
+      <div class="search-box" id="searchBox">
+        <input type="search" id="calSearchInput" placeholder="🔍 搜尋團名…" aria-label="搜尋團購" autocomplete="off" enterkeyhint="search">
+        <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="清除搜尋" style="display:none;">✕</button>
+      </div>
       <select id="modeSelect">
         <option value="all">顯示全部</option>
         <option value="start">開團日</option>
@@ -693,6 +754,8 @@
   <div class="month-grid" id="grid"></div>
 
   <div class="group-list" id="groupList" style="display:none;"></div>
+
+  <div class="search-results" id="searchResults" style="display:none;"></div>
 
   <div class="legend" id="legend">
     <span class="legend-item"><span class="legend-dot legend-upcoming"></span>開團預告</span>
@@ -1001,6 +1064,7 @@ function attachStatTracking(el, ev, clickable, srcOverride) {
 let allEvents = [];
 let currentYear, currentMonth;
 let currentMode = 'list';
+let currentSearchQuery = '';
 
 // 支援網址帶入預設顯示模式，例如 index.html?mode=start（開團日）；
 // 沒帶或帶到不認識的值就維持預設「現正開團中」
@@ -1321,6 +1385,7 @@ function populateMonthSelect() {
   }
   sel.value = `${currentYear}-${currentMonth}`;
   sel.onchange = () => {
+    clearSearch();
     const [y, m] = sel.value.split('-').map(Number);
     currentYear = y; currentMonth = m;
     render();
@@ -1342,6 +1407,22 @@ function renderWeekdayHeader() {
 
 function render() {
   if (currentYear === undefined) return;
+
+  // 搜尋中：整區換成搜尋結果，月曆／現正開團中／星期列／圖例都藏起來；
+  // 清空搜尋框才會回到原本畫面（見 clearSearch）。
+  if (currentSearchQuery.trim() !== '') {
+    document.getElementById('monthNum').style.display = 'none';
+    document.getElementById('headerCopyUrlBtn').style.display = 'none';
+    document.getElementById('monthSelect').style.display = 'none';
+    document.getElementById('weekdays').style.display = 'none';
+    document.getElementById('grid').style.display = 'none';
+    document.getElementById('groupList').style.display = 'none';
+    document.getElementById('legend').classList.remove('show');
+    document.getElementById('searchResults').style.display = '';
+    renderSearchResults(currentSearchQuery);
+    return;
+  }
+  document.getElementById('searchResults').style.display = 'none';
 
   const isList = currentMode === 'list';
   document.getElementById('monthNum').textContent = (currentMonth + 1) + '月';
@@ -1376,6 +1457,126 @@ function getRecentEndedEvents(limit) {
   return ended.slice(0, limit || 7);
 }
 
+// ===== 團購搜尋（控制列輸入框，見 #calSearchInput）=====
+// 拿掉全形/半形分隔符號與空白、統一大小寫比較，多個關鍵字（空白分隔）要全部命中才算符合。
+const SEARCH_STRIP_RE = /[\s｜|\/／、,，·・\-－]+/g;
+function normalizeSearchText(s) {
+  return String(s == null ? '' : s).normalize('NFKC').toLowerCase().replace(SEARCH_STRIP_RE, '');
+}
+
+function tokenizeSearchQuery(raw) {
+  return String(raw == null ? '' : raw).trim().split(/\s+/).filter(Boolean).map(normalizeSearchText).filter(Boolean);
+}
+
+// 搜尋範圍跟團名同一批欄位：斷行符號還原成空白的團名、標籤、分類、食譜品牌
+function eventSearchHaystack(ev) {
+  return normalizeSearchText([plainTitle(ev.title), ev.tag, ev.category, ev.recipeBrand].filter(Boolean).join(' '));
+}
+
+function eventMatchesSearchTokens(ev, tokens) {
+  const hay = eventSearchHaystack(ev);
+  return tokens.every(t => hay.includes(t));
+}
+
+// 只考慮「現正開團中」清單會考慮的同一批已發布團購（allEvents 本身在 loadData() 已經只留 published 的列），
+// 分三組：開團中（已開團且未結單）／即將開團（還沒開團）／已結單（90 天內）。
+function renderSearchResults(rawQuery) {
+  const container = document.getElementById('searchResults');
+  container.innerHTML = '';
+
+  const query = String(rawQuery || '').trim();
+  const tokens = tokenizeSearchQuery(query);
+
+  const todayStart = startOfDay(new Date());
+  const cutoff = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() - 90);
+
+  const matched = tokens.length ? allEvents.filter(ev => eventMatchesSearchTokens(ev, tokens)) : [];
+
+  const openItems = [];
+  const upcomingItems = [];
+  const endedItems = [];
+  matched.forEach(ev => {
+    const status = getEventStatus(ev);
+    if (status === 'active' || status === 'closingSoon') openItems.push(ev);
+    else if (status === 'upcoming') upcomingItems.push(ev);
+    else if (status === 'ended' && ev.displayEnd >= cutoff) endedItems.push(ev);
+  });
+
+  openItems.sort((a, b) => a.displayEnd - b.displayEnd);
+  upcomingItems.sort((a, b) => a.start - b.start);
+  endedItems.sort((a, b) => b.displayEnd - a.displayEnd);
+
+  const total = openItems.length + upcomingItems.length + endedItems.length;
+
+  if (total === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'gs-empty';
+    empty.appendChild(document.createTextNode(`找不到『${query}』的團購，可以追蹤 `));
+    const ig = document.createElement('a');
+    ig.href = 'https://www.instagram.com/dondon0813/';
+    ig.target = '_blank';
+    ig.rel = 'noopener noreferrer';
+    ig.textContent = 'IG @dondon0813 ♥';
+    empty.appendChild(ig);
+    empty.appendChild(document.createTextNode(' 看最新開團'));
+    container.appendChild(empty);
+    return;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'search-results-header';
+  header.textContent = `🔎「${query}」找到 ${total} 團`;
+  container.appendChild(header);
+
+  const buildSection = (title, arr, titleClass, grayOut) => {
+    if (!arr.length) return;
+    const h = document.createElement('div');
+    h.className = 'gs-section-title ' + titleClass;
+    h.textContent = title;
+    container.appendChild(h);
+    arr.forEach(ev => container.appendChild(buildGroupCard(ev, grayOut, 'search')));
+  };
+
+  buildSection('開團中', openItems, 'gs-title-active', false);
+  buildSection('即將開團', upcomingItems, 'gs-title-upcoming', false);
+  buildSection('已結單', endedItems, 'gs-title-ended', true);
+}
+
+function updateSearchClearBtn(val) {
+  const btn = document.getElementById('searchClearBtn');
+  if (btn) btn.style.display = (val && val.trim() !== '') ? '' : 'none';
+}
+
+// 清空搜尋框並回到原本畫面（切換模式／月份時呼叫）
+function clearSearch() {
+  currentSearchQuery = '';
+  const input = document.getElementById('calSearchInput');
+  if (input) input.value = '';
+  updateSearchClearBtn('');
+}
+
+let searchDebounceTimer = null;
+(function initSearchBox() {
+  const input = document.getElementById('calSearchInput');
+  const clearBtn = document.getElementById('searchClearBtn');
+  if (!input) return;
+  input.addEventListener('input', (e) => {
+    const val = e.target.value;
+    updateSearchClearBtn(val);
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      currentSearchQuery = val;
+      render();
+    }, 150);
+  });
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearSearch();
+      render();
+    });
+  }
+})();
+
 // 【新】頁首複製網址按鈕（只在「現正開團中」顯示），方便分享給粉絲
 document.getElementById('headerCopyUrlBtn').addEventListener('click', function () {
   const btn = this;
@@ -1385,6 +1586,90 @@ document.getElementById('headerCopyUrlBtn').addEventListener('click', function (
     setTimeout(() => { btn.textContent = '🔗'; }, 1500);
   });
 });
+
+// 團購卡片（品牌小圖／標題／日期／icon／徽章），現正開團中清單與搜尋結果共用同一份，
+// 長相與點擊行為（含 group-choice modal / 早鳥 / 冷凍 / 連結未解鎖）完全一致，只有統計 src 不同。
+// srcOverride 省略時沿用原本「現正開團中」清單的 'now'；搜尋結果呼叫時帶 'search'。
+function buildGroupCard(ev, grayOut, srcOverride) {
+  const todayStart = startOfDay(new Date());
+  const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
+  const isToday = !grayOut && daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
+  const frozen = isFrozenEvent(ev);
+  const clickable = isLinkUnlocked(ev);
+  const advanced = clickable && needsGroupModal(ev);
+
+  const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
+  card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '') + (grayOut ? ' gs-card-gray' : '');
+  if (clickable && !advanced) {
+    card.href = ev.url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+  } else if (advanced) {
+    card.addEventListener('click', () => openGroupChoiceModal(ev));
+  }
+  attachStatTracking(card, ev, clickable, srcOverride || 'now');
+  card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+
+  // 品牌小圖：有對到圖才出白色圓圈；圖真的載不進來就整顆拿掉，回到原本的卡片長相
+  const thumbSrc = resolveThumb(ev);
+  if (thumbSrc) {
+    card.classList.add('has-thumb');
+    const tb = document.createElement('div');
+    tb.className = 'gs-thumb';
+    const img = document.createElement('img');
+    img.src = thumbSrc;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.addEventListener('error', () => { tb.remove(); card.classList.remove('has-thumb'); });
+    fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
+    tb.appendChild(img);
+    card.appendChild(tb);
+  }
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'gs-card-name';
+  nameEl.textContent = plainTitle(ev.title);
+  card.appendChild(nameEl);
+
+  const dateEl = document.createElement('div');
+  dateEl.className = 'gs-card-date';
+  dateEl.textContent = fmtDateLabel(ev.start, ev.displayEnd);
+  card.appendChild(dateEl);
+
+  const icons = buildEventIconElements(ev);
+  if (icons.length) {
+    const iconsWrap = document.createElement('div');
+    iconsWrap.className = 'gs-card-icons';
+    icons.forEach(el => iconsWrap.appendChild(el));
+    card.appendChild(iconsWrap);
+  }
+
+  if (ev.tag || frozen || isToday) {
+    const badges = document.createElement('div');
+    badges.className = 'gs-badges';
+    if (ev.tag) {
+      const tagBadge = document.createElement('span');
+      tagBadge.className = 'gs-tag-badge';
+      tagBadge.textContent = ev.tag;
+      badges.appendChild(tagBadge);
+    }
+    if (frozen) {
+      const frozenBadge = document.createElement('span');
+      frozenBadge.className = 'gs-frozen-badge';
+      frozenBadge.textContent = '❄冷藏冷凍團';
+      badges.appendChild(frozenBadge);
+    }
+    if (isToday) {
+      const todayBadge = document.createElement('span');
+      todayBadge.className = 'gs-today-badge';
+      todayBadge.textContent = '今日截止';
+      badges.appendChild(todayBadge);
+    }
+    card.appendChild(badges);
+  }
+
+  return card;
+}
 
 function renderGroupList() {
   const listEl = document.getElementById('groupList');
@@ -1396,7 +1681,6 @@ function renderGroupList() {
 
   appendCustomBlocks(listEl, 'before');
 
-  const todayStart = startOfDay(new Date());
   const closingItems = [];
   const activeItems = [];
 
@@ -1409,93 +1693,13 @@ function renderGroupList() {
   closingItems.sort((a, b) => a.displayEnd - b.displayEnd);
   activeItems.sort((a, b) => b.start - a.start);
 
-  const buildCard = (ev, grayOut) => {
-    const daysLeft = daysBetween(todayStart, startOfDay(ev.displayEnd));
-    const isToday = !grayOut && daysLeft === 0 && getEventStatus(ev) === 'closingSoon';
-    const frozen = isFrozenEvent(ev);
-    const clickable = isLinkUnlocked(ev);
-    const advanced = clickable && needsGroupModal(ev);
-
-    const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
-    card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '') + (grayOut ? ' gs-card-gray' : '');
-    if (clickable && !advanced) {
-      card.href = ev.url;
-      card.target = '_blank';
-      card.rel = 'noopener noreferrer';
-    } else if (advanced) {
-      card.addEventListener('click', () => openGroupChoiceModal(ev));
-    }
-    attachStatTracking(card, ev, clickable, 'now');
-    card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
-
-    // 品牌小圖：有對到圖才出白色圓圈；圖真的載不進來就整顆拿掉，回到原本的卡片長相
-    const thumbSrc = resolveThumb(ev);
-    if (thumbSrc) {
-      card.classList.add('has-thumb');
-      const tb = document.createElement('div');
-      tb.className = 'gs-thumb';
-      const img = document.createElement('img');
-      img.src = thumbSrc;
-      img.alt = '';
-      img.loading = 'lazy';
-      img.addEventListener('error', () => { tb.remove(); card.classList.remove('has-thumb'); });
-      fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
-      tb.appendChild(img);
-      card.appendChild(tb);
-    }
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'gs-card-name';
-    nameEl.textContent = plainTitle(ev.title);
-    card.appendChild(nameEl);
-
-    const dateEl = document.createElement('div');
-    dateEl.className = 'gs-card-date';
-    dateEl.textContent = fmtDateLabel(ev.start, ev.displayEnd);
-    card.appendChild(dateEl);
-
-    const icons = buildEventIconElements(ev);
-    if (icons.length) {
-      const iconsWrap = document.createElement('div');
-      iconsWrap.className = 'gs-card-icons';
-      icons.forEach(el => iconsWrap.appendChild(el));
-      card.appendChild(iconsWrap);
-    }
-
-    if (ev.tag || frozen || isToday) {
-      const badges = document.createElement('div');
-      badges.className = 'gs-badges';
-      if (ev.tag) {
-        const tagBadge = document.createElement('span');
-        tagBadge.className = 'gs-tag-badge';
-        tagBadge.textContent = ev.tag;
-        badges.appendChild(tagBadge);
-      }
-      if (frozen) {
-        const frozenBadge = document.createElement('span');
-        frozenBadge.className = 'gs-frozen-badge';
-        frozenBadge.textContent = '❄冷藏冷凍團';
-        badges.appendChild(frozenBadge);
-      }
-      if (isToday) {
-        const todayBadge = document.createElement('span');
-        todayBadge.className = 'gs-today-badge';
-        todayBadge.textContent = '今日截止';
-        badges.appendChild(todayBadge);
-      }
-      card.appendChild(badges);
-    }
-
-    return card;
-  };
-
   const buildSection = (title, arr) => {
     if (!arr.length) return;
     const h = document.createElement('div');
     h.className = 'gs-section-title ' + (title.includes('倒數') ? 'gs-title-closing' : 'gs-title-active');
     h.textContent = title;
     listEl.appendChild(h);
-    arr.forEach(ev => listEl.appendChild(buildCard(ev)));
+    arr.forEach(ev => listEl.appendChild(buildGroupCard(ev)));
   };
 
   buildSection('‼️結團倒數‼️', closingItems);
@@ -1518,7 +1722,7 @@ function renderGroupList() {
     h.className = 'gs-section-title gs-title-ended';
     h.textContent = '🕰結團查詢（最近' + endedItems.length + '個）';
     listEl.appendChild(h);
-    endedItems.forEach(ev => listEl.appendChild(buildCard(ev, true)));
+    endedItems.forEach(ev => listEl.appendChild(buildGroupCard(ev, true)));
   }
 }
 
@@ -1910,6 +2114,7 @@ function closeGroupChoiceModal() {
 
 document.getElementById('refreshBtn').addEventListener('click', loadData);
 document.getElementById('modeSelect').addEventListener('change', (e) => {
+  clearSearch();
   currentMode = e.target.value;
   render();
 });
