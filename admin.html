@@ -5692,8 +5692,10 @@
     .lot-card{ border:1px solid var(--c-border-light); border-radius:12px; background:var(--c-bg-bottom); overflow:hidden; margin-bottom:12px; }
     .lot-card:last-child{ margin-bottom:0; }
     .lot-card-head{ display:flex; gap:12px; align-items:center; padding:12px 14px; cursor:pointer; }
-    /* 卡頭 R 號徽章 */
+    /* 卡頭 R 號徽章（現只用在未開團卡的行事曆日期範圍） */
     .lot-r-badge{ flex:none; font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; background:var(--c-cat-4); color:#fff; white-space:nowrap; }
+    /* 團卡標題句尾的 R 號小灰字（日期＋團名才是主識別，R 號降成附註） */
+    .lot-r-muted{ font-size:11.5px; color:var(--c-text-soft); font-weight:600; white-space:nowrap; }
     .lot-thumb-img{ height:44px; width:auto; max-width:80px; flex:none; border-radius:8px; object-fit:contain; background:#fff; }
     .lot-thumb-fallback{ height:44px; width:44px; flex:none; border-radius:10px; background:linear-gradient(135deg,#FFD3B6,#FF8FA3); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
     .lot-head-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
@@ -7146,7 +7148,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=10"></script>
+<script src="lottery.js?v=11"></script>
 <script src="admin.js?v=95"></script>
 <script src="memo.js?v=5"></script>
 
