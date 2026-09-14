@@ -189,16 +189,21 @@ function renderAccountingView() {
     tile('稿酬', acctCan.revenue ? acctMoney(fee) : hidden) +
     (acctCan.revenue && pend ? tile('其中未結算', acctMoney(pend), 'pend') : '');
 
-  // 其他分頁各自渲染，但摘要四格是共用的，所以上面一定要先算完
+  // 其他分頁各自渲染，但摘要四格是共用的，所以上面一定要先算完。
+  // 「lottery」＝子分頁抽獎（lottery.js），它有自己整套摘要磚/篩選列/資料來源（/api/lottery，
+  // 不是 acctData），這裡不用算、也不該算（只有 lotteryEdit 權限的人 acctData 本來就是空的）。
   if (acctTab === 'trend') { renderAcctTrend(); return; }
   if (acctTab === 'rank') { renderAcctRank(); return; }
   if (acctTab === 'print') { renderAcctPrint(); return; }
   if (acctTab === 'recon') { renderAcctRecon(); return; }
+  if (acctTab === 'lottery') { if (typeof loadLotteryView === 'function') loadLotteryView(); return; }
 
   if (!list.length) {
     box.innerHTML = '<div class="task-empty">沒有符合條件的紀錄</div>';
     return;
   }
+  // 抽獎狀態小標（lottery.js；有 lotteryEdit 權限才會拿得到資料，函式沒載入/沒資料就回 null 不顯示）
+  const canLotteryBadge = typeof hasPerm === 'function' && hasPerm('lotteryEdit') && typeof lotBadgeForAcctRow === 'function';
   box.innerHTML = list.map(r => {
     const st = r.status || '';
     const stCls = st === '已入帳' ? 'ok' : (st === '未成團' ? 'off' : 'wait');
@@ -209,10 +214,13 @@ function renderAccountingView() {
     const rc = r.reconStatus || '';
     const rcCls = rc ? 'wait' : 'ok';
     const rcLabel = rc ? escHtml(rc) : '—';
+    // 虛擬列（行事曆帶入、資料庫還沒有這筆帳務）沒有真正的帳務團可綁，不顯示抽獎小標
+    const badge = (!r.isVirtual && canLotteryBadge) ? lotBadgeForAcctRow(r.id, r.contFrom) : null;
+    const badgeHtml = badge ? ` <span class="lot-acct-badge ${badge.cls}" data-role="lot-acct-badge" data-legacy-id="${escHtml(r.contFrom || r.id)}">${escHtml(badge.label)}</span>` : '';
     return `<div class="acct-row" data-id="${escHtml(r.id)}">
       <span class="acct-date">${escHtml(r.date || '')}</span>
       <span class="acct-name">${escHtml(acctBrandName(r.brandId) || r.rawName)}
-        ${r.contFrom ? '<span class="acct-cont" title="同一團廠商重開表單，業績拆成兩列">續</span>' : ''}
+        ${r.contFrom ? '<span class="acct-cont" title="同一團廠商重開表單，業績拆成兩列">續</span>' : ''}${badgeHtml}
         <small>${escHtml(r.rawName || '')}</small></span>
       <span class="acct-rate">${rate}</span>
       <span class="acct-money">${acctCell(r, 'sales', acctCan.revenue)}</span>
@@ -225,6 +233,13 @@ function renderAccountingView() {
     el.addEventListener('click', () => {
       const rec = acctData.find(x => x.id === el.dataset.id);
       if (rec) openAcctEditModal(rec);
+    });
+  });
+  // 抽獎小標本身可點：跳去抽獎子分頁並捲到該團卡（不要一起觸發外層列的「開帳務編輯視窗」）
+  box.querySelectorAll('[data-role="lot-acct-badge"]').forEach(el => {
+    el.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (typeof lotJumpToAcctTeamCard === 'function') lotJumpToAcctTeamCard(el.dataset.legacyId);
     });
   });
 }
@@ -952,12 +967,20 @@ function acctSwitchTab(tab) {
   document.getElementById('acctPaneRank').style.display = tab === 'rank' ? '' : 'none';
   document.getElementById('acctPanePrint').style.display = tab === 'print' ? '' : 'none';
   document.getElementById('acctPaneRecon').style.display = tab === 'recon' ? '' : 'none';
+  // 抽獎子分頁（lottery.js；dondon-platform docs/09-lottery-design.md §11）：它自己有一整套
+  // 摘要磚／篩選列，不吃這裡的 acct-filters／acctSummary，跟列印/對帳同一組待遇
+  const paneLottery = document.getElementById('acctPaneLottery');
+  if (paneLottery) paneLottery.style.display = tab === 'lottery' ? '' : 'none';
   // 列印報表自己有範圍選單、對帳是獨立工作佇列，兩者都不吃上面的篩選列/摘要
-  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon') ? 'none' : '';
-  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon') ? 'none' : '';
+  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon' || tab === 'lottery') ? 'none' : '';
+  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon' || tab === 'lottery') ? 'none' : '';
   // 只有真的在列印分頁才掛這個 class，否則在別頁按 Ctrl+P 會印出空白紙（見 @media print 註解）
   document.body.classList.toggle('acct-printing', tab === 'print');
-  renderAccountingView();
+  // 只有 lotteryEdit、沒有 revenue/commission/acctRecon 的人（典典）acctData 是空的，
+  // 進來這個分頁不需要（也不能）打 acct-list，renderAccountingView 對 tab==='lottery' 會直接
+  // 早退去載抽獎資料，不會去跑後面那段依賴 acctData 的統計/列表渲染。
+  if (tab === 'lottery' && typeof loadLotteryView === 'function') loadLotteryView();
+  else renderAccountingView();
 }
 
 // ----- 開票抬頭候選清單 -----

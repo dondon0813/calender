@@ -62,7 +62,8 @@ let splitPersistReady = false;
 // 導致那行之後的最外層程式（initAppUI、漢堡選單監聽…）全部不執行，整頁變磚。
 // dispatch 保留當 myTasks 別名：兩分頁已合併成單一「任務」分頁（viewMyTasks），
 // 但殘留的 switchView('dispatch') 呼叫或使用者 localStorage 舊值仍要能正常導向。
-const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewMyTasks', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks', cardSub: 'viewCardSub', lottery: 'viewLottery', recipeDb: 'viewRecipeDb', schoolList: 'viewSchoolList', blog: 'viewBlog', fanAdmin: 'viewFanAdmin', hall: 'viewHall' };
+// lottery：獨立分頁已併入帳務頁子分頁（見 switchView 開頭的別名解析），VIEW_ID_MAP 不再需要它的項目。
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewMyTasks', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks', cardSub: 'viewCardSub', recipeDb: 'viewRecipeDb', schoolList: 'viewSchoolList', blog: 'viewBlog', fanAdmin: 'viewFanAdmin', hall: 'viewHall' };
 
 // ===== 開機期就會被讀到的模組層狀態，一律宣告在這裡 =====
 // 理由同上面 VIEW_ID_MAP：initAppUI() 會還原上次停留的分頁，於**最外層**同步呼叫
@@ -2387,13 +2388,17 @@ function isViewShown(name) {
 // target='right' 是寬螢幕雙欄工作區用的，把分頁搬進 #paneRight。
 function switchView(name, target) {
   target = (target === 'right') ? 'right' : 'left';
+  // 「抽獎管理」獨立分頁已併入帳務頁子分頁（dondon-platform docs/09-lottery-design.md §11.4）：
+  // 舊呼叫端／使用者 localStorage 殘留的分頁名 'lottery' 一律改成開帳務頁、並在下面切到抽獎子分頁。
+  let wantLotteryTab = false;
+  if (name === 'lottery') { name = 'accounting'; wantLotteryTab = true; }
   // 防呆：分頁被移除／改名後（例如 groupStatus 已併掉），VIEW_ID_MAP 查不到就退回工作首頁，
   // 避免使用者 localStorage 殘留舊值或舊呼叫端傳入已不存在的 name 時畫面整個空白。
   if (!VIEW_ID_MAP[name]) name = 'home';
   // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
   // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
-  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印', books: '繪本後台', lottery: '抽獎管理', recipeDb: '食譜資料庫', schoolList: '開學清單', blog: '文章管理', fanAdmin: '會員管理', hall: '教材館' };
-  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', books: 'bookEdit', cardSub: 'cardSubEdit', lottery: 'lotteryEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'bookEdit' };
+  const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', contractSign: '線上合約用印', books: '繪本後台', recipeDb: '食譜資料庫', schoolList: '開學清單', blog: '文章管理', fanAdmin: '會員管理', hall: '教材館' };
+  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon|lotteryEdit', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'bookEdit' };
   if (VIEW_PERM[name] && !hasPerm(VIEW_PERM_KEY[name] || name)) {
     alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
@@ -2465,11 +2470,23 @@ function switchView(name, target) {
   if (name === 'imageLibrary') { ilLoadFolderOptions().then(() => ilLoad()); }
   if (name === 'brandVendor') renderBrandVendorView();
   if (name === 'report') renderReportView();
-  // 帳務資料在另一份試算表，量也大，進入分頁時才拉（之後切回來就用快取）
-  if (name === 'accounting') loadAccounting();
+  // 帳務資料在另一份試算表，量也大，進入分頁時才拉（之後切回來就用快取）。
+  // 抽獎（lottery.js）已併入帳務頁的子分頁：只有 lotteryEdit、沒有 revenue/commission/acctRecon
+  // 的人（例如典典）進帳務頁不能打 acct-list（沒權限也沒意義），直接開抽獎子分頁；
+  // 兩種權限都有的人正常載入帳務、同時背景載入抽獎資料（帳務明細列的抽獎狀態小標要用）；
+  // wantLotteryTab＝舊分頁名 'lottery' 或使用者 localStorage 殘留值，強制切到抽獎子分頁。
+  if (name === 'accounting') {
+    const canAcctData = hasPerm('revenue|commission|acctRecon');
+    const canLottery = hasPerm('lotteryEdit');
+    if (canAcctData) loadAccounting();
+    if (canLottery && typeof loadLotteryView === 'function') loadLotteryView();
+    if (typeof acctSwitchTab === 'function') {
+      if (wantLotteryTab) acctSwitchTab('lottery');
+      else if (!canAcctData && canLottery) acctSwitchTab('lottery');
+    }
+  }
   if (name === 'books') loadBooksView();
   if (name === 'cardSub') loadCardSubView();
-  if (name === 'lottery') loadLotteryView();
   if (name === 'recipeDb') loadRecipeDbView();
   if (name === 'schoolList') loadSchoolListView();
   if (name === 'blog') loadBlogView();
@@ -2574,7 +2591,9 @@ function restoreSplitFromStorage() {
   }
 
   const savedRight = rawRight || '';
-  if (savedRight && VIEW_ID_MAP[savedRight] && savedRight !== currentView) {
+  // savedRight === 'lottery'：舊分頁名已併入帳務頁子分頁，VIEW_ID_MAP 查不到，
+  // 額外放行讓它照常呼叫 switchView('lottery','right')，由 switchView 自己解析別名。
+  if (savedRight && (VIEW_ID_MAP[savedRight] || savedRight === 'lottery') && savedRight !== currentView) {
     setRightPaneOpen(true);
     switchView(savedRight, 'right');
   } else {

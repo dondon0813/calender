@@ -4279,10 +4279,9 @@
     <button class="sn-item" data-view="prItems">🎀 公關品狀態</button>
     <button class="sn-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
     <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
-    <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
+    <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">💰 開團帳務</button>
     <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
     <button class="sn-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
-    <button class="sn-item" data-view="lottery" data-perm="lotteryEdit">🎁 抽獎管理</button>
     <button class="sn-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
     <button class="sn-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
     <button class="sn-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
@@ -4336,10 +4335,9 @@
           <button class="menu-item" data-view="tools">🧰 便利小工具</button>
           <button class="menu-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
           <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
-          <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</button>
+          <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">💰 開團帳務</button>
           <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
           <button class="menu-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
-          <button class="menu-item" data-view="lottery" data-perm="lotteryEdit">🎁 抽獎管理</button>
           <button class="menu-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
           <button class="menu-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
           <button class="menu-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
@@ -4927,8 +4925,8 @@
     <div class="rpt-header-wrap">
       <h2 class="view-title">💰 開團帳務</h2>
       <div style="display:flex; gap:8px;">
-        <button class="task-mini-btn" id="acctReloadBtn">🔄 重新整理</button>
-        <button class="task-mini-btn" id="acctAddBtn">📝 帳務補登</button>
+        <button class="task-mini-btn" id="acctReloadBtn" data-perm="revenue|commission|acctRecon">🔄 重新整理</button>
+        <button class="task-mini-btn" id="acctAddBtn" data-perm="revenue|commission|acctRecon">📝 帳務補登</button>
       </div>
     </div>
     <div class="form-status" id="acctStatus" style="text-align:center;"></div>
@@ -4939,6 +4937,7 @@
       <button class="acct-tab" data-tab="rank" data-perm="revenue|commission">🏆 品牌排行</button>
       <button class="acct-tab" data-tab="print" data-perm="revenue|commission">🖨️ 列印報表</button>
       <button class="acct-tab" data-tab="recon" data-perm="revenue|acctRecon">✅ 對帳</button>
+      <button class="acct-tab" data-tab="lottery" data-perm="lotteryEdit">🎁 抽獎</button>
     </div>
 
     <div class="acct-filters">
@@ -4982,6 +4981,19 @@
 
     <div id="acctPaneRecon" style="display:none;">
       <div id="acctReconList" class="acct-recon-list"></div>
+    </div>
+
+    <!-- ===== 抽獎（lottery.js；抽獎活動＋得獎人；改版後掛在帳務頁子分頁，綁帳務團／R號，見 dondon-platform docs/09-lottery-design.md §11）===== -->
+    <div id="acctPaneLottery" style="display:none;">
+      <div class="rpt-header-wrap">
+        <h3 style="margin:0; font-size:16px;">🎁 抽獎</h3>
+        <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
+        <button class="task-mini-btn" id="lotRefreshBtn">🔄 重新整理</button>
+      </div>
+      <div id="lotBanner"></div>
+      <div id="lotTiles" class="lot-tiles"></div>
+      <div id="lotFilters" class="lot-filters"></div>
+      <div id="lotBody"><div class="task-empty">讀取中…</div></div>
     </div>
   </div>
 
@@ -5620,22 +5632,20 @@
     <div id="cardSubListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewCardSub -->
 
-  <!-- ===== 抽獎管理（lottery.js；抽獎活動＋得獎人，原本只能直接改試算表）===== -->
+  <!-- ===== 抽獎（lottery.js；抽獎活動＋得獎人；掛在帳務頁子分頁「🎁 抽獎」，綁帳務團／R號，
+       見 dondon-platform docs/09-lottery-design.md §11）===== -->
   <style>
     .lot-tiles{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
     .lot-tiles-grid{ flex:1; min-width:280px; display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
     @media (max-width:720px){ .lot-tiles-grid{ grid-template-columns:1fr 1fr; } }
-    /* 摘要磚區右側小字（docs/09 §4.6 第 4 點）：點了等於按「📦 封存」chip */
-    .lot-archived-summary{ flex:none; font-size:12px; color:var(--c-text-soft); cursor:pointer; text-decoration:underline; }
-    .lot-archived-summary.on{ color:var(--c-primary); font-weight:700; }
     .lot-tile{ background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:12px; padding:10px 14px; cursor:pointer; }
     .lot-tile .lot-tile-n{ font-size:24px; font-weight:800; line-height:1; }
     .lot-tile .lot-tile-l{ font-size:12px; color:var(--c-text-soft); margin-top:2px; }
     .lot-tile.await .lot-tile-n{ color:var(--c-cat-1); }
     .lot-tile.ready .lot-tile-n{ color:var(--c-cat-4); }
     .lot-tile.vendor .lot-tile-n{ color:var(--c-cat-3); }
-    .lot-tile.pending .lot-tile-n{ color:var(--c-cat-5); }
-    .lot-tile.month .lot-tile-n{ color:var(--c-primary); }
+    .lot-tile.pending .lot-tile-n{ color:var(--c-danger); }
+    .lot-tile.unpaired .lot-tile-n{ color:var(--c-primary); }
     .lot-tile.on{ outline:2px solid var(--c-primary); }
     .lot-filters{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
     .lot-filters select, .lot-filters input[type="text"]{
@@ -5645,18 +5655,23 @@
     .lot-seg{ margin-left:auto; display:flex; border:1px solid var(--c-border); border-radius:999px; overflow:hidden; }
     .lot-seg span{ padding:5px 14px; font-size:12.5px; color:var(--c-text-soft); cursor:pointer; }
     .lot-seg span.on{ background:var(--c-primary); color:#fff; font-weight:700; }
+    /* 四個分區（團購／非團購／特殊／待配對），每區可收合 */
+    .lot-zone{ margin-bottom:18px; }
+    .lot-zone-head{ display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 2px; margin-bottom:8px; border-bottom:1px solid var(--c-border-light); }
+    .lot-zone-caret{ font-size:11px; color:var(--c-text-soft); flex:none; }
+    .lot-zone-title{ font-size:14.5px; font-weight:800; }
+    .lot-zone-count{ font-size:12px; color:var(--c-text-soft); background:var(--c-bg-bottom); border-radius:999px; padding:1px 9px; }
+    .lot-zone-empty{ padding:10px 2px; }
     .lot-cards{ display:flex; flex-direction:column; gap:12px; }
-    .lot-card{ border:1px solid var(--c-border-light); border-radius:12px; background:var(--c-bg-bottom); overflow:hidden; }
-    .lot-card-archived{ opacity:.82; }
+    .lot-card{ border:1px solid var(--c-border-light); border-radius:12px; background:var(--c-bg-bottom); overflow:hidden; margin-bottom:12px; }
+    .lot-card:last-child{ margin-bottom:0; }
     .lot-card-head{ display:flex; gap:12px; align-items:center; padding:12px 14px; cursor:pointer; }
-    /* 卡頭日期徽章（docs/09 §4.6 第 2 點），取代原本團名首字占位圖 */
-    .lot-date-badge{ flex:none; font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; background:var(--c-cat-4); color:#fff; white-space:nowrap; }
-    .lot-date-badge.lot-date-badge-empty{ background:var(--c-border-light); color:var(--c-text-soft); }
+    /* 卡頭 R 號徽章 */
+    .lot-r-badge{ flex:none; font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; background:var(--c-cat-4); color:#fff; white-space:nowrap; }
     .lot-thumb-img{ height:44px; width:auto; max-width:80px; flex:none; border-radius:8px; object-fit:contain; background:#fff; }
     .lot-thumb-fallback{ height:44px; width:44px; flex:none; border-radius:10px; background:linear-gradient(135deg,#FFD3B6,#FF8FA3); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
     .lot-head-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
     .lot-head-title{ font-size:16px; font-weight:800; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .lot-head-title a{ color:var(--c-text); text-decoration:none; border-bottom:1px dashed var(--c-border); }
     .lot-meta{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12.5px; color:var(--c-text-soft); align-items:center; }
     .lot-meta .lot-kw{ background:#fff; border:1px solid var(--c-border-light); border-radius:6px; padding:1px 7px; font-size:12px; }
     .lot-meta .lot-warn{ color:var(--c-cat-1); font-weight:700; }
@@ -5665,10 +5680,14 @@
     .lot-bar{ width:120px; height:7px; border-radius:999px; background:var(--c-border-light); overflow:hidden; display:flex; }
     .lot-bar i{ display:block; height:100%; }
     .lot-caret{ font-size:11px; color:var(--c-muted, var(--c-text-soft)); }
-    .lot-card-body{ border-top:1px solid var(--c-border-light); overflow-x:auto; }
+    .lot-card-body{ border-top:1px solid var(--c-border-light); }
+    /* 團卡裡每一場抽獎自成一塊（正抽／加碼可能不只一場） */
+    .lot-draw-block{ padding:10px 14px; overflow-x:auto; }
+    .lot-draw-block + .lot-draw-block{ border-top:1px dashed var(--c-border-light); }
+    .lot-draw-block-head{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:6px; }
+    .lot-draw-block-title{ font-size:13.5px; font-weight:700; }
     .lot-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
-    /* 固定欄寬（docs/09 §4.6 第 1 點）：所有卡片共用同一組欄寬，讓「狀態」欄永遠在同一 x 位置；
-       容器要有 overflow-x:auto（.lot-card-body 已有，待辦清單表的外層 div 行內樣式也已有） */
+    /* 固定欄寬：所有卡片共用同一組欄寬，讓「狀態」欄永遠在同一 x 位置（容器要有 overflow-x:auto） */
     .lot-table.lot-table-fixed{ table-layout:fixed; }
     .lot-table.lot-table-fixed td.lot-td-prize{ white-space:normal; vertical-align:top; }
     .lot-prize-clamp{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; line-height:1.35; }
@@ -5680,7 +5699,8 @@
     .lot-mask{ cursor:default; }
     .lot-eye{ cursor:pointer; margin-left:4px; opacity:.6; }
     .lot-empty-cell{ color:var(--c-muted, #bbb); }
-    .lot-card-foot{ display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--c-border-light); flex-wrap:wrap; }
+    .lot-card-foot, .lot-draw-block-foot{ display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--c-border-light); flex-wrap:wrap; align-items:center; }
+    .lot-draw-block-foot{ padding:8px 0 0; border-top:none; }
     .lot-card-foot .lot-spacer{ flex:1; }
     .lot-status-sel{
       border:none; border-radius:999px; padding:3px 20px 3px 10px; font-size:12px; font-weight:700; cursor:pointer;
@@ -5702,28 +5722,29 @@
     .lot-winner-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
     .lot-winner-row input{ flex:1; min-width:0; }
     .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#EFE9E3; color:#7d6b5d; }
-    /* 「待抽」虛擬卡（docs/09 §4.5）：結團滿 2 週還沒建抽獎的團，卡頭無法展開（沒有得獎人表格） */
-    .lot-card-pending{ border-style:dashed; border-color:var(--c-cat-5); }
+    /* 「待抽」虛擬卡：帳務團已達待抽門檻但還沒建抽獎 */
+    .lot-card-pending{ border-style:dashed; border-color:var(--c-danger); }
     .lot-card-pending .lot-card-head{ cursor:default; }
-    .lot-todo-pending{ margin-bottom:14px; }
-    .lot-todo-pending-title{ font-size:12.5px; font-weight:700; color:var(--c-cat-5); margin-bottom:6px; }
-    /* 篩選區底部「已略過 N 團」小字展開清單，可「還原」（POST lottery-event-unskip） */
-    .lot-skip-wrap{ width:100%; font-size:11.5px; color:var(--c-text-soft); margin-top:2px; }
-    .lot-skip-toggle{ cursor:pointer; text-decoration:underline; }
-    .lot-skip-list{ margin-top:6px; border:1px solid var(--c-border-light); border-radius:8px; padding:6px 10px; background:var(--c-bg-bottom); max-width:420px; }
-    .lot-skip-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:3px 0; }
+    /* 已標「這團不抽」的列（預設隱藏在 chip 後面） */
+    .lot-nolottery-row{ display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px dashed var(--c-border-light); border-radius:8px; margin-bottom:8px; font-size:12.5px; color:var(--c-text-soft); }
+    .lot-nolottery-row .lot-spacer{ flex:1; }
+    /* 待配對卡：綁定帳務團下拉＋改為非團購 */
+    .lot-unpaired-bind{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:10px 14px; border-top:1px solid var(--c-border-light); }
+    .lot-unpaired-bind input, .lot-unpaired-bind select{ border:1px solid var(--c-border); background:#fff; border-radius:8px; padding:5px 10px; font-size:12.5px; font-family:inherit; }
+    .lot-unpaired-bind select{ min-width:220px; flex:1; }
+    /* 篩選列的「已標不抽」顯示開關（比照 acct-tab 的樣式） */
+    .lot-toggle-chip{ font-size:12px; padding:5px 12px; border-radius:999px; border:1px solid var(--c-border-light); background:var(--c-surface, #fff); color:var(--c-text-soft); cursor:pointer; }
+    .lot-toggle-chip.on{ background:var(--c-primary); border-color:var(--c-primary); color:#fff; font-weight:700; }
+    /* 帳務明細列上的抽獎狀態小標（accounting.js） */
+    .lot-acct-badge{ display:inline-block; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; margin-left:6px; cursor:pointer; vertical-align:1px; }
+    .lot-acct-badge-done{ background:var(--c-cat-2); color:#fff; }
+    .lot-acct-badge-pending{ background:var(--c-cat-1); color:#fff; }
+    .lot-acct-badge-draw{ background:var(--c-danger); color:#fff; }
+    .lot-acct-badge-off{ background:var(--c-line); color:var(--c-muted); }
+    /* 從帳務明細列點小標跳過來時，短暫高亮該張團卡 */
+    .lot-flash{ animation: lotFlash 1.6s ease-out; }
+    @keyframes lotFlash{ 0%{ box-shadow:0 0 0 3px var(--c-primary); } 100%{ box-shadow:0 0 0 0 rgba(0,0,0,0); } }
   </style>
-  <div class="view" id="viewLottery">
-    <div class="rpt-header-wrap">
-      <h2 class="view-title">🎁 抽獎管理</h2>
-      <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
-      <button class="task-mini-btn" id="lotRefreshBtn">🔄 重新整理</button>
-    </div>
-    <div id="lotBanner"></div>
-    <div id="lotTiles" class="lot-tiles"></div>
-    <div id="lotFilters" class="lot-filters"></div>
-    <div id="lotBody"><div class="task-empty">讀取中…</div></div>
-  </div><!-- /viewLottery -->
 
   <!-- ===== 食譜資料庫（sheetdb.js；食譜/食材/成品，原本只能直接改試算表）===== -->
   <div class="view" id="viewRecipeDb">
@@ -5961,7 +5982,7 @@
       <option value="prItems">🎀 公關品狀態</option>
       <option value="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</option>
       <option value="report" data-perm="report">📊 報表統計</option>
-      <option value="accounting" data-perm="revenue|commission|acctRecon">💰 開團帳務</option>
+      <option value="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">💰 開團帳務</option>
       <option value="tools">🧰 便利小工具</option>
       <option value="lotteryTool">🎉 抽獎小幫手</option>
       <option value="imageLibrary">🖼️ 圖片庫</option>
@@ -6363,8 +6384,19 @@
     <button class="modal-close" onclick="closeLotteryDrawModal()">✕</button>
     <h3 id="lotDrawModalTitle">➕ 新增抽獎</h3>
     <div class="task-form" style="margin:0; padding:0; background:none;">
-      <label for="lotDrawEventSelect">行事曆的團（選了自動帶入品牌、日期）</label>
-      <select id="lotDrawEventSelect"></select>
+      <label for="lotDrawSectionSelect">分區 *</label>
+      <select id="lotDrawSectionSelect">
+        <option value="groupbuy">🛍️ 團購抽獎</option>
+        <option value="non_groupbuy">📌 非團購</option>
+        <option value="special">🎂 特殊抽獎專區</option>
+      </select>
+
+      <div id="lotDrawAcctGroup">
+        <label for="lotDrawAcctSearchInput">帳務團（輸入 R 號或團名搜尋）</label>
+        <input type="text" id="lotDrawAcctSearchInput" placeholder="搜尋 R 號／團名…">
+        <select id="lotDrawAcctSelect"><option value="">（不綁）</option></select>
+        <p class="hint" id="lotDrawAcctReadyWarn" style="display:none; font-size:12px; color:#a05a00; margin:4px 0 0;">⚠️ 需要雪莉先在 PowerShell 執行 npx supabase db push 才能綁定帳務團。</p>
+      </div>
 
       <label for="lotDrawTitleInput">活動標題 *</label>
       <input type="text" id="lotDrawTitleInput" placeholder="例如：午茶夫人 9 月團">
@@ -7022,7 +7054,7 @@
 <script src="customBlocks.js?v=2"></script>
 <script src="tools.js?v=18"></script>
 <script src="report.js?v=4"></script>
-<script src="accounting.js?v=15"></script>
+<script src="accounting.js?v=16"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
 <script src="books.js?v=27"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
@@ -7076,9 +7108,9 @@
     <p style="font-size:11.5px; color:var(--c-text-soft); margin:10px 0 0;">圖源＝品牌庫去背小圖＋圖片庫（brands／events 資料夾）＋行事曆用過的圖。要加新的品項圖：到「🖼 圖片庫」上傳到 brands 或 events 資料夾，回來這裡就選得到。</p>
   </div>
 </div>
-<!-- lottery.js（抽獎管理）必須排在 admin.js 之前：開機還原分頁若停在 lottery，會同步呼叫 loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=6"></script>
-<script src="admin.js?v=93"></script>
+<!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
+<script src="lottery.js?v=7"></script>
+<script src="admin.js?v=94"></script>
 <script src="memo.js?v=5"></script>
 
 </body>
