@@ -305,35 +305,29 @@
   .chip.chip-fav.active { color: #fff; }
 
   /* 置頂開團宣傳（2026-09-14）：有食譜的品牌開團中自動出現，結團自動消失 */
-  .rcp-promo-slot { margin: 0 0 16px; }
+  /* 雪莉 09-14 定：不要大卡浮誇，一團一條細長列、整列點擊＝前往下單（有折扣碼先跳折扣碼視窗） */
+  .rcp-promo-slot { margin: 0 0 14px; }
   .rcp-promo-card {
-    background: linear-gradient(135deg, var(--c-pink-bg-2) 0%, var(--c-gold-gradient) 100%);
-    border: 2px solid var(--c-primary);
-    border-radius: 20px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    box-shadow: 0 6px 16px rgba(255,143,163,0.25);
+    display: flex; align-items: center; gap: 10px;
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 14px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(230,160,120,0.12);
   }
-  .rcp-promo-head { display: flex; align-items: center; gap: 12px; }
-  .rcp-promo-thumb { height: 52px; width: auto; flex: 0 0 auto; }
+  .rcp-promo-card:hover { background: var(--c-bg-bottom); }
+  .rcp-promo-thumb { height: 34px; width: auto; flex: 0 0 auto; }
   .rcp-promo-info { flex: 1; min-width: 0; }
+  .rcp-promo-brand { font-weight: 800; font-size: 14px; color: var(--c-text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .rcp-promo-brand span:first-child { min-width: 0; }
   .rcp-promo-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12px; font-weight: 800; color: #fff;
-    background: var(--c-primary); border-radius: var(--r-pill); padding: 3px 10px;
+    font-size: 10.5px; font-weight: 800; color: var(--c-pink-deep);
+    background: var(--c-pink-bg); border-radius: var(--r-pill); padding: 1px 7px;
   }
-  .rcp-promo-badge .home-calendar-dot { width: 7px; height: 7px; }
-  .rcp-promo-brand { font-family: var(--font-round); font-weight: 800; font-size: 19px; color: var(--c-pink-deep); margin-top: 4px; }
-  .rcp-promo-date { font-size: 12.5px; font-weight: 700; color: var(--c-text-soft); }
-  .rcp-promo-actions { display: flex; gap: 8px; margin-top: 12px; }
-  .rcp-promo-btn {
-    flex: 1; text-align: center; font-family: inherit;
-    font-weight: 800; font-size: 14px; text-decoration: none;
-    border: 2px solid var(--c-primary); border-radius: var(--r-pill);
-    padding: 10px 6px; cursor: pointer;
-  }
-  .rcp-promo-btn.primary { background: var(--c-primary); color: #fff; }
-  .rcp-promo-btn.ghost { background: #fff; color: var(--c-pink-deep); }
+  .rcp-promo-date { font-size: 11.5px; color: var(--c-muted); margin-top: 1px; }
+  .rcp-promo-go { font-size: 12.5px; font-weight: 800; color: var(--c-primary-dark); white-space: nowrap; }
 
   @media (max-width: 420px) {
     .ing-tile-name { font-size: 10px; }
@@ -3022,83 +3016,104 @@ function renderRecipePromos() {
   const opens = [];
   recipeCount.forEach((n, brand) => {
     const st = getBrandStatus(brand);
-    if (st.status === 'open') opens.push({ st, n });
+    if (st.status === 'open' && isValidUrl(st.url)) opens.push({ st, n }); // 整列＝下單連結，沒連結的團不顯示
   });
   opens.sort((a, b) => a.st.displayEnd - b.st.displayEnd); // 快結單的排前面
   ['promoSlotHome', 'promoSlotRecipes'].forEach(slotId => {
     const slot = document.getElementById(slotId);
     slot.innerHTML = '';
-    opens.forEach(({ st, n }) => slot.appendChild(buildPromoCard(st, n)));
+    opens.forEach(({ st }) => slot.appendChild(buildPromoCard(st)));
     slot.style.display = opens.length ? 'block' : 'none';
   });
 }
 
-function buildPromoCard(st, recipeCount) {
-  const card = document.createElement('div');
+// 一團一條細長列，整列就是「前往下單」連結；有折扣碼的團先跳折扣碼視窗（視窗裡再前往下單）
+function buildPromoCard(st) {
+  const card = document.createElement('a');
   card.className = 'rcp-promo-card';
+  card.href = st.url;
+  card.target = '_blank';
+  card.rel = 'noopener noreferrer';
 
-  const head = document.createElement('div');
-  head.className = 'rcp-promo-head';
   if (BRAND_THUMBS[st.brand]) {
     const img = document.createElement('img');
     img.className = 'rcp-promo-thumb';
     img.src = promoThumbUrl(BRAND_THUMBS[st.brand]);
     img.alt = st.brand;
     img.onerror = () => img.remove();
-    head.appendChild(img);
+    card.appendChild(img);
   }
   const info = document.createElement('div');
   info.className = 'rcp-promo-info';
-  const badge = document.createElement('span');
-  badge.className = 'rcp-promo-badge';
-  badge.innerHTML = '<span class="home-calendar-dot"></span>現正開團中';
-  info.appendChild(badge);
   const brandEl = document.createElement('div');
   brandEl.className = 'rcp-promo-brand';
-  brandEl.textContent = st.brand;
+  const nameEl = document.createElement('span');
+  nameEl.textContent = st.brand;
+  brandEl.appendChild(nameEl);
+  const badge = document.createElement('span');
+  badge.className = 'rcp-promo-badge';
+  badge.textContent = '開團中';
+  brandEl.appendChild(badge);
   info.appendChild(brandEl);
   if (st.displayEnd) {
     const dateEl = document.createElement('div');
     dateEl.className = 'rcp-promo-date';
     const daysLeft = Math.round((startOfDay(st.displayEnd) - startOfDay(new Date())) / 86400000);
-    dateEl.textContent = daysLeft <= 0 ? '⏰ 今天結單！' : `結單日 ${fmtSingleDate(st.displayEnd)}（剩 ${daysLeft} 天）`;
+    dateEl.textContent = daysLeft <= 0 ? '今天結單' : `結單 ${fmtSingleDate(st.displayEnd)}（剩 ${daysLeft} 天）`;
     info.appendChild(dateEl);
   }
-  head.appendChild(info);
-  card.appendChild(head);
+  card.appendChild(info);
+  const go = document.createElement('span');
+  go.className = 'rcp-promo-go';
+  go.textContent = '前往下單 ›';
+  card.appendChild(go);
 
-  const actions = document.createElement('div');
-  actions.className = 'rcp-promo-actions';
-  const recipeBtn = document.createElement('button');
-  recipeBtn.type = 'button';
-  recipeBtn.className = 'rcp-promo-btn ghost';
-  recipeBtn.textContent = `📖 看食譜（${recipeCount} 道）`;
-  recipeBtn.addEventListener('click', () => {
-    recSelectedBrands = [st.brand];
-    recOnlyFav = false;
-    initFilters();
-    renderRecipes();
-    switchView('recipes');
-    window.scrollTo(0, 0);
+  card.addEventListener('click', e => {
+    if (st.discountCode) {
+      e.preventDefault();
+      openPromoCodeModal(st);
+      return;
+    }
+    if (st.evKey) sendStat(st.evKey + '_src_recipespromo', 'click');
   });
-  actions.appendChild(recipeBtn);
-  if (isValidUrl(st.url)) {
-    const orderBtn = document.createElement('a');
-    orderBtn.className = 'rcp-promo-btn primary';
-    orderBtn.href = st.url;
-    orderBtn.target = '_blank';
-    orderBtn.rel = 'noopener noreferrer';
-    orderBtn.textContent = '🛒 前往下單';
-    orderBtn.addEventListener('click', () => {
-      if (st.evKey) sendStat(st.evKey + '_src_recipespromo', 'click');
-      if (st.discountCode) rcpCopyCode(st.discountCode);
-    });
-    actions.appendChild(orderBtn);
-  }
-  card.appendChild(actions);
-
-  if (st.discountCode) card.appendChild(buildRcpDiscountBlock(st.discountCode, st.discountDesc || '', st.brand));
   return card;
+}
+
+// 折扣碼浮動視窗：折扣碼（點擊複製）＋前往下單（順手複製＋統計）
+function openPromoCodeModal(st) {
+  let modal = document.getElementById('promoCodeModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.id = 'promoCodeModal';
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal('promoCodeModal'); });
+    modal.innerHTML = `
+      <div class="modal-box" style="width:320px;">
+        <button type="button" class="rc-close-btn rc-close-floating" id="promoCodeClose">✕</button>
+        <h2 class="rc-title" id="promoCodeTitle" style="margin-top:6px;"></h2>
+        <div id="promoCodeBody"></div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <a class="action-btn" id="promoCodeGo" target="_blank" rel="noopener noreferrer">🛒 前往下單</a>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('#promoCodeClose').addEventListener('click', () => closeModal('promoCodeModal'));
+  }
+  modal.querySelector('#promoCodeTitle').textContent = `${st.brand} 開團中`;
+  const body = modal.querySelector('#promoCodeBody');
+  body.innerHTML = '';
+  body.appendChild(buildRcpDiscountBlock(st.discountCode, st.discountDesc || '', st.brand));
+  // 換掉按鈕節點＝清掉上一次開視窗綁的點擊事件
+  const oldGo = modal.querySelector('#promoCodeGo');
+  const go = oldGo.cloneNode(true);
+  oldGo.replaceWith(go);
+  go.href = st.url;
+  go.addEventListener('click', () => {
+    if (st.evKey) sendStat(st.evKey + '_src_recipespromo', 'click');
+    rcpCopyCode(st.discountCode);
+    closeModal('promoCodeModal');
+  });
+  modal.classList.add('show');
 }
 
 // ===== 食譜收藏（2026-09-14，會員功能）=====
