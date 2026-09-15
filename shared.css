@@ -177,6 +177,17 @@ body {
   cursor: pointer;
 }
 .site-home-btn:hover { background: var(--c-bg-bottom); }
+/* 2026-09-16 雪莉：🏠 emoji 改線條小房子（與會員中心底部導覽列同一個圖形），線寬換算後畫面粗細同導覽列（約 2.06px） */
+.site-home-btn svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.06;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 /* ============================================================
    膠囊型控制項（下拉選單、按鈕）
