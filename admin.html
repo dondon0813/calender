@@ -5315,6 +5315,7 @@
                     <select id="mWmLogo" style="width:auto;">
                       <option value="dark" selected>咖啡字（白底/淺底）</option>
                       <option value="light">白字（彩色底/深底）</option>
+                      <option value="blue">藍字（白底/淺底）</option>
                     </select>
                   </div>
                   <!-- 團購資訊文字樣式（2026-09-13 雪莉需求：不要底色、放圖下方，顏色與位置自選） -->
@@ -5570,6 +5571,10 @@
           <div>
             <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新浮水印圖・白字（透明 PNG）</label>
             <input type="file" id="tplLogoLightFile" accept="image/png,image/webp">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新浮水印圖・藍字（透明 PNG）</label>
+            <input type="file" id="tplLogoBlueFile" accept="image/png,image/webp">
           </div>
           <div>
             <label style="font-size:13px; font-weight:700; display:block; margin-bottom:4px;">更新 QR CODE 圖</label>
@@ -7094,7 +7099,7 @@
 <script src="report.js?v=4"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=27"></script>
+<script src="books.js?v=28"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

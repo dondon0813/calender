@@ -1359,7 +1359,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     payload.layer_watermark = layers.watermark;
     payload.layer_qr = layers.qr;
     payload.watermark_pos = document.getElementById('mWmPos').value;
-    payload.watermark_logo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
+    payload.watermark_logo = mtplWmLogoValue(document.getElementById('mWmLogo').value);
     payload.promo_color = mtplPromoColorValue();
     payload.promo_pos = mtplPromoPosValue();
     payload.qr_pos = mtplQrPosValue();
@@ -2427,7 +2427,7 @@ function mtplResetFormState(material) {
   document.getElementById('mLayerWatermark').checked = material ? !!material.layerWatermark : false;
   document.getElementById('mLayerQr').checked = material ? !!material.layerQr : false;
   document.getElementById('mWmPos').value = material && (material.watermarkPos === 'left' || material.watermarkPos === 'center') ? material.watermarkPos : 'right';
-  document.getElementById('mWmLogo').value = material && material.watermarkLogo === 'light' ? 'light' : 'dark';
+  document.getElementById('mWmLogo').value = mtplWmLogoValue(material && material.watermarkLogo);
   document.getElementById('mPromoColor').value = material && /^#[0-9A-Fa-f]{6}$/.test(material.promoColor || '') ? material.promoColor : '#FF8FA3';
   document.getElementById('mPromoPos').value = material && (material.promoPos === 'left' || material.promoPos === 'right') ? material.promoPos : 'center';
   // 團購資訊樣式欄位尚未 db push：選擇存不進去，提示一下（後台包教材 promoStyleReady===false）
@@ -2657,8 +2657,15 @@ async function mtplUploadComposed(bookId, variant, blob) {
 // 烤兩版成品並上傳，回傳要併進 material-upsert payload 的欄位。
 // bookIds＝教材掛載書單（開團判定看任一本；成品路徑用第一本）；getSource＝來源圖取得函式
 // 浮水印 LOGO 版本 → 圖檔網址（該版沒上傳就退回另一版，不會整個沒浮水印）
+// dark＝咖啡字、light＝白字、blue＝藍字（2026-09-16）；藍字沒上傳時退回咖啡字（同為淺底用）
 function mtplLogoUrlFor(s, variant) {
-  return variant === 'light' ? (s.logoLightUrl || s.logoUrl || '') : (s.logoUrl || s.logoLightUrl || '');
+  if (variant === 'light') return s.logoLightUrl || s.logoUrl || '';
+  if (variant === 'blue') return s.logoBlueUrl || s.logoUrl || s.logoLightUrl || '';
+  return s.logoUrl || s.logoLightUrl || '';
+}
+// 浮水印 LOGO 版本值正規化（不認得的值＝dark）
+function mtplWmLogoValue(v) {
+  return v === 'light' || v === 'blue' ? v : 'dark';
 }
 
 // promoStyle＝{color, pos, qrPos, longEdgeMm}：團購資訊文字顏色與底部位置（缺省＝粉色置中）＋QR 四角位置（缺省＝右上）
@@ -2728,7 +2735,7 @@ async function mtplFormComposeInputs() {
   const src = await mtplGetFormSourceBitmap();
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
   const s = mtplSettings();
-  const wmLogo = document.getElementById('mWmLogo').value === 'light' ? 'light' : 'dark';
+  const wmLogo = mtplWmLogoValue(document.getElementById('mWmLogo').value);
   const logoUrl = mtplLogoUrlFor(s, wmLogo);
   const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
   const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
@@ -2864,6 +2871,7 @@ function renderTplPanel() {
   const assets = [];
   if (s.logoUrl) assets.push({ label: '浮水印 LOGO（咖啡字）', url: s.logoUrl, h: 44, bg: '#fff' });
   if (s.logoLightUrl) assets.push({ label: '浮水印 LOGO（白字）', url: s.logoLightUrl, h: 44, bg: '#b9a99a' }); // 白字版放有色底才看得到
+  if (s.logoBlueUrl) assets.push({ label: '浮水印 LOGO（藍字）', url: s.logoBlueUrl, h: 44, bg: '#fff' });
   if (s.qrUrl) assets.push({ label: 'IG QR', url: s.qrUrl, h: 72, bg: '#fff' });
   assets.forEach(a => {
     const wrap = document.createElement('div');
@@ -2976,11 +2984,11 @@ async function mtlbUploadTplAsset(asset, file) {
     if (!urlRes || urlRes.success !== true) throw new Error((urlRes && urlRes.error) || '未知錯誤');
     const put = await fetch(urlRes.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'image/png' }, body: file });
     if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
-    const key = asset === 'qr' ? 'qr_url' : asset === 'logo_light' ? 'logo_light_url' : 'logo_url';
+    const key = asset === 'qr' ? 'qr_url' : asset === 'logo_light' ? 'logo_light_url' : asset === 'logo_blue' ? 'logo_blue_url' : 'logo_url';
     const setRes = await apiPost('material-tpl-settings-set', { [key]: urlRes.publicUrl });
     if (!setRes || setRes.success !== true) throw new Error((setRes && setRes.error) || '設定儲存失敗');
     if (PACKAGE_DATA) PACKAGE_DATA.mtplSettings = setRes.settings;
-    st.textContent = (asset === 'qr' ? 'QR CODE' : asset === 'logo_light' ? '浮水印圖（白字）' : '浮水印圖（咖啡字）') + '已更新 ✓ 已合成的教材要按「重新產生全部成品」才會換上新圖';
+    st.textContent = (asset === 'qr' ? 'QR CODE' : asset === 'logo_light' ? '浮水印圖（白字）' : asset === 'logo_blue' ? '浮水印圖（藍字）' : '浮水印圖（咖啡字）') + '已更新 ✓ 已合成的教材要按「重新產生全部成品」才會換上新圖';
     renderTplPanel();
   } catch (err) {
     st.textContent = '上傳失敗：' + (err && err.message ? err.message : '未知錯誤');
@@ -2994,6 +3002,11 @@ document.getElementById('tplLogoFile').addEventListener('change', (e) => {
 document.getElementById('tplLogoLightFile').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (file) mtlbUploadTplAsset('logo_light', file);
+  e.target.value = '';
+});
+document.getElementById('tplLogoBlueFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) mtlbUploadTplAsset('logo_blue', file);
   e.target.value = '';
 });
 document.getElementById('tplQrFile').addEventListener('change', (e) => {
@@ -3088,7 +3101,7 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
         m.frameId || '',
         () => mtplCleanBitmapById(m.id),
         m.watermarkPos || 'right',
-        m.watermarkLogo === 'light' ? 'light' : 'dark',
+        mtplWmLogoValue(m.watermarkLogo),
         { color: m.promoColor || '#FF8FA3', pos: m.promoPos || 'center', qrPos: m.qrPos || 'tr', longEdgeMm: mtplLongEdgeMm(m.specId) }
       );
       const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
