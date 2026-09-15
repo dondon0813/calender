@@ -950,7 +950,8 @@
     color: var(--c-text-soft);
   }
   /* 首頁置頂品牌 LOGO：手機 min(236px, 60vw)（320px 寬時仍避開右上角 44px 回首頁鈕，驗收算式），電腦 280px */
-  .home-brand-logo { text-align: center; margin: 2px auto 8px; }
+  .home-brand-logo { text-align: center; margin: 2px auto 14px; }
+  .home-brand-logo a { display: inline-block; text-decoration: none; -webkit-tap-highlight-color: transparent; }
   .home-brand-logo img { display: block; width: min(236px, 60vw); height: auto; margin: 0 auto; }
   @media (min-width: 600px) {
     .home-brand-logo img { width: 280px; }
@@ -1228,16 +1229,16 @@
   <!-- 首頁 -->
   <div id="homeView">
     <!-- 首頁置頂品牌 LOGO（2026-09-16 雪莉選 A：咖啡字 Sheridondon 貓咪橫式；原圖 dondon-platform/PICICON/IMG_3641(1).PNG） -->
+    <!-- 點 LOGO＝重新載入首頁（清掉開著的視窗、篩選與 ?brand=/?recipe= 網址參數），同右上角回首頁的效果（09-16 雪莉） -->
     <div class="home-brand-logo">
-      <picture>
-        <source srcset="images/brand-logo.webp" type="image/webp">
-        <img src="images/brand-logo.png" alt="Sheridondon 雪莉與朵栗" width="720" height="230">
-      </picture>
+      <a href="recipes.html" title="回首頁" aria-label="回首頁">
+        <picture>
+          <source srcset="images/brand-logo.webp" type="image/webp">
+          <img src="images/brand-logo.png" alt="Sheridondon 雪莉與朵栗" width="720" height="230">
+        </picture>
+      </a>
     </div>
-    <div class="page-title-wrap">
-      <div class="page-title-badge">💗 雪莉與朵栗</div>
-      <div class="page-title">👶 育兒小幫手</div>
-    </div>
+    <!-- 原「💗 雪莉與朵栗」小膠囊＋「👶 育兒小幫手」標題（.page-title-wrap）2026-09-16 雪莉指示移除，LOGO 取代 -->
 
     <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="recipes"></div>
 
