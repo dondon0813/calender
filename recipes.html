@@ -949,41 +949,11 @@
     font-size: 11.5px;
     color: var(--c-text-soft);
   }
-  .home-calendar-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-round);
-    font-weight: 800;
-    font-size: 18px;
-    color: #fff;
-    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark));
-    border-radius: var(--r-pill);
-    padding: 17px 38px;
-    text-decoration: none;
-    box-shadow: 0 6px 16px rgba(255,143,163,0.45);
-    animation: homeCalendarPulse 2.2s ease-in-out infinite;
-  }
-  .home-calendar-btn:hover { background: var(--c-primary-dark); }
-  .home-calendar-dot {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #fff;
-    animation: homeCalendarDotPing 1.8s ease-in-out infinite;
-  }
-  @keyframes homeCalendarPulse {
-    0%, 100% { box-shadow: 0 6px 16px rgba(255,143,163,0.45); }
-    50% { box-shadow: 0 6px 22px rgba(255,143,163,0.75), 0 0 0 7px rgba(255,143,163,0.16); }
-  }
-  @keyframes homeCalendarDotPing {
-    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.65); }
-    70% { box-shadow: 0 0 0 7px rgba(255,255,255,0); }
-    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .home-calendar-btn, .home-calendar-dot { animation: none; }
+  /* 首頁置頂品牌 LOGO：手機 min(236px, 60vw)（320px 寬時仍避開右上角 44px 回首頁鈕，驗收算式），電腦 280px */
+  .home-brand-logo { text-align: center; margin: 2px auto 8px; }
+  .home-brand-logo img { display: block; width: min(236px, 60vw); height: auto; margin: 0 auto; }
+  @media (min-width: 600px) {
+    .home-brand-logo img { width: 280px; }
   }
   @media (max-width: 420px) {
     .home-card-icon { font-size: 28px; }
@@ -1257,6 +1227,13 @@
 <div class="wrap">
   <!-- 首頁 -->
   <div id="homeView">
+    <!-- 首頁置頂品牌 LOGO（2026-09-16 雪莉選 A：咖啡字 Sheridondon 貓咪橫式；原圖 dondon-platform/PICICON/IMG_3641(1).PNG） -->
+    <div class="home-brand-logo">
+      <picture>
+        <source srcset="images/brand-logo.webp" type="image/webp">
+        <img src="images/brand-logo.png" alt="Sheridondon 雪莉與朵栗" width="720" height="230">
+      </picture>
+    </div>
     <div class="page-title-wrap">
       <div class="page-title-badge">💗 雪莉與朵栗</div>
       <div class="page-title">👶 育兒小幫手</div>
@@ -1264,9 +1241,7 @@
 
     <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="recipes"></div>
 
-    <div style="text-align:center; margin: 4px 0 20px;">
-      <a class="home-calendar-btn" href="index.html"><span class="home-calendar-dot"></span>📅 現正開團中</a>
-    </div>
+    <!-- 粉紅「📅 現正開團中」按鈕（連 index.html）2026-09-16 雪莉指示移除：下方卡片已有團購行事曆入口、上方開團橫列已有小圖 -->
 
     <!-- 雪莉更新日誌（2026-09-14）：後台「📣 更新日誌」分頁輸入，GET scope=changelog 最新 5 條；沒資料整塊藏 -->
     <div class="home-changelog" id="homeChangelog" style="display:none;">
