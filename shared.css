@@ -234,6 +234,14 @@ body {
   margin: 4px 0 18px;
 }
 
+/* 各頁頂端小 LOGO（2026-09-17 雪莉定：取代「💗 雪莉與朵栗」小膠囊，點 LOGO 回首頁）。
+   首頁 recipes.html 的大 LOGO 另有 .home-brand-logo，不共用這組 */
+.page-brand-logo { display: inline-block; margin-bottom: 4px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.page-brand-logo img { display: block; width: 140px; height: auto; margin: 0 auto; }
+@media (min-width: 600px) {
+  .page-brand-logo img { width: 160px; }
+}
+
 .page-title-badge {
   display: inline-block;
   font-size: 12px;
