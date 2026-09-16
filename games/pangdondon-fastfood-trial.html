@@ -657,6 +657,10 @@ function renderMenu() {
     const pack = packs[0];
     document.title = pack.gameTitle || "點餐遊戲";
     $("back-btn").style.display = "none";
+    /* 開始畫面就先套用素材包,讓右下角喇叭鈕用圖片而非 emoji */
+    state.pack = pack;
+    state.base = packBase(pack);
+    refreshMuteIcon();
     /* 素材包有自訂開始畫面 → 整張圖當進場畫面,點任意處開始 */
     if (pack.startScreen) {
       const ms = $("menu-screen");
