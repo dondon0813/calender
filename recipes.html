@@ -348,6 +348,11 @@
   .home-changelog-list li:first-child { border-top: none; }
   .home-changelog-date { flex: 0 0 44px; font-size: 12px; font-weight: 800; color: var(--c-pink-deep); }
   .home-changelog-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* 收合時最多 5 行（一條折成兩行就算兩行；clampChangelog 量實際行數決定截斷位置） */
+  .home-changelog-list li.is-cut .home-changelog-text { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+  .home-changelog-list li.is-hidden { display: none; }
+  .home-changelog-more-row { display: none; justify-content: flex-end; }
+  .home-changelog-more { background: none; border: none; padding: 2px 0; font-family: inherit; font-size: 12.5px; font-weight: 800; color: var(--c-pink-deep); cursor: pointer; }
 
   @media (max-width: 420px) {
     .ing-tile-name { font-size: 10px; }
@@ -1249,6 +1254,7 @@
     <div class="home-changelog" id="homeChangelog" style="display:none;">
       <div class="home-changelog-title"><span class="home-changelog-star">⭐</span>雪莉更新日誌<span class="home-changelog-star">⭐</span></div>
       <ul class="home-changelog-list" id="homeChangelogList"></ul>
+      <div class="home-changelog-more-row" id="homeChangelogMoreRow"><button type="button" class="home-changelog-more" id="homeChangelogMore">更多 ▾</button></div>
     </div>
 
     <div class="home-subtitle">🌸 選擇食材，發現美味食譜 🌸</div>
@@ -2916,6 +2922,7 @@ function closeModal(id) {
 function switchView(view) {
   currentView = view;
   document.getElementById('homeView').style.display = view === 'home' ? 'block' : 'none';
+  if (view === 'home') { try { clampChangelog(); } catch (e) { /* 日誌程式尚未初始化時略過，載入完會自己算 */ } }
   document.getElementById('ingredientsView').style.display = view === 'ingredients' ? 'block' : 'none';
   document.getElementById('recipesView').style.display = view === 'recipes' ? 'block' : 'none';
 }
@@ -3265,8 +3272,53 @@ async function loadChangelog() {
       list.appendChild(li);
     });
     box.style.display = entries.length ? 'block' : 'none';
+    clampChangelog();
   } catch (err) { /* 日誌載入失敗不影響頁面，安靜藏著 */ }
 }
+
+// 收合時整塊最多顯示 5 行文字：一條很長折成兩行以上就算兩行以上（依實際寬度量），
+// 跨過第 5 行的那條截在剩餘行數、之後的條目藏起來，右下角「更多」展開全部。視窗寬度改變時重算。
+const CHANGELOG_MAX_LINES = 5;
+let changelogExpanded = false;
+function clampChangelog() {
+  const list = document.getElementById('homeChangelogList');
+  const moreRow = document.getElementById('homeChangelogMoreRow');
+  if (!list || !moreRow) return;
+  const items = Array.from(list.children);
+  items.forEach(li => {
+    li.classList.remove('is-cut', 'is-hidden');
+    li.querySelector('.home-changelog-text').style.webkitLineClamp = '';
+  });
+  if (!items.length || list.offsetParent === null) return; // 首頁藏著量不到，切回首頁時再算
+  let used = 0, overflow = false;
+  items.forEach(li => {
+    const textEl = li.querySelector('.home-changelog-text');
+    const lh = parseFloat(getComputedStyle(textEl).lineHeight) || 20.8;
+    const lines = Math.max(1, Math.round(textEl.offsetHeight / lh));
+    if (used >= CHANGELOG_MAX_LINES) {
+      overflow = true;
+      if (!changelogExpanded) li.classList.add('is-hidden');
+    } else if (used + lines > CHANGELOG_MAX_LINES) {
+      overflow = true;
+      if (!changelogExpanded) {
+        li.classList.add('is-cut');
+        textEl.style.webkitLineClamp = String(CHANGELOG_MAX_LINES - used);
+      }
+    }
+    used += lines;
+  });
+  moreRow.style.display = overflow ? 'flex' : 'none';
+  document.getElementById('homeChangelogMore').textContent = changelogExpanded ? '收合 ▴' : '更多 ▾';
+}
+document.getElementById('homeChangelogMore').addEventListener('click', () => {
+  changelogExpanded = !changelogExpanded;
+  clampChangelog();
+});
+let changelogResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(changelogResizeTimer);
+  changelogResizeTimer = setTimeout(clampChangelog, 150);
+});
 
 applyInitialRoute();
 loadAll();

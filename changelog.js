@@ -167,14 +167,39 @@ document.addEventListener('DOMContentLoaded', () => {
     clFillFormFromDate();
   });
 
-  document.getElementById('changelogSaveBtn').addEventListener('click', () => {
+  document.getElementById('changelogSaveBtn').addEventListener('click', async () => {
     const date = dateEl.value;
     if (!date) { clSetStatus('請先選日期', true); return; }
-    const hasText = linesEl.value.split(/\r?\n/).some(l => l.trim());
-    const existed = CHANGELOG_DAYS.some(d => d.date === date);
-    if (!hasText) {
-      if (!existed) { clSetStatus('請先輸入更新內容（一行一條）', true); return; }
-      if (!confirm('文字框是空的，儲存會刪除這一天的全部日誌，確定嗎？')) return;
+    const saveBtn = document.getElementById('changelogSaveBtn');
+    const newLines = linesEl.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // 覆蓋保護（2026-09-17 雪莉誤蓋 9/16 日誌後加）：存檔前重抓資料庫「這天現在的內容」，
+    // 不信任畫面快取（可能是其他分頁／其他人剛存過）；只要有舊條目會被拿掉就逐條列出來確認。
+    saveBtn.disabled = true;
+    clSetStatus('確認這天目前內容…');
+    let serverLines;
+    try {
+      const data = await clApiPost('changelog-list');
+      if (!data.success) throw new Error(data.error || '讀取失敗');
+      const day = (data.days || []).find(d => d.date === date);
+      serverLines = day ? day.lines : [];
+    } catch (err) {
+      saveBtn.disabled = false;
+      clSetStatus(`無法確認這天目前的內容，為了避免覆蓋已先停止儲存：${err.message || err}`, true);
+      return;
+    }
+    saveBtn.disabled = false;
+    clSetStatus('');
+    if (!newLines.length && !serverLines.length) { clSetStatus('請先輸入更新內容（一行一條）', true); return; }
+    const removed = serverLines.filter(l => !newLines.includes(String(l).trim()));
+    if (removed.length) {
+      const list = removed.map(l => `・${l}`).join('\n');
+      const head = newLines.length
+        ? `⚠️ ${clDateLabel(date)} 已經有內容，儲存後下面 ${removed.length} 條會被移除：`
+        : `⚠️ 文字框是空的，儲存會刪除 ${clDateLabel(date)} 的全部 ${removed.length} 條：`;
+      if (!confirm(`${head}\n\n${list}\n\n刪掉就救不回來。確定要儲存嗎？\n（想保留舊的，請按取消，把舊內容一起打進文字框再存）`)) {
+        clSetStatus('已取消儲存，資料沒有變動');
+        return;
+      }
     }
     clSaveDay(date, linesEl.value);
   });
@@ -195,7 +220,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const delBtn = e.target.closest('[data-cl-delete]');
     if (delBtn) {
       const date = delBtn.dataset.clDelete;
-      if (!confirm(`確定刪除 ${clDateLabel(date)} 的全部日誌？`)) return;
+      const day = CHANGELOG_DAYS.find(d => d.date === date);
+      const list = day ? '\n\n' + day.lines.map(l => `・${l}`).join('\n') : '';
+      if (!confirm(`確定刪除 ${clDateLabel(date)} 的全部日誌？刪掉就救不回來。${list}`)) return;
       // 文字框正在編輯「別天」且還沒存：刪除後重新載入會蓋掉文字框，先記下來再放回去
       const keepText = (CHANGELOG_DIRTY && dateEl.value !== date) ? linesEl.value : null;
       clSaveDay(date, '').then(ok => {
