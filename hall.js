@@ -31,6 +31,8 @@ let HALL_TABLE_READY = true;  // 教材館資料表是否已 db push
 let HALL_LIST = [];           // 最近一次 fan-admin-hall-list 的 resources
 let HALL_KIND_TAB = 'file';   // 教材館子分頁過濾（file=教材分頁/game/audio；books.js setHallTab 控制）
 let HALL_EVENT_CHOICES = [];  // {id, legacyId, title, startDate, endDate}
+let HALL_BRAND_CHOICES = [];  // {id(brands uuid), name}：前台卡片品牌標籤用（2026-09-17）
+let HALL_BRAND_READY = true;  // brand_id 欄位 migration 未 push＝false
 let HALL_EDIT = null;         // 編輯中的資源工作副本（含 rules/grants）；null＝顯示列表
 
 // ===== HTML 逃逸（自帶一份，不依賴 admin.js，同 books.js／fans.js 的做法）=====
@@ -88,6 +90,8 @@ function loadHallView(forceReload) {
     HALL_TABLE_READY = data.tableReady !== false;
     HALL_LIST = Array.isArray(data.resources) ? data.resources : [];
     HALL_EVENT_CHOICES = Array.isArray(data.eventChoices) ? data.eventChoices : [];
+    HALL_BRAND_CHOICES = Array.isArray(data.brandChoices) ? data.brandChoices : [];
+    HALL_BRAND_READY = data.brandReady !== false;
     hallRenderBanner();
     hallRenderList();
   }).catch(err => {
@@ -139,6 +143,7 @@ function hallRenderList() {
         '<div style="font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + hallEscape(r.title) + '</div>' +
         '<div style="font-size:11px; color:var(--c-text-light); margin-top:2px;">/' + hallEscape(r.slug) + '　排序 ' + hallEscape(r.sort) + '</div>' +
         '<div style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">' + kindBadge + freeBadge + pubBadge +
+          (function () { const b = r.brandId && HALL_BRAND_CHOICES.find(x => x.id === r.brandId); return b ? '<span style="background:#fff0f3; color:#d9677f; border:1px solid #f7c9d3; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">' + hallEscape(b.name) + '</span>' : ''; })() +
           '<span style="font-size:11px; color:var(--c-text-light);">規則 ' + ruleCount + '　開通 ' + grantCount + ' 人</span>' +
         '</div>' +
       '</div>' +
@@ -172,7 +177,7 @@ function hallOpenEdit(i) {
         id: r.id, slug: r.slug || '', title: r.title || '', kind: r.kind || 'game',
         isFree: !!r.isFree, intro: r.intro || '', description: r.description || '',
         screenshots: Array.isArray(r.screenshots) ? r.screenshots.slice() : [],
-        coverUrl: r.coverUrl || '', eventId: r.eventId || '', eventTitle: r.eventTitle || '',
+        coverUrl: r.coverUrl || '', eventId: r.eventId || '', eventTitle: r.eventTitle || '', brandId: r.brandId || '',
         buyUrl: r.buyUrl || '', privatePath: r.privatePath || '', fileName: r.fileName || '',
         trialUrl: r.trialUrl || '', isPublished: !!r.isPublished, sort: r.sort || 0,
         rules: JSON.parse(JSON.stringify(r.rules || [])),
@@ -182,10 +187,22 @@ function hallOpenEdit(i) {
     : {
         // 新增預設類型跟著目前子分頁（教材分頁＝file）
         id: null, slug: '', title: '', kind: HALL_KIND_TAB || 'game', isFree: false, intro: '', description: '',
-        screenshots: [], coverUrl: '', eventId: '', eventTitle: '', buyUrl: '', privatePath: '',
+        screenshots: [], coverUrl: '', eventId: '', eventTitle: '', brandId: '', buyUrl: '', privatePath: '',
         fileName: '', trialUrl: '', isPublished: false, sort: 0, rules: [], grants: [], codeRules: []
       };
   hallRenderEditor();
+}
+
+// 重畫表單前把畫面上還沒存的輸入寫回工作副本（例如上傳封面後重畫，不能清掉剛改的欄位）
+function hallSyncFormToEdit() {
+  const e = HALL_EDIT;
+  if (!e) return;
+  const map = { hfTitle: 'title', hfSlug: 'slug', hfKind: 'kind', hfIntro: 'intro', hfDescription: 'description',
+    hfCoverUrl: 'coverUrl', hfEvent: 'eventId', hfBrand: 'brandId', hfBuyUrl: 'buyUrl', hfFileName: 'fileName',
+    hfTrialUrl: 'trialUrl', hfSort: 'sort' };
+  Object.keys(map).forEach(id => { const el = document.getElementById(id); if (el) e[map[id]] = el.value; });
+  const free = document.getElementById('hfFree'); if (free) e.isFree = free.checked;
+  const pub = document.getElementById('hfPublished'); if (pub) e.isPublished = pub.checked;
 }
 
 function hallCloseEdit() {
@@ -209,6 +226,13 @@ function hallRenderEditor() {
   ));
   if (e.eventId && !HALL_EVENT_CHOICES.some(c => c.id === e.eventId)) {
     evOptions.push('<option value="' + hallEscape(e.eventId) + '" selected>' + (e.eventTitle ? hallEscape(e.eventTitle) : '（目前綁定的團，已超過下拉範圍）') + '</option>');
+  }
+
+  const brandOptions = ['<option value="">（不顯示品牌）</option>'].concat(HALL_BRAND_CHOICES.map(b =>
+    '<option value="' + hallEscape(b.id) + '"' + (b.id === e.brandId ? ' selected' : '') + '>' + hallEscape(b.name) + '</option>'
+  ));
+  if (e.brandId && !HALL_BRAND_CHOICES.some(b => b.id === e.brandId)) {
+    brandOptions.push('<option value="' + hallEscape(e.brandId) + '" selected>（目前品牌已不在品牌資料庫）</option>');
   }
 
   const fullFileStatus = e.privatePath
@@ -260,13 +284,16 @@ function hallRenderEditor() {
           (e.coverUrl ? '<img src="' + hallEscape(e.coverUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : '尚未設定') + '</div>' +
         '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
           '<input id="hfCoverUrl" style="' + inputStyle + '" value="' + hallEscape(e.coverUrl) + '" placeholder="圖片網址，或用下面按鈕上傳" oninput="hallCoverUrlInput(this.value)">' +
-          '<button type="button" class="task-mini-btn" onclick="hallPickImage(function(url){ HALL_EDIT.coverUrl = url; hallRenderEditor(); })">📤 上傳封面</button>' +
+          '<button type="button" class="task-mini-btn" onclick="hallPickImage(function(url){ hallSyncFormToEdit(); HALL_EDIT.coverUrl = url; hallRenderEditor(); })">📤 上傳封面</button>' +
         '</div>' +
       '</div>' +
 
       label('截圖') +
       '<div id="hfScreenshots"></div>' +
       '<button type="button" class="task-mini-btn" onclick="hallPickImage(function(url){ HALL_EDIT.screenshots.push(url); hallRenderScreenshots(); })">＋ 新增截圖</button>' +
+
+      label('品牌標籤（顯示在會員收藏庫、教材館、點數商城、我的兌換碼的卡片上）' + (HALL_BRAND_READY ? '' : '　<span style="color:#c0392b;">⚠ 資料庫待更新，選了也存不起來</span>')) +
+      '<select id="hfBrand" style="' + inputStyle + '">' + brandOptions.join('') + '</select>' +
 
       label('綁定團購（純標記用，例如搭配某次開團的加購贈品；不綁定就跟團購無關）') +
       '<select id="hfEvent" style="' + inputStyle + '">' + evOptions.join('') + '</select>' +
@@ -762,6 +789,7 @@ async function hallSave() {
     screenshots: e.screenshots || [],
     coverUrl: document.getElementById('hfCoverUrl').value.trim(),
     eventId: document.getElementById('hfEvent').value,
+    brandId: document.getElementById('hfBrand').value,
     buyUrl: document.getElementById('hfBuyUrl').value.trim(),
     fileName: document.getElementById('hfFileName').value.trim(),
     trialUrl: document.getElementById('hfTrialUrl').value.trim(),
@@ -783,8 +811,12 @@ async function hallSave() {
     const idx = HALL_LIST.findIndex(x => x.id === merged.id);
     if (idx >= 0) HALL_LIST[idx] = Object.assign({}, HALL_LIST[idx], merged);
     else HALL_LIST.unshift(merged);
-    e.id = merged.id;
-    e.slug = merged.slug;
+    // 工作副本改用存檔後的值（原本只同步 id/slug，重畫會把品牌等欄位跳回存檔前的值）
+    ['id', 'slug', 'title', 'kind', 'isFree', 'intro', 'description', 'coverUrl', 'eventId', 'eventTitle', 'brandId',
+      'buyUrl', 'privatePath', 'fileName', 'trialUrl', 'isPublished', 'sort'].forEach(k => {
+      if (merged[k] !== undefined) e[k] = merged[k];
+    });
+    if (Array.isArray(merged.screenshots)) e.screenshots = merged.screenshots.slice();
     document.getElementById('hfSlug').value = merged.slug || '';
     statusEl.textContent = '已儲存';
     statusEl.className = 'form-status';
