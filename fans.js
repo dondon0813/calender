@@ -206,7 +206,25 @@ function renderFanMemberStats(s) {
     tile('總註冊', s.total) + tile('本週新增', s.newThisWeek) + tile('有訂單', s.withOrders) +
     tile('行銷同意', s.marketingConsent) + tile('填了生日', s.withBirthday) + tile('填了電話', s.withPhone) +
     tile('填了LINE', s.withLine) + tile('填了寶貝', s.withChildren) + tile('綁多信箱', s.multiEmail) +
-    tile('已分級', s.tiered);
+    tile('已分級', s.tiered) + faProfileFillHtml(s);
+}
+
+// 個人資料填寫率（09-17 雪莉：密碼／信箱收進「⚙️ 設定」、未填資料在會員中心顯示可關閉的資料卡，追蹤新註冊的填寫比例有沒有降低）
+// 後端 profileFill＝以改版上線時間分兩組；pfPrompt＝資料卡漏斗次數（每台裝置各算一次，非人數）
+function faProfileFillHtml(s) {
+  const f = s.profileFill, p = s.pfPrompt;
+  if (!f) return '';
+  const pct = (g) => g.total ? Math.round(g.filled / g.total * 100) + '%' : '—';
+  const cut = String(f.cutoff || '').slice(5, 10).replace('-', '/');
+  let h = '<div style="flex-basis:100%; background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:10px; padding:10px 14px; font-size:13px; line-height:1.8;">' +
+    '<b>📋 個人資料填寫率</b>（填了生日／電話／LINE／寶貝任一項）<br>' +
+    cut + ' 改版前註冊：<b>' + pct(f.before) + '</b>（' + f.before.filled + '／' + f.before.total + ' 人）　' +
+    cut + ' 改版後註冊：<b>' + pct(f.after) + '</b>（' + f.after.filled + '／' + f.after.total + ' 人）';
+  if (p) {
+    h += '<br><span style="color:var(--c-text-light);">會員中心資料卡：顯示 ' + p.shown + ' 次｜按 ✕ ' + p.dismiss + ' 次｜在卡片儲存 ' + p.savepopup +
+      ' 次｜在設定頁儲存 ' + p.savesettings + ' 次（次數以裝置計）</span>';
+  }
+  return h + '</div>';
 }
 
 // ===== 生日提醒（只提醒「已分級標註」的會員：本人生日＋寶貝生日月，14 天內）=====
