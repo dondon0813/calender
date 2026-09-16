@@ -2,9 +2,15 @@
  * 各頁 HTML 放 <button class="site-home-btn" id="siteMenuBtn">（沿用 shared.css 的圓鈕外觀與位置）＋載入本檔。
  * 選單內容＝首頁入口卡那些；最上面「加入會員」。要增刪項目只改下面 SITE_MENU_ITEMS。
  * 樣式由本檔自行注入（smn- 前綴），不依賴 shared.css 快取版本。
- * 內嵌在會員 App（iframe）裡時不顯示「加入會員」（已經是會員）。 */
+ * 內嵌在會員 App（iframe）裡時不顯示「加入會員」（已經是會員）。
+ * 已登入會員（09-17 雪莉）：「加入會員」換成「會員中心＋會員編號・暱稱」卡片。登入狀態存在會員網域，
+ * 用隱藏 iframe 載入 /fan-bridge 以 postMessage 問（op:'who'，只回編號＋暱稱，token 不離開會員網域；同 recipes.html 收藏橋接）。
+ * 已登入結果在 sessionStorage 快取 5 分鐘（換頁不重問）；未登入不快取（剛登入回來馬上就會變）。 */
 (function () {
-  var MEMBER_URL = 'https://member.sheridondon.com.tw/member';
+  // 本機預覽（localhost）改連本機 next dev，正式站一律連會員網域
+  var MEMBER_ORIGIN = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://localhost:3999' : 'https://member.sheridondon.com.tw';
+  var MEMBER_URL = MEMBER_ORIGIN + '/member';
+  var SS_MEMBER = 'smn_member_v1';
   var ICON = {
     home: '<path d="M3.8 11.2 12 4.6l8.2 6.6" /><path d="M6 9.8v8.9A1.8 1.8 0 0 0 7.8 20.5h8.4a1.8 1.8 0 0 0 1.8-1.8V9.8" /><path d="M10 20.5v-3.6a2 2 0 0 1 4 0v3.6" />',
     calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17" /><path d="M8.5 3v4" /><path d="M15.5 3v4" /><path d="M12 18c-.3-.2-2.6-1.6-2.6-3.1a1.3 1.3 0 0 1 2.6-.6 1.3 1.3 0 0 1 2.6.6c0 1.5-2.3 2.9-2.6 3.1z" />',
@@ -44,6 +50,49 @@
     return new URLSearchParams(location.search).get('view') ? 'recipes' : 'home';
   }
 
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ---- 會員登入狀態（fan-bridge）----
+  function readCachedMember() {
+    try {
+      var o = JSON.parse(sessionStorage.getItem(SS_MEMBER) || 'null');
+      if (o && o.loggedIn && Date.now() - o.at < 5 * 60 * 1000) return o;
+    } catch (e) { /* 私密模式等 */ }
+    return null;
+  }
+  function askMember(done) {
+    var ifr = document.createElement('iframe');
+    var finished = false;
+    var timer = setTimeout(function () { finish({ loggedIn: false }); }, 12000);
+    function finish(res) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      window.removeEventListener('message', onMsg);
+      setTimeout(function () { if (ifr.parentNode) ifr.parentNode.removeChild(ifr); }, 0);
+      done(res);
+    }
+    function onMsg(e) {
+      if (e.origin !== MEMBER_ORIGIN || e.source !== ifr.contentWindow || !e.data) return;
+      if (e.data.src === 'dd-fav-ready') {
+        try { ifr.contentWindow.postMessage({ src: 'dd-fav', id: 1, op: 'who' }, MEMBER_ORIGIN); } catch (err) { finish({ loggedIn: false }); }
+      } else if (e.data.src === 'dd-fav-reply' && e.data.id === 1) {
+        finish({ loggedIn: !!e.data.loggedIn, memberNo: e.data.memberNo || '', displayName: e.data.displayName || '' });
+      }
+    }
+    window.addEventListener('message', onMsg);
+    ifr.src = MEMBER_ORIGIN + '/fan-bridge';
+    ifr.title = '會員登入狀態';
+    ifr.setAttribute('aria-hidden', 'true');
+    ifr.tabIndex = -1;
+    ifr.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(ifr);
+  }
+
   function injectCss() {
     if (document.getElementById('smnStyle')) return;
     var css =
@@ -56,6 +105,13 @@
       '.smn-join{display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 2px 8px;padding:12px 10px;border-radius:999px;' +
       'background:var(--c-primary,#FF8FA3);color:#fff !important;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 3px 10px rgba(255,143,163,.35);}' +
       '.smn-join svg{flex:none;}' +
+      '.smn-member{display:flex;align-items:center;gap:10px;margin:2px 2px 8px;padding:10px 12px;border-radius:16px;text-decoration:none;' +
+      'background:linear-gradient(135deg,#FF8FA3 0%,#ffb199 100%);color:#fff !important;box-shadow:0 3px 10px rgba(255,143,163,.35);}' +
+      '.smn-member-ico{flex:none;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;}' +
+      '.smn-member-txt{flex:1;min-width:0;line-height:1.35;}' +
+      '.smn-member-title{font-weight:800;font-size:15px;}' +
+      '.smn-member-sub{font-size:12px;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+      '.smn-member-arrow{flex:none;font-size:18px;font-weight:800;opacity:.9;}' +
       '.smn-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:var(--c-text,#5a4a3f) !important;' +
       'text-decoration:none;font-weight:700;font-size:15px;-webkit-tap-highlight-color:transparent;}' +
       '.smn-item svg{flex:none;color:var(--c-brown,#b5755a);}' +
@@ -66,6 +122,19 @@
     st.id = 'smnStyle';
     st.textContent = css;
     document.head.appendChild(st);
+  }
+
+  // 選單最上面：未登入＝加入會員；已登入＝會員中心卡（編號・暱稱）
+  function joinHtml(m) {
+    if (m && m.loggedIn) {
+      var sub = [m.memberNo, m.displayName].filter(Boolean).map(esc).join('・');
+      return '<a class="smn-member" href="' + MEMBER_URL + '">' +
+        '<span class="smn-member-ico">' + svg('member', 20) + '</span>' +
+        '<span class="smn-member-txt"><span class="smn-member-title" style="display:block;">會員中心</span>' +
+        (sub ? '<span class="smn-member-sub" style="display:block;">' + sub + '　您好 🩷</span>' : '') + '</span>' +
+        '<span class="smn-member-arrow" aria-hidden="true">›</span></a>';
+    }
+    return '<a class="smn-join" href="' + MEMBER_URL + '">' + svg('member', 20) + '加入會員</a>';
   }
 
   function init() {
@@ -83,15 +152,28 @@
     panel.setAttribute('aria-label', '網站選單');
 
     var html = '';
-    if (!embedded) {
-      html += '<a class="smn-join" href="' + MEMBER_URL + '">' + svg('member', 20) + '加入會員</a>';
-    }
+    if (!embedded) html += '<div id="smnMemberSlot">' + joinHtml(readCachedMember()) + '</div>';
     SITE_MENU_ITEMS.forEach(function (it, i) {
       html += '<a class="smn-item" data-i="' + i + '" href="' + it.href + '">' + svg(it.icon, 20) + '<span>' + it.label + '</span></a>';
     });
     panel.innerHTML = html;
     document.body.appendChild(overlay);
     document.body.appendChild(panel);
+
+    // 沒有已登入快取才去問（頁面載入完、閒置時再問，不拖慢首屏）
+    if (!embedded && !readCachedMember()) {
+      var run = function () {
+        askMember(function (res) {
+          if (res.loggedIn) {
+            try { sessionStorage.setItem(SS_MEMBER, JSON.stringify({ loggedIn: true, memberNo: res.memberNo, displayName: res.displayName, at: Date.now() })); } catch (e) { /* 忽略 */ }
+          }
+          var slot = document.getElementById('smnMemberSlot');
+          if (slot) slot.innerHTML = joinHtml(res.loggedIn ? res : null);
+        });
+      };
+      if (document.readyState === 'complete') setTimeout(run, 300);
+      else window.addEventListener('load', function () { setTimeout(run, 300); });
+    }
 
     function markCurrent() {
       var links = panel.querySelectorAll('.smn-item');
