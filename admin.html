@@ -6939,6 +6939,8 @@
       </div>
       <label for="vendorNoteInput">廠商備註</label>
       <textarea id="vendorNoteInput" rows="3" placeholder="備註…"></textarea>
+      <label for="vendorCustomerServiceInput">💬 客服（給客人看的，會員訂單明細顯示；品牌沒填客服時才會用廠商的。跟上面的內部聯絡窗口分開）</label>
+      <textarea id="vendorCustomerServiceInput" rows="3" placeholder="例如：&#10;LINE 官方帳號：@xxxx&#10;客服信箱：service@example.com"></textarea>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="vendorSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="vendorDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -7096,7 +7098,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=1"></script>
-<script src="brandVendor.js?v=20"></script>
+<script src="brandVendor.js?v=21"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

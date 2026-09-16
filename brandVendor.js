@@ -235,6 +235,7 @@ function openVendorEditModal(vendor) {
   document.getElementById('vendorArchivedInput').checked = vendor ? !!vendor.archived : false;
   bvSyncVendorEndReason_();
   document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
+  document.getElementById('vendorCustomerServiceInput').value = vendor ? (vendor.customerService || '') : '';
   document.getElementById('vendorEditModal').classList.add('show');
 }
 function closeVendorEditModal() {
@@ -255,7 +256,8 @@ document.getElementById('vendorSaveBtn').addEventListener('click', async () => {
     ended: document.getElementById('vendorEndedInput').checked,
     endReason: document.getElementById('vendorEndReasonInput').value.trim(),
     archived: document.getElementById('vendorArchivedInput').checked,
-    note: document.getElementById('vendorNoteInput').value.trim()
+    note: document.getElementById('vendorNoteInput').value.trim(),
+    customerService: document.getElementById('vendorCustomerServiceInput').value.trim()
   };
   const btn = document.getElementById('vendorSaveBtn');
   btn.disabled = true;
@@ -724,7 +726,7 @@ document.getElementById('evTitleInput').addEventListener('input', () => {
 });
 
 // ===== 客服（2026-09-16）=====
-// 事件客服空白＝沿用品牌庫 customerService。視窗裡提示「目前會沿用哪個品牌的客服」。
+// 優先順序：事件客服＞品牌 customerService＞品牌所屬廠商 customerService。視窗裡提示「目前會沿用哪個」。
 // 提示只依團名比對（後台畫面上的推測）；會員端實際解析另外優先看帳務列綁的品牌（lib/fans/customerservice.ts）。
 function bvRenderEvCsHint() {
   const hint = document.getElementById('evCsBrandHint');
@@ -735,12 +737,27 @@ function bvRenderEvCsHint() {
     lines.push('⚠ 客服欄位還沒開通（資料庫待更新），目前填了也存不起來');
   } else if (!input.value.trim()) {
     const title = document.getElementById('evTitleInput').value.trim();
-    const brands = title ? bvBrandsInTitle_(title).filter(b => String(b.customerService || '').trim()) : [];
-    if (brands.length) {
-      lines.push('目前沿用品牌客服：');
-      brands.forEach(b => lines.push((brands.length > 1 ? '【' + b.name + '】\n' : '') + String(b.customerService).trim()));
+    const found = (title ? bvBrandsInTitle_(title) : []).map(b => {
+      const own = String(b.customerService || '').trim();
+      if (own) return { name: b.name, src: '品牌', cs: own };
+      const seen = new Set();
+      const vs = (b.vendorIds || []).map(id => vendorDb.find(v => v.id === id))
+        .filter(v => {
+          const cs = v ? String(v.customerService || '').trim() : '';
+          if (!cs || seen.has(cs)) return false;
+          seen.add(cs);
+          return true;
+        });
+      if (!vs.length) return null;
+      const cs = vs.length === 1 ? String(vs[0].customerService).trim()
+        : vs.map(v => '【' + v.name + '】\n' + String(v.customerService).trim()).join('\n');
+      return { name: b.name, src: '廠商', cs };
+    }).filter(Boolean);
+    if (found.length) {
+      lines.push('目前沿用客服：');
+      found.forEach(f => lines.push('【' + f.name + (f.src === '廠商' ? '（品牌沒填，用廠商的）' : '') + '】\n' + f.cs));
     } else {
-      lines.push('目前沒有可沿用的品牌客服（團名比對不到品牌，或品牌沒填客服）');
+      lines.push('目前沒有可沿用的客服（團名比對不到品牌，或品牌與廠商都沒填客服）');
     }
   }
   hint.textContent = lines.join('\n');
