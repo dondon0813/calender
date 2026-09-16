@@ -39,6 +39,8 @@ let customBlocks = [];             // 【新】開團狀態清單的自訂區塊
 let socialLinks = {};              // 【新】品牌社群連結（IG／TikTok／FB／Email），顯示在現正開團中最上方
 let vendorDb = [];  // 【新】團購廠商資料庫（廠商/行銷公司）
 let brandDb = [];   // 【新】團購品牌資料庫（掛在廠商底下）
+let eventCustomerService = {};  // 【新】各事件的客服文字 { 事件id: "客服" }（只含有填的；空白＝沿用品牌）
+let customerServiceReady = true; // 客服欄位 migration 未 push 時後台包回 false
 let eventChecklistStates = {};  // 【新】各事件的開團前檢查清單勾選狀態 { 事件id: { "品牌名::項目": true } }
 
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
@@ -1484,6 +1486,8 @@ async function fetchMemos() {
     vendorDb = Array.isArray(data.vendorDb) ? data.vendorDb : [];
     brandDb = Array.isArray(data.brandDb) ? data.brandDb : [];
     eventChecklistStates = (data.eventChecklistStates && typeof data.eventChecklistStates === 'object') ? data.eventChecklistStates : {};
+    eventCustomerService = (data.eventCustomerService && typeof data.eventCustomerService === 'object') ? data.eventCustomerService : {};
+    customerServiceReady = data.customerServiceReady !== false;
     if (isViewShown('brandVendor')) renderBrandVendorView();
 
     renderGroupStatusList('calGroupList');
@@ -1970,6 +1974,8 @@ function openEventEditModal(ev, prefillDate) {
   document.getElementById('evEarlyBirdInput').value = ev && ev.earlyBird && ev.earlyBird.length ? ev.earlyBird.join('\n') : '';
   document.getElementById('evDiscountCodeInput').value = ev ? (ev.discountCode || '') : '';
   document.getElementById('evDiscountDescInput').value = ev ? (ev.discountDesc || '') : '';
+  document.getElementById('evCustomerServiceInput').value = (ev && eventCustomerService[String(ev.id)]) || '';
+  if (typeof bvRenderEvCsHint === 'function') setTimeout(bvRenderEvCsHint, 0);
   evThumbSet(ev ? (ev.thumb || '') : '');
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;
   document.getElementById('evBrandMatchInfo').style.display = 'none';
@@ -2162,11 +2168,15 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const discountCode = document.getElementById('evDiscountCodeInput').value.trim();
   const discountDesc = document.getElementById('evDiscountDescInput').value.trim();
   const thumbUrl = evThumbCurrent;
+  const customerService = document.getElementById('evCustomerServiceInput').value.trim();
+  if (!customerServiceReady && customerService) {
+    if (!confirm('💬 客服欄位還沒開通（資料庫待更新），這次填的客服不會被存起來，其他設定照常儲存。要繼續嗎？')) return;
+  }
 
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
     allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime,
-    thumbUrl, discountCode, discountDesc
+    thumbUrl, discountCode, discountDesc, customerService
   };
 
   // 開團前檢查清單：沒勾完先確認一次（提醒不強制擋）；清單沒顯示就不帶欄位、不動已存狀態
@@ -2187,9 +2197,13 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
       await postTask(Object.assign({ type: 'event-update', id: eventEditCtx.ev.id }, payload));
     }
     // 勾選狀態後台包（fetchMemos）才會刷新，先把本地快取跟上，重開視窗才不會看到舊勾選
-    if (ck) {
-      const savedId = eventEditCtx.isNew ? (addRes && addRes.id) : eventEditCtx.ev.id;
-      if (savedId !== undefined && savedId !== null && savedId !== '') eventChecklistStates[String(savedId)] = ck.state;
+    const savedId = eventEditCtx.isNew ? (addRes && addRes.id) : eventEditCtx.ev.id;
+    const hasSavedId = savedId !== undefined && savedId !== null && savedId !== '';
+    if (ck && hasSavedId) eventChecklistStates[String(savedId)] = ck.state;
+    // 客服同理：本地快取先跟上（空白＝刪掉 key，代表沿用品牌）
+    if (hasSavedId && customerServiceReady) {
+      if (customerService) eventCustomerService[String(savedId)] = customerService;
+      else delete eventCustomerService[String(savedId)];
     }
     const reopenDate = calEditSelectedDate;
     closeEventEditModal();

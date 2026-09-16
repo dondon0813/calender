@@ -332,6 +332,7 @@ function openBrandEditModal(brand) {
   document.getElementById('brandShopeeInput').value = brand ? (brand.shopeeUrl || '') : '';
   document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
   document.getElementById('brandOpenChecklistInput').value = brand ? (brand.openChecklist || '') : '';
+  document.getElementById('brandCustomerServiceInput').value = brand ? (brand.customerService || '') : '';
   document.getElementById('brandEditModal').classList.add('show');
 }
 function closeBrandEditModal() {
@@ -362,7 +363,9 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     // 只修頭尾空白，內文換行是貼文排版的一部分，不能動
     postTemplate: document.getElementById('brandPostTemplateInput').value.trim(),
     // 一行一條，換行是清單分隔，不能動
-    openChecklist: document.getElementById('brandOpenChecklistInput').value.trim()
+    openChecklist: document.getElementById('brandOpenChecklistInput').value.trim(),
+    // 多行文字，換行保留
+    customerService: document.getElementById('brandCustomerServiceInput').value.trim()
   };
   const btn = document.getElementById('brandSaveBtn');
   btn.disabled = true;
@@ -717,7 +720,35 @@ function renderEvBrandMatchInfo() {
 
 document.getElementById('evTitleInput').addEventListener('input', () => {
   clearTimeout(window._evBrandMatchTimer);
-  window._evBrandMatchTimer = setTimeout(() => { renderEvBrandMatchInfo(); bvRenderEvChecklist(); }, 300);
+  window._evBrandMatchTimer = setTimeout(() => { renderEvBrandMatchInfo(); bvRenderEvChecklist(); bvRenderEvCsHint(); }, 300);
+});
+
+// ===== 客服（2026-09-16）=====
+// 事件客服空白＝沿用品牌庫 customerService。視窗裡提示「目前會沿用哪個品牌的客服」。
+// 提示只依團名比對（後台畫面上的推測）；會員端實際解析另外優先看帳務列綁的品牌（lib/fans/customerservice.ts）。
+function bvRenderEvCsHint() {
+  const hint = document.getElementById('evCsBrandHint');
+  const input = document.getElementById('evCustomerServiceInput');
+  if (!hint || !input) return;
+  const lines = [];
+  if (typeof customerServiceReady !== 'undefined' && !customerServiceReady) {
+    lines.push('⚠ 客服欄位還沒開通（資料庫待更新），目前填了也存不起來');
+  } else if (!input.value.trim()) {
+    const title = document.getElementById('evTitleInput').value.trim();
+    const brands = title ? bvBrandsInTitle_(title).filter(b => String(b.customerService || '').trim()) : [];
+    if (brands.length) {
+      lines.push('目前沿用品牌客服：');
+      brands.forEach(b => lines.push((brands.length > 1 ? '【' + b.name + '】\n' : '') + String(b.customerService).trim()));
+    } else {
+      lines.push('目前沒有可沿用的品牌客服（團名比對不到品牌，或品牌沒填客服）');
+    }
+  }
+  hint.textContent = lines.join('\n');
+  hint.style.display = lines.length ? 'block' : 'none';
+}
+document.getElementById('evCustomerServiceInput').addEventListener('input', () => {
+  clearTimeout(window._evCsHintTimer);
+  window._evCsHintTimer = setTimeout(bvRenderEvCsHint, 300);
 });
 
 // ===== 開團前檢查清單（2026-09-09）=====
