@@ -1223,7 +1223,7 @@
 </head>
 <body>
 
-<button class="site-home-btn" id="siteHomeBtn" title="回首頁" aria-label="回首頁"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 11.2 12 4.6l8.2 6.6" /><path d="M6 9.8v8.9A1.8 1.8 0 0 0 7.8 20.5h8.4a1.8 1.8 0 0 0 1.8-1.8V9.8" /><path d="M10 20.5v-3.6a2 2 0 0 1 4 0v3.6" /></svg></button>
+<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=1"></script>
 
 <div class="wrap">
   <!-- 首頁 -->
@@ -2929,8 +2929,7 @@ document.querySelectorAll('.soon-card').forEach(card => {
 document.getElementById('backFromIngredients').addEventListener('click', () => switchView('home'));
 document.getElementById('backFromRecipes').addEventListener('click', () => switchView('home'));
 
-// 【新】右上角小房子：這裡本身就是首頁，點擊直接切回首頁區塊（不用整頁跳轉）
-document.getElementById('siteHomeBtn').addEventListener('click', () => switchView('home'));
+// 右上角原「回首頁」小房子 2026-09-17 改漢堡選單（siteMenu.js；選單內「首頁／觀看食譜」在本頁直接 switchView）
 
 function applyInitialRoute() {
   // 完全沒帶網址參數（直接打開 recipes.html）才停在首頁；
