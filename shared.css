@@ -325,7 +325,7 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(90, 74, 63, 0.45);
-  z-index: 50;
+  z-index: 1100; /* 高於置頂橫幅 .smn-bar(1000)，彈窗開著時橫幅一起被遮罩蓋住 */
   align-items: center;
   justify-content: center;
 }

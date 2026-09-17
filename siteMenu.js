@@ -1,10 +1,10 @@
-/* 右上角漢堡選單（2026-09-17 雪莉：原本各頁右上角「回首頁」小房子全部改成漢堡選單）。
- * 各頁 HTML 放 <button class="site-home-btn" id="siteMenuBtn">（沿用 shared.css 的圓鈕外觀與位置）＋載入本檔。
- * 選單內容＝首頁入口卡那些；最上面「加入會員」。要增刪項目只改下面 SITE_MENU_ITEMS。
- * 樣式由本檔自行注入（smn- 前綴），不依賴 shared.css 快取版本。
- * 內嵌在會員 App（iframe）裡時不顯示「加入會員」（已經是會員）。
- * 已登入會員（09-17 雪莉）：「加入會員」換成「會員中心＋會員編號・暱稱」卡片。登入狀態存在會員網域，
- * 用隱藏 iframe 載入 /fan-bridge 以 postMessage 問（op:'who'，只回編號＋暱稱，token 不離開會員網域；同 recipes.html 收藏橋接）。
+/* 置頂橫幅（Vogue 風格）：左上漢堡、正中 LOGO、右上會員圖示，捲動／換頁永遠固定（2026-09-17 雪莉定案）。
+ * 取代原本各頁右上角單顆「回首頁」圓鈕＋各頁自己内嵌的 .page-brand-logo／.home-brand-logo：
+ * 本檔自行注入整條 <header class="smn-bar">，不依賴頁面上是否有 #siteMenuBtn（有就隱藏、沒有也能運作）。
+ * 各頁只要維持 <script src="siteMenu.js?v=..."></script> 一行即可，樣式全部自帶（smn- 前綴，不吃 shared.css 快取版本）。
+ * 內嵌在會員 App（iframe）裡時不顯示會員圖示、也不顯示「加入會員」（已經是會員）。
+ * 已登入會員（09-17 雪莉）：面板頂「加入會員」換成「會員中心＋會員編號・暱稱」卡片；橫幅會員圖示同步換成實心＋小圓點。
+ * 登入狀態存在會員網域，用隱藏 iframe 載入 /fan-bridge 以 postMessage 問（op:'who'，只回編號＋暱稱，token 不離開會員網域，同 recipes.html 收藏橋接）。
  * 已登入結果在 sessionStorage 快取 5 分鐘（換頁不重問）；未登入不快取（剛登入回來馬上就會變）。 */
 (function () {
   // 本機預覽（localhost）改連本機 next dev，正式站一律連會員網域
@@ -35,6 +35,16 @@
   function svg(name, size) {
     return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="' +
       (size > 22 ? '2.06' : '1.8') + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[name] + '</svg>';
+  }
+
+  // 橫幅右上角會員圖示：未登入＝空心描邊、已登入＝實心＋右上小圓點（同一組路徑，開／合口徑一致）
+  function memberBarIcon(loggedIn) {
+    var path = '<circle cx="12" cy="8.6" r="4.15" /><path d="M4.6 20.2c.7-4 3.7-6.9 7.4-6.9s6.7 2.9 7.4 6.9" />';
+    if (loggedIn) {
+      return '<svg viewBox="0 0 24 24" width="22" height="22" fill="#FF8FA3" stroke="none" aria-hidden="true">' + path + '</svg>' +
+        '<span class="smn-member-dot" aria-hidden="true"></span>';
+    }
+    return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--c-text,#5a4a3f)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
   }
 
   var embedded = false;
@@ -96,11 +106,31 @@
   function injectCss() {
     if (document.getElementById('smnStyle')) return;
     var css =
-      '.smn-overlay{position:fixed;inset:0;z-index:1000;background:rgba(90,60,40,.28);opacity:0;pointer-events:none;transition:opacity .18s ease;}' +
+      /* 橫幅高度：手機 56px、≥768px 64px，另外加上瀏海機安全區。變數給頁面自己的 fixed 元素（例如 index.html 左上複製網址鈕）讀取避開橫幅。 */
+      ':root{--smn-bar-h:56px;}' +
+      '@media (min-width:768px){:root{--smn-bar-h:64px;}}' +
+      '.smn-bar{position:fixed;top:0;left:0;right:0;z-index:1000;padding-top:env(safe-area-inset-top,0px);' +
+      'background:#FFF7EE;box-sizing:border-box;}' +
+      '.smn-bar-inner{position:relative;height:var(--smn-bar-h);display:flex;align-items:center;}' +
+      '.smn-burger,.smn-member-btn{width:44px;height:44px;flex:none;box-sizing:border-box;border:0;background:transparent;padding:0;margin:0;' +
+      'display:flex;align-items:center;justify-content:center;color:var(--c-text,#5a4a3f);cursor:pointer;position:relative;' +
+      'text-decoration:none;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none;}' +
+      '.smn-burger{margin-left:8px;}' +
+      '.smn-member-btn{margin-left:auto;margin-right:8px;}' +
+      '.smn-member-dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:#FF8FA3;border:2px solid #FFF7EE;}' +
+      '.smn-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);line-height:0;-webkit-tap-highlight-color:transparent;}' +
+      '.smn-logo img{display:block;height:34px;width:auto;}' +
+      '@media (min-width:768px){.smn-logo img{height:40px;}}' +
+      /* 全站讓位＋隱藏舊版每頁各自的回首頁鈕／頁內 LOGO（橫幅統一取代） */
+      'body{padding-top:calc(var(--smn-bar-h) + env(safe-area-inset-top,0px) + 1px) !important;}' +
+      '.site-home-btn,.page-brand-logo,.home-brand-logo{display:none !important;}' +
+      /* 選單面板：從橫幅下方左側彈出 */
+      '.smn-overlay{position:fixed;inset:0;z-index:999;background:rgba(90,60,40,.28);opacity:0;pointer-events:none;transition:opacity .18s ease;}' +
       '.smn-overlay.on{opacity:1;pointer-events:auto;}' +
-      '.smn-panel{position:fixed;top:66px;right:14px;z-index:1001;width:min(260px,calc(100vw - 28px));max-height:calc(100dvh - 86px);overflow-y:auto;' +
+      '.smn-panel{position:fixed;top:calc(var(--smn-bar-h) + env(safe-area-inset-top,0px) + 9px);left:14px;z-index:1001;width:min(260px,calc(100vw - 28px));' +
+      'max-height:calc(100dvh - var(--smn-bar-h) - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;' +
       'background:#fff;border:1px solid var(--c-border,#FFD3B6);border-radius:18px;box-shadow:0 10px 30px rgba(120,80,50,.18);padding:10px;' +
-      'transform:translateY(-6px) scale(.98);transform-origin:top right;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;}' +
+      'transform:translateY(-6px) scale(.98);transform-origin:top left;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;}' +
       '.smn-panel.on{opacity:1;transform:none;pointer-events:auto;}' +
       '.smn-join{display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 2px 8px;padding:12px 10px;border-radius:999px;' +
       'background:var(--c-primary,#FF8FA3);color:#fff !important;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 3px 10px rgba(255,143,163,.35);}' +
@@ -138,12 +168,41 @@
   }
 
   function init() {
-    var btn = document.getElementById('siteMenuBtn');
-    if (!btn || btn.getAttribute('data-smn') === '1') return;
-    btn.setAttribute('data-smn', '1');
+    if (document.getElementById('smnBar')) return; // 防重複注入
     injectCss();
 
     var page = currentPage();
+
+    // ---- 置頂橫幅：左漢堡／中 LOGO／右會員圖示（iframe 內嵌不出會員圖示） ----
+    var bar = document.createElement('header');
+    bar.id = 'smnBar';
+    bar.className = 'smn-bar';
+    var barHtml = '<div class="smn-bar-inner">' +
+      '<button type="button" class="smn-burger" id="smnBurgerBtn" title="選單" aria-label="選單" aria-expanded="false" aria-controls="siteMenuPanel">' + svg('menu', 24) + '</button>' +
+      '<a class="smn-logo" id="smnLogo" href="recipes.html" title="回首頁" aria-label="雪莉與朵栗">' +
+      '<picture><source srcset="images/brand-logo.webp" type="image/webp">' +
+      '<img src="images/brand-logo.png" alt="雪莉與朵栗" width="720" height="230"></picture></a>';
+    if (!embedded) {
+      barHtml += '<a class="smn-member-btn" id="smnMemberBtn" href="' + MEMBER_URL + '" aria-label="加入會員／登入">' + memberBarIcon(false) + '</a>';
+    }
+    barHtml += '</div>';
+    bar.innerHTML = barHtml;
+    document.body.insertBefore(bar, document.body.firstChild);
+
+    var btn = document.getElementById('smnBurgerBtn');
+    var logo = document.getElementById('smnLogo');
+    var memberBtn = document.getElementById('smnMemberBtn');
+
+    // 在 recipes.html：點 LOGO 頁內直接切回首頁（與選單「首頁」項一致），不整頁重載
+    logo.addEventListener('click', function (e) {
+      if (page === 'recipes.html' && typeof window.switchView === 'function') {
+        e.preventDefault();
+        window.switchView('home');
+        window.scrollTo(0, 0);
+      }
+    });
+
+    // ---- 選單面板 ----
     var overlay = document.createElement('div');
     overlay.className = 'smn-overlay';
     var panel = document.createElement('nav');
@@ -161,18 +220,29 @@
     document.body.appendChild(panel);
 
     // 沒有已登入快取才去問（頁面載入完、閒置時再問，不拖慢首屏）
-    if (!embedded && !readCachedMember()) {
-      var run = function () {
-        askMember(function (res) {
-          if (res.loggedIn) {
-            try { sessionStorage.setItem(SS_MEMBER, JSON.stringify({ loggedIn: true, memberNo: res.memberNo, displayName: res.displayName, at: Date.now() })); } catch (e) { /* 忽略 */ }
-          }
-          var slot = document.getElementById('smnMemberSlot');
-          if (slot) slot.innerHTML = joinHtml(res.loggedIn ? res : null);
-        });
-      };
-      if (document.readyState === 'complete') setTimeout(run, 300);
-      else window.addEventListener('load', function () { setTimeout(run, 300); });
+    if (!embedded) {
+      var cached = readCachedMember();
+      if (cached && memberBtn) {
+        memberBtn.innerHTML = memberBarIcon(true);
+        memberBtn.setAttribute('aria-label', '會員中心');
+      }
+      if (!cached) {
+        var run = function () {
+          askMember(function (res) {
+            if (res.loggedIn) {
+              try { sessionStorage.setItem(SS_MEMBER, JSON.stringify({ loggedIn: true, memberNo: res.memberNo, displayName: res.displayName, at: Date.now() })); } catch (e) { /* 忽略 */ }
+            }
+            var slot = document.getElementById('smnMemberSlot');
+            if (slot) slot.innerHTML = joinHtml(res.loggedIn ? res : null);
+            if (memberBtn) {
+              memberBtn.innerHTML = memberBarIcon(!!res.loggedIn);
+              memberBtn.setAttribute('aria-label', res.loggedIn ? '會員中心' : '加入會員／登入');
+            }
+          });
+        };
+        if (document.readyState === 'complete') setTimeout(run, 300);
+        else window.addEventListener('load', function () { setTimeout(run, 300); });
+      }
     }
 
     function markCurrent() {
@@ -188,10 +258,8 @@
       overlay.classList.toggle('on', open);
       panel.classList.toggle('on', open);
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      btn.style.zIndex = open ? '1002' : ''; // 開著時按鈕浮在遮罩上，可再點一次（✕）關閉
       btn.innerHTML = svg(open ? 'close' : 'menu', 24);
     }
-    btn.setAttribute('aria-controls', 'siteMenuPanel');
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       setOpen(!panel.classList.contains('on'));

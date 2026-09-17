@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>雪莉與朵栗 繪本館</title>
-<link rel="stylesheet" href="shared.css?v=20260917">
+<link rel="stylesheet" href="shared.css?v=20260917b">
 <style>
   /* picture-books.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
 
@@ -581,7 +581,7 @@
     padding: 10px 18px;
     border-radius: var(--r-pill);
     box-shadow: var(--sh-modal);
-    z-index: 210;
+    z-index: 1200; /* 高於彈窗遮罩(1100) */
     opacity: 0;
     pointer-events: none;
     transition: opacity .2s ease, transform .2s ease;
@@ -723,7 +723,7 @@
 </head>
 <body>
 
-<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=2"></script>
+<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=3"></script>
 
 <div class="wrap">
   <div class="page-title-wrap">
