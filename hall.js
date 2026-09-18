@@ -133,7 +133,7 @@ function hallRenderList() {
       : '<span style="background:#ccc; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">草稿</span>';
     const cover = r.coverUrl
       ? '<img src="' + hallEscape(r.coverUrl) + '" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex:none; background:#eeeeee;">'
-      : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#f0f0f8; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : r.kind === 'audio' ? '🎵' : '📄') + '</div>';
+      : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#eeeeee; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : r.kind === 'audio' ? '🎵' : '📄') + '</div>';
     const ruleCount = (r.rules || []).length;
     const grantCount = (r.grants || []).length;
     const pageUrl = HALL_MATERIALS_PAGE_BASE + encodeURIComponent(r.slug || '');
