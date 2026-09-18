@@ -74,7 +74,7 @@ body{background:#FDFBF9!important}
 .header-copy-url-btn{background:#F1EDE8!important;box-shadow:none!important}
 
 /* 白卡片疊在近白底色上：加極淡陰影讓卡片「浮」起來（無線條）。試看版，雪莉 09-19 */
-.ogb-bar,.home-changelog,.item-card,.ing-tile,.recipe-reco-card,.reminder-box,.a4-item,.pb-card,.calendar,.cal-wrap,.month-grid{
+.ogb-bar,.home-changelog,.item-card,.ing-tile,.recipe-reco-card,.reminder-box,.a4-item,.month-grid{
   box-shadow:0 1px 2px rgba(90,74,66,.05),0 4px 14px rgba(90,74,66,.07)!important;
 }
 .pb-search-input{background:#F1EDE8!important;border-color:transparent!important}
