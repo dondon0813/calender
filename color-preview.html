@@ -43,6 +43,13 @@
   }
   .cssbar .apply { background: #FF8FA3; color: #fff; }
   .cssbar .clear { background: transparent; color: #8A7D70; border: 1px solid #E8DFD5; }
+  .cssbar .toggle-row {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 700;
+    color: #6b5c50; padding: 8px 12px; border: 1px solid #E8DFD5; border-radius: 999px; cursor: pointer;
+    background: #fff; user-select: none;
+  }
+  .cssbar .toggle-row.on { background: #FDF1E1; border-color: #D98A2B; color: #B5601C; }
+  .cssbar .toggle-row input { accent-color: #FF8FA3; }
   .hint { flex-basis: 100%; font-size: .74rem; color: #A08A90; line-height: 1.5; }
 
   .stage { flex: 1 1 auto; min-height: 0; }
@@ -64,7 +71,11 @@
     <button class="apply" id="applyBtn">套用預覽</button>
     <button class="clear" id="clearBtn">清除／還原</button>
   </div>
-  <div class="hint">這裡只是把顏色暫時套到下面這個畫面上給妳看，不會改到正式網站；關掉這頁或重新整理就會消失。放心試。</div>
+  <label class="toggle-row" id="noBorderRow">
+    <input type="checkbox" id="noBorderToggle">
+    <span>移除外框線</span>
+  </label>
+  <div class="hint">這裡只是把顏色暫時套到下面這個畫面上給妳看，不會改到正式網站；關掉這頁或重新整理就會消失。放心試。「移除外框線」是額外選項，跟上面貼的顏色可以同時套用。</div>
 </div>
 
 <div class="stage">
@@ -89,10 +100,34 @@
   var cssInput = document.getElementById('cssInput');
   var applyBtn = document.getElementById('applyBtn');
   var clearBtn = document.getElementById('clearBtn');
+  var noBorderToggle = document.getElementById('noBorderToggle');
+  var noBorderRow = document.getElementById('noBorderRow');
 
   var overrideCss = '';
   var overrideOn = false;
   var STYLE_ID = 'dondon-color-preview-override';
+
+  var noBorderOn = false;
+  var NO_BORDER_STYLE_ID = 'dondon-no-border-override';
+  // shared.css 裡所有「邊框／分隔線」用的顏色變數，全部設成透明＝視覺上整站外框線消失，
+  // 但版面尺寸不變（border-width 還在，只是看不到），不會造成跑版。
+  // 最後一條 * 規則是保險：涵蓋少數沒有走變數、直接寫死色碼的邊框。
+  var NO_BORDER_CSS = ':root {\n' +
+    '  --c-border: transparent;\n' +
+    '  --c-border-light: transparent;\n' +
+    '  --c-line: transparent;\n' +
+    '  --c-line-2: transparent;\n' +
+    '  --c-tan-border: transparent;\n' +
+    '  --c-title-rule: transparent;\n' +
+    '  --c-coral-border: transparent;\n' +
+    '  --c-mint-border: transparent;\n' +
+    '  --c-purple-border: transparent;\n' +
+    '  --c-blue-border: transparent;\n' +
+    '  --c-gold-border: transparent;\n' +
+    '  --c-orange-dash: transparent;\n' +
+    '  --c-orange-dash-2: transparent;\n' +
+    '}\n' +
+    '* { border-color: transparent !important; }';
 
   function buildStyleText(raw) {
     var text = raw.trim();
@@ -103,18 +138,24 @@
     return text;
   }
 
+  function injectStyle(doc, id, cssText, enabled) {
+    var old = doc.getElementById(id);
+    if (old) old.remove();
+    if (enabled && cssText) {
+      var styleEl = doc.createElement('style');
+      styleEl.id = id;
+      styleEl.textContent = cssText;
+      doc.head.appendChild(styleEl);
+    }
+  }
+
   function injectOverride() {
     try {
       var doc = frame.contentDocument;
       if (!doc || !doc.head) return false;
-      var old = doc.getElementById(STYLE_ID);
-      if (old) old.remove();
-      if (overrideOn && overrideCss) {
-        var styleEl = doc.createElement('style');
-        styleEl.id = STYLE_ID;
-        styleEl.textContent = overrideCss;
-        doc.head.appendChild(styleEl);
-      }
+      injectStyle(doc, STYLE_ID, overrideCss, overrideOn);
+      // 移除外框線的樣式要放在顏色覆寫「之後」，確保邊框一律蓋成透明，不被貼上的顏色 CSS 覆蓋回去。
+      injectStyle(doc, NO_BORDER_STYLE_ID, NO_BORDER_CSS, noBorderOn);
       return true;
     } catch (e) {
       return false;
@@ -122,8 +163,11 @@
   }
 
   function updateStatus() {
-    if (overrideOn && overrideCss) {
-      statusText.textContent = '目前顯示：測試配色（已套用，正式網站沒有被改動）';
+    var parts = [];
+    if (overrideOn && overrideCss) parts.push('測試配色');
+    if (noBorderOn) parts.push('無外框線');
+    if (parts.length) {
+      statusText.textContent = '目前顯示：' + parts.join('＋') + '（已套用，正式網站沒有被改動）';
       statusText.classList.add('on');
     } else {
       statusText.textContent = '目前顯示：正式顏色（未套用測試配色）';
@@ -138,7 +182,7 @@
   }
 
   frame.addEventListener('load', function () {
-    if (overrideOn) {
+    if (overrideOn || noBorderOn) {
       var ok = injectOverride();
       if (!ok) {
         statusText.textContent = '這個網域不允許套用預覽（要在 sheridondon.com.tw 上打開這一頁才能用）';
@@ -172,6 +216,16 @@
 
   clearBtn.addEventListener('click', function () {
     overrideOn = false;
+    noBorderOn = false;
+    noBorderToggle.checked = false;
+    noBorderRow.classList.remove('on');
+    injectOverride();
+    updateStatus();
+  });
+
+  noBorderToggle.addEventListener('change', function () {
+    noBorderOn = noBorderToggle.checked;
+    noBorderRow.classList.toggle('on', noBorderOn);
     injectOverride();
     updateStatus();
   });
