@@ -17,7 +17,7 @@
 --c-placeholder:#B9ACA2;--c-tag-bg:#BFA18B;--c-tan-border:#DCCBBE;--c-title-rule:#E5CFCD;--c-badge-bg:#F3E3E1;
 --ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#F5EFE9;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
 --ix-closing-title:#BA6B78;--ix-active-title:#A8876A;
---ix-card-bg:#BFA18B;--ix-card-today-bg:#AB5462;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
+--ix-card-bg:#BFA18B;--ix-card-today-bg:#B07F83;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
 --ix-today-badge-bg:#FFFFFF;--ix-tag-bg:#B5485A;--ix-social-icon-default:#5A4A42;
 --ix-btn-intro-hover:#6F8FB3;--ix-btn-recipe-hover:#C4936F;--ix-code-hover-bg:#F1E8E0;
 --ix-c0-badge-bg:#F3E3E1;--ix-c1-badge-bg:#F1E8E0;--ix-c3-badge-bg:#E6EFEE;--ix-c6-badge-bg:#F4ECE3;--ix-c6-text:#A8876A;
@@ -25,10 +25,10 @@
 body{background:#FFFFFF!important}
 .smn-bar{background:#FFFFFF!important}
 
-/* 現正開團中：今日截止卡＝柔莓果紅、無光暈；卡上標籤白底紅字；冷凍徽章灰藍 */
+/* 現正開團中：今日截止卡＝深藕粉 #B07F83（同鐵粉福利社原設計用色；雪莉 09-19 改）、無光暈；卡上標籤白底紅字；冷凍徽章灰藍 */
 .gs-card.gs-today{box-shadow:none!important}
-.gs-today-badge{color:#AB5462!important}
-.gs-card.gs-today .gs-tag-badge{background:#fff!important;color:#AB5462!important}
+.gs-today-badge{color:#B07F83!important}
+.gs-card.gs-today .gs-tag-badge{background:#fff!important;color:#B5485A!important}
 .gs-frozen-badge{background:#6F8FB3!important}
 
 /* 月曆小膠囊與圖例＝維持原本鮮豔配色；開團預告、已結單去框 */
@@ -53,11 +53,7 @@ body{background:#FFFFFF!important}
 }
 .legend-frozen{background:#fff!important;border-color:#5F97DB!important}
 
-/* 自訂區塊（正式版由雪莉在後台設定；這裡只是示意）：第一張＝蝦皮霧橘、第二張＝深藕粉 */
-.cb-card:nth-of-type(1){background:#C97D4E!important;border-color:transparent!important;box-shadow:none!important}
-.cb-card:nth-of-type(1),.cb-card:nth-of-type(1) *{color:#fff!important}
-.cb-card:nth-of-type(2){background:#B07F83!important;border-color:transparent!important}
-.cb-card:nth-of-type(2),.cb-card:nth-of-type(2) *{color:#fff!important}
+/* 自訂區塊（蝦皮推薦清單、鐵粉福利社）：雪莉 09-19 定＝維持她後台原本的顏色與外框，預覽不覆寫 */
 
 /* 食譜頁（育兒小幫手首頁）入口卡片：全部去框（團購行事曆用頁內專屬青綠框、觀看食譜用虛線橘變數，原本沒被標準色的 transparent 蓋到） */
 .home-card{border-color:transparent!important}
@@ -102,3 +98,6 @@ body{background:#FFFFFF!important}
 .rcp-promo-card:hover{background:#F3E3E1!important}
 /* 宣傳列上的「開團中」小標籤：底色加深，用現有的深藕粉 #B07F83（＝狀態標籤色）、白字 */
 .rcp-promo-badge{background:#B07F83!important;color:#FFFFFF!important}
+
+/* 食譜／食材小卡（白底）加陰影（雪莉 09-19；白卡在白底上需要一點浮起感） */
+.item-card,.ing-tile,.recipe-reco-card{box-shadow:0 1px 3px rgba(90,74,66,.08),0 6px 16px rgba(90,74,66,.08)!important}
