@@ -95,7 +95,7 @@ function loadFanAdminView(forceReload) {
     if (data.tableReady === false) {
       FAN_TABLE_READY = false;
       FAN_UNCLAIMED_LIST = [];
-      banner.innerHTML = '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 會員資料表尚未建立（待 db push）</div>';
+      banner.innerHTML = '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 會員資料表尚未建立（待 db push）</div>';
       area.innerHTML = '<div class="task-empty">資料表尚未建立</div>';
       faSetControlsDisabled(true);
       return;
@@ -603,7 +603,7 @@ function loadFanRewards(force) {
     if (data.tableReady === false) {
       FAN_REWARDS_READY = false;
       FAN_REWARDS_CFG = data;
-      banner.innerHTML = '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 第二期資料表尚未建立（待 db push）</div>';
+      banner.innerHTML = '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 第二期資料表尚未建立（待 db push）</div>';
       ['fanRuleListArea', 'fanVruleListArea', 'fanShopListArea'].forEach(id => {
         document.getElementById(id).innerHTML = '<div class="task-empty">資料表尚未建立</div>';
       });

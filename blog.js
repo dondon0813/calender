@@ -237,7 +237,7 @@ function blogRenderBlocks() {
         '<input style="' + inputStyle + '" placeholder="按鈕文字（例如：🛒 前往下單）" value="' + blogEscape(b.label || '') + '" oninput="BLOG_EDIT.blocks[' + i + '].label=this.value">' +
         '<input style="' + inputStyle + ' margin-top:6px;" placeholder="按鈕連結網址 https://…" value="' + blogEscape(b.url || '') + '" oninput="BLOG_EDIT.blocks[' + i + '].url=this.value">';
     }
-    return '<div style="border:1px dashed var(--c-border); border-radius:10px; padding:10px; margin-bottom:8px; background:#fffdfa;">' +
+    return '<div style="border:1px dashed var(--c-border); border-radius:10px; padding:10px; margin-bottom:8px; background:#fffbf5;">' +
       '<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">' +
         '<span style="font-size:12px; font-weight:700; color:var(--c-brown, #b5755a);">' + names[b.type] + '</span>' +
         '<div style="flex:1;"></div>' +

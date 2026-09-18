@@ -157,11 +157,11 @@ function renderCardSubAlerts() {
   });
   let html = '';
   if (!CARD_SUB_CYCLE_READY) {
-    html += '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+    html += '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 週期／費用欄位尚未建立（migration 20260829000001），請先在 PowerShell 執行 npx supabase db push，否則這幾欄存不進去。</div>';
   }
   if (!CARD_SUB_STAFF_READY) {
-    html += '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+    html += '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 員工訂閱欄位尚未建立（migration 20260907000002），請先在 PowerShell 執行 npx supabase db push，否則「使用人／付款方式」存不進去。</div>';
   }
   if (billingLines.length) {
@@ -169,7 +169,7 @@ function renderCardSubAlerts() {
       billingLines.join('<br>') + '</div>';
   }
   if (expiryLines.length) {
-    html += '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
+    html += '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
       expiryLines.join('<br>') + '</div>';
   }
   box.innerHTML = html;
@@ -256,7 +256,7 @@ function renderCardSubList() {
     const due = s.dueDate || s.nextBillingDate;
     let rowStyle = 'border-bottom:1px solid var(--c-line);';
     if (due && csDaysUntil(due) <= 7) rowStyle += 'background:#fff0f3;';
-    else if (s.cardExpiry && csCardExpiryDaysUntil(s.cardExpiry) <= 60) rowStyle += 'background:#fff6ec;';
+    else if (s.cardExpiry && csCardExpiryDaysUntil(s.cardExpiry) <= 60) rowStyle += 'background:#fff7ee;';
 
     // 自動續費徽章：一眼看出這筆會不會自己扣錢
     const renewBadge = s.autoRenew === false

@@ -381,10 +381,10 @@ function renderLotteryBanner() {
   const box = document.getElementById('lotBanner');
   if (!box) return;
   if (!LOTTERY_TABLE_READY) {
-    box.innerHTML = '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+    box.innerHTML = '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 抽獎資料表尚未建立，請雪莉先在 PowerShell 執行 npx supabase db push。</div>';
   } else if (!LOTTERY_ACCT_READY) {
-    box.innerHTML = '<div style="background:#fff6ec; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+    box.innerHTML = '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 抽獎掛帳務團所需的欄位（acct_id／section／no_lottery）尚未建立，請雪莉先在 PowerShell 執行 npx supabase db push。' +
       '目前綁定帳務團、分區、「這團不抽」都先關閉，其他功能（新增得獎人、改狀態…）不受影響。</div>';
   } else {
