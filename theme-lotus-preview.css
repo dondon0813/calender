@@ -96,3 +96,7 @@ body{background:#FFFFFF!important}
 .modal-box,.gc-modal-box,.modal-box.pb-modal-box{background:#FFFFFF!important;border-color:transparent!important}
 /* 食譜／食材小卡（非彈出，清單上的卡片）也改白底（雪莉 09-19） */
 .item-card,.ing-tile,.recipe-reco-card{background:#FFFFFF!important}
+
+/* 食譜頁「觀看食譜」置頂的開團宣傳列（永圻魚湯 開團中 ›）：原本白底＋框＋橘陰影 → 淺藕粉底（同「現正開團中」小圖列＝開團相關區塊同一個底色）、無框無陰影 */
+.rcp-promo-card{background:#F9F0EE!important;border-color:transparent!important;box-shadow:none!important}
+.rcp-promo-card:hover{background:#F3E3E1!important}
