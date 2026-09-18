@@ -719,6 +719,8 @@
   .cb-anim-bounce { animation: cbBounce 0.9s ease-in-out infinite; }
   .cb-anim-vibrate { animation: cbVibrate 0.35s ease-in-out infinite; }
 </style>
+<!-- 藕粉奶茶色系（2026-09-19）：必須放在本頁 <style> 之後；拿掉這行＝回到舊配色 -->
+<link rel="stylesheet" href="theme-lotus.css?v=1">
 </head>
 <body>
 
@@ -1923,7 +1925,8 @@ function renderSingleDayMode(mode) {
           const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
           // 已結團的灰色優先於冷凍團藍色：冷凍標示只在團還沒結束時才有意義，
           // 不然冷凍團結團後會永遠掛著藍色，看起來像還在開團
-          const catClass = (frozen && status !== 'ended') ? 'cat-frozen' : `cat-${status}`;
+          // 2026-09-19 藕粉奶茶改版：冷凍團改成「疊加屬性」——底色跟著狀態走，另加 is-frozen（雪花浮水印，樣式在 theme-lotus.css）
+          const catClass = `cat-${status}` + ((frozen && status !== 'ended') ? ' is-frozen' : '');
           bar.className = `ebar ebar-wrap ${catClass}` + (clickable || hasEarlyBird ? ' clickable' : '');
           if (clickable && !advanced) {
             bar.href = ev.url;

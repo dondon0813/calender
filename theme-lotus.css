@@ -1,6 +1,12 @@
-/* 藕粉奶茶色系「預覽用」覆寫檔 —— 只給 color-preview.html 載入，正式頁面不會引用。
-   規格正本：dondon-platform/docs/11-theme-lotus-milktea.md（雪莉 2026-09-19 逐項定案）
-   限制：冷凍團「底色跟狀態走」需要改程式才做得到；預覽裡冷凍團一律先用「開團中」的淡橘底示意＋雙角雪花。 */
+/* ============================================================
+   藕粉奶茶色系（正式版）— 2026-09-19 雪莉逐項預覽定案
+   規格正本：dondon-platform/docs/11-theme-lotus-milktea.md
+   還原點：git tag theme-default-20260919；要整個改回＝把各頁 <head> 最後那行
+   <link rel="stylesheet" href="theme-lotus.css?v=N"> 拿掉即可。
+   過渡期作法：這是一層「覆寫」（放在各頁 <style> 之後載入，所以用 !important）。
+   目前掛載：index／recipes／school-list／picture-books／star-card。
+   其餘頁面（後台、標籤頁、工具頁…）尚未掛＝維持舊配色；全部轉完後再把數值收進 shared.css。
+   ============================================================ */
 :root{
 --c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
 --c-bg-top:#FFFFFF;--c-bg-bottom:#FFFFFF;--c-surface:#F5EFE9;--c-surface-2:#F5EFE9;--c-surface-3:#F5EFE9;
@@ -40,17 +46,15 @@ body{background:#FFFFFF!important}
 .legend-closingSoon{background:#FFE7ED!important;border-color:#FF6F91!important}
 .legend-ended{background:#F3EDE7!important;border-color:transparent!important}
 
-/* 冷凍團：雙角線條雪花浮水印（右下 28px、左上 18px）；預覽先用開團中底色示意 */
-.ebar-wrap.cat-frozen{
-  background-color:#FFECD9!important;border-color:#FF9F4A!important;color:#B5601C!important;
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>"),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>")!important;
+/* 冷凍團＝疊加屬性：底色／字色／框跟著該團狀態（cat-upcoming／active／closingSoon），只加雙角線條雪花浮水印（右下 28px、左上 18px）。
+   index.html 的 catClass 已改成「cat-${status}」＋ is-frozen；已結單的冷凍團不加 is-frozen。 */
+.ebar-wrap.is-frozen{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>"),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>")!important;
   background-repeat:no-repeat,no-repeat!important;
   background-position:right -5px bottom -7px,left -4px top -5px!important;
   background-size:28px 28px,18px 18px!important;
 }
-.legend-frozen{background:#fff!important;border-color:#5F97DB!important}
+.legend-frozen{background:#FFFFFF url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>") center/contain no-repeat!important;border-color:transparent!important}
 
 /* 自訂區塊（蝦皮推薦清單、鐵粉福利社）：雪莉 09-19 定＝維持她後台原本的顏色與外框，預覽不覆寫 */
 
@@ -101,8 +105,6 @@ body{background:#FFFFFF!important}
 /* 食譜／食材小卡（白底）加陰影（雪莉 09-19；白卡在白底上需要一點浮起感） */
 .item-card,.ing-tile,.recipe-reco-card{box-shadow:0 1px 3px rgba(90,74,66,.08),0 6px 16px rgba(90,74,66,.08)!important}
 
-/* 蝦皮推薦清單（自訂區塊第一張）：顏色與外框維持雪莉後台設定，只把外框線改細（正式版請她在後台把「邊框粗細」改成 1） */
-.cb-card:nth-of-type(1){border-width:1px!important}
 
 /* 小提醒框（食譜視窗的 .rc-tip-box、食材頁的 .reminder-box）：框內灰奶茶色改成跟置頂開團宣傳列同一個淺藕粉；虛線同步改柔粉 */
 .rc-tip-box,.reminder-box{background:#FBF1EF!important;border-color:#E5CFCD!important}
