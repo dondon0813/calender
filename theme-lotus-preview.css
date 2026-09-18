@@ -92,3 +92,7 @@ body{background:#FFFFFF!important}
 
 /* 食譜／食材小卡點開的視窗：底色白（雪莉 09-19）；視窗裡的資訊列、提示框維持奶茶色塊 */
 .recipe-card-modal{background:#FFFFFF!important}
+/* 彈出視窗一律白底（雪莉 09-19 通則）：共用 .modal-box、首頁團購選擇視窗 .gc-modal-box、繪本館 .pb-modal-box、星星卡視窗 */
+.modal-box,.gc-modal-box,.modal-box.pb-modal-box{background:#FFFFFF!important;border-color:transparent!important}
+/* 食譜／食材小卡（非彈出，清單上的卡片）也改白底（雪莉 09-19） */
+.item-card,.ing-tile,.recipe-reco-card{background:#FFFFFF!important}
