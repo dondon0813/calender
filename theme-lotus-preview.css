@@ -3,7 +3,7 @@
    限制：冷凍團「底色跟狀態走」需要改程式才做得到；預覽裡冷凍團一律先用「開團中」的淡橘底示意＋雙角雪花。 */
 :root{
 --c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
---c-bg-top:#FEFCFA;--c-bg-bottom:#FEFCFA;--c-surface:#F5EFE9;--c-surface-2:#F5EFE9;--c-surface-3:#F5EFE9;
+--c-bg-top:#FFFFFF;--c-bg-bottom:#FFFFFF;--c-surface:#F5EFE9;--c-surface-2:#F5EFE9;--c-surface-3:#F5EFE9;
 --c-border:transparent;--c-border-light:transparent;--c-line:#E6DCD2;--c-line-2:#E6DCD2;
 --c-primary:#C99A9B;--c-primary-dark:#B07F83;--c-danger:#B5485A;
 --c-cat-0:#C99A9B;--c-cat-1:#D4A98A;--c-cat-2:#A9B99A;--c-cat-3:#9DBDB8;--c-cat-4:#8FA9C7;--c-cat-5:#B3A3C9;--c-cat-6:#D6BE8A;
@@ -22,8 +22,8 @@
 --ix-btn-intro-hover:#6F8FB3;--ix-btn-recipe-hover:#C4936F;--ix-code-hover-bg:#F1E8E0;
 --ix-c0-badge-bg:#F3E3E1;--ix-c1-badge-bg:#F1E8E0;--ix-c3-badge-bg:#E6EFEE;--ix-c6-badge-bg:#F4ECE3;--ix-c6-text:#A8876A;
 }
-body{background:#FEFCFA!important}
-.smn-bar{background:#FEFCFA!important}
+body{background:#FFFFFF!important}
+.smn-bar{background:#FFFFFF!important}
 
 /* 現正開團中：今日截止卡＝柔莓果紅、無光暈；卡上標籤白底紅字；冷凍徽章灰藍 */
 .gs-card.gs-today{box-shadow:none!important}
@@ -67,7 +67,7 @@ body{background:#FEFCFA!important}
 /* 全站共用「現正開團中」小圖列（openGroupBuy.js 手寫粉底粉框）：改白底無框 */
 .ogb-bar{background:#F5EFE9!important;border-color:transparent!important}
 
-/* 09-19 雪莉定：外面底色近白 #FEFCFA、裡面（卡片／選單／搜尋框）用奶茶色 #F5EFE9；不要陰影、不要外框 */
+/* 09-19 雪莉定：外面底色近白 #FFFFFF、裡面（卡片／選單／搜尋框）用奶茶色 #F5EFE9；不要陰影、不要外框 */
 :root{--c-input-bg:#FFFFFF}
 .controls select,.controls button,#calSearchInput,.pb-search-input{background:#F5EFE9!important;border-color:transparent!important}
 .controls button:hover{background:#ECE3DA!important}
@@ -76,11 +76,10 @@ body{background:#FEFCFA!important}
 .daycell{background:#FFFFFF!important}
 .daycell.dim,.daycell-list.dim{background:#F5EFE9!important}
 .daycell-list{background:#FFFFFF!important}
-/* 月曆星期色條（一～日）：原本鮮豔色與柔和版的中間值，再往白色調淺 25%（雪莉 09-19 兩次調整）；字改深棕才看得清楚 */
-.wd-0,.wd-6{background:#EBB0B7!important}
-.wd-1{background:#EFC2A1!important}
-.wd-2{background:#B9D1AC!important}
-.wd-3{background:#A4D2CE!important}
-.wd-4{background:#A4C1E3!important}
-.wd-5{background:#C8B7E3!important}
-[class*="wd-"]{color:#5A4A42!important;text-shadow:none!important}
+/* 月曆星期色條（一～日）：取「原本鮮豔色」與「柔和版」的中間值（雪莉 09-19）；只改色條，其他用到分類色的地方維持柔和版 */
+.wd-0,.wd-6{background:#E4959F!important}
+.wd-1{background:#EAAE82!important}
+.wd-2{background:#A2C290!important}
+.wd-3{background:#86C3BD!important}
+.wd-4{background:#85ACD9!important}
+.wd-5{background:#B59FD9!important}
