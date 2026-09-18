@@ -100,3 +100,5 @@ body{background:#FFFFFF!important}
 /* 食譜頁「觀看食譜」置頂的開團宣傳列（永圻魚湯 開團中 ›）：原本白底＋框＋橘陰影 → 淺藕粉底（同「現正開團中」小圖列＝開團相關區塊同一個底色）、無框無陰影 */
 .rcp-promo-card{background:#F9F0EE!important;border-color:transparent!important;box-shadow:none!important}
 .rcp-promo-card:hover{background:#F3E3E1!important}
+/* 宣傳列上的「開團中」小標籤：底色加深，用現有的深藕粉 #B07F83（＝狀態標籤色）、白字 */
+.rcp-promo-badge{background:#B07F83!important;color:#FFFFFF!important}
