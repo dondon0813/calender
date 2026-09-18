@@ -58,3 +58,6 @@ body{background:#FAF6F2!important}
 .cb-card:nth-of-type(1),.cb-card:nth-of-type(1) *{color:#fff!important}
 .cb-card:nth-of-type(2){background:#B07F83!important;border-color:transparent!important}
 .cb-card:nth-of-type(2),.cb-card:nth-of-type(2) *{color:#fff!important}
+
+/* 食譜頁（育兒小幫手首頁）入口卡片：全部去框（團購行事曆用頁內專屬青綠框、觀看食譜用虛線橘變數，原本沒被標準色的 transparent 蓋到） */
+.home-card{border-color:transparent!important}
