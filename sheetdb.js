@@ -71,7 +71,7 @@ const SHEETDB_SPECS = {
       { key: 'name', label: '食譜名稱 *', required: true },
       { key: 'ageRange', label: '適合月齡', ph: '例如：6M+' },
       { key: 'cookTime', label: '烹調時間', ph: '例如：15分鐘' },
-      { key: 'difficulty', label: '難易度', type: 'select', options: [['', '未設定'], ['1', '1（簡單）'], ['2', '2（中等）'],['3', '3（進階）']] },
+      { key: 'difficulty', label: '難易度', type: 'select', options: [['', '未設定'], ['1', '1（簡單）'], ['2', '2（中等）'], ['3', '3（進階）'], ['4', '4（困難）'], ['5', '5（挑戰）']] },
       { key: 'method', label: '料理方式', ph: '例如：電鍋' },
       { key: 'intro', label: '簡介', type: 'textarea', rows: 2 },
       { key: 'ingredientRefs', label: '使用食材', type: 'textarea', rows: 2, ph: 'ing001:50g/雞蛋:1顆/蔬菜', hint: '用 / 分隔、可帶 :分量。可填食材編號、食材名稱／簡稱，或分類詞（例如「蔬菜」＝該分類都可用）' },
