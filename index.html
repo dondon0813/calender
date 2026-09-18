@@ -172,6 +172,7 @@
     z-index: 30;
   }
   .header-copy-url-btn:hover { background: var(--c-bg-bottom); }
+  .header-copy-url-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ===== 星期列 ===== */
   .weekdays {
@@ -722,7 +723,7 @@
 <body>
 
 <button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=3"></script>
-<button type="button" class="header-copy-url-btn" id="headerCopyUrlBtn" title="複製網址" aria-label="複製網址" style="display:none;">🔗</button>
+<button type="button" class="header-copy-url-btn" id="headerCopyUrlBtn" title="複製網址" aria-label="複製網址" style="display:none;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/></svg></button>
 
 <div class="wrap">
   <div class="header">
@@ -1582,8 +1583,9 @@ document.getElementById('headerCopyUrlBtn').addEventListener('click', function (
   const btn = this;
   const url = location.origin + location.pathname;
   copyToClipboard(url).then(ok => {
-    btn.textContent = ok ? '✅' : '❌';
-    setTimeout(() => { btn.textContent = '🔗'; }, 1500);
+    const iconHtml = btn.dataset.iconHtml || (btn.dataset.iconHtml = btn.innerHTML);
+    btn.textContent = ok ? '✓' : '✕';
+    setTimeout(() => { btn.innerHTML = iconHtml; }, 1500);
   });
 });
 
