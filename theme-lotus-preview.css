@@ -65,3 +65,5 @@ body{background:#FAF6F2!important}
 .home-card{background:#FFFFFF!important}
 .home-card:hover{box-shadow:0 8px 18px rgba(90,74,66,.10)!important}
 :root{--rcp-gift-text:#4E9A8F;--rcp-peach-accent:#C98A55}
+/* 全站共用「現正開團中」小圖列（openGroupBuy.js 手寫粉底粉框）：改白底無框 */
+.ogb-bar{background:#FFFFFF!important;border-color:transparent!important}
