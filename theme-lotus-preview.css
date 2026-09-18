@@ -76,3 +76,10 @@ body{background:#FEFCFA!important}
 .daycell{background:#FFFFFF!important}
 .daycell.dim,.daycell-list.dim{background:#F5EFE9!important}
 .daycell-list{background:#FFFFFF!important}
+/* 月曆星期色條（一～日）：取「原本鮮豔色」與「柔和版」的中間值（雪莉 09-19）；只改色條，其他用到分類色的地方維持柔和版 */
+.wd-0,.wd-6{background:#E4959F!important}
+.wd-1{background:#EAAE82!important}
+.wd-2{background:#A2C290!important}
+.wd-3{background:#86C3BD!important}
+.wd-4{background:#85ACD9!important}
+.wd-5{background:#B59FD9!important}
