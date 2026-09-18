@@ -17,18 +17,17 @@
 --c-placeholder:#B9ACA2;--c-tag-bg:#BFA18B;--c-tan-border:#DCCBBE;--c-title-rule:#E5CFCD;--c-badge-bg:#F3E3E1;
 --ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#F5EFE9;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
 --ix-closing-title:#BA6B78;--ix-active-title:#A8876A;
---ix-card-bg:#BFA18B;--ix-card-today-bg:#B5485A;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
---ix-today-badge-bg:#FFFFFF;--ix-tag-bg:#B5485A;--ix-social-icon-default:#5A4A42;
+--ix-card-bg:#BFA18B;--ix-card-today-bg:#B07F83;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
+--ix-today-badge-bg:#B5485A;--ix-tag-bg:#B5485A;--ix-social-icon-default:#5A4A42;
 --ix-btn-intro-hover:#6F8FB3;--ix-btn-recipe-hover:#C4936F;--ix-code-hover-bg:#F1E8E0;
 --ix-c0-badge-bg:#F3E3E1;--ix-c1-badge-bg:#F1E8E0;--ix-c3-badge-bg:#E6EFEE;--ix-c6-badge-bg:#F4ECE3;--ix-c6-text:#A8876A;
 }
 body{background:#FFFFFF!important}
 .smn-bar{background:#FFFFFF!important}
 
-/* 現正開團中：今日截止卡＝莓果紅 #B5485A（雪莉 09-19 最終：試過柔莓果、深藕粉後改回莓果色）、無光暈；卡上標籤白底紅字；冷凍徽章灰藍 */
+/* 現正開團中：今日截止卡＝深藕粉 #B07F83、無光暈；卡上「今日截止」小標籤＝莓果紅底白字（雪莉 09-19 釐清：她要換色的是小標籤不是卡片底色）；冷凍徽章灰藍 */
 .gs-card.gs-today{box-shadow:none!important}
-.gs-today-badge{color:#B5485A!important}
-.gs-card.gs-today .gs-tag-badge{background:#fff!important;color:#B5485A!important}
+.gs-today-badge{color:#FFFFFF!important}
 .gs-frozen-badge{background:#6F8FB3!important}
 
 /* 月曆小膠囊與圖例＝維持原本鮮豔配色；開團預告、已結單去框 */
@@ -97,10 +96,13 @@ body{background:#FFFFFF!important}
 .rcp-promo-card{background:#F7E4E2!important;border-color:transparent!important;box-shadow:none!important}
 .rcp-promo-card:hover{background:#F1D8D6!important}
 /* 宣傳列上的「開團中」小標籤：底色加深，用現有的深藕粉 #B07F83（＝狀態標籤色）、白字 */
-.rcp-promo-badge{background:#B07F83!important;color:#FFFFFF!important}
+.rcp-promo-badge{background:#BA6B78!important;color:#FFFFFF!important}
 
 /* 食譜／食材小卡（白底）加陰影（雪莉 09-19；白卡在白底上需要一點浮起感） */
 .item-card,.ing-tile,.recipe-reco-card{box-shadow:0 1px 3px rgba(90,74,66,.08),0 6px 16px rgba(90,74,66,.08)!important}
 
 /* 蝦皮推薦清單（自訂區塊第一張）：顏色與外框維持雪莉後台設定，只把外框線改細（正式版請她在後台把「邊框粗細」改成 1） */
 .cb-card:nth-of-type(1){border-width:1px!important}
+
+/* 小提醒框（食譜視窗的 .rc-tip-box、食材頁的 .reminder-box）：框內灰奶茶色改成跟置頂開團宣傳列同一個淺藕粉；虛線同步改柔粉 */
+.rc-tip-box,.reminder-box{background:#F7E4E2!important;border-color:#E5CFCD!important}
