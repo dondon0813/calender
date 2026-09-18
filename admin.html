@@ -58,7 +58,7 @@
     font-size: 46px;
     color: var(--c-primary);
     line-height: 1;
-    text-shadow: 2px 2px 0 #FFE1E8;
+    text-shadow: 2px 2px 0 #FFE7ED;
     flex: none;
   }
 
@@ -98,7 +98,7 @@
     width: 42px;
     height: 24px;
     border-radius: var(--r-pill);
-    background: #EAD9CB;
+    background: #F3E2D3;
     transition: background .2s;
     flex: 0 0 auto;
   }
@@ -156,10 +156,10 @@
     white-space: nowrap;
   }
   /* 六種公關品狀態色塊（chip 與面板標題共用） */
-  .pr-st-none     { background: #ECE3DA; color: #7d6b5d; }
+  .pr-st-none     { background: #F3E2D3; color: #7a7166; }
   .pr-st-picking  { background: #FFE0B2; color: #9a5f14; }
-  .pr-st-picked   { background: #D6E8FF; color: #2f6bb3; }
-  .pr-st-sent     { background: #DDEBD3; color: #4f7a3a; }
+  .pr-st-picked   { background: #E2EBFD; color: #2f6bb3; }
+  .pr-st-sent     { background: #E4F5DF; color: #4f7a3a; }
   .pr-st-received { background: #FFD6E0; color: #b04068; }
   .pr-st-shot     { background: #E4D9FF; color: #6a4fb0; }
 
@@ -201,7 +201,7 @@
     box-sizing: border-box;
     font-family: var(--font-body);
     font-size: 14px;
-    border: 1px solid #FFD8C2;
+    border: 1px solid #FFD3B6;
     border-radius: 10px;
     padding: 8px 10px;
     background: #fff;
@@ -235,8 +235,8 @@
     padding: 8px 18px;
     cursor: pointer;
   }
-  .pr-save-btn:hover { background: #ff7d95; }
-  .pr-save-status { font-size: 12px; color: #7BAF7B; }
+  .pr-save-btn:hover { background: #ff7391; }
+  .pr-save-status { font-size: 12px; color: #72A576; }
 
   /* ===== 頂部列：目前身份 + 小房子 + 三條線選單 ===== */
   .topbar {
@@ -367,7 +367,7 @@
     gap: 8px;
     background: #FFE3DC;
     border: 1px solid #F1998F;
-    color: #D63A2E;
+    color: #E0453A;
     font-size: 13px;
     font-weight: 900;
     border-radius: 14px;
@@ -388,7 +388,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #EBF7E6;
+    background: #E4F5DF;
     border: 1px solid var(--c-cat-2);
     color: #5C9147;
     font-size: 13px;
@@ -410,7 +410,7 @@
   .task-modal-extra {
     font-size: 12.5px;
     color: var(--c-text);
-    background: #E9F2FC;
+    background: #E2EBFD;
     border-radius: 12px;
     padding: 10px 14px;
     margin-bottom: 12px;
@@ -422,7 +422,7 @@
     width: 100%;
     border: 1px solid #F1998F;
     background: #fff;
-    color: #D63A2E;
+    color: #E0453A;
     border-radius: var(--r-pill);
     font-family: var(--font-round);
     font-size: 12.5px;
@@ -466,7 +466,7 @@
   }
   .home-card {
     position: relative;
-    border: 1px solid #FFD9BB;
+    border: 1px solid #FFD3B6;
     border-radius: 18px;
     background: #FFF1E6;
     padding: 26px 10px 20px;
@@ -536,7 +536,7 @@
   .lottery-result-box {
     max-width: 400px;
     margin: 0 auto 20px;
-    background: linear-gradient(145deg, #FFD9BB, #FFAFC2);
+    background: linear-gradient(145deg, #FFD3B6, #FFB4C2);
     border-radius: 20px;
     padding: 26px 20px;
     text-align: center;
@@ -570,7 +570,7 @@
     font-size: 13px;
   }
   .lottery-winner-row .lw-prize { font-weight: 800; color: var(--c-text-soft); }
-  .lottery-winner-row .lw-winner { font-weight: 900; color: #D63A2E; }
+  .lottery-winner-row .lw-winner { font-weight: 900; color: #E0453A; }
 
   /* ===== 表單（派遣任務／安排工作／公關品新增）===== */
   .task-form {
@@ -650,7 +650,7 @@
     flex: none;
     border: none;
     background: #fff;
-    color: #D63A2E;
+    color: #E0453A;
     width: 16px;
     height: 16px;
     line-height: 16px;
@@ -722,7 +722,7 @@
     padding: 12px 14px;
     margin-bottom: 10px;
   }
-  .task-item.urgent { border-color: #F1998F; background: #FDECEB; }
+  .task-item.urgent { border-color: #F1998F; background: #FFF0F3; }
   .task-item.done { opacity: .7; }
   .task-check {
     flex: none;
@@ -819,7 +819,7 @@
   .task-mini-btn:hover { background: var(--c-bg-bottom); }
   .task-mini-btn.working { border-color: #F5A25D; color: #E58B4E; }
   .task-mini-btn.working.on { background: #F5A25D; color: #fff; }
-  .task-mini-btn.danger { border-color: #F1998F; color: #D63A2E; }
+  .task-mini-btn.danger { border-color: #F1998F; color: #E0453A; }
   .task-mini-btn.restore { border-color: var(--c-cat-2); color: #5C9147; }
 
   /* ===== 公關品明細（行事曆彈窗／任務彈窗共用）＋清單頁篩選 ===== */
@@ -979,8 +979,8 @@
     user-select: none;
   }
   .task-item.done-item {
-    background: #F8F0EA;
-    border-color: #E8DECF;
+    background: #FFF7EE;
+    border-color: #F3E2D3;
     opacity: .85;
   }
   .task-item.done-item .task-name-line { color: var(--c-muted); text-decoration: line-through; }
@@ -1002,13 +1002,13 @@
     margin-bottom: 8px;
     cursor: pointer;
   }
-  .dispatched-item.urgent { border-color: #F1998F; background: #FDECEB; }
+  .dispatched-item.urgent { border-color: #F1998F; background: #FFF0F3; }
   .dispatched-item .di-to {
     flex: none;
     font-size: 11.5px;
     font-weight: 900;
     color: #4a7fb5;
-    background: #E9F2FC;
+    background: #E2EBFD;
     border-radius: var(--r-pill);
     padding: 3px 10px;
   }
@@ -1113,7 +1113,7 @@
     padding: 8px 16px;
     cursor: pointer;
   }
-  .stage-add-row button:hover { background: #5F97DB; }
+  .stage-add-row button:hover { background: #4F91D9; }
 
   /* 選品任務的階段快選按鈕 */
   .stage-quick {
@@ -1375,18 +1375,18 @@
     color: #B5601C;
   }
   .ebar-wrap.cat-closingSoon {
-    background: #FFE1E8;
+    background: #FFE7ED;
     border: 1px solid #FF6F91;
     color: #C1315A;
   }
   .ebar-wrap.cat-ended {
-    background: #EFEBE5;
+    background: #FFF7EE;
     border: 1px solid #B8AC9C;
     color: #7A7166;
   }
   /* 冷凍團：藍色＋右下角淺色雪花浮水印。結團後不套這組、改吃 cat-ended 的灰（見 admin.js 的 catClass） */
   .ebar-wrap.cat-frozen {
-    background-color: #E9F2FC;
+    background-color: #E2EBFD;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
     background-repeat: no-repeat;
     background-position: bottom right;
@@ -1396,7 +1396,7 @@
   }
   /* 行事曆「工作表」模式：把安排好日期的工作用小卡片排在對應日期 */
   .ebar-wrap.cat-work {
-    background: #EBF7E6;
+    background: #E4F5DF;
     border: 1px solid var(--c-cat-2);
     color: #4f7a3a;
   }
@@ -1406,7 +1406,7 @@
     color: #a8291f;
   }
   .ebar-wrap.cat-work-done {
-    background: #EFEBE5;
+    background: #FFF7EE;
     border: 1px solid #B8AC9C;
     color: #7A7166;
   }
@@ -1451,7 +1451,7 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    background: #E9F2FC;
+    background: #E2EBFD;
     border: 1px solid #C9DEFB;
     border-radius: 12px;
     padding: 9px 12px;
@@ -1720,9 +1720,9 @@
   }
   .legend-upcoming { background: #FFF6DD; border: 1px solid #E8B93D; }
   .legend-active { background: #FFEcD9; border: 1px solid #FF9F4A; }
-  .legend-closingSoon { background: #FFE1E8; border: 1px solid #FF6F91; }
-  .legend-ended { background: #EFEBE5; border: 1px solid #B8AC9C; }
-  .legend-frozen { background: #E9F2FC; border: 1px solid #4F91D9; }
+  .legend-closingSoon { background: #FFE7ED; border: 1px solid #FF6F91; }
+  .legend-ended { background: #FFF7EE; border: 1px solid #B8AC9C; }
+  .legend-frozen { background: #E2EBFD; border: 1px solid #4F91D9; }
 
   @media (max-width: 480px) {
     .month-num { font-size: 36px; }
@@ -1872,7 +1872,7 @@
     cursor: pointer;
     padding: 2px 4px;
   }
-  .mtree-folder-add:hover { color: #7BAF7B; }
+  .mtree-folder-add:hover { color: #72A576; }
   .mtree-folder-del:hover { color: var(--c-danger); }
   .mtree-children {
     margin-left: 20px;
@@ -1947,7 +1947,7 @@
     padding: 7px 12px;
     cursor: pointer;
     color: #fff;
-    background: #b5a08c;
+    background: #b39a8b;
   }
   .pnote-btn-save { background: var(--c-cat-2); }
   .pnote-btn-copy { background: #7FB6D9; }
@@ -2040,8 +2040,8 @@
     display: flex;
     align-items: center;
     gap: 18px;
-    background: #F8F0EA;
-    border: 1px solid #E8DECF;
+    background: #FFF7EE;
+    border: 1px solid #F3E2D3;
     border-top: none;
     border-radius: 0 0 14px 14px;
     padding: 9px 18px;
@@ -2083,12 +2083,12 @@
   }
   .gs-card:hover { transform: scale(1.015); }
   .gs-card.gs-today {
-    background: #7A5A42;
+    background: #7A6248;
     box-shadow: 0 0 0 3px #FFD6E0;
   }
   .gs-card.gs-card-gray {
     background: #C9C1B4;
-    color: #6b6255;
+    color: #6b5c4e;
   }
   .gs-card-name {
     font-size: 19px;
@@ -2330,7 +2330,7 @@
     margin-top: 40px;
     height: calc(100% - 40px);
     box-sizing: border-box;
-    background: #FEE6D5;
+    background: #FFECD9;
     border: 2px solid rgba(224,149,74,0.16);
     border-radius: 28px;
     padding: 48px 14px 18px;
@@ -2513,7 +2513,7 @@
   }
   /* 每個步驟文字中間加一條細直線做區隔（最後一格不用加，右邊沒有下一步了） */
   .pgp-step-card:not(:last-child) .pgp-step-caption-wrap {
-    border-right: 2px solid #F0CBA0;
+    border-right: 2px solid #FFD3AC;
   }
   /* 裁切（不是完整顯示）：直式照片切上下、太寬的照片切左右，只切掉超出框外的部分，
      用 background-size:cover（原因見上面主圖照片的說明註解，img+min-width 那招
@@ -2626,7 +2626,7 @@
 
   /* 尚未確認顯示於前台：開團日／結團日一律淡綠色 */
   .ebar-wrap.cat-unpublished {
-    background: #DFF2D8;
+    background: #E4F5DF;
     border: 1px solid var(--c-cat-2);
     color: #4f7a3a;
   }
@@ -2681,7 +2681,7 @@
     font-weight: 800;
     border-radius: var(--r-pill);
     padding: 2px 8px;
-    background: #DFF2D8;
+    background: #E4F5DF;
     color: #4f7a3a;
   }
   .cal-edit-day-empty {
@@ -2698,7 +2698,7 @@
     justify-content: space-between;
     gap: 8px;
     flex-wrap: wrap;
-    background: #DFF2D8;
+    background: #E4F5DF;
     border: 1px solid var(--c-cat-2);
     border-radius: 12px;
     padding: 8px 12px;
@@ -2740,7 +2740,7 @@
     border-radius: 50%;
     cursor: pointer;
     border: 1px solid #fff;
-    box-shadow: 0 0 0 1.5px #EAD9CB;
+    box-shadow: 0 0 0 1.5px #F3E2D3;
   }
   .ev-toggle-row {
     display: flex;
@@ -2884,7 +2884,7 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-    background: #E9F2FC;
+    background: #E2EBFD;
     border-radius: 12px;
     padding: 10px 14px;
   }
@@ -2956,9 +2956,9 @@
     padding: 5px 4px;
     cursor: pointer;
   }
-  .il-card-actions button:hover { background: #E4D5C2; }
+  .il-card-actions button:hover { background: #DDD0C2; }
   .il-card-actions button.danger { background: #FFE3DC; color: #C0392B; }
-  .il-card-actions button.primary { background: #DDEBD3; color: #4f7a3a; }
+  .il-card-actions button.primary { background: #E4F5DF; color: #4f7a3a; }
   .il-empty {
     text-align: center;
     color: var(--c-muted-light);
@@ -3313,9 +3313,9 @@
   .acct-recon-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .acct-recon-actions .form-status{ margin:0; font-size:12px; }
   /* 對帳清單裡的虛擬列（行事曆帶入、資料庫還沒有帳務紀錄）：提示＋回填按鈕，取代輸入表單 */
-  .acct-recon-virtual-hint{font-size:12.5px;color:#a05a00;background:#fff6e6;border:1px solid #ffdb99;border-radius:8px;padding:8px 10px;margin:6px 0}
+  .acct-recon-virtual-hint{font-size:12.5px;color:#a05a00;background:#fff6ec;border:1px solid #ffdb99;border-radius:8px;padding:8px 10px;margin:6px 0}
   /* 帳務編輯視窗裡的「修改紀錄」清單 */
-  #acctHistoryBox{margin-top:8px;max-height:160px;overflow:auto;font-size:11.5px;color:#6b5c4e;border-top:1px dashed #e8decf;padding-top:6px}
+  #acctHistoryBox{margin-top:8px;max-height:160px;overflow:auto;font-size:11.5px;color:#6b5c4e;border-top:1px dashed #f3e2d3;padding-top:6px}
   #acctHistoryBox .acct-hist-item{margin:0 0 6px}
   #acctHistoryBox .acct-hist-head{font-weight:600;color:#8a7462}
   #acctHistoryBox .acct-hist-chg{margin-left:10px}
@@ -3498,13 +3498,13 @@
     cursor: pointer;
   }
   .calc-btn:hover { background: #ffecd9; }
-  .calc-btn.op { background: #FFD9BB; color: #b5601c; }
+  .calc-btn.op { background: #FFD3B6; color: #b5601c; }
   .calc-btn.op:hover { background: #FFC79A; }
   .calc-btn.eq { background: var(--c-primary); color: #fff; grid-column: span 2; }
   .calc-btn.eq:hover { background: var(--c-primary-dark); }
   .calc-btn.zero { grid-column: span 2; }
   .calc-btn.func { background: #F3E2D3; color: var(--c-text-soft); }
-  .calc-btn.func:hover { background: #E4D5C2; }
+  .calc-btn.func:hover { background: #DDD0C2; }
 
   .tax-calc-box {
     max-width: 420px;
@@ -4724,7 +4724,7 @@
       <div class="form-status" id="ilUploadStatus"></div>
     </div>
 
-    <div style="max-width:900px; margin:0 auto 16px; text-align:center; background:#E9F2FC; border-radius:14px; padding:14px 16px;">
+    <div style="max-width:900px; margin:0 auto 16px; text-align:center; background:#E2EBFD; border-radius:14px; padding:14px 16px;">
       <div style="font-size:12.5px; font-weight:800; color:#4a7fb5; margin-bottom:8px;">🔧 圖片已經轉過 WebP，但試算表網址還沒跟著換嗎？點這裡一次修復，不用重新轉檔</div>
       <button class="task-mini-btn" style="border-color:#7AAEEB; color:#4a7fb5; padding:8px 20px;" id="ilRepairRefsBtn">修復所有試算表網址</button>
       <div class="form-status" id="ilRepairStatus" style="margin-top:6px;"></div>
@@ -5075,7 +5075,7 @@
     <span class="legend-item"><span class="legend-dot legend-closingSoon"></span>即將結單</span>
     <span class="legend-item"><span class="legend-dot legend-ended"></span>已結單</span>
     <span class="legend-item"><span class="legend-dot legend-frozen"></span>冷凍團</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#DFF2D8; border: 1px solid #9ACB85;"></span>尚未確認顯示</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#E4F5DF; border: 1px solid #9ACB85;"></span>尚未確認顯示</span>
   </div>
   </div><!-- /viewCalendar -->
 
@@ -5733,7 +5733,7 @@
     .lot-draw-block + .lot-draw-block{ border-top:1px dashed var(--c-border-light); }
     .lot-draw-block-head{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:6px; }
     .lot-draw-block-title{ font-size:13.5px; font-weight:700; }
-    .lot-sheet-ref{ font-size:11.5px; color:var(--c-text-soft); background:#F8F0EA; border-radius:999px; padding:1px 8px; white-space:nowrap; }
+    .lot-sheet-ref{ font-size:11.5px; color:var(--c-text-soft); background:#FFF7EE; border-radius:999px; padding:1px 8px; white-space:nowrap; }
     .lot-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
     /* 固定欄寬：所有卡片共用同一組欄寬，讓「狀態」欄永遠在同一 x 位置（容器要有 overflow-x:auto） */
     .lot-table.lot-table-fixed{ table-layout:fixed; min-width:1410px; }
@@ -5757,7 +5757,7 @@
       appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23ffffff'/></svg>");
       background-repeat:no-repeat; background-position:right 6px center; background-size:8px 5px;
     }
-    .lot-status-sel.lot-s-pending{ background-color:#EFEBE5; color:#7d6b5d; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%237d6b5d'/></svg>"); }
+    .lot-status-sel.lot-s-pending{ background-color:#FFF7EE; color:#7a7166; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%237d6b5d'/></svg>"); }
     .lot-status-sel.lot-s-awaiting_info{ background-color:var(--c-cat-1); color:#fff; }
     .lot-status-sel.lot-s-info_ready{ background-color:var(--c-cat-4); color:#fff; }
     .lot-status-sel.lot-s-handed_to_vendor{ background-color:var(--c-cat-3); color:#fff; }
@@ -5771,7 +5771,7 @@
     .lot-form-grid .lot-field-full{ grid-column:1/-1; }
     .lot-winner-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
     .lot-winner-row input{ flex:1; min-width:0; }
-    .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#EFEBE5; color:#7d6b5d; }
+    .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#FFF7EE; color:#7a7166; }
     /* 「待抽」虛擬卡：帳務團已達待抽門檻但還沒建抽獎 */
     .lot-card-pending{ border-style:dashed; border-color:var(--c-danger); }
     .lot-card-pending .lot-card-head{ cursor:default; }
@@ -6264,7 +6264,7 @@
   <div class="modal-box">
     <button class="modal-close" onclick="closeSettingsModal()">✕</button>
     <h3>⚙️ 設定：修改密碼</h3>
-    <p id="settingsForceHint" style="display:none; font-size:12.5px; color:#a05a00; background:#fff6e6; border:1px solid #ffdb99; border-radius:8px; padding:8px 10px; margin:0 0 10px;">🔒 你目前使用的是一次性密碼，請先更換密碼，完成前無法使用其他功能。</p>
+    <p id="settingsForceHint" style="display:none; font-size:12.5px; color:#a05a00; background:#fff6ec; border:1px solid #ffdb99; border-radius:8px; padding:8px 10px; margin:0 0 10px;">🔒 你目前使用的是一次性密碼，請先更換密碼，完成前無法使用其他功能。</p>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="oldPasswordInput">目前密碼</label>
       <input type="password" id="oldPasswordInput" autocomplete="off">
@@ -6287,7 +6287,7 @@
     <button class="modal-close" onclick="closeAcctEditModal()">✕</button>
     <h3 id="acctEditTitle">➕ 新增開團紀錄</h3>
     <div id="acctEditLinks" style="display:none; gap:8px; margin-bottom:10px;"></div>
-    <div id="acctBackfillHint" style="display:none; font-size:12.5px; color:#a05a00; background:#fff6e6; border:1px solid #ffdb99; border-radius:8px; padding:8px 10px; margin-bottom:10px;">
+    <div id="acctBackfillHint" style="display:none; font-size:12.5px; color:#a05a00; background:#fff6ec; border:1px solid #ffdb99; border-radius:8px; padding:8px 10px; margin-bottom:10px;">
       ⚠️ 這個按鈕只用來補登「系統沒有自動抓到」的舊帳務。正常情況下只要有開團就會在行事曆排日期，對帳畫面會自動列出待回填的團，不需要在這裡手動新增。
     </div>
     <div class="task-form" style="margin:0; padding:0; background:none;">
@@ -6609,7 +6609,7 @@
 
       <label for="evTitleInput">標題</label>
       <input type="text" id="evTitleInput" placeholder="例如：林貝兒米餅 開團">
-      <div id="evBrandMatchInfo" style="display:none; margin-top:8px; background:#E9F2FC; border: 1px solid #C9DEFB; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#4a7fb5; line-height:1.7;"></div>
+      <div id="evBrandMatchInfo" style="display:none; margin-top:8px; background:#E2EBFD; border: 1px solid #C9DEFB; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#4a7fb5; line-height:1.7;"></div>
       <!-- 開團前檢查清單：依團名比對品牌庫 openChecklist 自動帶出，勾選狀態存在事件上 -->
       <div id="evChecklistBox" style="display:none; margin-top:8px; background:#FFF0F3; border:1px solid #F3C6D3; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#b25a76; line-height:1.7;"></div>
 

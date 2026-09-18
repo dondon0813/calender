@@ -72,7 +72,7 @@ function blogRenderBanner() {
   const box = document.getElementById('blogBanner');
   if (!box) return;
   box.innerHTML = BLOG_TABLE_READY ? '' :
-    '<div style="background:#fff3cd; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
+    '<div style="background:#ffe9c2; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
     '⚠️ 文章資料表尚未建立（要先請雪莉執行 db push），目前無法新增或儲存文章。</div>';
 }
 
@@ -100,7 +100,7 @@ function blogRenderList() {
     const ev = p.eventTitle ? '<span style="font-size:11px; color:var(--c-brown);">🔗 ' + blogEscape(p.eventTitle) + '</span>' : '';
     const cover = p.coverUrl
       ? '<img src="' + blogEscape(p.coverUrl) + '" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#eeeeee;">'
-      : '<div style="width:64px; height:44px; border-radius:8px; flex:none; background:#f8f0ea; display:flex; align-items:center; justify-content:center; font-size:18px;">📝</div>';
+      : '<div style="width:64px; height:44px; border-radius:8px; flex:none; background:#fff7ee; display:flex; align-items:center; justify-content:center; font-size:18px;">📝</div>';
     html +=
       '<div style="display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer;" onclick="blogOpenEdit(' + i + ')">' +
         cover +
@@ -178,7 +178,7 @@ function blogRenderEditor() {
       '<textarea id="bfExcerpt" rows="2" style="' + inputStyle + '" placeholder="一兩句話介紹這篇文章">' + blogEscape(e.excerpt) + '</textarea>' +
       label('封面圖（分享到 LINE／FB 顯示的預覽圖）') +
       '<div style="display:flex; gap:8px; align-items:center;">' +
-        '<div id="bfCoverPreview" style="width:120px; height:63px; border-radius:8px; background:#f8f0ea; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
+        '<div id="bfCoverPreview" style="width:120px; height:63px; border-radius:8px; background:#fff7ee; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
           (e.coverUrl ? '<img src="' + blogEscape(e.coverUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : '尚未設定') + '</div>' +
         '<button class="task-mini-btn" onclick="blogPickImage(function(url){ BLOG_EDIT.coverUrl = url; blogRenderEditor(); })">📤 上傳封面</button>' +
         (e.coverUrl ? '<button class="task-mini-btn" onclick="BLOG_EDIT.coverUrl=\'\'; blogRenderEditor();">✕ 移除</button>' : '') +

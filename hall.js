@@ -103,7 +103,7 @@ function hallRenderBanner() {
   const box = document.getElementById('hallBanner');
   if (!box) return;
   box.innerHTML = HALL_TABLE_READY ? '' :
-    '<div style="background:#fff3cd; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
+    '<div style="background:#ffe9c2; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
     '⚠️ 教材館資料表尚未建立（待 db push），目前無法新增或儲存資源。</div>';
 }
 
@@ -123,11 +123,11 @@ function hallRenderList() {
     return;
   }
   const html = rows.map(({ r, i }) => {
-    const kindBadge = '<span style="background:#e9f2fc; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
+    const kindBadge = '<span style="background:#e2ebfd; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
       (r.kind === 'game' ? '🎮 遊戲' : r.kind === 'audio' ? '🎵 音檔' : '📄 檔案') + '</span>';
     const freeBadge = r.isFree
       ? '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">免費</span>'
-      : '<span style="background:#fdeceb; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">付費</span>';
+      : '<span style="background:#fff0f3; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">付費</span>';
     const pubBadge = r.isPublished
       ? '<span style="background:#3ddc84; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已發布</span>'
       : '<span style="background:#ccc; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">草稿</span>';
@@ -280,7 +280,7 @@ function hallRenderEditor() {
 
       label('封面圖') +
       '<div style="display:flex; gap:8px; align-items:center;">' +
-        '<div id="hfCoverPreview" style="width:96px; height:96px; border-radius:8px; background:#f8f0ea; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
+        '<div id="hfCoverPreview" style="width:96px; height:96px; border-radius:8px; background:#fff7ee; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
           (e.coverUrl ? '<img src="' + hallEscape(e.coverUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : '尚未設定') + '</div>' +
         '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
           '<input id="hfCoverUrl" style="' + inputStyle + '" value="' + hallEscape(e.coverUrl) + '" placeholder="圖片網址，或用下面按鈕上傳" oninput="hallCoverUrlInput(this.value)">' +
@@ -612,7 +612,7 @@ async function hallLoadCodesList() {
     }
     const statusBadge = st => {
       if (st === 'redeemed') return '<span style="background:#dddddd; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
-      if (st === 'revoked') return '<span style="background:#fdeceb; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
+      if (st === 'revoked') return '<span style="background:#fff0f3; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
       return '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">未使用</span>';
     };
     box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px;">' +

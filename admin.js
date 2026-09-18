@@ -1305,7 +1305,7 @@ function setPrMsg(id, text, ok) {
   const el = document.getElementById(id);
   if (!el) return;
   el.textContent = text;
-  el.style.color = ok === true ? '#7BAF7B' : (ok === false ? '#d9534f' : '#c9a892');
+  el.style.color = ok === true ? '#72A576' : (ok === false ? '#d9534f' : '#c9a892');
 }
 
 // 送出公關品狀態更新（樂觀更新，失敗還原）
@@ -1318,7 +1318,7 @@ async function savePrStatus(key, fields, msgElId) {
   if (isViewShown('calendar') && prChipOn) render();
   try {
     await postTask(Object.assign({ type: 'pr-status', key }, fields));
-    if (msgEl) { msgEl.textContent = '已儲存 ✓'; msgEl.style.color = '#7BAF7B'; }
+    if (msgEl) { msgEl.textContent = '已儲存 ✓'; msgEl.style.color = '#72A576'; }
     // 團級位置改了就套用到這團所有公關品（收到／收納都是整團一起，避免兩個地方各存一份位置）
     if (fields.location !== undefined) applyPrLocationToItems_(key, fields.location);
     // 狀態是公關品明細的唯一來源，改完要讓清單頁與兩個共用面板跟著更新

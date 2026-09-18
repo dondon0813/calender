@@ -371,7 +371,7 @@ function setPriInlineMsg(prefix, text, ok) {
   const el = field.querySelector('.pri-inline-msg');
   if (!el) return;
   el.textContent = text;
-  el.style.color = ok === true ? '#7BAF7B' : (ok === false ? '#d9534f' : '#c9a892');
+  el.style.color = ok === true ? '#72A576' : (ok === false ? '#d9534f' : '#c9a892');
 }
 
 // 掛載到某一場團購；evKey 為空時整區隱藏（例如任務沒指定對應團購）
