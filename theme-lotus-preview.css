@@ -3,7 +3,7 @@
    限制：冷凍團「底色跟狀態走」需要改程式才做得到；預覽裡冷凍團一律先用「開團中」的淡橘底示意＋雙角雪花。 */
 :root{
 --c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
---c-bg-top:#F6F0EA;--c-bg-bottom:#F6F0EA;--c-surface:#FFFFFF;--c-surface-2:#FFFFFF;--c-surface-3:#FFFFFF;
+--c-bg-top:#FAF6F2;--c-bg-bottom:#FAF6F2;--c-surface:#FFFFFF;--c-surface-2:#FFFFFF;--c-surface-3:#FFFFFF;
 --c-border:transparent;--c-border-light:transparent;--c-line:#EEE6DE;--c-line-2:#EEE6DE;
 --c-primary:#C99A9B;--c-primary-dark:#B07F83;--c-danger:#B5485A;
 --c-cat-0:#C99A9B;--c-cat-1:#D4A98A;--c-cat-2:#A9B99A;--c-cat-3:#9DBDB8;--c-cat-4:#8FA9C7;--c-cat-5:#B3A3C9;--c-cat-6:#D6BE8A;
@@ -15,15 +15,15 @@
 --c-gold-text:#A8876A;--c-gold-badge-bg:#F4ECE3;--c-gold-border:transparent;--c-gold-gradient:#F4ECE3;
 --c-orange-bg:#FFFFFF;--c-orange-bg-2:#F1E8E0;--c-orange-badge-bg:#F1E8E0;--c-orange-dash:#DCCBBE;--c-orange-dash-2:#DCCBBE;--c-orange-text:#8B6E5E;
 --c-placeholder:#B9ACA2;--c-tag-bg:#BFA18B;--c-tan-border:#DCCBBE;--c-title-rule:#E5CFCD;--c-badge-bg:#F3E3E1;
---ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#F6F0EA;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
+--ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#FAF6F2;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
 --ix-closing-title:#BA6B78;--ix-active-title:#A8876A;
 --ix-card-bg:#BFA18B;--ix-card-today-bg:#AB5462;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
 --ix-today-badge-bg:#FFFFFF;--ix-tag-bg:#B5485A;--ix-social-icon-default:#5A4A42;
 --ix-btn-intro-hover:#6F8FB3;--ix-btn-recipe-hover:#C4936F;--ix-code-hover-bg:#F1E8E0;
 --ix-c0-badge-bg:#F3E3E1;--ix-c1-badge-bg:#F1E8E0;--ix-c3-badge-bg:#E6EFEE;--ix-c6-badge-bg:#F4ECE3;--ix-c6-text:#A8876A;
 }
-body{background:#F6F0EA!important}
-.smn-bar{background:#F6F0EA!important}
+body{background:#FAF6F2!important}
+.smn-bar{background:#FAF6F2!important}
 
 /* 現正開團中：今日截止卡＝柔莓果紅、無光暈；卡上標籤白底紅字；冷凍徽章灰藍 */
 .gs-card.gs-today{box-shadow:none!important}
