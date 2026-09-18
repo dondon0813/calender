@@ -234,15 +234,21 @@ function sdRecipeBrandsOf(recipe) {
   return set;
 }
 
-// 品牌下拉選項：食材/成品分頁列自己表裡出現過的品牌；食譜分頁列兩表聯集
-// （食譜的品牌是從食材對出來的）。換分頁時若原選擇不在新清單裡就退回「全部」。
+// 品牌下拉選項：食材/成品分頁列自己表裡出現過的品牌；食譜分頁只列「目前真的有食譜在用」的品牌
+// （不是兩表聯集——聯集會把食譜庫沒用到的品牌也列出來，選單一長串，雪莉 09-19 要求隱藏沒食譜的）。
+// 換分頁時若原選擇不在新清單裡就退回「全部」。
 function renderRecipeDbBrandFilter() {
   const sel = document.getElementById('recipeDbBrandFilter');
-  const src = RECIPE_DB_TAB === 'ingredient' ? RECIPE_DB.ingredients
-    : RECIPE_DB_TAB === 'product' ? RECIPE_DB.products
-    : RECIPE_DB.ingredients.concat(RECIPE_DB.products);
-  const brands = Array.from(new Set(src.map(r => String(r.brand || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  let brands;
+  if (RECIPE_DB_TAB === 'recipe') {
+    const used = new Set();
+    RECIPE_DB.recipes.forEach(r => sdRecipeBrandsOf(r).forEach(b => used.add(b)));
+    brands = Array.from(used).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  } else {
+    const src = RECIPE_DB_TAB === 'ingredient' ? RECIPE_DB.ingredients : RECIPE_DB.products;
+    brands = Array.from(new Set(src.map(r => String(r.brand || '').trim()).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  }
   if (brands.indexOf(RECIPE_DB_BRAND) === -1) RECIPE_DB_BRAND = '';
   sel.innerHTML = '<option value="">🏷️ 全部品牌</option>' +
     brands.map(b => '<option value="' + sdEscapeHtml(b) + '">' + sdEscapeHtml(b) + '</option>').join('');
