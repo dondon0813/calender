@@ -15,7 +15,7 @@
 --c-gold-text:#A8876A;--c-gold-badge-bg:#F4ECE3;--c-gold-border:transparent;--c-gold-gradient:#F4ECE3;
 --c-orange-bg:#F5EFE9;--c-orange-bg-2:#F1E8E0;--c-orange-badge-bg:#F1E8E0;--c-orange-dash:#DCCBBE;--c-orange-dash-2:#DCCBBE;--c-orange-text:#8B6E5E;
 --c-placeholder:#B9ACA2;--c-tag-bg:#BFA18B;--c-tan-border:#DCCBBE;--c-title-rule:#E5CFCD;--c-badge-bg:#F3E3E1;
---ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#EDE5DD;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
+--ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#F5EFE9;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
 --ix-closing-title:#BA6B78;--ix-active-title:#A8876A;
 --ix-card-bg:#BFA18B;--ix-card-today-bg:#AB5462;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
 --ix-today-badge-bg:#FFFFFF;--ix-tag-bg:#B5485A;--ix-social-icon-default:#5A4A42;
@@ -72,3 +72,7 @@ body{background:#FEFCFA!important}
 .controls select,.controls button,#calSearchInput,.pb-search-input{background:#F5EFE9!important;border-color:transparent!important}
 .controls button:hover{background:#ECE3DA!important}
 .header-copy-url-btn{background:#F5EFE9!important;box-shadow:none!important}
+/* 月曆例外：日期格維持白色（格子改奶茶色的話，無框的「已結單」「開團預告」膠囊會融進去）；非本月格用淡奶茶 */
+.daycell{background:#FFFFFF!important}
+.daycell.dim,.daycell-list.dim{background:#F5EFE9!important}
+.daycell-list{background:#FFFFFF!important}
