@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>🎨 顏色測試預覽｜雪莉與朵栗</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; flex-direction: column;
+    background: #FBF7F2; font-family: "Noto Sans TC", sans-serif; color: #3D3128;
+  }
+  header {
+    flex: 0 0 auto; padding: 12px 14px; border-bottom: 1px solid #E8DFD5; background: #fff;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  }
+  header .backlink { font-size: .82rem; font-weight: 700; color: #A08A90; text-decoration: none; margin-right: 4px; }
+  header .backlink:hover { color: #E56B8C; }
+  header h1 { font-size: 1rem; margin: 0 10px 0 0; white-space: nowrap; }
+  .pagepicker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pagepicker button {
+    font-size: .8rem; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid #E8DFD5; background: #FBF7F2; color: #6b5c50; cursor: pointer;
+  }
+  .pagepicker button.active { background: #FF8FA3; border-color: #FF8FA3; color: #fff; }
+  .status { font-size: .75rem; color: #A08A90; margin-left: auto; }
+  .status.on { color: #C97A1E; font-weight: 700; }
+
+  .cssbar {
+    flex: 0 0 auto; padding: 10px 14px; background: #FFFCF8; border-bottom: 1px solid #E8DFD5;
+    display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .cssbar textarea {
+    flex: 1 1 320px; min-width: 240px; height: 64px; resize: vertical;
+    font-family: ui-monospace, Consolas, monospace; font-size: .78rem; padding: 8px 10px;
+    border: 1px solid #E8DFD5; border-radius: 10px; background: #fff; color: #3D3128;
+  }
+  .cssbar .btns { display: flex; flex-direction: column; gap: 6px; }
+  .cssbar button {
+    font-size: .82rem; font-weight: 700; border: none; border-radius: 999px; padding: 8px 16px; cursor: pointer; white-space: nowrap;
+  }
+  .cssbar .apply { background: #FF8FA3; color: #fff; }
+  .cssbar .clear { background: transparent; color: #8A7D70; border: 1px solid #E8DFD5; }
+  .hint { flex-basis: 100%; font-size: .74rem; color: #A08A90; line-height: 1.5; }
+
+  .stage { flex: 1 1 auto; min-height: 0; }
+  iframe { width: 100%; height: 100%; border: none; display: block; background: #fff; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="backlink" href="admin.html">← 返回後台</a>
+  <h1>🎨 顏色測試預覽</h1>
+  <div class="pagepicker" id="pagePicker"></div>
+  <div class="status" id="statusText">目前顯示：正式顏色（未套用測試配色）</div>
+</header>
+
+<div class="cssbar">
+  <textarea id="cssInput" placeholder="從「顏色規則編輯器」按「📋 複製調整後的 CSS」，貼在這裡……"></textarea>
+  <div class="btns">
+    <button class="apply" id="applyBtn">套用預覽</button>
+    <button class="clear" id="clearBtn">清除／還原</button>
+  </div>
+  <div class="hint">這裡只是把顏色暫時套到下面這個畫面上給妳看，不會改到正式網站；關掉這頁或重新整理就會消失。放心試。</div>
+</div>
+
+<div class="stage">
+  <iframe id="previewFrame" title="預覽畫面"></iframe>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var PAGES = [
+    { label: '首頁', url: 'index.html' },
+    { label: '食譜頁', url: 'recipes.html' },
+    { label: '開學清單', url: 'school-list.html' },
+    { label: '繪本館', url: 'picture-books.html' },
+    { label: '星星卡', url: 'star-card.html' },
+  ];
+
+  var frame = document.getElementById('previewFrame');
+  var picker = document.getElementById('pagePicker');
+  var statusText = document.getElementById('statusText');
+  var cssInput = document.getElementById('cssInput');
+  var applyBtn = document.getElementById('applyBtn');
+  var clearBtn = document.getElementById('clearBtn');
+
+  var overrideCss = '';
+  var overrideOn = false;
+  var STYLE_ID = 'dondon-color-preview-override';
+
+  function buildStyleText(raw) {
+    var text = raw.trim();
+    if (!text) return '';
+    if (text.indexOf('{') === -1) {
+      text = ':root {\n' + text + '\n}';
+    }
+    return text;
+  }
+
+  function injectOverride() {
+    try {
+      var doc = frame.contentDocument;
+      if (!doc || !doc.head) return false;
+      var old = doc.getElementById(STYLE_ID);
+      if (old) old.remove();
+      if (overrideOn && overrideCss) {
+        var styleEl = doc.createElement('style');
+        styleEl.id = STYLE_ID;
+        styleEl.textContent = overrideCss;
+        doc.head.appendChild(styleEl);
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function updateStatus() {
+    if (overrideOn && overrideCss) {
+      statusText.textContent = '目前顯示：測試配色（已套用，正式網站沒有被改動）';
+      statusText.classList.add('on');
+    } else {
+      statusText.textContent = '目前顯示：正式顏色（未套用測試配色）';
+      statusText.classList.remove('on');
+    }
+  }
+
+  function loadPage(url, btn) {
+    Array.prototype.forEach.call(picker.querySelectorAll('button'), function (b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    frame.src = url;
+  }
+
+  frame.addEventListener('load', function () {
+    if (overrideOn) {
+      var ok = injectOverride();
+      if (!ok) {
+        statusText.textContent = '這個網域不允許套用預覽（要在 sheridondon.com.tw 上打開這一頁才能用）';
+        statusText.classList.remove('on');
+      }
+    }
+  });
+
+  PAGES.forEach(function (p, i) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = p.label;
+    btn.addEventListener('click', function () { loadPage(p.url, btn); });
+    picker.appendChild(btn);
+    if (i === 0) { btn.classList.add('active'); }
+  });
+  loadPage(PAGES[0].url, picker.querySelector('button'));
+
+  applyBtn.addEventListener('click', function () {
+    var built = buildStyleText(cssInput.value);
+    if (!built) {
+      statusText.textContent = '請先貼上顏色 CSS 再按套用';
+      statusText.classList.remove('on');
+      return;
+    }
+    overrideCss = built;
+    overrideOn = true;
+    injectOverride();
+    updateStatus();
+  });
+
+  clearBtn.addEventListener('click', function () {
+    overrideOn = false;
+    injectOverride();
+    updateStatus();
+  });
+})();
+</script>
+
+</body>
+</html>
