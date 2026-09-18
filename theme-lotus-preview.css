@@ -105,4 +105,4 @@ body{background:#FFFFFF!important}
 .cb-card:nth-of-type(1){border-width:1px!important}
 
 /* 小提醒框（食譜視窗的 .rc-tip-box、食材頁的 .reminder-box）：框內灰奶茶色改成跟置頂開團宣傳列同一個淺藕粉；虛線同步改柔粉 */
-.rc-tip-box,.reminder-box{background:#F7E4E2!important;border-color:#E5CFCD!important}
+.rc-tip-box,.reminder-box{background:#FBF1EF!important;border-color:#E5CFCD!important}
