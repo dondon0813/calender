@@ -70,6 +70,7 @@
   <div class="btns">
     <button class="apply" id="applyBtn">套用預覽</button>
     <button class="clear" id="clearBtn">清除／還原</button>
+    <button class="apply" id="lotusBtn" type="button">🌸 載入藕粉奶茶預覽</button>
   </div>
   <label class="toggle-row" id="noBorderRow">
     <input type="checkbox" id="noBorderToggle">
@@ -200,6 +201,18 @@
     if (i === 0) { btn.classList.add('active'); }
   });
   loadPage(PAGES[0].url, picker.querySelector('button'));
+
+  // 一鍵載入「藕粉奶茶」新色系預覽（theme-lotus-preview.css）：填進文字框後走同一條套用流程，
+  // 所以在下面畫面裡換頁、回首頁都會自動重新套上，不會跳回正式顏色。
+  var lotusBtn = document.getElementById('lotusBtn');
+  if (lotusBtn) lotusBtn.addEventListener('click', function () {
+    lotusBtn.disabled = true;
+    fetch('theme-lotus-preview.css?cb=' + Date.now())
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (css) { cssInput.value = css; applyBtn.click(); })
+      .catch(function () { statusText.textContent = '載入藕粉奶茶預覽失敗，請重新整理再試一次'; })
+      .then(function () { lotusBtn.disabled = false; });
+  });
 
   applyBtn.addEventListener('click', function () {
     var built = buildStyleText(cssInput.value);
