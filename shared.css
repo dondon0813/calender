@@ -27,14 +27,14 @@
   --c-text:        #5a4a3f;  /* 主要文字（棕） */
   --c-text-soft:   #8a7462;  /* 次要文字 */
   --c-muted:       #a89888;  /* 淡化文字、日期數字 */
-  --c-muted-light: #b39a8b;  /* 最淡：狀態列 */
+  --c-muted-light: #a89888;  /* 最淡：狀態列 */
   --c-brown:       #b5755a;  /* 按鈕文字、圖示 */
 
   /* ---------- 底色 / 面板 ---------- */
   --c-bg-top:    #FFF7EE;  /* body 漸層上緣 */
   --c-bg-bottom: #FFF1E6;  /* body 漸層下緣，也是 hover 底色 */
   --c-surface:   #FFFBF5;  /* 卡片 / 面板底 */
-  --c-surface-2: #FFFDFA;  /* 日期格底 */
+  --c-surface-2: #FFFBF5;  /* 日期格底 */
 
   /* ---------- 邊框 / 分隔線 ---------- */
   --c-border:       #FFD3B6;  /* 主要邊框（按鈕、輸入框） */
@@ -43,7 +43,7 @@
 
   /* ---------- 品牌 / 強調色 ---------- */
   --c-primary:       #FF8FA3;  /* 主粉 */
-  --c-primary-dark:  #FF7391;  /* 主粉 hover */
+  --c-primary-dark:  #FF6F91;  /* 主粉 hover */
   --c-danger:        #e0654f;  /* 錯誤訊息 */
   --c-input-bg:      #fff;     /* 輸入框內裡（表單欄位一律用這個，別硬寫白） */
   --c-text-invert:   #fff;     /* 深底上的反白文字 */
@@ -87,15 +87,15 @@
   --c-gold-border:    #F0DBA0;  /* 黃邊框 */
   --c-gold-gradient:  #FFF0D9;  /* 漸層黃 */
 
-  --c-orange-bg:       #FFF6EC;  /* 淡橘卡片底 */
+  --c-orange-bg:       #FFF7EE;  /* 淡橘卡片底 */
   --c-orange-bg-2:     #FFE9CE;  /* 橘淡底2 */
   --c-orange-badge-bg: #FFECD9;  /* 橘淡底徽章 */
   --c-orange-dash:     #FFD3AC;  /* 虛線邊框橘 */
   --c-orange-dash-2:   #FFC79A;  /* 虛線邊框橘2 */
   --c-orange-text:     #B5601C;  /* 橘文字 */
 
-  --c-line-2:      #F0DFCB;  /* 表格虛線分隔 */
-  --c-surface-3:   #FFFCF7;  /* 卡片底白偏黃 */
+  --c-line-2:      #F3E2D3;  /* 表格虛線分隔 */
+  --c-surface-3:   #FFFBF5;  /* 卡片底白偏黃 */
   --c-placeholder: #CBB8A8;  /* placeholder 灰棕 */
   --c-tag-bg:      #C9A66B;  /* 標籤底按鈕 */
   --c-tan-border:  #E0C9B0;  /* 淺棕邊框（checkbox／狀態框，跨 admin.html／school-list.html） */
@@ -116,7 +116,7 @@
 
   /* ---------- 頁面標題 ---------- */
   --c-title-rule: #FFC2CE;  /* 標題下方虛線 */
-  --c-badge-bg:   #FFE9EF;  /* 標題上方小徽章底色 */
+  --c-badge-bg:   #FFE7ED;  /* 標題上方小徽章底色 */
   --title-size:   28px;     /* 各頁可覆寫：star-card 26px、school-labels 24px */
   --title-rule-w: 120px;    /* 各頁可覆寫：star-card 110px、school-labels 60% */
 
@@ -450,7 +450,7 @@ body {
 
 /* ---- 「現正開團中」置頂橫列（跨頁共用元件，見 openGroupBuy.js） ---- */
 .ogb-bar {
-  background: #FFF6F8;
+  background: #FFF0F3;
   border: 1px solid #FFD6E0;
   border-radius: 14px;
   padding: 10px 0 12px;
@@ -493,7 +493,7 @@ body {
 .ogb-thumb-fallback {
   font-size: 24px;
   font-weight: 900;
-  color: #FFAFC2;
+  color: #FFB4C2;
 }
 .ogb-name {
   font-size: 11px;
