@@ -64,8 +64,10 @@ body{background:#FFFFFF!important}
 /* 入口卡片：維持各自的顏色底（雪莉定，不要白底）、無框；圖示／標題色調柔一階；hover 陰影改中性 */
 .home-card:hover{box-shadow:0 8px 18px rgba(90,74,66,.10)!important}
 :root{--rcp-gift-text:#4E9A8F;--rcp-peach-accent:#C98A55}
-/* 全站共用「現正開團中」小圖列（openGroupBuy.js 手寫粉底粉框）：雪莉 09-19 從現有色卡挑「標題虛線粉 #E5CFCD」當底色、無框 */
-.ogb-bar{background:#E5CFCD!important;border-color:transparent!important}
+/* 全站共用「現正開團中」小圖列（openGroupBuy.js 手寫粉底粉框）：雪莉 09-19 從現有色卡定：底色藕粉主色 #C99A9B、標題／團名／收單日小字全部白色、無框（先挑 #E5CFCD，小字太淡→改深底白字） */
+.ogb-bar{background:#C99A9B!important;border-color:transparent!important}
+.ogb-title,.ogb-name,.ogb-end{color:#FFFFFF!important}
+.ogb-thumb-fallback{color:#FFFFFF!important}
 
 /* 09-19 雪莉定：外面底色近白 #FFFFFF、裡面（卡片／選單／搜尋框）用奶茶色 #F5EFE9；不要陰影、不要外框 */
 :root{--c-input-bg:#FFFFFF}
