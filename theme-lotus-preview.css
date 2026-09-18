@@ -61,3 +61,7 @@ body{background:#FAF6F2!important}
 
 /* 食譜頁（育兒小幫手首頁）入口卡片：全部去框（團購行事曆用頁內專屬青綠框、觀看食譜用虛線橘變數，原本沒被標準色的 transparent 蓋到） */
 .home-card{border-color:transparent!important}
+/* 入口卡片 B 方案：四張一律白底，只有圖示／標題／虛線保留各自的顏色（調柔一階）；hover 陰影改中性 */
+.home-card{background:#FFFFFF!important}
+.home-card:hover{box-shadow:0 8px 18px rgba(90,74,66,.10)!important}
+:root{--rcp-gift-text:#4E9A8F;--rcp-peach-accent:#C98A55}
