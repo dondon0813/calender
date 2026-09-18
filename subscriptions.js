@@ -270,7 +270,7 @@ function renderCardSubList() {
     // 使用人欄：員工訂閱顯示名字，代墊請款再掛個徽章提醒「這筆錢是走請款流程」
     const whoCell = s.staffName
       ? csEscapeHtml(s.staffName) + (s.payMethod === 'staff'
-          ? '<br><span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#eef2ff; color:#3949ab; font-size:11px; white-space:nowrap;">🧾 代墊請款</span>'
+          ? '<br><span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#e9f2fc; color:#3949ab; font-size:11px; white-space:nowrap;">🧾 代墊請款</span>'
           : '')
       : '<span style="opacity:.5;">自己</span>';
 

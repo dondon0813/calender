@@ -507,7 +507,7 @@ body {
 }
 .ogb-end {
   font-size: 10px;
-  color: #b9a99a;
+  color: #b8ac9c;
   margin-top: 1px;
 }
 /* 開團數 >= 6 時改用固定格線（4 欄或 5 欄，由 openGroupBuy.js 依數量挑最不會出現零散殘行的版本），

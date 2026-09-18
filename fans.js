@@ -265,7 +265,7 @@ function renderFanBirthdayReminders() {
   }
   if (!lines.length) { box.innerHTML = ''; return; }
   lines.sort((a, b) => a.d - b.d);
-  box.innerHTML = '<div style="background:#fff4f7; border:1.5px dashed var(--c-primary); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:2;">' +
+  box.innerHTML = '<div style="background:#fff0f3; border:1.5px dashed var(--c-primary); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:2;">' +
     '<b>🎁 生日提醒（已分級會員，14 天內）</b><br>' + lines.map(l => l.html).join('<br>') + '</div>';
 }
 
@@ -365,7 +365,7 @@ function faMemberDetailRow(m) {
   const info = (label, val) =>
     '<div style="min-width:160px;"><div style="font-size:11px; color:var(--c-text-light);">' + label + '</div>' +
     '<div style="font-weight:700;">' + (val || '—') + '</div></div>';
-  return '<tr class="fa-mem-detail"><td colspan="7" style="padding:12px 16px; background:#fffaf5; border-bottom:2px solid var(--c-line);">' +
+  return '<tr class="fa-mem-detail"><td colspan="7" style="padding:12px 16px; background:#fffbf5; border-bottom:2px solid var(--c-line);">' +
     '<div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:10px;">' +
     info('🎂 生日', faEscapeHtml(m.birthday)) +
     info('📞 電話', faEscapeHtml(m.phone)) +

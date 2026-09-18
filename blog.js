@@ -99,7 +99,7 @@ function blogRenderList() {
     const pin = p.pinned ? '<span style="font-size:11px;">📌</span> ' : '';
     const ev = p.eventTitle ? '<span style="font-size:11px; color:var(--c-brown);">🔗 ' + blogEscape(p.eventTitle) + '</span>' : '';
     const cover = p.coverUrl
-      ? '<img src="' + blogEscape(p.coverUrl) + '" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#f5f5f5;">'
+      ? '<img src="' + blogEscape(p.coverUrl) + '" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#eeeeee;">'
       : '<div style="width:64px; height:44px; border-radius:8px; flex:none; background:#f8f0ea; display:flex; align-items:center; justify-content:center; font-size:18px;">📝</div>';
     html +=
       '<div style="display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer;" onclick="blogOpenEdit(' + i + ')">' +
@@ -237,7 +237,7 @@ function blogRenderBlocks() {
         '<input style="' + inputStyle + '" placeholder="按鈕文字（例如：🛒 前往下單）" value="' + blogEscape(b.label || '') + '" oninput="BLOG_EDIT.blocks[' + i + '].label=this.value">' +
         '<input style="' + inputStyle + ' margin-top:6px;" placeholder="按鈕連結網址 https://…" value="' + blogEscape(b.url || '') + '" oninput="BLOG_EDIT.blocks[' + i + '].url=this.value">';
     }
-    return '<div style="border:1px dashed var(--c-border); border-radius:10px; padding:10px; margin-bottom:8px; background:#fffdfb;">' +
+    return '<div style="border:1px dashed var(--c-border); border-radius:10px; padding:10px; margin-bottom:8px; background:#fffdfa;">' +
       '<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">' +
         '<span style="font-size:12px; font-weight:700; color:var(--c-brown, #b5755a);">' + names[b.type] + '</span>' +
         '<div style="flex:1;"></div>' +

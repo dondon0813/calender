@@ -424,7 +424,7 @@ const PBI_ENGINE_URL = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1
 const PBI_MODEL = 'isnet_quint8';
 const PBI_WEBP_QUALITY = 0.92;
 // 透明格棋盤底，讓人一眼看出「這塊真的是透明的」（抄自 bgRemover.js 的 BGR_CHECKER_BG）
-const PBI_CHECKER_BG = 'background:repeating-conic-gradient(#e8e2da 0% 25%, #faf7f2 0% 50%) 0 0/16px 16px; border-radius:10px;';
+const PBI_CHECKER_BG = 'background:repeating-conic-gradient(#ece3da 0% 25%, #fffbf5 0% 50%) 0 0/16px 16px; border-radius:10px;';
 
 let pbiEnginePromise = null; // 去背引擎只載一次
 let pbiWebpChecked = false;
@@ -840,7 +840,7 @@ async function pbiUploadCanvas(canvas, kind, buildFilename, statusElId, previewS
     const finalUrl = res.download_url + (res.download_url.indexOf('?') === -1 ? '?v=' : '&v=') + Date.now();
     document.getElementById(hiddenInputId).value = finalUrl;
     previewSetFn(finalUrl);
-    statusEl.style.cssText = 'color:#1b7a3d; font-weight:700;';
+    statusEl.style.cssText = 'color:#1e7a3c; font-weight:700;';
     statusEl.textContent = '✅ 圖片已上傳（' + pbiRemoveBgLabel(effectiveMode) + '），記得按下方「儲存」';
     showToast('圖片上傳完成');
   } catch (err) {
@@ -2870,7 +2870,7 @@ function renderTplPanel() {
   assetBox.innerHTML = '';
   const assets = [];
   if (s.logoUrl) assets.push({ label: '浮水印 LOGO（咖啡字）', url: s.logoUrl, h: 44, bg: '#fff' });
-  if (s.logoLightUrl) assets.push({ label: '浮水印 LOGO（白字）', url: s.logoLightUrl, h: 44, bg: '#b9a99a' }); // 白字版放有色底才看得到
+  if (s.logoLightUrl) assets.push({ label: '浮水印 LOGO（白字）', url: s.logoLightUrl, h: 44, bg: '#b8ac9c' }); // 白字版放有色底才看得到
   if (s.logoBlueUrl) assets.push({ label: '浮水印 LOGO（藍字）', url: s.logoBlueUrl, h: 44, bg: '#fff' });
   if (s.qrUrl) assets.push({ label: 'IG QR', url: s.qrUrl, h: 72, bg: '#fff' });
   assets.forEach(a => {

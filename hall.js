@@ -123,7 +123,7 @@ function hallRenderList() {
     return;
   }
   const html = rows.map(({ r, i }) => {
-    const kindBadge = '<span style="background:#eef2ff; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
+    const kindBadge = '<span style="background:#e9f2fc; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
       (r.kind === 'game' ? '🎮 遊戲' : r.kind === 'audio' ? '🎵 音檔' : '📄 檔案') + '</span>';
     const freeBadge = r.isFree
       ? '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">免費</span>'
@@ -132,7 +132,7 @@ function hallRenderList() {
       ? '<span style="background:#3ddc84; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已發布</span>'
       : '<span style="background:#ccc; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">草稿</span>';
     const cover = r.coverUrl
-      ? '<img src="' + hallEscape(r.coverUrl) + '" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex:none; background:#f5f5f5;">'
+      ? '<img src="' + hallEscape(r.coverUrl) + '" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex:none; background:#eeeeee;">'
       : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#f0f0f8; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : r.kind === 'audio' ? '🎵' : '📄') + '</div>';
     const ruleCount = (r.rules || []).length;
     const grantCount = (r.grants || []).length;
@@ -143,7 +143,7 @@ function hallRenderList() {
         '<div style="font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + hallEscape(r.title) + '</div>' +
         '<div style="font-size:11px; color:var(--c-text-light); margin-top:2px;">/' + hallEscape(r.slug) + '　排序 ' + hallEscape(r.sort) + '</div>' +
         '<div style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">' + kindBadge + freeBadge + pubBadge +
-          (function () { const b = r.brandId && HALL_BRAND_CHOICES.find(x => x.id === r.brandId); return b ? '<span style="background:#fff0f3; color:#d9677f; border:1px solid #f7c9d3; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">' + hallEscape(b.name) + '</span>' : ''; })() +
+          (function () { const b = r.brandId && HALL_BRAND_CHOICES.find(x => x.id === r.brandId); return b ? '<span style="background:#fff0f3; color:#d9677f; border:1px solid #f3c6d3; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">' + hallEscape(b.name) + '</span>' : ''; })() +
           '<span style="font-size:11px; color:var(--c-text-light);">規則 ' + ruleCount + '　開通 ' + grantCount + ' 人</span>' +
         '</div>' +
       '</div>' +
@@ -390,7 +390,7 @@ function hallRenderScreenshots() {
     ? '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
       list.map((url, i) =>
         '<div style="position:relative; width:96px; height:96px;">' +
-          '<img src="' + hallEscape(url) + '" style="width:100%; height:100%; object-fit:cover; border-radius:8px; background:#f5f5f5;">' +
+          '<img src="' + hallEscape(url) + '" style="width:100%; height:100%; object-fit:cover; border-radius:8px; background:#eeeeee;">' +
           '<button type="button" class="task-mini-btn" style="position:absolute; top:-8px; right:-8px; padding:0 6px; line-height:20px; border-radius:999px;" onclick="hallRemoveScreenshot(' + i + ')">✕</button>' +
         '</div>'
       ).join('') + '</div>'
@@ -611,7 +611,7 @@ async function hallLoadCodesList() {
       return;
     }
     const statusBadge = st => {
-      if (st === 'redeemed') return '<span style="background:#e0e0e0; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
+      if (st === 'redeemed') return '<span style="background:#dddddd; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
       if (st === 'revoked') return '<span style="background:#fdeceb; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
       return '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">未使用</span>';
     };

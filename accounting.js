@@ -529,7 +529,7 @@ function acctPastGroupBuysForBrand_(brand, matchedCalendarEvents) {
       const coveredByCalendar = (matchedCalendarEvents || []).some(ev =>
         startOfDay(ev.start) <= dd && dd <= startOfDay(ev.displayEnd));
       if (coveredByCalendar) return null;
-      return { id: 'acct-' + r.id, start: dd, displayEnd: dd, title: r.rawName || brand.name, color: '#c9c9c9', fromAccounting: true };
+      return { id: 'acct-' + r.id, start: dd, displayEnd: dd, title: r.rawName || brand.name, color: '#cccccc', fromAccounting: true };
     })
     .filter(Boolean);
 }
