@@ -86,6 +86,6 @@ body{background:#FFFFFF!important}
 .wd-5{background:#B59FD9!important}
 
 /* 篩選小標籤（食譜月齡／品牌、繪本館分類、星星卡小孩切換）：原本是白底＋框，去框後在白底上整顆消失 → 給一層淺奶茶底（比卡片色深一階，放在白底或奶茶卡片上都看得到）；選中狀態維持藕粉實心 */
-.chip:not(.active),.profile-chip:not(.active),.ing-selected-chip{background:#EDE4DB!important;border-color:transparent!important}
-.chip:not(.active):hover,.profile-chip:not(.active):hover{background:#E4D9CE!important}
+.chip:not(.active),.profile-chip:not(.active),.ing-selected-chip{background:#F3ECE5!important;border-color:transparent!important}
+.chip:not(.active):hover,.profile-chip:not(.active):hover{background:#EADFD4!important}
 .profile-chip-add{background:transparent!important;border:1px dashed #CDBBAD!important}
