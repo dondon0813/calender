@@ -89,3 +89,6 @@ body{background:#FFFFFF!important}
 .chip:not(.active),.profile-chip:not(.active),.ing-selected-chip{background:#F8F3EE!important;border-color:transparent!important}
 .chip:not(.active):hover,.profile-chip:not(.active):hover{background:#EFE7DF!important}
 .profile-chip-add{background:transparent!important;border:1px dashed #CDBBAD!important}
+
+/* 食譜／食材小卡點開的視窗：底色白（雪莉 09-19）；視窗裡的資訊列、提示框維持奶茶色塊 */
+.recipe-card-modal{background:#FFFFFF!important}
