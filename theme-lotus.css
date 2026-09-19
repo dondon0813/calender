@@ -4,8 +4,8 @@
    還原點：git tag theme-default-20260919；要整個改回＝把各頁 <head> 最後那行
    <link rel="stylesheet" href="theme-lotus.css?v=N"> 拿掉即可。
    過渡期作法：這是一層「覆寫」（放在各頁 <style> 之後載入，所以用 !important）。
-   目前掛載：index／recipes／school-list／picture-books／star-card。
-   其餘頁面（後台、標籤頁、工具頁…）尚未掛＝維持舊配色；全部轉完後再把數值收進 shared.css。
+   目前掛載：index／recipes／school-list／picture-books／star-card／learn／kids／school-labels／ibon-upload／name-sticker-generator。
+   其餘頁面（後台、calendar-poster 等工具頁）尚未掛＝維持舊配色；全部轉完後再把數值收進 shared.css。
    ============================================================ */
 :root{
 --c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
@@ -113,3 +113,15 @@ body{background:#FFFFFF!important}
 .ing-search-input,.field-input,.action-btn-ghost,.nav-arrow,
 .mode-btn:not(.active):not(.on):not(.selected),.main-tab:not(.active):not(.on):not(.selected),.avatar-pick:not(.active):not(.on):not(.selected){background:#F5EFE9!important;border-color:transparent!important}
 .school-checkbox,.a4-item-checkbox{border-color:#CDBBAD!important}
+
+/* ===== 第二批（2026-09-19 雪莉看過預覽後上線）：learn／kids／school-labels／ibon-upload／name-sticker-generator ===== */
+/* 玩中學 learn.html 三張入口卡：比照食譜頁入口卡＝各自的淡色底、無白框、無陰影、不要漸層 */
+.learn-card{border-color:transparent!important;box-shadow:none!important}
+.learn-card:hover{box-shadow:0 8px 18px rgba(90,74,66,.10)!important}
+.learn-card-books{background:#F3E3E1!important}
+.learn-card-toys{background:#EAF0E6!important}
+.learn-card:not(.learn-card-books):not(.learn-card-toys){background:#F4ECE3!important}
+/* 標籤頁 school-labels.html：說明方塊改奶茶色、小標題膠囊改奶茶淡底、強調字改深藕粉 */
+.box{background:#F5EFE9!important}
+.box .desc b{color:#B07F83!important}
+body:has(.box) .section-title{background:#F1E8E0!important}

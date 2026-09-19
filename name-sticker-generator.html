@@ -224,6 +224,8 @@
     padding-top: 3px;
   }
 </style>
+<!-- 藕粉奶茶色系（2026-09-19）：必須放在本頁 <style> 之後；拿掉這行＝回到舊配色 -->
+<link rel="stylesheet" href="theme-lotus.css?v=2">
 </head>
 <body>
 
@@ -835,6 +837,7 @@ async function captureInIsolatedFrame(sourceEl, options) {
       doc.head.appendChild(s);
     });
     document.querySelectorAll('head link[rel="stylesheet"]').forEach(linkEl => {
+      if (/theme-lotus/.test(linkEl.href)) return; // 成品圖維持原本配色：新色系覆寫層不帶進出圖用的 iframe（2026-09-19）
       const l = doc.createElement('link');
       l.rel = 'stylesheet';
       l.href = linkEl.href;
