@@ -111,3 +111,15 @@ body{background:#FFFFFF!important}
 .ing-search-input,.field-input,.action-btn-ghost,.nav-arrow,
 .mode-btn:not(.active):not(.on):not(.selected),.main-tab:not(.active):not(.on):not(.selected),.avatar-pick:not(.active):not(.on):not(.selected){background:#F5EFE9!important;border-color:transparent!important}
 .school-checkbox,.a4-item-checkbox{border-color:#CDBBAD!important}
+
+/* ===== 第二批預覽（其餘前台頁，2026-09-19；雪莉看過才會掛到正式頁）===== */
+/* 玩中學 learn.html 三張入口卡：比照食譜頁入口卡＝各自的淡色底、無白框、無陰影、不要漸層 */
+.learn-card{border-color:transparent!important;box-shadow:none!important}
+.learn-card:hover{box-shadow:0 8px 18px rgba(90,74,66,.10)!important}
+.learn-card-books{background:#F3E3E1!important}
+.learn-card-toys{background:#EAF0E6!important}
+.learn-card:not(.learn-card-books):not(.learn-card-toys){background:#F4ECE3!important}
+/* 標籤頁 school-labels.html：說明方塊改奶茶色、小標題膠囊改奶茶淡底、強調字改深藕粉 */
+.box{background:#F5EFE9!important}
+.box .desc b{color:#B07F83!important}
+body:has(.box) .section-title{background:#F1E8E0!important}
