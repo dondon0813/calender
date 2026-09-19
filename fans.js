@@ -86,6 +86,7 @@ function loadFanAdminView(forceReload) {
   const banner = document.getElementById('fanAdminBanner');
   area.innerHTML = '<div class="task-empty">讀取中…</div>';
   banner.innerHTML = '';
+  faLoadClaimReports(!!forceReload); // 進分頁就抓一次：子分頁按鈕上的「待核對 N」紅點要靠它
   faApiPost('fan-admin-unclaimed').then(data => {
     if (!data || !data.success) {
       area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
@@ -514,17 +515,251 @@ async function faToggleCustDetail(row) {
   }
 }
 
-// ===== 子分頁切換（📥 未歸戶訂單／🔍 會員查詢／📊 顧客分析）=====
+// ===================================================================
+// ===== 📮 認領回報（2026-09-20；後端 fan-admin-claim-reports／-resolve／-sync）=====
+// 客人認領時系統對不到的訂單先留紀錄；匯入後自動比對，這裡處理對不上的。
+// 一次抓全部狀態（後端上限 500 筆）在前端分狀態，切 chip 不用重抓。
+// ===================================================================
+let FAN_CLAIMS_LIST = [];
+let FAN_CLAIMS_STATS = { pending: 0, matched: 0, rejected: 0 };
+let FAN_CLAIMS_FILTER = 'pending';
+let FAN_CLAIMS_LOADED = false;
+let FAN_CLAIMS_BUSY = false;
+
+const FAN_CLAIMS_FILTER_DEFS = [['pending', '⏳ 待核對'], ['matched', '✅ 已加入'], ['rejected', '🚫 已駁回'], ['all', '全部']];
+const FAN_CLAIMS_PLATFORM_LABELS = { gbf: '跟團買', shopline: 'Shopline', oneshop: '1shop', vendor: '廠商名單' };
+
+function renderFanClaimsBadge() {
+  const el = document.getElementById('fanClaimsBadge');
+  if (!el) return;
+  const n = FAN_CLAIMS_STATS.pending || 0;
+  el.innerHTML = n ? ' <span style="display:inline-block; min-width:16px; padding:0 5px; border-radius:999px; background:#FF6F91; color:#fff; font-size:11px; line-height:16px; text-align:center;">' + n + '</span>' : '';
+}
+
+async function faLoadClaimReports(force) {
+  if (FAN_CLAIMS_LOADED && !force) return;
+  const area = document.getElementById('fanClaimsArea');
+  area.innerHTML = '<div class="task-empty">讀取中…</div>';
+  try {
+    const data = await faApiPost('fan-admin-claim-reports', { status: 'all' });
+    if (data && data.tableReady === false) { // 後端表缺失時 success 也是 false，要先判這個
+      area.innerHTML = '<div class="task-empty">⚠️ 認領回報資料表尚未建立（待 db push）</div>';
+      return;
+    }
+    if (!data || !data.success) {
+      area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml((data && data.error) || '未知錯誤') + '</div>';
+      return;
+    }
+    FAN_CLAIMS_LIST = Array.isArray(data.reports) ? data.reports : [];
+    FAN_CLAIMS_STATS = Object.assign({ pending: 0, matched: 0, rejected: 0 }, data.stats || {});
+    FAN_CLAIMS_LOADED = true;
+    renderFanClaimsBadge();
+    renderFanClaimsFilters();
+    renderFanClaimsList();
+  } catch (err) {
+    area.innerHTML = '<div class="task-empty">讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+
+function renderFanClaimsFilters() {
+  const box = document.getElementById('fanClaimsFilters');
+  const s = FAN_CLAIMS_STATS;
+  const counts = { pending: s.pending, matched: s.matched, rejected: s.rejected, all: s.pending + s.matched + s.rejected };
+  box.innerHTML = FAN_CLAIMS_FILTER_DEFS.map(([key, label]) =>
+    '<button type="button" class="task-mini-btn fa-claims-filter" data-key="' + key + '"' +
+    (FAN_CLAIMS_FILTER === key ? ' style="background:var(--c-primary); color:#fff;"' : '') + '>' + label + ' ' + counts[key] + '</button>'
+  ).join('');
+  box.querySelectorAll('.fa-claims-filter').forEach(btn => btn.addEventListener('click', () => {
+    FAN_CLAIMS_FILTER = btn.dataset.key;
+    renderFanClaimsFilters();
+    renderFanClaimsList();
+  }));
+}
+
+function faClaimsVisibleList() {
+  const q = (document.getElementById('fanClaimsSearch').value || '').trim().toLowerCase();
+  return FAN_CLAIMS_LIST.filter(r => {
+    if (FAN_CLAIMS_FILTER !== 'all' && r.status !== FAN_CLAIMS_FILTER) return false;
+    if (!q) return true;
+    return [r.orderNo, r.buyerName, r.buyerEmail, r.member, r.eventTitle].some(v => String(v || '').toLowerCase().includes(q));
+  });
+}
+
+// 客人填的值 vs 訂單上的值：不一樣的那格標紅，一眼看出差在哪（遮罩欄位含 * 不標，交給「四項全符」判斷）
+function faClaimsDiffCell(orderVal, reportVal, isMoney) {
+  const o = String(orderVal === null || orderVal === undefined ? '' : orderVal);
+  const text = isMoney ? faMoney(orderVal) : o;
+  const masked = o.indexOf('*') !== -1;
+  const same = isMoney ? Number(orderVal) === Number(reportVal) : o.trim().toLowerCase() === String(reportVal || '').trim().toLowerCase();
+  const style = (!masked && !same) ? ' style="padding:6px 8px; color:#b23a2e; font-weight:600;"' : ' style="padding:6px 8px;"';
+  return '<td' + style + '>' + faEscapeHtml(text || '—') + '</td>';
+}
+
+function faClaimsStatusBadge(r) {
+  if (r.status === 'matched') {
+    return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#e6f4ea; color:#1e7a3c; font-size:11px;">已加入' +
+      (r.resolvedBy === 'auto' ? '（系統自動）' : r.resolvedBy ? '（' + faEscapeHtml(r.resolvedBy) + '）' : '') + '</span>';
+  }
+  if (r.status === 'rejected') {
+    return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#fff0f3; color:#b23a2e; font-size:11px;">已駁回' +
+      (r.resolvedBy ? '（' + faEscapeHtml(r.resolvedBy) + '）' : '') + '</span>';
+  }
+  return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#fff7ee; color:#a05a00; font-size:11px;">待核對</span>';
+}
+
+function faClaimsCardHtml(r) {
+  const cands = Array.isArray(r.candidates) ? r.candidates : [];
+  let candHtml;
+  if (!cands.length) {
+    candHtml = '<div style="font-size:12px; color:var(--c-text-light); padding:6px 0;">系統裡還沒有這個編號的訂單（可能還沒匯入，或是要請廠商核對）</div>';
+  } else {
+    const rows = cands.map(c => {
+      let who = '';
+      if (c.claimedBySelf) who = '已歸到這位會員';
+      else if (c.claimedByMemberNo) who = '⚠ 已歸到 ' + c.claimedByMemberNo;
+      const canMatch = r.status === 'pending' && (!c.claimedByMemberNo || c.claimedBySelf);
+      return '<tr style="border-top:1px solid var(--c-line);">' +
+        '<td style="padding:6px 8px; white-space:nowrap;">' + (c.fullMatch ? '<span title="四項全部相符" style="color:#1e7a3c; font-weight:600;">★ 全符</span>' : '<span style="color:var(--c-text-light);">不符</span>') + '</td>' +
+        '<td style="padding:6px 8px;">' + faEscapeHtml(c.eventTitle || '') + '<div style="font-size:11px; color:var(--c-text-light);">' + faEscapeHtml(FAN_CLAIMS_PLATFORM_LABELS[c.platform] || c.platform || '') + '｜' + faEscapeHtml(faDate(c.orderedAt)) + '｜' + (c.paid ? '已付款' : '未付款') + '</div></td>' +
+        faClaimsDiffCell(c.amount, r.amount, true) +
+        faClaimsDiffCell(c.customerName, r.buyerName, false) +
+        faClaimsDiffCell(c.email, r.buyerEmail, false) +
+        '<td style="padding:6px 8px; white-space:nowrap; font-size:12px;">' + faEscapeHtml(who) + '</td>' +
+        '<td style="padding:6px 8px; white-space:nowrap;">' + (canMatch ? '<button type="button" class="task-mini-btn fa-claims-match" data-id="' + faEscapeHtml(r.id) + '" data-order="' + faEscapeHtml(c.orderId) + '">加入這筆</button>' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    candHtml = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px; min-width:640px;">' +
+      '<thead><tr style="text-align:left; font-size:11px; color:var(--c-text-light);"><th style="padding:4px 8px;">比對</th><th style="padding:4px 8px;">系統裡的訂單</th><th style="padding:4px 8px;">金額</th><th style="padding:4px 8px;">姓名</th><th style="padding:4px 8px;">email</th><th></th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  let actions = '';
+  if (r.status === 'pending') actions = '<button type="button" class="task-mini-btn fa-claims-reject" data-id="' + faEscapeHtml(r.id) + '">駁回</button>';
+  else if (r.status === 'rejected') actions = '<button type="button" class="task-mini-btn fa-claims-reopen" data-id="' + faEscapeHtml(r.id) + '">退回待核對</button>';
+
+  return '<div style="border:1px solid var(--c-border-light); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fff;">' +
+    '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">' +
+      faClaimsStatusBadge(r) +
+      '<b style="font-size:14px;">' + faEscapeHtml(r.orderNo) + '</b>' +
+      '<span style="font-size:12px; color:var(--c-text-light);">會員 ' + faEscapeHtml(r.member) + '｜' + faEscapeHtml(faDate(r.createdAt)) + ' 回報</span>' +
+      '<span style="margin-left:auto;">' + actions + '</span>' +
+    '</div>' +
+    '<div style="font-size:13px; margin-bottom:6px;">客人填的：<b>' + faEscapeHtml(faMoney(r.amount)) + '</b>｜' + faEscapeHtml(r.buyerName) + '｜' + faEscapeHtml(r.buyerEmail) + '</div>' +
+    (r.hint ? '<div style="font-size:12px; color:#a05a00; margin-bottom:6px;">💡 系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
+    (r.note ? '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">📝 備註（客人看得到）：' + faEscapeHtml(r.note) + '</div>' : '') +
+    candHtml +
+    '</div>';
+}
+
+function renderFanClaimsList() {
+  const area = document.getElementById('fanClaimsArea');
+  const list = faClaimsVisibleList();
+  if (!list.length) {
+    const empty = FAN_CLAIMS_FILTER === 'pending' && !FAN_CLAIMS_STATS.pending ? '目前沒有待核對的回報 🎉' : '沒有符合條件的回報';
+    area.innerHTML = '<div class="task-empty">' + empty + '</div>';
+    return;
+  }
+  // 依團分組（同一團的單要一起拿去問廠商）
+  const groups = [];
+  const byTitle = {};
+  list.forEach(r => {
+    const title = r.eventTitle || '（未選團）';
+    if (!byTitle[title]) { byTitle[title] = { title, items: [] }; groups.push(byTitle[title]); }
+    byTitle[title].items.push(r);
+  });
+  area.innerHTML = groups.map(g =>
+    '<div style="margin:14px 0 6px; font-size:14px; font-weight:600;">' + faEscapeHtml(g.title) + ' <span style="font-weight:400; font-size:12px; color:var(--c-text-light);">' + g.items.length + ' 筆</span></div>' +
+    g.items.map(faClaimsCardHtml).join('')
+  ).join('');
+
+  area.querySelectorAll('.fa-claims-match').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'match', btn.dataset.order)));
+  area.querySelectorAll('.fa-claims-reject').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reject')));
+  area.querySelectorAll('.fa-claims-reopen').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reopen')));
+}
+
+async function faResolveClaimReport(id, action, orderId) {
+  if (FAN_CLAIMS_BUSY) return;
+  const r = FAN_CLAIMS_LIST.find(x => x.id === id);
+  if (!r) return;
+  const extra = { id, action };
+  if (action === 'match') {
+    const c = (r.candidates || []).find(x => x.orderId === orderId);
+    const warn = c && !c.fullMatch ? '\n\n⚠ 這筆訂單和客人填的資料「不完全相符」，請確認真的是同一個人。' : '';
+    if (!confirm('把訂單 ' + r.orderNo + ' 加入會員 ' + r.member + ' 名下？（會同時入點）' + warn)) return;
+    extra.orderId = orderId;
+  } else if (action === 'reject') {
+    const note = prompt('駁回原因（客人在「我的訂單」看得到，可留空）：', '');
+    if (note === null) return;
+    extra.note = note.trim();
+  }
+  FAN_CLAIMS_BUSY = true;
+  try {
+    const res = await faApiPost('fan-admin-claim-report-resolve', extra);
+    if (!res || !res.success) throw new Error((res && res.error) || '處理失敗');
+    if (action === 'match') { FAN_ADMIN_LOADED = false; } // 未歸戶清單少了一筆，下次切回去重抓
+    await faLoadClaimReports(true);
+  } catch (err) {
+    alert('處理失敗：' + err.message);
+  } finally {
+    FAN_CLAIMS_BUSY = false;
+  }
+}
+
+async function faSyncClaimReports() {
+  if (FAN_CLAIMS_BUSY) return;
+  const btn = document.getElementById('fanClaimsSyncBtn');
+  FAN_CLAIMS_BUSY = true;
+  btn.disabled = true;
+  try {
+    const res = await faApiPost('fan-admin-claim-reports-sync', {});
+    if (!res || !res.success) throw new Error((res && res.error) || '比對失敗');
+    const s = res.stats || {};
+    await faLoadClaimReports(true);
+    alert('比對完成：核對 ' + (s.checked || 0) + ' 筆、自動加入 ' + (s.matched || 0) + ' 筆' + ((s.warnings || []).length ? '\n\n注意：\n' + s.warnings.join('\n') : ''));
+  } catch (err) {
+    alert('比對失敗：' + err.message);
+  } finally {
+    FAN_CLAIMS_BUSY = false;
+    btn.disabled = false;
+  }
+}
+
+// 匯出目前畫面上的清單（預設＝待核對）給廠商核對；帶 BOM 讓 Excel 直接開不亂碼
+function faExportClaimReports() {
+  const list = faClaimsVisibleList();
+  if (!list.length) { alert('目前清單是空的，沒有東西可以匯出'); return; }
+  const cell = v => {
+    let s = String(v === null || v === undefined ? '' : v);
+    if (/^[=+\-@]/.test(s)) s = "'" + s; // 防 Excel 把客人填的內容當公式執行
+    return '"' + s.replace(/"/g, '""') + '"';
+  };
+  const lines = [['團購', '訂單編號', '金額', '姓名', 'email', '回報日', '狀態'].map(cell).join(',')];
+  const statusLabel = { pending: '待核對', matched: '已加入', rejected: '已駁回' };
+  list.forEach(r => lines.push([r.eventTitle, r.orderNo, r.amount, r.buyerName, r.buyerEmail, faDate(r.createdAt), statusLabel[r.status] || r.status].map(cell).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  const d = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = '認領回報-' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ===== 子分頁切換（📥 未歸戶訂單／📮 認領回報／🔍 會員查詢／📊 顧客分析）=====
 // 純顯示切換，不影響各區塊原有的載入邏輯（那套邏輯只認 DOM id，跟分頁容器無關）。
 // 做法比照 books.js 的 switchPbaTab（admin.html 5077-5081 的 .pba-tab 樣式）。
 const FAN_TAB_PANELS = {
   unclaimed: document.getElementById('fanTabPanelUnclaimed'),
+  claims: document.getElementById('fanTabPanelClaims'),
   member: document.getElementById('fanTabPanelMember'),
   cust: document.getElementById('fanTabPanelCust'),
   rewards: document.getElementById('fanTabPanelRewards'),
 };
 const FAN_TAB_BTNS = {
   unclaimed: document.getElementById('fanTabBtnUnclaimed'),
+  claims: document.getElementById('fanTabBtnClaims'),
   member: document.getElementById('fanTabBtnMember'),
   cust: document.getElementById('fanTabBtnCust'),
   rewards: document.getElementById('fanTabBtnRewards'),
@@ -539,6 +774,7 @@ function switchFanTab(tab, skipSave) {
     try { sessionStorage.setItem('fanAdminSubTab', tab); } catch (e) { /* 私密模式等情況忽略 */ }
   }
   if (tab === 'rewards') loadFanRewards(false);
+  if (tab === 'claims') faLoadClaimReports(false);
   if (tab === 'member') faLoadMemberOverview(false); // 切到會員總覽自動載入（有快取不重抓）
 }
 Object.keys(FAN_TAB_BTNS).forEach(key => {
@@ -556,6 +792,9 @@ document.getElementById('fanUnclaimedRefreshBtn').addEventListener('click', () =
 document.getElementById('fanUnclaimedSearch').addEventListener('input', () => { if (FAN_TABLE_READY) renderFanUnclaimedList(); });
 document.getElementById('fanMemberSearchBtn').addEventListener('click', () => faLoadMemberOverview(true));
 document.getElementById('fanMemberSearchInput').addEventListener('input', () => { if (FAN_MEMBER_LOADED) renderFanMemberList(); });
+document.getElementById('fanClaimsSearch').addEventListener('input', () => { if (FAN_CLAIMS_LOADED) renderFanClaimsList(); });
+document.getElementById('fanClaimsSyncBtn').addEventListener('click', () => faSyncClaimReports());
+document.getElementById('fanClaimsExportBtn').addEventListener('click', () => faExportClaimReports());
 document.getElementById('fanCustLoadBtn').addEventListener('click', () => faLoadCustomers());
 document.getElementById('fanCustSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') faLoadCustomers(); });
 

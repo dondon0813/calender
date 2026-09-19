@@ -5847,6 +5847,7 @@
     <!-- 子分頁（做法比照 books.js 的 .pba-tab：📖 繪本管理／🎁 優惠活動／⚙️ 繪本館設定，admin.html 5077-5081） -->
     <div class="pba-tabs">
       <button type="button" class="pba-tab on" id="fanTabBtnUnclaimed" data-fan-tab="unclaimed">📥 未歸戶訂單</button>
+      <button type="button" class="pba-tab" id="fanTabBtnClaims" data-fan-tab="claims">📮 認領回報<span id="fanClaimsBadge"></span></button>
       <button type="button" class="pba-tab" id="fanTabBtnMember" data-fan-tab="member">🔍 會員查詢</button>
       <button type="button" class="pba-tab" id="fanTabBtnCust" data-fan-tab="cust">📊 顧客分析</button>
       <button type="button" class="pba-tab" id="fanTabBtnRewards" data-fan-tab="rewards">🎁 點數與商城</button>
@@ -5859,6 +5860,19 @@
     </div>
     <div id="fanUnclaimedArea"><div class="task-empty">讀取中…</div></div>
     </div><!-- /fanTabPanelUnclaimed -->
+
+    <!-- 📮 認領回報（2026-09-20）：客人認領時系統對不到的訂單先留紀錄；匯入後自動比對，對不上的在這裡人工處理 -->
+    <div class="pba-tab-panel" id="fanTabPanelClaims" style="display:none;">
+    <h3 style="margin:18px 0 4px; font-size:15px;">📮 認領回報</h3>
+    <div style="font-size:12px; color:var(--c-text-light); margin-bottom:10px;">客人填的訂單資料系統還對不到時會先存在這裡。每天收單後會自動比對，四項全對的直接歸戶；這裡只需要處理對不上的。</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
+      <div id="fanClaimsFilters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+      <input type="text" id="fanClaimsSearch" placeholder="🔍 搜尋訂單編號／姓名／email／會員編號…" style="flex:1; min-width:200px; max-width:320px;">
+      <button type="button" class="task-mini-btn" id="fanClaimsSyncBtn">⟳ 立即比對</button>
+      <button type="button" class="task-mini-btn" id="fanClaimsExportBtn">⬇ 匯出給廠商核對（CSV）</button>
+    </div>
+    <div id="fanClaimsArea"><div class="task-empty">讀取中…</div></div>
+    </div><!-- /fanTabPanelClaims -->
 
     <div class="pba-tab-panel" id="fanTabPanelMember" style="display:none;">
     <h3 style="margin:24px 0 8px; font-size:15px;">👥 會員總覽</h3>
@@ -7130,7 +7144,7 @@
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=2"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=10"></script>
+<script src="fans.js?v=11"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
