@@ -390,14 +390,19 @@
     .gs-card.has-thumb { padding-left: 84px; padding-right: 68px; }
     .gs-thumb { left: 8px; top: 5px; bottom: 5px; }
   }
+  /* 團名與日期靠近一點（雪莉 09-20）：圓體預設行高很鬆，兩行中間空一大塊；行高收緊後
+     卡片上下內距各補 5px，卡片總高與左側小圖大小維持不變 */
+  .gs-card { padding-top: 19px; padding-bottom: 19px; }
   .gs-card-name {
     font-size: 19px;
     font-weight: 700;
+    line-height: 1.25;
   }
   .gs-card-date {
     font-size: 13px;
     opacity: 0.85;
-    margin-top: 4px;
+    margin-top: 2px;
+    line-height: 1.3;
   }
   .gs-card-icons {
     display: flex;
