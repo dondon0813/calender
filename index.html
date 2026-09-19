@@ -1680,7 +1680,11 @@ function buildGroupCard(ev, grayOut, srcOverride) {
     if (frozen) {
       const frozenBadge = document.createElement('span');
       frozenBadge.className = 'gs-frozen-badge';
-      frozenBadge.textContent = '❄冷藏冷凍團';
+      // 雪花用線條 SVG 刻（不用 emoji：iOS 會畫成彩色大顆、撐高標籤）；造型同月曆冷凍團浮水印（六根主幹各帶兩對分岔）
+      const arm = 'M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5';
+      frozenBadge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none; margin-right:3px;">' +
+        [0, 60, 120, 180, 240, 300].map(d => '<path transform="rotate(' + d + ' 12 12)" d="' + arm + '"/>').join('') +
+        '</svg>冷藏冷凍團';
       badges.appendChild(frozenBadge);
     }
     if (isToday) {
