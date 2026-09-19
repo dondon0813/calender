@@ -437,7 +437,13 @@
     border-radius: var(--r-pill);
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
-  .gs-today-badge { background: var(--ix-today-badge-bg); }
+  .gs-today-badge { background: var(--ix-today-badge-bg); animation: gsTodayBreath 2.2s ease-in-out infinite; }
+  /* 今日截止：外圈光暈呼吸（雪莉 09-20 選 A；標籤本身不動、字永遠清楚；節奏同「現正開團中」綠燈）。光暈顏色跟著標籤底色 */
+  @keyframes gsTodayBreath {
+    0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 0 0 0 color-mix(in srgb, var(--ix-today-badge-bg) 45%, transparent); }
+    50%      { box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 0 0 6px color-mix(in srgb, var(--ix-today-badge-bg) 0%, transparent); }
+  }
+  @media (prefers-reduced-motion: reduce) { .gs-today-badge { animation: none; } }
   .gs-frozen-badge { background: var(--ix-frozen-border); }
   .gs-tag-badge { background: var(--ix-tag-bg); }
   .gs-empty {
