@@ -323,7 +323,8 @@
 
     const title = document.createElement('div');
     title.className = 'ogb-title';
-    title.textContent = '🟢 現正開團中';
+    // 綠色圓點用 SVG 刻（不用 emoji：各平台長相不一、跟色系不搭）；顏色跟著頁面的綠色標準色
+    title.innerHTML = '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true" style="vertical-align:-1px; margin-right:5px; color:var(--c-mint-text, #5C9147);"><circle cx="6" cy="6" r="6" fill="currentColor" opacity=".22"/><circle cx="6" cy="6" r="3.4" fill="currentColor"/></svg>現正開團中';
     bar.appendChild(title);
 
     const list = document.createElement('div');
