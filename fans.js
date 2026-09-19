@@ -187,6 +187,7 @@ async function faLoadMemberOverview(force) {
       return;
     }
     FAN_MEMBER_LIST = Array.isArray(data.members) ? data.members : [];
+    Object.keys(FAN_MEMBER_ORDERS_CACHE).forEach(k => delete FAN_MEMBER_ORDERS_CACHE[k]); // 重新整理＝訂單快取一併作廢
     FAN_MEMBER_LOADED = true;
     renderFanMemberStats(data.stats || {});
     renderFanBirthdayReminders();
@@ -354,6 +355,7 @@ function renderFanMemberList() {
   if (saveBtn) saveBtn.addEventListener('click', (e) => { e.stopPropagation(); faSaveMemberTier(saveBtn.dataset.uid); });
   const detail = area.querySelector('.fa-mem-detail');
   if (detail) detail.addEventListener('click', (e) => e.stopPropagation());
+  if (FAN_MEMBER_OPEN) faLoadMemberOrders(FAN_MEMBER_OPEN);
 }
 
 // 展開列：完整個資＋分級標註編輯（前台看不到分級，僅後台）
@@ -376,6 +378,10 @@ function faMemberDetailRow(m) {
     info('👶 寶貝', kids) +
     info('📧 綁定信箱', emails) +
     '</div>' +
+    '<div style="border-top:1px dashed var(--c-border-light); padding:10px 0;">' +
+    '<div style="font-size:12px; font-weight:800; margin-bottom:6px;">🛒 訂單紀錄</div>' +
+    '<div id="faMemOrdersBox" data-uid="' + faEscapeHtml(m.userId) + '"><div style="font-size:12px; color:var(--c-text-light);">讀取中…</div></div>' +
+    '</div>' +
     '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; border-top:1px dashed var(--c-border-light); padding-top:10px;">' +
     '<span style="font-size:12px; font-weight:800;">⭐ 分級標註（僅後台可見）</span>' +
     '<input type="text" id="faMemTierInput" list="faMemTierPresets" value="' + faEscapeHtml(m.adminTier) + '" placeholder="例如 VIP／高級" style="width:120px;">' +
@@ -384,6 +390,63 @@ function faMemberDetailRow(m) {
     '<button type="button" class="task-mini-btn" id="faMemTierSaveBtn" data-uid="' + faEscapeHtml(m.userId) + '">💾 儲存</button>' +
     '</div>' +
     '</td></tr>';
+}
+
+// ===== 展開列的訂單紀錄（2026-09-20；後端 fan-admin-member-orders）=====
+// 每位會員抓一次就快取（清單重畫很頻繁：搜尋、篩選、存分級都會重畫）；按「重新整理」整個總覽重抓時一併清掉。
+const FAN_MEMBER_ORDERS_CACHE = {};
+const FAN_CLAIMED_VIA_LABELS = { email: 'email 自動', claim: '客人認領', manual: '後台手動' };
+
+async function faLoadMemberOrders(userId) {
+  const box = document.getElementById('faMemOrdersBox');
+  if (!box || box.dataset.uid !== userId) return;
+  if (FAN_MEMBER_ORDERS_CACHE[userId]) { renderFanMemberOrders(userId); return; }
+  try {
+    const data = await faApiPost('fan-admin-member-orders', { userId });
+    if (!data || !data.success) throw new Error((data && data.error) || '未知錯誤');
+    FAN_MEMBER_ORDERS_CACHE[userId] = data;
+    renderFanMemberOrders(userId);
+  } catch (err) {
+    const b = document.getElementById('faMemOrdersBox');
+    if (b && b.dataset.uid === userId) b.innerHTML = '<div style="font-size:12px; color:#b23a2e;">訂單讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+
+function renderFanMemberOrders(userId) {
+  const box = document.getElementById('faMemOrdersBox');
+  const data = FAN_MEMBER_ORDERS_CACHE[userId];
+  if (!box || box.dataset.uid !== userId || !data) return; // 等回應期間已切到別的會員就不畫
+  const orders = Array.isArray(data.orders) ? data.orders : [];
+  if (!orders.length) { box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">這位會員名下還沒有訂單</div>'; return; }
+  const rows = orders.map((o, i) => {
+    const items = (o.items || []).map(it =>
+      '<div style="display:flex; gap:8px; justify-content:space-between; padding:2px 0;">' +
+      '<span>' + (it.isGift ? '🎁 ' : '') + faEscapeHtml(it.name) + ' × ' + faEscapeHtml(it.qty) + '</span>' +
+      '<span style="white-space:nowrap; color:var(--c-text-light);">' + faEscapeHtml(faMoney(it.lineTotal)) + '</span></div>'
+    ).join('') || '<div style="color:var(--c-text-light);">（這筆訂單沒有品項明細）</div>';
+    return '<tr class="fa-mo-row" data-idx="' + i + '" style="border-top:1px solid var(--c-line); cursor:pointer;">' +
+      '<td style="padding:6px 8px; white-space:nowrap;">' + faEscapeHtml(faDate(o.orderedAt)) + '</td>' +
+      '<td style="padding:6px 8px;">' + faEscapeHtml(o.eventTitle || '—') + '</td>' +
+      '<td style="padding:6px 8px; white-space:nowrap;">' + faEscapeHtml(o.orderNo) + '</td>' +
+      '<td style="padding:6px 8px; white-space:nowrap; text-align:right;">' + faEscapeHtml(faMoney(o.amount)) + '</td>' +
+      '<td style="padding:6px 8px;">' + faPaidBadge({ paid: o.paid, status: o.statusLabel }) + '</td>' +
+      '<td style="padding:6px 8px; white-space:nowrap; font-size:12px; color:var(--c-text-light);">' + faEscapeHtml(FAN_CLAIMED_VIA_LABELS[o.claimedVia] || o.claimedVia || '') + '</td>' +
+      '<td style="padding:6px 8px; white-space:nowrap; font-size:12px; color:var(--c-text-light);">' + (o.items || []).length + ' 項 ▾</td>' +
+      '</tr>' +
+      '<tr class="fa-mo-items" data-idx="' + i + '" style="display:none;"><td colspan="7" style="padding:6px 16px 10px; font-size:12px; background:#fff;">' + items +
+      (o.email ? '<div style="margin-top:4px; color:var(--c-text-light);">下單 email：' + faEscapeHtml(o.email) + '</div>' : '') +
+      '</td></tr>';
+  }).join('');
+  box.innerHTML =
+    '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">共 ' + orders.length + ' 筆、跟過 ' + (data.teamsCount || 0) + ' 團，已付款累積 ' + faEscapeHtml(faMoney(data.totalSpent)) + '（點訂單列看品項）</div>' +
+    '<div style="overflow-x:auto; border:1px solid var(--c-border-light); border-radius:8px; background:#fff;">' +
+    '<table style="width:100%; border-collapse:collapse; font-size:13px; min-width:640px;">' +
+    '<thead><tr style="text-align:left; font-size:11px; color:var(--c-text-light);"><th style="padding:6px 8px;">下單日</th><th style="padding:6px 8px;">團購</th><th style="padding:6px 8px;">訂單編號</th><th style="padding:6px 8px; text-align:right;">金額</th><th style="padding:6px 8px;">狀態</th><th style="padding:6px 8px;">歸戶方式</th><th></th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div>';
+  box.querySelectorAll('.fa-mo-row').forEach(tr => tr.addEventListener('click', () => {
+    const it = box.querySelector('.fa-mo-items[data-idx="' + tr.dataset.idx + '"]');
+    if (it) it.style.display = it.style.display === 'none' ? '' : 'none';
+  }));
 }
 
 async function faSaveMemberTier(userId) {
