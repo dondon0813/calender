@@ -323,8 +323,9 @@
 
     const title = document.createElement('div');
     title.className = 'ogb-title';
-    // 綠色圓點用 SVG 刻（不用 emoji：各平台長相不一、跟色系不搭）；顏色跟著頁面的綠色標準色
-    title.innerHTML = '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true" style="vertical-align:-1px; margin-right:5px; color:var(--c-mint-text, #5C9147);"><circle cx="6" cy="6" r="6" fill="currentColor" opacity=".22"/><circle cx="6" cy="6" r="3.4" fill="currentColor"/></svg>現正開團中';
+    // 綠燈圓點用 SVG 刻（不用 emoji）；亮綠＋外圈光暈呼吸動畫（純 CSS、不載任何檔案；系統設定「減少動態效果」時不動）
+    title.innerHTML = '<style>@keyframes ogbDotBreath{0%,100%{transform:scale(.62);opacity:.55}50%{transform:scale(1);opacity:.12}}.ogb-dot-halo{transform-origin:7px 7px;animation:ogbDotBreath 2.2s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.ogb-dot-halo{animation:none;opacity:.25}}</style>' +
+      '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" style="vertical-align:-2px; margin-right:4px; color:#34C759; overflow:visible;"><circle class="ogb-dot-halo" cx="7" cy="7" r="7" fill="currentColor"/><circle cx="7" cy="7" r="3.6" fill="currentColor"/></svg>現正開團中';
     bar.appendChild(title);
 
     const list = document.createElement('div');
