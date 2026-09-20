@@ -104,6 +104,11 @@
   }
   .filter-chips.chips-scroll::-webkit-scrollbar { display: none; }
   .filter-chips.chips-scroll .chip { flex: 0 0 auto; }
+  /* 主選單（第一層：品牌）：整條有底色的大按鈕列，單選；放不下時左右滑（雪莉 2026-09-21 兩層選單規則） */
+  .rcp-brand-tabs { display: flex; background: var(--c-orange-bg-2); border-radius: 999px; padding: 3px; margin: 0 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .rcp-brand-tabs::-webkit-scrollbar { display: none; }
+  .rcp-brand-tab { flex: 1 0 auto; border: 0; background: transparent; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; color: var(--c-brown); cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .rcp-brand-tab.on { background: #fff; color: var(--c-primary-dark); }
   .chip-clear {
     font-size: 11.5px;
     font-weight: 700;
@@ -1172,10 +1177,8 @@
   <!-- 食材介紹畫面 -->
   <div id="ingredientsView" style="display:none;">
     <button class="back-btn" id="backFromIngredients">← 返回首頁</button>
-    <div class="filter-section">
-      <div class="filter-label">品牌</div>
-      <div class="filter-chips chips-scroll" id="ingBrandChips"></div>
-    </div>
+    <!-- 主選單：品牌（大按鈕列，單選；一開始不選＝顯示「請先選擇一個品牌」） -->
+    <div class="rcp-brand-tabs" id="ingBrandChips" role="tablist"></div>
 
     <div id="ingBrandPrompt" class="ing-brand-prompt">請先選擇一個品牌，看看有哪些食材唷！</div>
 
@@ -1208,12 +1211,13 @@
   <div id="recipesView" style="display:none;">
     <button class="back-btn" id="backFromRecipes">← 返回首頁</button>
     <div class="rcp-promo-slot" id="promoSlotRecipes" style="display:none;"></div>
+    <!-- 主選單：品牌（大按鈕列，單選；「全部」＝不限品牌） -->
+    <div class="rcp-brand-tabs" id="recBrandChips" role="tablist"></div>
     <div class="filter-section">
       <!-- 「我的收藏」篩選列 2026-09-19 雪莉指示移除、09-20 相關程式碼一併清除：收藏後從會員中心收藏庫看即可 -->
-      <div class="filter-label">品牌</div>
-      <div class="filter-chips chips-scroll" id="recBrandChips"></div>
+      <!-- 副選單：適合月齡（小膠囊，單行左右滑） -->
       <div class="filter-label">適合月齡</div>
-      <div class="filter-chips" id="recAgeChips"></div>
+      <div class="filter-chips chips-scroll" id="recAgeChips"></div>
     </div>
 
     <div class="ing-select-title">選擇食材</div>
@@ -1887,42 +1891,27 @@ function pickRandomBasicIngredients() {
 
 // ===== 篩選標籤初始化 =====
 function initFilters() {
-  // 食材介紹的品牌篩選（單選：點同一個品牌可以取消回到「請選擇品牌」）
-  const ingBrandChipsEl = document.getElementById('ingBrandChips');
-  const ingScrollX = ingBrandChipsEl.scrollLeft; // 重畫後保留左右滑動位置，點選品牌不會跳回最左邊
-  ingBrandChipsEl.innerHTML = '';
+  // 食材介紹的品牌（主選單，單選；一開始不選＝「請先選擇一個品牌」；沒有食材的品牌不列）
   const brandsWithIngredients = new Set(INGREDIENTS.map(i => String(i['品牌'] || '').trim()).filter(Boolean));
-  BRANDS.filter(b => brandsWithIngredients.has(b)).forEach(b => {
-    const chip = makeChip(b, ingSelectedBrand === b, () => {
-      ingSelectedBrand = (ingSelectedBrand === b) ? '' : b;
-      initFilters();
-      renderIngredients();
-    });
-    ingBrandChipsEl.appendChild(chip);
-  });
-  ingBrandChipsEl.scrollLeft = ingScrollX;
+  buildBrandTabs(document.getElementById('ingBrandChips'), BRANDS.filter(b => brandsWithIngredients.has(b)),
+    b => ingSelectedBrand === b,
+    b => { ingSelectedBrand = b; initFilters(); renderIngredients(); },
+    false);
 
-  // 觀看食譜的品牌篩選
-  const recBrandChipsEl = document.getElementById('recBrandChips');
-  const recScrollX = recBrandChipsEl.scrollLeft;
-  recBrandChipsEl.innerHTML = '';
+  // 觀看食譜的品牌（主選單，單選；「全部」＝不限；沒有食譜的品牌不列）
   const brandsWithRecipes = new Set();
   RECIPES.forEach(r => getRecipeBrands(r).forEach(b => brandsWithRecipes.add(b)));
-  BRANDS.filter(b => brandsWithRecipes.has(b)).forEach(b => {
-    const chip = makeChip(b, recSelectedBrands.includes(b), () => {
-      toggleInArray(recSelectedBrands, b);
-      initFilters();
-      renderRecipes();
-    });
-    recBrandChipsEl.appendChild(chip);
-  });
-  recBrandChipsEl.scrollLeft = recScrollX;
+  buildBrandTabs(document.getElementById('recBrandChips'), BRANDS.filter(b => brandsWithRecipes.has(b)),
+    b => recSelectedBrands.includes(b),
+    b => { recSelectedBrands = b === null ? [] : [b]; initFilters(); renderRecipes(); },
+    true);
 
   // 觀看食譜的月齡篩選
   const AGE_ORDER = ['6m+', '8m+', '10m+', '1y+', '2y+', '成人'];
   const ages = Array.from(new Set(RECIPES.map(r => r['適合月齡']).filter(Boolean)));
   ages.sort((a, b) => AGE_ORDER.indexOf(a) - AGE_ORDER.indexOf(b));
   const recAgeChipsEl = document.getElementById('recAgeChips');
+  const ageScrollX = recAgeChipsEl.scrollLeft;
   recAgeChipsEl.innerHTML = '';
   ages.forEach(age => {
     const chip = makeChip(age, recSelectedAges.includes(age), () => {
@@ -1932,6 +1921,7 @@ function initFilters() {
     });
     recAgeChipsEl.appendChild(chip);
   });
+  recAgeChipsEl.scrollLeft = ageScrollX;
 
   // 選擇食材的搜尋/篩選圖磚 + 已選擇食材標籤
   renderSelectedIngredientChips();
@@ -2051,6 +2041,24 @@ function makeEmojiIconFallback(item) {
   div.className = 'ing-tile-icon emoji-fallback';
   div.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (CAT_ICON_PATHS[categoryIconKey(item)] || CAT_ICON_PATHS.dish) + '</svg>';
   return div;
+}
+
+// 主選單（品牌）大按鈕列：withAll＝前面加「全部」（選中＝沒挑品牌）；點已選中的維持選中；重畫後保留左右滑動位置
+function buildBrandTabs(el, options, isOn, onSelect, withAll) {
+  const scrollX = el.scrollLeft;
+  el.innerHTML = '';
+  const mk = (label, value, on) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'tab');
+    btn.className = 'rcp-brand-tab' + (on ? ' on' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', () => onSelect(value));
+    el.appendChild(btn);
+  };
+  if (withAll) mk('全部', null, !options.some(isOn));
+  options.forEach(o => mk(o, o, !!isOn(o)));
+  el.scrollLeft = scrollX;
 }
 
 function makeChip(label, active, onClick) {
