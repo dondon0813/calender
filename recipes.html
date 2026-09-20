@@ -1395,7 +1395,7 @@
     <div class="recipe-search-row">
       <input type="text" id="recipeSearchInput" class="ing-search-input ico-search" placeholder="搜尋食譜名稱...">
     </div>
-    <div class="recipe-reco-title" id="recipeRecoTitle">🍽 食譜推薦（共 0 道）</div>
+    <div class="recipe-reco-title" id="recipeRecoTitle">食譜推薦（共 0 道）</div>
     <div class="recipe-card-grid" id="recipeGrid"></div>
     <div class="empty-state" id="recipeEmpty" style="display:none;">這個篩選條件下沒有找到食譜</div>
   </div>
@@ -2267,7 +2267,7 @@ const AGE_COLOR = {
 function ageTagHtml(age) {
   if (!age) return '';
   const color = AGE_COLOR[age] || '#b5755a';
-  return `<span class="mini-tag" style="background:${color}22;color:${color};">👶 ${age}</span>`;
+  return `<span class="mini-tag" style="background:${color}22;color:${color};">${age}</span>`;
 }
 
 // ===== 渲染：食材介紹 =====
@@ -2401,7 +2401,7 @@ function renderRecipes() {
     return true;
   });
 
-  titleEl.textContent = recOnlyFav ? `❤️ 我收藏的食譜（共 ${items.length} 道）` : `🍽 食譜推薦（共 ${items.length} 道）`;
+  titleEl.textContent = recOnlyFav ? `❤️ 我收藏的食譜（共 ${items.length} 道）` : `食譜推薦（共 ${items.length} 道）`;
 
   if (!items.length) {
     emptyEl.textContent = (recOnlyFav && !FAV.ids.size)

@@ -65,6 +65,12 @@
     padding: 3px 8px;
   }
   .home-card-icon { font-size: 34px; margin-bottom: 8px; }
+  /* 大圖示改線條 SVG（2026-09-20 雪莉指示，不用 emoji）：顏色跟著各色卡標題色 */
+  .home-card-icon svg { display: block; margin: 0 auto; }
+  .home-card-coral .home-card-icon { color: var(--c-coral-text); }
+  .home-card-purple .home-card-icon { color: var(--c-purple-text); }
+  .home-card-mint .home-card-icon { color: var(--c-mint-text); }
+  .home-card-blue .home-card-icon { color: var(--c-blue-text); }
   .home-card-title {
     font-family: var(--font-display);
     font-weight: 800;
@@ -113,21 +119,21 @@
 
   <div class="home-cards">
     <a class="home-card home-card-coral" href="star-card.html" style="text-decoration:none; display:block;">
-      <div class="home-card-icon">⭐</div>
+      <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6-4.5-4.2 6.1-.8z" /></svg></div>
       <div class="home-card-title">我的集點卡</div>
       <div class="home-card-title-divider"></div>
       <div class="home-card-desc">蓋星星集點，累積小成就 💗</div>
     </a>
 
     <a class="home-card home-card-purple" href="name-sticker-generator.html" style="text-decoration:none; display:block;">
-      <div class="home-card-icon">🏷️</div>
+      <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5A1.5 1.5 0 0 1 5 4h6.6a1.5 1.5 0 0 1 1.06.44l7.4 7.4a1.5 1.5 0 0 1 0 2.12l-6.1 6.1a1.5 1.5 0 0 1-2.12 0l-7.4-7.4A1.5 1.5 0 0 1 3.5 11.6z" /><circle cx="8.2" cy="8.7" r="1.3" /></svg></div>
       <div class="home-card-title">姓名貼產生器</div>
       <div class="home-card-title-divider"></div>
       <div class="home-card-desc">選款式、輸入姓名，馬上產生 💗</div>
     </a>
 
     <a class="home-card home-card-mint" href="ibon-upload.html" style="text-decoration:none; display:block;">
-      <div class="home-card-icon">🖨️</div>
+      <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V4h10v5" /><path d="M7 17H5.5A1.5 1.5 0 0 1 4 15.5v-5A1.5 1.5 0 0 1 5.5 9h13a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H17" /><rect x="7" y="14" width="10" height="6" rx="1" /><path d="M16.5 11.8h.01" /></svg></div>
       <div class="home-card-title">ibon 上傳</div>
       <div class="home-card-title-divider"></div>
       <div class="home-card-desc">看教學、開傳送門去列印 💗</div>
@@ -135,7 +141,7 @@
 
     <div class="home-card home-card-blue soon-card">
       <div class="soon-badge">即將推出</div>
-      <div class="home-card-icon">🎵</div>
+      <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l10-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="16.5" cy="16" r="2.5" /></svg></div>
       <div class="home-card-title">兒歌童謠</div>
       <div class="home-card-title-divider"></div>
       <div class="home-card-desc">好聽好唱的兒歌精選 💗</div>
