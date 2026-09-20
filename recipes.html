@@ -61,31 +61,6 @@
   .modal-close { z-index: 2; }
 
   /* ===== 主分頁切換 ===== */
-  .main-tabs {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 18px;
-  }
-  .main-tab {
-    font-family: var(--font-round);
-    font-weight: 800;
-    font-size: 14px;
-    border-radius: var(--r-pill);
-    border: 1px solid var(--c-border);
-    background: #fff;
-    color: var(--c-brown);
-    padding: 10px 22px;
-    cursor: pointer;
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  .main-tab.active {
-    background: var(--c-primary);
-    border-color: var(--c-primary);
-    color: #fff;
-    box-shadow: 0 4px 10px rgba(255,143,163,0.4);
-    transform: translateY(-1px);
-  }
 
   .filter-section {
     margin-bottom: 16px;
@@ -448,58 +423,9 @@
     border-radius: var(--r-pill);
     padding: 2px 8px;
   }
-  .tag-brand { background: var(--c-blue-bg); color: var(--c-blue-text); }
-  .tag-age { background: var(--c-mint-bg); color: var(--c-mint-text); }
-  .tag-type-product { background: var(--c-purple-bg); color: var(--c-purple-text); }
 
   .recipe-card {
     text-align: left;
-  }
-  .recipe-card .rc-img-wrap {
-    position: relative;
-  }
-  .recipe-card .rc-img-wrap img {
-    aspect-ratio: 4 / 3;
-  }
-  .recipe-card .rc-age-badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    font-size: 10.5px;
-    font-weight: 800;
-    border-radius: var(--r-pill);
-    padding: 3px 10px;
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  }
-  .recipe-card .rc-title-overlay {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    padding: 22px 10px 8px;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(60,40,25,0.72) 100%);
-  }
-  .recipe-card .rc-title-overlay .card-name {
-    color: #fff;
-    font-size: 13.5px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    -webkit-line-clamp: 2;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .recipe-card .rc-meta-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 7px 9px 9px;
-    font-size: 10.5px;
-    color: var(--c-muted);
-    font-weight: 700;
-  }
-  .recipe-card .rc-meta-row span {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
   }
 
   .empty-state {
@@ -651,55 +577,6 @@
     border-radius: var(--r-pill);
     padding: 5px 14px;
   }
-  .rc-ing-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 14px;
-    font-size: 12.5px;
-    color: var(--c-text);
-  }
-  .rc-ing-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    padding: 3px 0;
-    border-bottom: 1px dotted var(--c-line-2);
-    cursor: pointer;
-  }
-  .rc-ing-item .rc-ing-name { font-weight: 700; }
-  .rc-ing-item .rc-ing-qty { color: var(--c-brown); font-weight: 700; white-space: nowrap; }
-  .rc-steps-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    counter-reset: rc-step;
-  }
-  .rc-steps-list li {
-    counter-increment: rc-step;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 13px;
-    color: var(--c-text);
-    line-height: 1.6;
-    margin-bottom: 10px;
-  }
-  .rc-steps-list li::before {
-    content: counter(rc-step);
-    flex: none;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--c-primary);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 1px;
-  }
   .rc-tip-box {
     background: var(--c-orange-bg);
     border: 1px dashed var(--c-orange-dash-2);
@@ -725,49 +602,12 @@
     font-weight: 700;
     margin-top: 14px;
   }
-  .modal-img {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    border-radius: 12px;
-    background: var(--c-bg-bottom);
-    margin-bottom: 12px;
-  }
-  .spec-table {
-    width: 100%;
-    font-size: 12.5px;
-    color: var(--c-text);
-    margin: 10px 0;
-    border-collapse: collapse;
-  }
-  .spec-table td {
-    padding: 4px 0;
-    border-bottom: 1px dashed var(--c-line);
-    vertical-align: top;
-  }
-  .spec-table td:first-child {
-    color: var(--c-muted);
-    font-weight: 700;
-    width: 76px;
-    white-space: nowrap;
-  }
   .modal-desc {
     font-size: 13px;
     color: var(--c-text);
     line-height: 1.7;
     margin: 8px 0 14px;
     white-space: pre-wrap;
-  }
-  .related-recipes {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1.5px dashed var(--c-line);
-  }
-  .related-recipes .rr-label {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--c-muted);
-    margin-bottom: 8px;
   }
   .rr-item {
     display: flex;
@@ -794,16 +634,6 @@
     color: var(--c-text);
   }
 
-  .steps-box {
-    font-size: 13px;
-    color: var(--c-text);
-    line-height: 1.8;
-    white-space: pre-wrap;
-    background: var(--c-orange-bg);
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin: 8px 0 14px;
-  }
 
   .modal-actions {
     display: flex;
@@ -1497,8 +1327,6 @@
 
 <script>
 // ===== 設定 =====
-const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
-const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
 // 正式切換（2026-09-03）：改打新後端（Next.js/Supabase，dondon-platform），回退＝revert 本 commit
 // 前提：食譜/食材/成品四張表已完成最後匯入、後台編輯改走 admin.html 食譜資料庫分頁（試算表即將轉唯讀）

@@ -777,18 +777,6 @@
     font-size: 13px;
     padding: 24px 0;
   }
-  .done-toggle {
-    display: block;
-    margin: 16px auto 0;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--c-brown);
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-decoration: underline;
-  }
 
   /* ===== 任務狀態標籤 ===== */
   .task-status-tag {
@@ -1399,23 +1387,6 @@
     background: #F5EFE9;
     border: 1px solid #B8AC9C;
     color: #7A7166;
-  }
-  .countdown-dot {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 3px;
-    border-radius: var(--r-pill);
-    background: #FF4D6A;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
   /* 內部後台彈窗 */
@@ -2149,12 +2120,6 @@
   .site-social-icon:hover { filter: brightness(1.12); }
   .site-social-icon.editable {
     border-style: dashed;
-  }
-  .site-social-edit-hint {
-    text-align: center;
-    font-size: 11.5px;
-    color: var(--c-muted-light);
-    margin: -10px 0 14px;
   }
 
   /* ===== 食譜貼文產生器：選食譜的卡片 grid（跟 recipes.html 同款樣式，之前漏加導致圖片破版） ===== */
@@ -3049,18 +3014,6 @@
     font-size: 13.5px;
     font-weight: 800;
     color: var(--c-text);
-  }
-  .perm-row-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .perm-row-toggle .pr-toggle-text {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--c-brown);
   }
   /* ===== 開團帳務 ===== */
   .acct-filters{
@@ -4114,7 +4067,6 @@
     pointer-events: none;
   }
   .pba-badge-draft { color: var(--c-orange-text); }
-  .pba-badge-pub { color: var(--c-mint-text); }
   .pba-empty-list { text-align: center; color: var(--c-muted-light); font-size: 12.5px; padding: 20px 0; }
 
   .pba-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -5884,8 +5836,6 @@
     .lot-todo-stuck{ font-variant-numeric:tabular-nums; color:var(--c-cat-1); font-weight:700; }
     .lot-next-btn{ font-size:12px; color:var(--c-primary); font-weight:700; cursor:pointer; background:none; border:none; padding:0; margin-right:8px; }
     .lot-next-btn.danger{ color:#B5485A; }
-    .lot-form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
-    .lot-form-grid .lot-field-full{ grid-column:1/-1; }
     .lot-winner-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
     .lot-winner-row input{ flex:1; min-width:0; }
     .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#F5EFE9; color:#7a7166; }

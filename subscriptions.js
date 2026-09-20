@@ -21,7 +21,6 @@ let CARD_SUB_CYCLE_READY = true; // migration 20260829000001 是否已 db push
 let CARD_SUB_STAFF_READY = true; // migration 20260907000002（員工訂閱兩欄）是否已 db push
 
 // 週期／幣別對照（值必須與後端 lib/legacy/subscriptions.ts 的白名單一致）
-const CS_CYCLE_LABEL = { daily: '每日', weekly: '每週', monthly: '每月', quarterly: '每季', yearly: '每年', onetime: '一次性' };
 const CS_CYCLE_PER = { daily: '日', weekly: '週', monthly: '月', quarterly: '季', yearly: '年', onetime: '' };
 const CS_CURRENCY_SYMBOL = { TWD: 'NT$', USD: 'US$', JPY: '¥', EUR: '€', CNY: 'CN¥', GBP: '£' };
 

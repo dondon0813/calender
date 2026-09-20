@@ -1354,10 +1354,6 @@ function prevVisibleEvent(ev, mode) {
 }
 // 貼文／提醒用：一團一個字串，｜ 接回空格
 function groupNames(group, mode) { return group.map(ev => plainName(displayName(ev, mode))); }
-// 圖上用：一團可能兩行（｜），同框再串起來
-function groupLines(group, mode) {
-  return group.reduce((out, ev) => out.concat(nameLines(displayName(ev, mode))), []);
-}
 function groupNotes(group) {
   const out = [];
   group.forEach(ev => { const n = noteOf(ev); if (n && out.indexOf(n) === -1) out.push(n); });

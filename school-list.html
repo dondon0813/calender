@@ -179,12 +179,6 @@
     display: block;
     margin: 0 auto;
   }
-  .school-subtitle-img {
-    max-width: 70%;
-    height: auto;
-    display: block;
-    margin: 10px auto 0;
-  }
   .school-category-title {
     font-size: 13.5px;
     font-weight: 800;
@@ -272,14 +266,6 @@
     max-width: 100%;
     height: auto;
     display: block;
-  }
-  .school-reminder-text {
-    font-size: 12px;
-    color: var(--c-text-soft);
-    line-height: 1.6;
-  }
-  .school-reminder-text b {
-    color: var(--c-pink-deep);
   }
   .school-progress {
     text-align: center;
@@ -517,28 +503,6 @@
     font-weight: 700;
     margin-top: 14px;
   }
-  .a4-category-title {
-    font-size: 16px;
-    font-weight: 800;
-    color: #fff;
-    background: var(--c-text);
-    border-radius: var(--r-pill);
-    padding: 7px 18px;
-    display: inline-block;
-    margin: 22px 0 14px;
-  }
-  .a4-cat-header {
-    grid-column: 1 / -1;
-    font-size: 16px;
-    font-weight: 800;
-    color: #fff;
-    background: var(--c-text);
-    border-radius: var(--r-pill);
-    padding: 7px 18px;
-    width: fit-content;
-    margin: 18px 0 4px;
-  }
-  .a4-cat-header:first-child { margin-top: 0; }
   .a4-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -898,8 +862,6 @@ function ensureHtml2Canvas() {
 </script>
 <script>
 // ===== 設定 =====
-const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk"; // 跟客人版行事曆同一份公開試算表
-const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
 // 正式切換（2026-09-03）：改打新後端（Next.js/Supabase，dondon-platform），回退＝revert 本 commit
 // 前提：開學清單已完成最後匯入、後台編輯改走 admin.html 開學清單分頁（試算表即將轉唯讀）

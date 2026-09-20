@@ -5,8 +5,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-const SHEET_ID = "18DfV9xz58VvNDuKx7LD2aUewwBeN3abugK9BAl79rJk";
-const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
 // 步驟5正式切換（2026-08-20）：改打新後端（Next.js/Supabase，dondon-platform），回退＝revert 本 commit
 const APPS_SCRIPT_URL = "https://dondon-platform.vercel.app/api/legacy";
@@ -83,7 +81,6 @@ const expandedDoneDates = new Set(); // 展開中的日期分組
 let doneDatesInitialized = false;
 // 自訂區塊樣式對照：同上，目前靠「開機時 customBlocks 是空的」擋住
 // 自訂區塊樣式對照（CB_*）→ 已拆到 customBlocks.js 檔案最前段（該檔載入順序在 admin.js 之前）
-let doneExpanded = false;
 // 【新】待辦事項（所有人共用）
 let todoCategories = [];
 let todos = [];
@@ -905,10 +902,6 @@ function renderWorkMode() {
 
 function startOfDay(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function isStarted(ev) {
-  return startOfDay(new Date()) >= startOfDay(ev.start);
 }
 
 // 團購狀態：未開團 / 已開團 / 即將結單（結束前一天起）/ 已結團
