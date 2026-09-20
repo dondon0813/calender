@@ -96,14 +96,20 @@ function renderBookList() {
   listEl.innerHTML = '';
   const term = (document.getElementById('bookSearchInput').value || '').trim().toLowerCase();
   const hintEl = document.getElementById('bookGridHint');
-  const kindBooks = (PACKAGE_DATA.books || []).filter(b => (b.kind || 'book') === BOOK_GRID_KIND); // 書牆/玩具牆只是同一張表的過濾
-  renderBookBrandBar(kindBooks);
-  hintEl.textContent = term
-    ? '搜尋中無法拖曳排序（清空搜尋後才是完整順序）'
-    : '前台顯示順序＝這裡的順序。電腦按住封面拖曳、手機長按 0.3 秒後拖曳，放開自動儲存。'
-      + (BOOK_GRID_BRAND ? '（目前只顯示這個品牌，拖曳只調整這個品牌內的先後）' : '');
-  const books = kindBooks
-    .filter(b => !BOOK_GRID_BRAND || (BOOK_GRID_BRAND === 'none' ? !b.brand_id : b.brand_id === BOOK_GRID_BRAND))
+  const allKindBooks = (PACKAGE_DATA.books || []).filter(b => (b.kind || 'book') === BOOK_GRID_KIND); // 書牆/玩具牆只是同一張表的過濾
+  // 已下架（2026-09-21）：不再販售但資料保留供再版，不混在一般封面牆裡，統一收在「已下架」分類
+  const kindBooks = allKindBooks.filter(b => !b.isDiscontinued);
+  const offBooks = allKindBooks.filter(b => b.isDiscontinued);
+  renderBookBrandBar(kindBooks, offBooks.length);
+  const offView = BOOK_GRID_BRAND === 'off';
+  hintEl.textContent = offView
+    ? '已下架的書：不會公開，資料保留供日後再版。點封面編輯；取消「已下架」勾選就會回到草稿，可重新上架。（此分類不能拖曳排序）'
+    : term
+      ? '搜尋中無法拖曳排序（清空搜尋後才是完整順序）'
+      : '前台顯示順序＝這裡的順序。電腦按住封面拖曳、手機長按 0.3 秒後拖曳，放開自動儲存。'
+        + (BOOK_GRID_BRAND ? '（目前只顯示這個品牌，拖曳只調整這個品牌內的先後）' : '');
+  const books = (offView ? offBooks : kindBooks
+    .filter(b => !BOOK_GRID_BRAND || (BOOK_GRID_BRAND === 'none' ? !b.brand_id : b.brand_id === BOOK_GRID_BRAND)))
     .filter(b => !term || (b.title || '').toLowerCase().includes(term));
   if (!books.length) {
     listEl.innerHTML = `<div class="pba-empty-list">沒有符合的${BOOK_GRID_KIND === 'toy' ? '玩具' : '繪本'}</div>`;
@@ -127,7 +133,12 @@ function renderBookList() {
       card.appendChild(ph);
     }
 
-    if (!b.is_published) {
+    if (b.isDiscontinued) {
+      const badge = document.createElement('span');
+      badge.className = 'pba-grid-badge pba-badge-off';
+      badge.textContent = '已下架';
+      card.appendChild(badge);
+    } else if (!b.is_published) {
       const badge = document.createElement('span');
       badge.className = 'pba-grid-badge pba-badge-draft';
       badge.textContent = '草稿';
@@ -141,7 +152,8 @@ function renderBookList() {
 
     const meta = document.createElement('div');
     meta.className = 'pba-grid-meta';
-    meta.textContent = `教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
+    const brandLabel = offView ? ((PACKAGE_DATA.brands || []).find(x => x.id === b.brand_id) || {}).name : '';
+    meta.textContent = (brandLabel ? brandLabel + '・' : '') + `教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
     card.appendChild(meta);
 
     card.addEventListener('pointerdown', (e) => pbaDragPointerDown(e, card, b));
@@ -150,7 +162,7 @@ function renderBookList() {
 }
 
 // 品牌分類切換列：全部／各品牌（書團兩家排前面）／未分類；只有一組以上才有意義（少於兩組隱藏並回到「全部」）
-function renderBookBrandBar(kindBooks) {
+function renderBookBrandBar(kindBooks, offCount) {
   const bar = document.getElementById('bookBrandBar');
   const counts = new Map();
   let none = 0;
@@ -161,6 +173,7 @@ function renderBookBrandBar(kindBooks) {
   counts.forEach((n, id) => { if (!groups.some(g => g.key === id)) groups.push({ key: id, label: '(未知品牌)', n }); });
   groups.sort((a, b) => rank(a.label) - rank(b.label));
   if (none) groups.push({ key: 'none', label: '未分類', n: none });
+  if (offCount) groups.push({ key: 'off', label: '已下架', n: offCount }); // 已下架的書不算在「全部」裡，獨立一個分類
   if (groups.length < 2 || (BOOK_GRID_BRAND && !groups.some(g => g.key === BOOK_GRID_BRAND))) BOOK_GRID_BRAND = '';
   if (groups.length < 2) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
   bar.style.display = 'flex';
@@ -196,7 +209,7 @@ let pbaDrag = null;
 function pbaDragPointerDown(e, card, book) {
   if (pbaDrag) return;
   if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-  const filtering = !!(document.getElementById('bookSearchInput').value || '').trim();
+  const filtering = !!(document.getElementById('bookSearchInput').value || '').trim() || BOOK_GRID_BRAND === 'off';
   pbaDrag = {
     card, book, filtering,
     startX: e.clientX, startY: e.clientY,
@@ -458,12 +471,13 @@ function fillForm(book) {
   ensureBrandOption(book && book.brand_id);
   document.getElementById('fBrand').value = book && book.brand_id ? book.brand_id : '';
   // 新增時，如果封面牆正停在某個品牌分類，就預選那個品牌（不用每本都自己選）
-  if (!book && BOOK_GRID_BRAND && BOOK_GRID_BRAND !== 'none' && document.querySelector(`#fBrand option[value="${BOOK_GRID_BRAND}"]`)) {
+  if (!book && BOOK_GRID_BRAND && BOOK_GRID_BRAND !== 'none' && BOOK_GRID_BRAND !== 'off' && document.querySelector(`#fBrand option[value="${BOOK_GRID_BRAND}"]`)) {
     document.getElementById('fBrand').value = BOOK_GRID_BRAND;
   }
   renderCategoryCheckboxes(document.getElementById('fBrand').value, book ? book.categories || [] : []);
   setCheckedValues('fTypes', book ? book.types || [] : []);
   document.getElementById('fPublished').checked = book ? !!book.is_published : false;
+  syncDiscontinuedField(book);
 
   const coverUrl = book ? book.cover_url || '' : '';
   document.getElementById('fCoverUrl').value = coverUrl;
@@ -475,6 +489,27 @@ function fillForm(book) {
 
   document.getElementById('deleteBookBtn').style.display = book ? 'inline-block' : 'none';
 }
+
+// 已下架勾選框：勾＝不公開（自動取消發布並鎖住發布框）；取消勾選＝回到草稿（發布框解鎖，仍需自己勾發布）。
+// 欄位未 db push 時鎖住並提示（後台包 discontinuedReady=false）。
+function syncDiscontinuedField(book) {
+  const cb = document.getElementById('fDiscontinued');
+  const note = document.getElementById('fDiscontinuedNote');
+  const pub = document.getElementById('fPublished');
+  const ready = !PACKAGE_DATA || PACKAGE_DATA.discontinuedReady !== false;
+  cb.checked = ready && !!(book && book.isDiscontinued);
+  cb.disabled = !ready;
+  note.style.display = ready ? 'none' : '';
+  note.textContent = ready ? '' : '需先 db push（migration 20260921200000）才能使用已下架';
+  pub.disabled = cb.checked;
+  if (cb.checked) pub.checked = false;
+}
+document.getElementById('fDiscontinued').addEventListener('change', () => {
+  const cb = document.getElementById('fDiscontinued');
+  const pub = document.getElementById('fPublished');
+  pub.disabled = cb.checked;
+  if (cb.checked) pub.checked = false;
+});
 
 // 換品牌 → 主題清單跟著換（已勾的保留，不適用的會標註提醒）
 document.getElementById('fBrand').addEventListener('change', () => renderCategoryCheckboxes());
@@ -1118,8 +1153,10 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     categories: getCheckedValues('fCategories'),
     types: getCheckedValues('fTypes'),
     is_published: document.getElementById('fPublished').checked,
+    is_discontinued: document.getElementById('fDiscontinued').checked, // 已下架＝後端強制不公開；取消＝回到草稿
     cover_url: document.getElementById('fCoverUrl').value.trim()
   };
+  const becameDiscontinued = payload.is_discontinued && !(CURRENT_BOOK && CURRENT_BOOK.isDiscontinued);
   if (CURRENT_BOOK) {
     payload.id = CURRENT_BOOK.id; // 編輯不送 sort（partial update 不動原值，順序只在封面牆拖曳改）；kind 建立後不可改、也不送
   } else {
@@ -1137,7 +1174,7 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     }
     // 書本體存好 → 接著存影片清單（沒動過會自動跳過）；影片失敗不擋書的儲存，錯誤已 toast
     const videosOk = await saveVideosForBook(res.book.id);
-    if (videosOk) showToast('已儲存');
+    if (videosOk) showToast(becameDiscontinued ? '已下架，資料保留；之後可到封面牆「已下架」分類找回' : '已儲存');
     const pkg = await loadPackage();
     if (!pkg) return;
     PACKAGE_DATA = pkg;
@@ -2218,10 +2255,10 @@ function renderTagManageCards(field) {
           ph.textContent = '📖';
           bookCard.appendChild(ph);
         }
-        if (!b.is_published) {
+        if (b.isDiscontinued || !b.is_published) {
           const badge = document.createElement('span');
-          badge.className = 'pba-grid-badge pba-badge-draft';
-          badge.textContent = '草稿';
+          badge.className = 'pba-grid-badge ' + (b.isDiscontinued ? 'pba-badge-off' : 'pba-badge-draft');
+          badge.textContent = b.isDiscontinued ? '已下架' : '草稿';
           bookCard.appendChild(badge);
         }
         const check = document.createElement('span');
