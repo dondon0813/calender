@@ -2539,30 +2539,38 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
 
   if (o.layers.frame && o.frameImg) ctx.drawImage(o.frameImg, 0, 0, W, H);
 
-  // 標題與說明：疊在圖底部的半透明深色條（雪莉定案）
+  // 標題與說明：直接疊在圖底部（無底條，見下方 2026-09-20 說明）
   let captionH = 0;
   if (o.layers.caption && (o.caption.title || o.caption.desc)) {
     const titleSize = Math.round(base * 0.028);
     const descSize = Math.round(base * 0.020);
     const pad = Math.round(base * 0.016);
     captionH = pad * 2 + titleSize + (o.caption.desc ? Math.round(descSize * 1.45) : 0);
-    ctx.fillStyle = 'rgba(30,30,30,0.60)';
-    ctx.fillRect(0, H - captionH, W, captionH);
+    // 2026-09-20 雪莉：不要深色底條，說明文字「直接疊在圖片上」——白字＋深色細描邊（任何底圖都看得清楚）。
+    // captionH 仍是文字區塊高度：QR／團購資訊照樣疊在文字上方，不會蓋到說明文字
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
     ctx.fillStyle = '#fff';
     ctx.font = '700 ' + titleSize + 'px ' + MTPL_FONT;
-    ctx.fillText(mtplTruncate(ctx, o.caption.title, W - pad * 2), pad, H - captionH + pad);
+    ctx.lineWidth = Math.max(2, Math.round(titleSize * 0.16));
+    const titleText = mtplTruncate(ctx, o.caption.title, W - pad * 2);
+    ctx.strokeText(titleText, pad, H - captionH + pad);
+    ctx.fillText(titleText, pad, H - captionH + pad);
     if (o.caption.desc) {
       ctx.font = '400 ' + descSize + 'px ' + MTPL_FONT;
-      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = Math.max(2, Math.round(descSize * 0.18));
       const descOneLine = String(o.caption.desc).replace(/\s*\n+\s*/g, '　');
-      ctx.fillText(mtplTruncate(ctx, descOneLine, W - pad * 2), pad, H - captionH + pad + titleSize + Math.round(descSize * 0.4));
+      const descText = mtplTruncate(ctx, descOneLine, W - pad * 2);
+      const descY = H - captionH + pad + titleSize + Math.round(descSize * 0.4);
+      ctx.strokeText(descText, pad, descY);
+      ctx.fillText(descText, pad, descY);
     }
   }
 
   // QR CODE 圖層（獨立勾選）：尺寸＝長邊 5%；位置四角可選（2026-09-13 雪莉：tl/tr/bl/br，預設右上）。
-  // 下方兩角＝貼在標題說明條上方；記下範圍讓底部的團購資訊/浮水印水平重疊時往上讓
+  // 下方兩角＝貼在標題說明文字上方；記下範圍讓底部的團購資訊/浮水印水平重疊時往上讓
   let qrBox = null;
   if (o.layers.qr && o.qrImg) {
     const pad = Math.round(base * 0.014);
@@ -2578,7 +2586,7 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
   const clearQr = (floorY, x0, x1) =>
     qrBox && x1 > qrBox.x0 && x0 < qrBox.x1 && floorY > qrBox.top ? qrBox.top : floorY;
 
-  // 底部由下往上疊：標題說明條 → 團購資訊文字 → 浮水印（各自選左/中/右，垂直錯開不會互蓋）
+  // 底部由下往上疊：標題說明文字 → 團購資訊文字 → 浮水印（各自選左/中/右，垂直錯開不會互蓋）
   let bottomY = H - captionH;
 
   // 團購資訊：開團版限定。2026-09-13 雪莉改：不要底色、放圖下方、顏色與位置每份教材自選
@@ -2613,7 +2621,7 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const wmTextW = o.watermarkText ? ctx.measureText(o.watermarkText).width : 0;
     const wmW = Math.max(wmLogoW, wmTextW);
     const wmX0 = pos === 'left' ? pad : pos === 'center' ? (W - wmW) / 2 : W - pad - wmW;
-    // 有標題說明條時：LOGO 直接貼在圖最底（可以蓋在說明條上，雪莉 2026-09-20：LOGO 是去背 PNG，重疊沒關係、
+    // 有標題說明文字時：LOGO 直接貼在圖最底（可以蓋在說明文字上，雪莉 2026-09-20：LOGO 是去背 PNG，重疊沒關係、
     // 不要被說明條頂上去）；說明條在最底所以不會碰到說明條上方的 QR／團購資訊。沒有說明條才維持原本的疊放讓位。
     let y = (captionH > 0 ? H : clearQr(bottomY, wmX0, wmX0 + wmW)) - pad;
     if (o.logoImg) {
