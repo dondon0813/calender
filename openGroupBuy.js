@@ -385,7 +385,8 @@
 
       const end = document.createElement('div');
       end.className = 'ogb-end';
-      end.textContent = fmtSingleDate(o.end) + ' 收單' + (o.discountCode ? '・折扣碼 ' + o.discountCode : '');
+      // 折扣碼不寫在小圖下面（2026-09-20 雪莉：文字多、把整條撐高）——有折扣碼的團點下去會跳浮動視窗顯示折扣碼＋前往下單
+      end.textContent = fmtSingleDate(o.end) + ' 收單';
       cell.appendChild(end);
 
       list.appendChild(cell);
