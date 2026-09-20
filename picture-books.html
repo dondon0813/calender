@@ -108,6 +108,15 @@
   }
   .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .pb-chip-hint { margin-top: 6px; font-size: 11.5px; color: var(--c-muted-light); }
+  /* 第二層（副選單：年齡與主題、類型）：小膠囊單行左右滑動，不換行展開（雪莉 2026-09-21） */
+  .filter-chips.chips-scroll { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .filter-chips.chips-scroll::-webkit-scrollbar { display: none; }
+  .filter-chips.chips-scroll .chip { flex: 0 0 auto; }
+  /* 第一層（主選單：品牌）：整條有底色的大按鈕列，樣式同教材館 .mh-tabs；品牌多到放不下時左右滑 */
+  .pb-brand-tabs { display: flex; background: var(--c-orange-bg-2); border-radius: 999px; padding: 3px; margin: 0 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pb-brand-tabs::-webkit-scrollbar { display: none; }
+  .pb-brand-tab { flex: 1 0 auto; border: 0; background: transparent; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; color: var(--c-brown); cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .pb-brand-tab.on { background: #fff; color: var(--c-primary-dark); }
   .chip {
     font-size: 12px;
     font-weight: 700;
@@ -745,22 +754,24 @@
          不受搜尋/篩選影響，內容由 renderFeatured() 動態產生，排的顯示與否跟著開團狀態走 -->
     <div class="pb-featured" id="pbFeatured" style="display:none;"></div>
 
+    <!-- 主選單（第一層）：品牌。品牌決定下面「年齡與主題」有哪些主題，所以放最上面優先選；只有一個品牌時整列隱藏 -->
+    <div id="pbBrandSection" style="display:none;">
+      <div class="pb-brand-tabs" id="pbBrandChips" role="tablist"></div>
+    </div>
+
     <div class="pb-search-row">
       <input type="text" id="pbSearchInput" class="pb-search-input ico-search" placeholder="搜尋書名...">
     </div>
 
+    <!-- 副選單（第二層）：年齡與主題、類型；小膠囊、單行左右滑 -->
     <div class="filter-section">
       <div class="filter-label">年齡與主題</div>
-      <div class="filter-chips" id="pbCatChips"></div>
+      <div class="filter-chips chips-scroll" id="pbCatChips"></div>
       <div class="pb-chip-hint" id="pbCatHint" style="display:none;">選擇品牌可看更多主題</div>
-    </div>
-    <div class="filter-section" id="pbBrandSection" style="display:none;">
-      <div class="filter-label">品牌</div>
-      <div class="filter-chips" id="pbBrandChips"></div>
     </div>
     <div class="filter-section">
       <div class="filter-label">類型</div>
-      <div class="filter-chips" id="pbTypeChips"></div>
+      <div class="filter-chips chips-scroll" id="pbTypeChips"></div>
     </div>
 
     <div class="pb-count" id="pbCount">共 0 本</div>
@@ -1058,6 +1069,7 @@ function renderModalLike(book) {
 // ===== 篩選 chips =====
 function buildChipGroup(containerId, options, selectedSet, onToggle) {
   const el = document.getElementById(containerId);
+  const scrollX = el.scrollLeft; // 重畫後保留左右滑動位置，點選後不會跳回最左邊
   el.innerHTML = '';
   const allChip = document.createElement('button');
   allChip.type = 'button';
@@ -1074,6 +1086,26 @@ function buildChipGroup(containerId, options, selectedSet, onToggle) {
     chip.addEventListener('click', () => onToggle(opt));
     el.appendChild(chip);
   });
+  el.scrollLeft = scrollX;
+}
+
+// 主選單（品牌）：整條大按鈕列，單選；點已選中的那顆維持選中（不像小膠囊會取消），要回到全部就點「全部」
+function buildBrandTabs(containerId, options, selectedSet, onSelect) {
+  const el = document.getElementById(containerId);
+  const scrollX = el.scrollLeft;
+  el.innerHTML = '';
+  const mk = (label, value, on) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'tab');
+    btn.className = 'pb-brand-tab' + (on ? ' on' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', () => onSelect(value));
+    el.appendChild(btn);
+  };
+  mk('全部', null, selectedSet === null);
+  options.forEach(opt => mk(opt, opt, !!(selectedSet && selectedSet.has(opt))));
+  el.scrollLeft = scrollX;
 }
 
 // 組內單選互斥：點某顆＝只選它（自動取消同組其他）；再點同一顆已選中的，或點「全部」＝回到「全部」
@@ -1142,8 +1174,11 @@ function renderChips() {
   const hintEl = document.getElementById('pbCatHint');
   if (hintEl) hintEl.style.display = (shownCats.length < chipCats.length && selectedBrandIds().length === 0) ? '' : 'none';
   document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
-  buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
-    v => toggleSelection(selBrands, v, s => { selBrands = s; }));
+  buildBrandTabs('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands, v => {
+    selBrands = v === null ? null : new Set([v]);
+    renderChips();
+    renderGrid();
+  });
   buildChipGroup('pbTypeChips', ALL_TYPES.slice(), selTypes,
     v => toggleSelection(selTypes, v, s => { selTypes = s; }));
 }
