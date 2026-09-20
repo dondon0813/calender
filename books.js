@@ -281,7 +281,7 @@ document.getElementById('bookBackBtn').addEventListener('click', showBookGrid);
 
 // ===== 表單：品牌 / 年齡與主題 / 類型 選項渲染 =====
 // 書團目前只有這兩家，其餘品牌不出現在下拉（2026-08-25 雪莉指定；要加品牌改這裡）
-var BOOK_BRAND_WHITELIST = ['禾流文創', 'Kidsread點讀筆'];
+var BOOK_BRAND_WHITELIST = ['禾流文創', 'KIDsREAD點讀筆']; // 名稱須與品牌庫 brands.name 完全一致（含大小寫）
 
 function renderBrandOptions() {
   const sel = document.getElementById('fBrand');

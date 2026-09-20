@@ -43,7 +43,7 @@
   // BOOK_TEAM_BRANDS 是同一份規則的複本，改品牌時兩邊要一起改。
   const BOOK_TEAM_BRANDS = [
     { match: '禾流', brand: '禾流文創' },
-    { match: 'kidsread', brand: 'Kidsread點讀筆' },
+    { match: 'kidsread', brand: 'KIDsREAD點讀筆' },
   ];
   function bookTeamBrandOf(title) {
     const t = String(title || '').toLowerCase();

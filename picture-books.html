@@ -837,7 +837,7 @@
 <div id="pbToast"></div>
 
 <!-- 「現正開團中」置頂橫列邏輯已抽成跨頁共用的 openGroupBuy.js -->
-<script src="openGroupBuy.js?v=8"></script>
+<script src="openGroupBuy.js?v=9"></script>
 
 <!-- 頁面瀏覽量統計 -->
 <script>
@@ -1132,7 +1132,7 @@ function applyBrandParam() {
   if (!raw) return;
   let name = raw;
   try { name = decodeURIComponent(raw); } catch (e) { /* 已經是解碼過的字串，忽略 */ }
-  const match = USED_BRANDS.find(b => b.name === name);
+  const match = USED_BRANDS.find(b => b.name === name) || USED_BRANDS.find(b => b.name.toLowerCase() === name.toLowerCase()); // 舊分享連結大小寫不同也認得
   if (!match) return;
   selBrands = new Set([match.name]);
   renderChips();
