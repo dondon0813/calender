@@ -19,6 +19,7 @@ const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
 let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
 let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
 let CURRENT_FORM_KIND = 'book'; // 品項表單目前的類型（book/toy；編輯＝該品項的 kind、新增＝當下牆別）
+let BOOK_GRID_BRAND = ''; // 封面牆品牌分類：''＝全部、'none'＝未分類（沒品牌）、其餘＝brands.id
 let BOOK_GRID_KIND = 'book'; // 封面牆目前顯示哪個館（📚 繪本／🧸 玩具切換）
 let materialFormStandalone = false; // 教材表單從教材庫（教材館分頁）開啟＝true，存檔後刷新教材庫而非書
 let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
@@ -95,11 +96,14 @@ function renderBookList() {
   listEl.innerHTML = '';
   const term = (document.getElementById('bookSearchInput').value || '').trim().toLowerCase();
   const hintEl = document.getElementById('bookGridHint');
+  const kindBooks = (PACKAGE_DATA.books || []).filter(b => (b.kind || 'book') === BOOK_GRID_KIND); // 書牆/玩具牆只是同一張表的過濾
+  renderBookBrandBar(kindBooks);
   hintEl.textContent = term
     ? '搜尋中無法拖曳排序（清空搜尋後才是完整順序）'
-    : '前台顯示順序＝這裡的順序。電腦按住封面拖曳、手機長按 0.3 秒後拖曳，放開自動儲存。';
-  const books = (PACKAGE_DATA.books || [])
-    .filter(b => (b.kind || 'book') === BOOK_GRID_KIND) // 書牆/玩具牆只是同一張表的過濾
+    : '前台顯示順序＝這裡的順序。電腦按住封面拖曳、手機長按 0.3 秒後拖曳，放開自動儲存。'
+      + (BOOK_GRID_BRAND ? '（目前只顯示這個品牌，拖曳只調整這個品牌內的先後）' : '');
+  const books = kindBooks
+    .filter(b => !BOOK_GRID_BRAND || (BOOK_GRID_BRAND === 'none' ? !b.brand_id : b.brand_id === BOOK_GRID_BRAND))
     .filter(b => !term || (b.title || '').toLowerCase().includes(term));
   if (!books.length) {
     listEl.innerHTML = `<div class="pba-empty-list">沒有符合的${BOOK_GRID_KIND === 'toy' ? '玩具' : '繪本'}</div>`;
@@ -142,6 +146,32 @@ function renderBookList() {
 
     card.addEventListener('pointerdown', (e) => pbaDragPointerDown(e, card, b));
     listEl.appendChild(card);
+  });
+}
+
+// 品牌分類切換列：全部／各品牌（書團兩家排前面）／未分類；只有一組以上才有意義（少於兩組隱藏並回到「全部」）
+function renderBookBrandBar(kindBooks) {
+  const bar = document.getElementById('bookBrandBar');
+  const counts = new Map();
+  let none = 0;
+  kindBooks.forEach(b => { if (b.brand_id) counts.set(b.brand_id, (counts.get(b.brand_id) || 0) + 1); else none++; });
+  const rank = (name) => { const i = BOOK_BRAND_WHITELIST.indexOf(name); return i < 0 ? 99 : i; };
+  const groups = [];
+  (PACKAGE_DATA.brands || []).forEach(br => { if (counts.has(br.id)) groups.push({ key: br.id, label: br.name, n: counts.get(br.id) }); });
+  counts.forEach((n, id) => { if (!groups.some(g => g.key === id)) groups.push({ key: id, label: '(未知品牌)', n }); });
+  groups.sort((a, b) => rank(a.label) - rank(b.label));
+  if (none) groups.push({ key: 'none', label: '未分類', n: none });
+  if (groups.length < 2 || (BOOK_GRID_BRAND && !groups.some(g => g.key === BOOK_GRID_BRAND))) BOOK_GRID_BRAND = '';
+  if (groups.length < 2) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = '';
+  [{ key: '', label: '全部', n: kindBooks.length }].concat(groups).forEach(g => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pba-tab' + (BOOK_GRID_BRAND === g.key ? ' on' : '');
+    btn.textContent = g.label + '（' + g.n + '）';
+    btn.addEventListener('click', () => { BOOK_GRID_BRAND = g.key; renderBookList(); });
+    bar.appendChild(btn);
   });
 }
 
@@ -236,26 +266,34 @@ async function pbaDragUp(e) {
     if (!moved) selectBook(book); // 沒拖＝單純點一下
     return;
   }
-  const ids = Array.from(card.parentElement.querySelectorAll('.pba-grid-card')).map(el => el.dataset.bookId);
+  // 牆上顯示的只是「同館＋同品牌」的一批：只重排這批書在整體順序裡佔的位置，其他書的位置不動
+  const shownNew = Array.from(card.parentElement.querySelectorAll('.pba-grid-card')).map(el => el.dataset.bookId);
+  const shownSet = new Set(shownNew);
   const oldIds = (PACKAGE_DATA.books || []).map(b => b.id);
+  let k = 0;
+  const ids = oldIds.map(id => (shownSet.has(id) ? shownNew[k++] : id));
   if (ids.join() === oldIds.join()) return; // 拖了又放回原位
   // 先樂觀更新本地順序，失敗再畫回來
   const byId = {};
-  (PACKAGE_DATA.books || []).forEach(b => { byId[b.id] = b; });
+  const oldSort = {};
+  (PACKAGE_DATA.books || []).forEach(b => { byId[b.id] = b; oldSort[b.id] = b.sort; });
+  const rollback = () => {
+    oldIds.forEach(id => { if (byId[id]) byId[id].sort = oldSort[id]; });
+    PACKAGE_DATA.books = oldIds.map(id => byId[id]).filter(Boolean);
+    renderBookList();
+  };
   PACKAGE_DATA.books = ids.map((id, i) => { const b = byId[id]; if (b) b.sort = i + 1; return b; }).filter(Boolean);
   try {
     const res = await apiPost('book-sort-set', { ids });
     if (!res || res.success !== true) {
       showToast('排序儲存失敗：' + ((res && res.error) || '未知錯誤'), true);
-      PACKAGE_DATA.books = oldIds.map(id => byId[id]).filter(Boolean);
-      renderBookList();
+      rollback();
       return;
     }
     showToast('已更新排序');
   } catch (err) {
     showToast('排序儲存失敗（網路問題），已還原順序', true);
-    PACKAGE_DATA.books = oldIds.map(id => byId[id]).filter(Boolean);
-    renderBookList();
+    rollback();
   }
 }
 
@@ -329,15 +367,44 @@ function orderedCategoryNames() {
   return out;
 }
 
-function renderCategoryCheckboxes() {
+// ===== 主題依品牌才出現（2026-09-21 雪莉）=====
+// 年齡（0y+、1.5y+…）永遠通用；主題的 brandIds 空＝通用、有值＝該書選了其中一個品牌才列出；
+// 子分類（單字書/互動式書籍）跟著母分類（語言學習）走。
+function isAgeCategory(name) { return /^\d+(\.\d+)?y\+$/.test(String(name || '')); }
+function categoryBrandIds(name) {
+  const c = (PACKAGE_DATA.categories || []).find(x => x.name === name);
+  return (c && c.brandIds) || [];
+}
+function categoryAppliesToBrand(name, brandId) {
+  if (isAgeCategory(name)) return true;
+  if (CATEGORY_PARENT_OF[name]) return categoryAppliesToBrand(CATEGORY_PARENT_OF[name], brandId);
+  const ids = categoryBrandIds(name);
+  if (!ids.length) return true;
+  return !!brandId && ids.includes(brandId);
+}
+function bookBrandChoices() { return (PACKAGE_DATA.brands || []).filter(b => BOOK_BRAND_WHITELIST.includes(b.name)); }
+function categoryBrandLabel(name) {
+  if (isAgeCategory(name)) return '通用';
+  if (CATEGORY_PARENT_OF[name]) return '跟著「' + CATEGORY_PARENT_OF[name] + '」';
+  const ids = categoryBrandIds(name);
+  if (!ids.length) return '通用';
+  return ids.map(id => { const b = (PACKAGE_DATA.brands || []).find(x => x.id === id); return b ? b.name : '(未知品牌)'; }).join('、');
+}
+
+// brandIdOverride／checkedOverride 不給＝沿用表單目前的品牌與勾選；已勾但不適用這個品牌的主題仍會列出（標註），避免存檔時被靜默洗掉
+function renderCategoryCheckboxes(brandIdOverride, checkedOverride) {
   const wrap = document.getElementById('fCategories');
+  const brandId = brandIdOverride !== undefined ? brandIdOverride : document.getElementById('fBrand').value;
+  const checked = new Set(checkedOverride !== undefined ? checkedOverride : getCheckedValues('fCategories'));
   wrap.innerHTML = '';
   orderedCategoryNames().forEach(name => {
+    const applies = categoryAppliesToBrand(name, brandId || '');
+    if (!applies && !checked.has(name)) return;
     const isSub = Boolean(CATEGORY_PARENT_OF[name]);
     const label = document.createElement('label');
     label.className = 'pba-checkbox-item';
     if (isSub) label.style.marginLeft = '18px';
-    label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(name)}"> ${isSub ? '↳ ' : ''}${pbaEscapeHtml(name)}`;
+    label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(name)}"${checked.has(name) ? ' checked' : ''}> ${isSub ? '↳ ' : ''}${pbaEscapeHtml(name)}${applies ? '' : ' <span style="color:var(--c-danger); font-size:11px;">（不適用這個品牌，建議取消勾選）</span>'}`;
     wrap.appendChild(label);
   });
 }
@@ -390,7 +457,11 @@ function fillForm(book) {
   document.getElementById('fShopee').value = book ? book.shopee_url || '' : '';
   ensureBrandOption(book && book.brand_id);
   document.getElementById('fBrand').value = book && book.brand_id ? book.brand_id : '';
-  setCheckedValues('fCategories', book ? book.categories || [] : []);
+  // 新增時，如果封面牆正停在某個品牌分類，就預選那個品牌（不用每本都自己選）
+  if (!book && BOOK_GRID_BRAND && BOOK_GRID_BRAND !== 'none' && document.querySelector(`#fBrand option[value="${BOOK_GRID_BRAND}"]`)) {
+    document.getElementById('fBrand').value = BOOK_GRID_BRAND;
+  }
+  renderCategoryCheckboxes(document.getElementById('fBrand').value, book ? book.categories || [] : []);
   setCheckedValues('fTypes', book ? book.types || [] : []);
   document.getElementById('fPublished').checked = book ? !!book.is_published : false;
 
@@ -404,6 +475,9 @@ function fillForm(book) {
 
   document.getElementById('deleteBookBtn').style.display = book ? 'inline-block' : 'none';
 }
+
+// 換品牌 → 主題清單跟著換（已勾的保留，不適用的會標註提醒）
+document.getElementById('fBrand').addEventListener('change', () => renderCategoryCheckboxes());
 
 function setCoverPreview(url) {
   const img = document.getElementById('fCoverPreview');
@@ -2087,7 +2161,7 @@ function renderTagManageCards(field) {
     head.className = 'pba-cat-manage-row';
     const name = document.createElement('span');
     const displayName = cfg.labelOf ? cfg.labelOf(tagName) : tagName;
-    name.textContent = `${isOpen ? '▾' : '▸'} ${displayName}（${inTag.length} 本）`;
+    name.textContent = `${isOpen ? '▾' : '▸'} ${displayName}（${inTag.length} 本）` + (field === 'categories' ? ' ・ ' + categoryBrandLabel(tagName) : '');
     head.appendChild(name);
     if (cfg.canEditNames()) {
       const delBtn = document.createElement('button');
@@ -2106,6 +2180,7 @@ function renderTagManageCards(field) {
     // 展開內容：全部書的封面選取牆（仿封面牆圖卡；2026-08-27 取代 chip＋下拉，雪莉指定）
     const body = document.createElement('div');
     body.className = 'pba-cat-books';
+    if (field === 'categories') body.appendChild(buildCategoryBrandRow(tagName));
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;';
     hint.textContent = cfg.hintText;
@@ -2161,6 +2236,60 @@ function renderTagManageCards(field) {
   });
 }
 
+// 設定頁：這個主題適用哪些品牌（不勾＝通用；年齡固定通用；子分類跟著母分類）
+function buildCategoryBrandRow(tagName) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:10px;';
+  const label = document.createElement('span');
+  label.style.cssText = 'font-size:12px; font-weight:700; color:var(--c-muted);';
+  label.textContent = '適用品牌：';
+  row.appendChild(label);
+  if (isAgeCategory(tagName) || CATEGORY_PARENT_OF[tagName]) {
+    const note = document.createElement('span');
+    note.style.cssText = 'font-size:12px; color:var(--c-muted);';
+    note.textContent = isAgeCategory(tagName) ? '年齡固定通用（所有品牌都顯示）' : '跟著「' + CATEGORY_PARENT_OF[tagName] + '」設定';
+    row.appendChild(note);
+    return row;
+  }
+  if (PACKAGE_DATA && PACKAGE_DATA.categoryBrandsReady === false) {
+    const warn = document.createElement('span');
+    warn.style.cssText = 'font-size:12px; color:var(--c-danger);';
+    warn.textContent = '需先 db push（migration 20260921100000）才能設定適用品牌，目前全部視為通用';
+    row.appendChild(warn);
+    return row;
+  }
+  const current = categoryBrandIds(tagName);
+  const mk = (text, on, onClick) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pba-tab' + (on ? ' on' : '');
+    btn.textContent = text;
+    btn.addEventListener('click', onClick);
+    row.appendChild(btn);
+  };
+  mk('通用（不限品牌）', current.length === 0, () => setCategoryBrands(tagName, []));
+  bookBrandChoices().forEach(b => {
+    const on = current.includes(b.id);
+    mk(b.name, on, () => setCategoryBrands(tagName, on ? current.filter(id => id !== b.id) : current.concat(b.id)));
+  });
+  return row;
+}
+
+async function setCategoryBrands(name, brandIds) {
+  try {
+    const res = await apiPost('book-category-brands-set', { name, brandIds });
+    if (!res || res.success !== true) {
+      showToast('設定失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    const entry = (PACKAGE_DATA.categories || []).find(c => c.name === name);
+    if (entry) entry.brandIds = res.brandIds || [];
+    renderCategoryManageList();
+    renderCategoryCheckboxes(); // 編輯表單開著的話，主題清單同步
+    showToast('「' + name + '」適用品牌：' + categoryBrandLabel(name));
+  } catch (err) { /* needLogin 已處理 */ }
+}
+
 /** 從標籤側把書加入/移出：book-upsert partial update 只送 id＋該陣列欄位，其餘欄位不動 */
 async function setBookTag(field, book, tagName, add) {
   const next = (book[field] || []).filter(n => n !== tagName);
@@ -2173,7 +2302,10 @@ async function setBookTag(field, book, tagName, add) {
     }
     book[field] = next; // book 是 PACKAGE_DATA.books 裡的同一個物件，直接改本地資料
     // 若那本書的編輯表單剛好開著，把表單勾選同步過來，避免之後按儲存蓋回舊勾選
-    if (CURRENT_BOOK && CURRENT_BOOK.id === book.id) setCheckedValues(TAG_SECTIONS[field].checkboxGroup, next);
+    if (CURRENT_BOOK && CURRENT_BOOK.id === book.id) {
+      if (field === 'categories') renderCategoryCheckboxes(undefined, next); // 主題清單依品牌過濾，勾選要連同清單一起重畫
+      else setCheckedValues(TAG_SECTIONS[field].checkboxGroup, next);
+    }
     renderTagManageCards(field);
     showToast(add ? `已把《${book.title}》加入「${tagName}」` : `已把《${book.title}》移出「${tagName}」`);
   } catch (err) { /* needLogin 已處理 */ }
@@ -2213,9 +2345,7 @@ async function refreshCategoriesOnly() {
   if (!pkg) return;
   PACKAGE_DATA = pkg;
   renderCategoryManageList();
-  const prevChecked = getCheckedValues('fCategories');
-  renderCategoryCheckboxes();
-  setCheckedValues('fCategories', prevChecked);
+  renderCategoryCheckboxes(); // 沿用表單目前的品牌與勾選
 }
 
 // ---- 類型名稱增刪（book_types 表，2026-08-27 起可後台管理；比照分類那組）----

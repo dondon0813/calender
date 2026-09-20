@@ -107,6 +107,7 @@
     letter-spacing: 1px;
   }
   .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pb-chip-hint { margin-top: 6px; font-size: 11.5px; color: var(--c-muted-light); }
   .chip {
     font-size: 12px;
     font-weight: 700;
@@ -751,6 +752,7 @@
     <div class="filter-section">
       <div class="filter-label">年齡與主題</div>
       <div class="filter-chips" id="pbCatChips"></div>
+      <div class="pb-chip-hint" id="pbCatHint" style="display:none;">選擇品牌可看更多主題</div>
     </div>
     <div class="filter-section" id="pbBrandSection" style="display:none;">
       <div class="filter-label">品牌</div>
@@ -1111,11 +1113,34 @@ const SUBSECTION_CAT_NAMES = new Set(
 const SUBSECTION_PARENT_OF = {};
 Object.keys(CATEGORY_SUBSECTIONS).forEach(p => CATEGORY_SUBSECTIONS[p].forEach(s => { SUBSECTION_PARENT_OF[s.cat] = p; }));
 
+// ===== 主題依品牌才出現（2026-09-21 雪莉）=====
+// 年齡（0y+、1.5y+…）永遠通用；主題的 brandIds 空＝通用、有值＝選了其中一個品牌才出現。
+// 沒選品牌時只顯示通用主題（並提示「選擇品牌可看更多主題」）；換品牌後不再適用的已選主題自動取消。
+const AGE_CAT_RE = /^\d+(\.\d+)?y\+$/;
+function selectedBrandIds() {
+  if (!selBrands) return [];
+  return USED_BRANDS.filter(b => selBrands.has(b.name)).map(b => b.id);
+}
+function categoryVisible(c) {
+  if (AGE_CAT_RE.test(c.name)) return true;
+  const ids = c.brandIds || [];
+  if (!ids.length) return true;
+  if (USED_BRANDS.length <= 1) return true; // 只有一個品牌（例如玩具館）＝沒有品牌 chips可選，專屬主題直接全顯示
+  const sel = selectedBrandIds();
+  return sel.some(id => ids.includes(id));
+}
+
 function renderChips() {
+  const chipCats = ALL_CATEGORIES.filter(c => !isSetCategory(c.name) && !SUBSECTION_CAT_NAMES.has(c.name));
+  const shownCats = chipCats.filter(categoryVisible);
+  // 已選的主題因為換了品牌而不再顯示 → 取消選取，避免留下看不到的篩選條件
+  if (selCats && !Array.from(selCats).every(n => shownCats.some(c => c.name === n))) selCats = null;
   buildChipGroup('pbCatChips',
-    ALL_CATEGORIES.filter(c => !isSetCategory(c.name) && !SUBSECTION_CAT_NAMES.has(c.name)).map(c => c.name),
+    shownCats.map(c => c.name),
     selCats,
     v => toggleSelection(selCats, v, s => { selCats = s; }));
+  const hintEl = document.getElementById('pbCatHint');
+  if (hintEl) hintEl.style.display = (shownCats.length < chipCats.length && selectedBrandIds().length === 0) ? '' : 'none';
   document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
   buildChipGroup('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands,
     v => toggleSelection(selBrands, v, s => { selBrands = s; }));

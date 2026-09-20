@@ -5176,6 +5176,8 @@
           <input type="text" id="bookSearchInput" class="ico-search" placeholder="搜尋書名">
         </div>
       </div>
+      <!-- 品牌分類（2026-09-21）：全部／各品牌／未分類，點哪個就只看那個品牌的書（少於兩組時自動隱藏） -->
+      <div id="bookBrandBar" style="display:none; gap:4px; flex-wrap:wrap; margin-bottom:8px;"></div>
       <div class="pba-grid-hint" id="bookGridHint"></div>
       <div class="pba-grid" id="bookList"></div>
     </div>
@@ -7202,7 +7204,7 @@
 <script src="report.js?v=7"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=33"></script>
+<script src="books.js?v=34"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
