@@ -60,7 +60,7 @@ window.BRAND_NOTES = [
   { brand: 'OOLY 畫筆／藝術寶盒',           keys: ['ooly'],                               note: '此團加贈雪莉🔥獨家手繪教材🔥' },
   { brand: '齒妍堂',                        keys: ['齒妍堂'],                             note: '汪汪隊聯名兒童牙膏、漱口水' },
   { brand: 'Learning Time 啟蒙玩具',        keys: ['learningtime'],                       note: '嬰幼兒啟蒙認知玩具' },
-  { brand: 'Kidsread 點讀筆',               keys: ['kidsread'],                           note: '此團下單加贈雪莉團隊精心製作的🔥手繪教材🔥' },
+  { brand: 'KIDsREAD點讀筆',                keys: ['kidsread'],                           note: '此團下單加贈雪莉團隊精心製作的🔥手繪教材🔥' },
   { brand: 'LMG 不沾鍋',                    keys: ['lmg'],                                note: '平價不沾鍋首選，定期換鍋不心疼' },
   { brand: '兔比媽咪廚房',                  keys: ['兔比'],                               note: '懶人育兒必備冷凍副食品&手指食物' },
 ];
