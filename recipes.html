@@ -1901,6 +1901,8 @@ function initFilters() {
   // 觀看食譜的品牌（主選單，單選；「全部」＝不限；沒有食譜的品牌不列）
   const brandsWithRecipes = new Set();
   RECIPES.forEach(r => getRecipeBrands(r).forEach(b => brandsWithRecipes.add(b)));
+  // 網址帶進來的品牌若沒有任何食譜（品牌列沒有那顆可選），就不要套用，避免「全部」亮著卻悄悄篩選
+  recSelectedBrands = recSelectedBrands.filter(b => brandsWithRecipes.has(b));
   buildBrandTabs(document.getElementById('recBrandChips'), BRANDS.filter(b => brandsWithRecipes.has(b)),
     b => recSelectedBrands.includes(b),
     b => { recSelectedBrands = b === null ? [] : [b]; initFilters(); renderRecipes(); },

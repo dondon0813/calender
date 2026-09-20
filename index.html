@@ -1107,8 +1107,9 @@ function renderModeTabs() {
     btn.className = 'mode-tab' + (currentMode === m.v ? ' on' : '');
     btn.textContent = m.t;
     btn.addEventListener('click', () => {
-      if (currentMode === m.v) return;
-      clearSearch();
+      const hadSearch = currentSearchQuery.trim() !== '';
+      clearSearch(); // 搜尋結果畫面下點任何一顆（含目前已選的）都會清掉搜尋並回到該模式
+      if (currentMode === m.v && !hadSearch) return;
       currentMode = m.v;
       renderModeTabs();
       render();
