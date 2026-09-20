@@ -174,8 +174,10 @@ function renderBookBrandBar(kindBooks, offCount) {
   groups.sort((a, b) => rank(a.label) - rank(b.label));
   if (none) groups.push({ key: 'none', label: '未分類', n: none });
   if (offCount) groups.push({ key: 'off', label: '已下架', n: offCount }); // 已下架的書不算在「全部」裡，獨立一個分類
-  if (groups.length < 2 || (BOOK_GRID_BRAND && !groups.some(g => g.key === BOOK_GRID_BRAND))) BOOK_GRID_BRAND = '';
-  if (groups.length < 2) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  // 有已下架的書時品牌列一定要顯示（否則整館書都下架時，已下架分類點不到）
+  const needBar = groups.length >= 2 || offCount > 0;
+  if (!needBar || (BOOK_GRID_BRAND && !groups.some(g => g.key === BOOK_GRID_BRAND))) BOOK_GRID_BRAND = '';
+  if (!needBar) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
   bar.style.display = 'flex';
   bar.innerHTML = '';
   [{ key: '', label: '全部', n: kindBooks.length }].concat(groups).forEach(g => {
@@ -3357,7 +3359,7 @@ function mtlbFillBindItems(type, selectedIds) {
     .forEach(b => {
       const opt = document.createElement('option');
       opt.value = b.id;
-      opt.textContent = (b.is_published === false ? '（草稿）' : '') + (b.title || '未命名');
+      opt.textContent = (b.isDiscontinued ? '（已下架）' : b.is_published === false ? '（草稿）' : '') + (b.title || '未命名');
       opt.selected = (selectedIds || []).indexOf(b.id) !== -1;
       sel.appendChild(opt);
     });
