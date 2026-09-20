@@ -119,6 +119,16 @@
     border-color: var(--c-primary);
     color: #fff;
   }
+  /* 品牌列：單行左右滑動（不換行展開）；chip 不被壓縮、隱藏捲軸 */
+  .filter-chips.chips-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .filter-chips.chips-scroll::-webkit-scrollbar { display: none; }
+  .filter-chips.chips-scroll .chip { flex: 0 0 auto; }
   .chip-clear {
     font-size: 11.5px;
     font-weight: 700;
@@ -213,8 +223,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
+    color: #C9A48F;
   }
+  .ing-tile-icon.emoji-fallback svg { width: 56%; height: 56%; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
   .ing-tile-name {
     font-size: 11.5px;
     font-weight: 800;
@@ -307,8 +318,6 @@
   .rc-title-row { position: relative; }
   .rc-title-row .rc-title { padding-left: 36px; padding-right: 36px; }
   .rec-fav-btn { position: absolute; right: 0; top: 0; }
-  .chip.chip-fav { border-color: var(--c-primary); color: var(--c-pink-deep); }
-  .chip.chip-fav.active { color: #fff; }
 
   /* 置頂開團宣傳（2026-09-14）：有食譜的品牌開團中自動出現，結團自動消失 */
   /* 雪莉 09-14 定：不要大卡浮誇，一團一條細長列、整列點擊＝前往下單（有折扣碼先跳折扣碼視窗） */
@@ -659,11 +668,6 @@
     cursor: pointer;
   }
   .rc-ing-item .rc-ing-name { font-weight: 700; }
-  .rc-ing-item .rc-ing-name::before {
-    content: '🔸';
-    font-size: 9px;
-    margin-right: 4px;
-  }
   .rc-ing-item .rc-ing-qty { color: var(--c-brown); font-weight: 700; white-space: nowrap; }
   .rc-steps-list {
     list-style: none;
@@ -1013,9 +1017,7 @@
     font-size: 14px;
     font-weight: 800;
     color: var(--c-text);
-    background: var(--c-orange-bg-2);
-    border-radius: var(--r-pill);
-    padding: 6px 16px;
+    letter-spacing: 1px;
   }
   .oil-toggle-btn {
     font-size: 11px;
@@ -1284,7 +1286,6 @@
            副食品類開團時從行事曆帶 ?brand= 連結進來仍會直接開食材介紹畫面；
            要恢復入口卡就把 display:none 拿掉 -->
       <div class="home-card home-card-pink" id="tabIngredients" style="display:none;">
-        <div class="home-card-icon">🥗</div>
         <div class="home-card-title">食材介紹</div>
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">認識豐富的食材</div>
@@ -1343,10 +1344,10 @@
     <button class="back-btn" id="backFromIngredients">← 返回首頁</button>
     <div class="filter-section">
       <div class="filter-label">品牌</div>
-      <div class="filter-chips" id="ingBrandChips"></div>
+      <div class="filter-chips chips-scroll" id="ingBrandChips"></div>
     </div>
 
-    <div id="ingBrandPrompt" class="ing-brand-prompt">🌿 請先選擇一個品牌，看看有哪些食材唷！</div>
+    <div id="ingBrandPrompt" class="ing-brand-prompt">請先選擇一個品牌，看看有哪些食材唷！</div>
 
     <div id="ingBrandContent" style="display:none;">
       <div class="brand-intro-card" id="ingBrandIntroCard" style="display:none;">
@@ -1356,7 +1357,7 @@
 
       <div class="ing-category-block">
         <div class="ing-category-head">
-          <span class="ing-category-title">🥬 生鮮食材</span>
+          <span class="ing-category-title">生鮮食材</span>
         </div>
         <div class="card-grid" id="ingFreshGrid"></div>
         <div class="ing-category-empty" id="ingFreshEmpty" style="display:none;">這個品牌目前還沒有生鮮食材</div>
@@ -1364,8 +1365,8 @@
 
       <div class="ing-category-block">
         <div class="ing-category-head">
-          <span class="ing-category-title">🍼 副食品</span>
-          <button class="oil-toggle-btn" id="oilToggleBtn">🫒 隱藏油品標籤</button>
+          <span class="ing-category-title">副食品</span>
+          <button class="oil-toggle-btn" id="oilToggleBtn">隱藏油品標籤</button>
         </div>
         <div class="card-grid" id="ingProductGrid"></div>
         <div class="ing-category-empty" id="ingProductEmpty" style="display:none;">這個品牌目前還沒有副食品</div>
@@ -1378,9 +1379,9 @@
     <button class="back-btn" id="backFromRecipes">← 返回首頁</button>
     <div class="rcp-promo-slot" id="promoSlotRecipes" style="display:none;"></div>
     <div class="filter-section">
-      <!-- 「我的收藏」篩選列 2026-09-19 雪莉指示移除：收藏後從會員中心收藏庫看即可（renderFavChip 找不到容器會自動略過） -->
+      <!-- 「我的收藏」篩選列 2026-09-19 雪莉指示移除、09-20 相關程式碼一併清除：收藏後從會員中心收藏庫看即可 -->
       <div class="filter-label">品牌</div>
-      <div class="filter-chips" id="recBrandChips"></div>
+      <div class="filter-chips chips-scroll" id="recBrandChips"></div>
       <div class="filter-label">適合月齡</div>
       <div class="filter-chips" id="recAgeChips"></div>
     </div>
@@ -1409,7 +1410,7 @@
 <div class="modal-backdrop" id="ingredientModal" onclick="if(event.target===this) closeModal('ingredientModal')">
   <div class="modal-box recipe-card-modal">
     <div class="rc-header">
-      <span class="rc-badge-pill">🩷 雪莉與朵栗 の食材小卡</span>
+      <span class="rc-badge-pill">雪莉與朵栗 の食材小卡</span>
       <button class="rc-close-btn" onclick="closeModal('ingredientModal')">✕</button>
     </div>
 
@@ -1423,18 +1424,18 @@
     <div class="rc-info-row" id="ingModalInfoRow"></div>
 
     <div class="rc-tip-box" id="ingModalDescBox" style="display:none;">
-      <div class="rc-tip-title">📝 食材介紹</div>
+      <div class="rc-tip-title">食材介紹</div>
       <div class="rc-tip-text" id="ingModalDesc"></div>
     </div>
 
     <div class="modal-actions" style="margin-bottom: 6px;">
-      <button class="action-btn" id="ingBuyBtn">🛒 前往購買</button>
+      <button class="action-btn" id="ingBuyBtn">前往購買</button>
     </div>
     <div class="buy-status-list" id="ingBuyStatusList" style="display:none;"></div>
 
     <div class="rc-section" id="ingModalRelated" style="display:none; margin-top:20px;">
       <div class="rc-section-head">
-        <span class="rc-section-title">🍽 使用這個食材的食譜</span>
+        <span class="rc-section-title">使用這個食材的食譜</span>
       </div>
       <div id="ingModalRelatedList"></div>
     </div>
@@ -1477,7 +1478,7 @@
 
     <div class="modal-actions" style="margin-top:14px;">
       <button class="action-btn" id="recBuyBtn">前往購買食材</button>
-      <a class="action-btn action-btn-alt" id="recVideoBtn" style="display:none;" target="_blank" rel="noopener noreferrer">🎬 觀看影片</a>
+      <a class="action-btn action-btn-alt" id="recVideoBtn" style="display:none;" target="_blank" rel="noopener noreferrer">觀看影片</a>
     </div>
     <div class="buy-status-list" id="recBuyStatusList" style="display:none;"></div>
 
@@ -1522,57 +1523,63 @@ function sendStat(key, field) {
   } catch (e) { /* 統計失敗不影響使用者瀏覽，安靜忽略 */ }
 }
 
-const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>🍽</text></svg>";
-
-// 食材/成品「分類」欄位 -> 對應表情符號，圖片網址還沒填或載入失敗時，
-// 用比較貼近該食材種類的表情符號代替，不會一律都是同一張空盤子圖
-const CATEGORY_EMOJI_MAP = {
-  '蔬菜': '🥬',
-  '根莖類': '🥔',
-  '水果': '🍎',
-  '蛋類': '🥚',
-  '菇類': '🍄',
-  '辛香料': '🧄',
-  '豆製品': '🧊',
-  '豆類穀物': '🌾',
-  '堅果乾貨': '🌰',
-  '芝麻類': '⚪',
-  '調味料': '🧂',
-  '乳製品': '🧀',
-  '粉類': '🌾',
-  '肉類海鮮': '🍤',
-  '肉類': '🥩',
-  '海鮮': '🦐',
-  '湯品': '🍲',
-  '其他': '🍽'
+// ===== 分類小圖示（線條 SVG，2026-09-20 雪莉指示取代表情符號）=====
+// 食材/成品沒有照片、或圖片載入失敗時，依「分類」欄位顯示對應的線條小圖；食譜沒照片則顯示餐盤。
+const CAT_ICON_PATHS = {
+  leaf: '<path d="M5 19C5 10 10 5 19 5c0 9-5 14-14 14z"/><path d="M5 19L14 10"/>',
+  root: '<ellipse cx="12" cy="12.5" rx="8" ry="5.5" transform="rotate(-20 12 12.5)"/><path d="M9.5 11h.01M14.5 14h.01M12.5 10.5h.01"/>',
+  fruit: '<path d="M12 7.5C9.5 5.5 5 7 5 12.5c0 4 3 8 5.5 8 1 0 1.5-.6 2-.6s1 .6 2 .6c2.5 0 5.5-4 5.5-8 0-5.5-4.5-7-7-5z"/><path d="M12 7.5c0-2 1-3.5 3-4.5"/>',
+  egg: '<path d="M12 3c4 0 7 6.5 7 11a7 7 0 0 1-14 0c0-4.5 3-11 7-11z"/>',
+  mushroom: '<path d="M4 12.5a8 7.5 0 0 1 16 0z"/><path d="M9.5 12.5V17a2.5 2.5 0 0 0 5 0v-4.5"/>',
+  garlic: '<path d="M12 4c1 2.5 5 4.5 5 9.5a5 5 0 0 1-10 0C7 8.5 11 6.5 12 4z"/><path d="M12 4V2.5"/><path d="M10 10c-1 2.5-1 5 0 7M14 10c1 2.5 1 5 0 7"/>',
+  tofu: '<path d="M4 8.5l8-4 8 4V16l-8 4-8-4z"/><path d="M4 8.5l8 4 8-4M12 12.5V20"/>',
+  grain: '<path d="M12 21V4"/><path d="M12 9c-2.5 0-4-1.5-4-4 2.5 0 4 1.5 4 4zM12 9c2.5 0 4-1.5 4-4-2.5 0-4 1.5-4 4zM12 15c-2.5 0-4-1.5-4-4 2.5 0 4 1.5 4 4zM12 15c2.5 0 4-1.5 4-4-2.5 0-4 1.5-4 4z"/>',
+  nut: '<path d="M6 10.5a6 5 0 0 1 12 0z"/><path d="M7 10.5c0 5.5 3 9.5 5 9.5s5-4 5-9.5"/><path d="M12 5.5V3.5"/>',
+  sesame: '<ellipse cx="8" cy="9" rx="2" ry="3.5" transform="rotate(-25 8 9)"/><ellipse cx="16" cy="9" rx="2" ry="3.5" transform="rotate(25 16 9)"/><ellipse cx="12" cy="16.5" rx="2" ry="3.5"/>',
+  seasoning: '<path d="M8 8.5h8V19a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z"/><path d="M9 8.5v-2a3 3 0 0 1 6 0v2"/><path d="M10.5 12.5h.01M13.5 12.5h.01M12 15.5h.01"/>',
+  dairy: '<path d="M3 18h18V8L3 10z"/><circle cx="8" cy="14.5" r="1.3"/><circle cx="15" cy="14" r="1.6"/>',
+  meat: '<circle cx="15" cy="9" r="5.5"/><path d="M11 13l-5 5"/><circle cx="4.5" cy="17.5" r="1.3"/><circle cx="6.5" cy="19.5" r="1.3"/>',
+  fish: '<path d="M3 12c3-4.5 9-6 14-3l4-2.5v11l-4-2.5c-5 3-11 1.5-14-3z"/><path d="M8 11h.01"/>',
+  soup: '<path d="M4 11.5h16a8 8 0 0 1-16 0z"/><path d="M9 20.5h6"/><path d="M8 8c-1-1.5 1-2.5 0-4M12 8c-1-1.5 1-2.5 0-4M16 8c-1-1.5 1-2.5 0-4"/>',
+  rice: '<path d="M4 12.5h16a8 7 0 0 1-16 0z"/><path d="M6.5 12.5c0-4 2.5-6.5 5.5-6.5s5.5 2.5 5.5 6.5"/>',
+  dish: '<circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2.8"/><path d="M2.5 3.5v5a1.5 1.5 0 0 0 3 0v-5M4 3.5v17"/><path d="M21.5 20.5v-17c-2 1.5-3 4-3 7.5h3"/>'
 };
-
-// 依食材/成品資料回傳最貼近的表情符號：優先看「分類」欄位，
-// 品牌商品（湯品/肉類/海鮮）沒有分類欄位的話，改用名稱關鍵字猜一個
-function categoryEmojiFor(item) {
-  if (!item) return '🍽';
+// 分類欄位 → 圖示；品牌商品沒有分類欄位時，改用名稱關鍵字猜一個
+const CAT_ICON_MAP = {
+  '蔬菜': 'leaf', '根莖類': 'root', '水果': 'fruit', '蛋類': 'egg', '菇類': 'mushroom',
+  '辛香料': 'garlic', '豆製品': 'tofu', '豆類穀物': 'grain', '堅果乾貨': 'nut', '芝麻類': 'sesame',
+  '調味料': 'seasoning', '乳製品': 'dairy', '粉類': 'grain', '肉類海鮮': 'fish', '肉類': 'meat',
+  '海鮮': 'fish', '湯品': 'soup', '其他': 'dish'
+};
+function categoryIconKey(item) {
+  if (!item) return 'dish';
   const cat = String(item['分類'] || '').trim();
-  if (CATEGORY_EMOJI_MAP[cat]) return CATEGORY_EMOJI_MAP[cat];
+  if (CAT_ICON_MAP[cat]) return CAT_ICON_MAP[cat];
   const name = String(item['食材名稱'] || '').trim();
-  // 食譜有時會直接打籠統的分類詞（例如「蔬菜」「水果」）而不是指定確切食材，
-  // 這種在資料庫裡對不到任何食材項目、也就沒有「分類」欄位可以參考，
-  // 所以額外檢查食材名稱本身是不是剛好就是分類表裡的其中一個分類詞
-  if (CATEGORY_EMOJI_MAP[name]) return CATEGORY_EMOJI_MAP[name];
-  if (name.includes('湯')) return '🍲';
-  if (name.includes('魚') || name.includes('蝦') || name.includes('干貝') || name.includes('海鮮')) return '🦐';
-  if (name.includes('雞') || name.includes('豬') || name.includes('牛') || name.includes('羊') || name.includes('肉')) return '🥩';
-  if (name.includes('飯') || name.includes('米')) return '🍚';
-  return '🍽';
+  // 食譜有時直接打籠統的分類詞（例如「蔬菜」「水果」），資料庫對不到項目、沒有「分類」欄位，
+  // 所以也檢查食材名稱本身是不是分類詞
+  if (CAT_ICON_MAP[name]) return CAT_ICON_MAP[name];
+  if (name.includes('湯')) return 'soup';
+  if (name.includes('魚') || name.includes('蝦') || name.includes('干貝') || name.includes('海鮮')) return 'fish';
+  if (name.includes('雞') || name.includes('豬') || name.includes('牛') || name.includes('羊') || name.includes('肉')) return 'meat';
+  if (name.includes('飯') || name.includes('米')) return 'rice';
+  return 'dish';
 }
-
-// 依表情符號組出跟 PLACEHOLDER_IMG 同樣格式的預設圖，用在食材/成品圖片網址還沒填或載入失敗的情況
-function emojiPlaceholderImg(emoji) {
-  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/><text x='100' y='110' font-size='48' text-anchor='middle'>${emoji}</text></svg>`;
+// 給 <img src> 用的預設圖：淡橘底＋置中的線條小圖
+function iconPlaceholderImg(key) {
+  const paths = CAT_ICON_PATHS[key] || CAT_ICON_PATHS.dish;
+  const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='#FFF1E6'/>"
+    + "<g transform='translate(52 52) scale(4)' fill='none' stroke='#C9A48F' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'>" + paths + "</g></svg>";
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
+const PLACEHOLDER_IMG = iconPlaceholderImg('dish');
 
-// 食材/成品專用：依項目分類回傳對應表情符號的預設圖（找不到分類就退回通用 🍽）
+// 食材/成品專用：依項目分類回傳對應線條小圖的預設圖（找不到分類就退回餐盤）
+// 食材小卡（點開的視窗）專用：沒照片時只留底色，不放圖示（雪莉 09-20 指示）
+const BLANK_PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='200' height='200' fill='%23FFF1E6'/></svg>";
+
 function ingredientPlaceholderImg(item) {
-  return emojiPlaceholderImg(categoryEmojiFor(item));
+  return iconPlaceholderImg(categoryIconKey(item));
 }
 
 // 直式長圖（例如保久乳 200ml 鋁箔包）放進固定比例的相框用 cover 會被裁到只剩中間段，
@@ -1824,7 +1831,7 @@ function buildRcpDiscountBlock(code, desc, brandLabel) {
 
   const remind = document.createElement('div');
   remind.className = 'rcp-discount-remind';
-  remind.textContent = '💡 記得輸入折扣碼才能享有折扣';
+  remind.textContent = '記得輸入折扣碼才能享有折扣';
   box.appendChild(remind);
 
   return box;
@@ -2054,8 +2061,10 @@ function pickRandomBasicIngredients() {
 function initFilters() {
   // 食材介紹的品牌篩選（單選：點同一個品牌可以取消回到「請選擇品牌」）
   const ingBrandChipsEl = document.getElementById('ingBrandChips');
+  const ingScrollX = ingBrandChipsEl.scrollLeft; // 重畫後保留左右滑動位置，點選品牌不會跳回最左邊
   ingBrandChipsEl.innerHTML = '';
-  BRANDS.forEach(b => {
+  const brandsWithIngredients = new Set(INGREDIENTS.map(i => String(i['品牌'] || '').trim()).filter(Boolean));
+  BRANDS.filter(b => brandsWithIngredients.has(b)).forEach(b => {
     const chip = makeChip(b, ingSelectedBrand === b, () => {
       ingSelectedBrand = (ingSelectedBrand === b) ? '' : b;
       initFilters();
@@ -2063,11 +2072,15 @@ function initFilters() {
     });
     ingBrandChipsEl.appendChild(chip);
   });
+  ingBrandChipsEl.scrollLeft = ingScrollX;
 
   // 觀看食譜的品牌篩選
   const recBrandChipsEl = document.getElementById('recBrandChips');
+  const recScrollX = recBrandChipsEl.scrollLeft;
   recBrandChipsEl.innerHTML = '';
-  BRANDS.forEach(b => {
+  const brandsWithRecipes = new Set();
+  RECIPES.forEach(r => getRecipeBrands(r).forEach(b => brandsWithRecipes.add(b)));
+  BRANDS.filter(b => brandsWithRecipes.has(b)).forEach(b => {
     const chip = makeChip(b, recSelectedBrands.includes(b), () => {
       toggleInArray(recSelectedBrands, b);
       initFilters();
@@ -2075,6 +2088,7 @@ function initFilters() {
     });
     recBrandChipsEl.appendChild(chip);
   });
+  recBrandChipsEl.scrollLeft = recScrollX;
 
   // 觀看食譜的月齡篩選
   const AGE_ORDER = ['6m+', '8m+', '10m+', '1y+', '2y+', '成人'];
@@ -2090,9 +2104,6 @@ function initFilters() {
     });
     recAgeChipsEl.appendChild(chip);
   });
-
-  // 觀看食譜的「❤️ 已收藏」篩選（會員功能）
-  renderFavChip();
 
   // 選擇食材的搜尋/篩選圖磚 + 已選擇食材標籤
   renderSelectedIngredientChips();
@@ -2210,7 +2221,7 @@ function renderIngredientFilterTiles() {
 function makeEmojiIconFallback(item) {
   const div = document.createElement('div');
   div.className = 'ing-tile-icon emoji-fallback';
-  div.textContent = categoryEmojiFor(item);
+  div.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (CAT_ICON_PATHS[categoryIconKey(item)] || CAT_ICON_PATHS.dish) + '</svg>';
   return div;
 }
 
@@ -2235,7 +2246,7 @@ document.getElementById('oilToggleBtn').addEventListener('click', () => {
 
 function updateOilToggleBtnLabel() {
   const btn = document.getElementById('oilToggleBtn');
-  btn.textContent = showOilBadges ? '🫒 隱藏油品標籤' : '🫒 顯示油品標籤';
+  btn.textContent = showOilBadges ? '隱藏油品標籤' : '顯示油品標籤';
   btn.classList.toggle('oil-hidden', !showOilBadges);
 }
 
@@ -2384,7 +2395,6 @@ function renderRecipes() {
   const categoryLookup = recSelectedIngredients.length ? buildIngredientCategoryLookup_() : null;
 
   let items = RECIPES.filter(r => {
-    if (recOnlyFav && !FAV.ids.has(r['食譜ID'])) return false;
     if (recSearchText) {
       if (!String(r['食譜名稱'] || '').includes(recSearchText)) return false;
     }
@@ -2402,12 +2412,10 @@ function renderRecipes() {
     return true;
   });
 
-  titleEl.textContent = recOnlyFav ? `❤️ 我收藏的食譜（共 ${items.length} 道）` : `食譜推薦（共 ${items.length} 道）`;
+  titleEl.textContent = `食譜推薦（共 ${items.length} 道）`;
 
   if (!items.length) {
-    emptyEl.textContent = (recOnlyFav && !FAV.ids.size)
-      ? '還沒有收藏的食譜——點食譜卡右下角的收藏圖示就能收藏'
-      : '這個篩選條件下沒有找到食譜';
+    emptyEl.textContent = '這個篩選條件下沒有找到食譜';
     emptyEl.style.display = 'block';
     return;
   }
@@ -2485,15 +2493,15 @@ function openIngredientBrandChoice(group) {
 }
 
 function openIngredientModal(item) {
-  document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+  document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : BLANK_PLACEHOLDER_IMG;
   fitPortraitImage(document.getElementById('ingModalImg'));
-  document.getElementById('ingModalImg').onerror = function() { this.src = ingredientPlaceholderImg(item); };
+  document.getElementById('ingModalImg').onerror = function() { this.src = BLANK_PLACEHOLDER_IMG; };
   document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
 
   const isProduct = (item['類型'] || '食材') === '成品';
   const brandLineEl = document.getElementById('ingModalBrandLine');
   if (item['品牌']) {
-    brandLineEl.textContent = (isProduct ? '🍼 副食品・' : '🥬 生鮮食材・') + item['品牌'];
+    brandLineEl.textContent = (isProduct ? '副食品・' : '生鮮食材・') + item['品牌'];
     brandLineEl.style.display = 'block';
   } else {
     brandLineEl.style.display = 'none';
@@ -2501,16 +2509,16 @@ function openIngredientModal(item) {
 
   const infoRowEl = document.getElementById('ingModalInfoRow');
   const specs = [
-    ['⏳', '保存期限', item['保存期限']],
-    ['🧾', '成分', item['成分']],
-    ['📍', '產地', item['產地']],
-    ['⚖️', '規格', item['內容物規格']]
-  ].filter(([, , val]) => val);
+    ['保存期限', item['保存期限']],
+    ['成分', item['成分']],
+    ['產地', item['產地']],
+    ['規格', item['內容物規格']]
+  ].filter(([, val]) => val);
   if (specs.length) {
     infoRowEl.className = 'spec-list';
-    infoRowEl.innerHTML = specs.map(([icon, label, val]) => `
+    infoRowEl.innerHTML = specs.map(([label, val]) => `
       <div class="spec-list-item">
-        <div class="spec-list-label">${icon} ${label}</div>
+        <div class="spec-list-label">${label}</div>
         <div class="spec-list-value">${val}</div>
       </div>
     `).join('');
@@ -2916,7 +2924,7 @@ function renderBuyStatusList(statuses, statusListEl) {
     // 沒開團的時候（還沒開團／已結單）就用品牌資料庫填的蝦皮連結導流；沒填就只顯示狀態文字
     // （做法跟開學清單的品項小卡一致：左邊寫下一團日期／已結單，右邊擺蝦皮下單按鈕）
     const shopeeBtn = isValidUrl(s.shopeeUrl)
-      ? `<a class="bsi-btn" href="${s.shopeeUrl}" target="_blank" rel="noopener noreferrer">🛒 蝦皮下單</a>`
+      ? `<a class="bsi-btn" href="${s.shopeeUrl}" target="_blank" rel="noopener noreferrer">蝦皮下單</a>`
       : '';
     if (s.status === 'open') {
       rightHtml = `<a class="bsi-btn" href="${s.url}" target="_blank" rel="noopener noreferrer">前往下單</a>`;
@@ -2970,7 +2978,7 @@ document.querySelector('.home-cards').addEventListener('click', e => {
 });
 document.querySelectorAll('.soon-card').forEach(card => {
   card.addEventListener('click', () => {
-    alert('這個功能還在準備中，敬請期待！🩷');
+    alert('這個功能還在準備中，敬請期待！');
   });
 });
 document.getElementById('backFromIngredients').addEventListener('click', () => switchView('home'));
@@ -3094,7 +3102,7 @@ function openPromoCodeModal(st) {
         <h2 class="rc-title" id="promoCodeTitle" style="margin-top:6px;"></h2>
         <div id="promoCodeBody"></div>
         <div class="modal-actions" style="margin-top:14px;">
-          <a class="action-btn" id="promoCodeGo" target="_blank" rel="noopener noreferrer">🛒 前往下單</a>
+          <a class="action-btn" id="promoCodeGo" target="_blank" rel="noopener noreferrer">前往下單</a>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -3124,7 +3132,6 @@ function openPromoCodeModal(st) {
 // 資料＝後端 fan_favorites（item_type=recipe、item_id=食譜ID），會員中心「收藏庫」看得到同一份。
 const MEMBER_ORIGIN = 'https://member.sheridondon.com.tw';
 const FAV = { ready: false, loggedIn: false, ids: new Set() };
-let recOnlyFav = false;
 let currentModalRecipe = null;
 let favBridgeWin = null;
 let favReqSeq = 0;
@@ -3174,7 +3181,7 @@ function initFavBridge() {
     refreshFavUi();
     if (presetFavDone) {
       // 會員頁已經幫忙收藏好了；這裡還是讀不到登入狀態＝這個瀏覽器擋了跨頁同步，引導去收藏庫看
-      if (!FAV.loggedIn) alert('已經幫你收藏好囉 ❤️\n這個瀏覽器無法在官網同步顯示，可以到會員中心「收藏庫」查看。');
+      if (!FAV.loggedIn) alert('已經幫你收藏好囉\n這個瀏覽器無法在官網同步顯示，可以到會員中心「收藏庫」查看。');
       try {
         const u = new URL(window.location.href);
         u.searchParams.delete('favDone');
@@ -3198,28 +3205,9 @@ function updateRecFavBtn() {
   if (btn && currentModalRecipe) paintFavBtn(btn, currentModalRecipe['食譜ID'], false);
 }
 
-function renderFavChip() {
-  const el = document.getElementById('recFavChips');
-  if (!el) return;
-  el.innerHTML = '';
-  const n = RECIPES.filter(r => FAV.ids.has(r['食譜ID'])).length;
-  const chip = makeChip(FAV.loggedIn ? `❤️ 已收藏（${n}）` : '❤️ 已收藏', recOnlyFav, async () => {
-    if (!FAV.ready) await favStateLoaded;
-    if (!FAV.loggedIn) { openFavLogin(''); return; }
-    recOnlyFav = !recOnlyFav;
-    renderFavChip();
-    renderRecipes();
-  });
-  chip.classList.add('chip-fav');
-  el.appendChild(chip);
-}
-
 function refreshFavUi() {
   document.querySelectorAll('.rrc-fav[data-rid]').forEach(b => paintFavBtn(b, b.dataset.rid, true));
   updateRecFavBtn();
-  if (!RECIPE_DATA_READY) return;
-  renderFavChip();
-  if (recOnlyFav) renderRecipes();
 }
 
 async function toggleRecipeFav(recipe) {
@@ -3235,13 +3223,12 @@ async function toggleRecipeFav(recipe) {
   if (res.success) { setLocalFav(id, !!res.favorited); return; }
   if (res.needLogin) {
     FAV.loggedIn = false;
-    recOnlyFav = false;
     setLocalFav(id, !want);
     openFavLogin(id);
     return;
   }
   setLocalFav(id, !want);
-  alert('收藏沒有成功，請稍後再試一次 🙏');
+  alert('收藏沒有成功，請稍後再試一次');
 }
 
 function setLocalFav(id, on) {
