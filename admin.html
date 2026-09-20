@@ -3874,7 +3874,7 @@
     border: 1px solid var(--c-border);
     border-radius: 10px;
     padding: 8px 12px;
-    background: #fff;
+    background: var(--c-surface);
     color: var(--c-text);
     box-sizing: border-box;
   }
@@ -3919,6 +3919,74 @@
     color: var(--c-muted);
     font-size: 13px;
     padding: 20px 10px;
+  }
+  /* --- 報表統計 2026-09-20：子分頁／趨勢圖／購買點擊 --- */
+  .rpt-tabs { justify-content: center; max-width: 900px; margin: 12px auto 16px; }
+  .rpt-panel { display: none; }
+  .rpt-panel.on { display: block; }
+  .rpt-notice {
+    max-width: 900px; margin: 0 auto 12px; text-align: center;
+    background: var(--c-gold-badge-bg); color: var(--c-gold-text);
+    border-radius: var(--r-md); padding: 8px 12px; font-size: 12.5px; font-weight: 700;
+  }
+  .rpt-notice[hidden] { display: none; }
+  .rpt-card-delta { font-size: 11.5px; font-weight: 800; color: var(--c-muted); margin-top: 3px; line-height: 1.4; }
+  .rpt-card-delta span { font-weight: 700; color: var(--c-muted); }
+  .rpt-card-delta.up { color: var(--c-mint-text); }
+  .rpt-card-delta.down { color: var(--c-danger); }
+  .rpt-mini-cards { margin-bottom: 14px; }
+  .rpt-chart-wrap { max-width: 640px; margin: 0 auto 6px; }
+  .rpt-chart { width: 100%; height: auto; display: block; }
+  .rpt-chart .rpt-grid { stroke: var(--c-line); stroke-width: 1; }
+  .rpt-chart .rpt-axis { font-size: 12px; fill: var(--c-muted); }
+  .rpt-chart .rpt-axis-b { fill: var(--c-danger); }
+  .rpt-line { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+  .rpt-line-a { stroke: var(--c-primary-dark); }
+  .rpt-line-b { stroke: var(--c-danger); }
+  circle.rpt-dot-a { fill: var(--c-primary-dark); }
+  circle.rpt-dot-b { fill: var(--c-danger); }
+  i.rpt-dot-a { background: var(--c-primary-dark); }
+  i.rpt-dot-b { background: var(--c-danger); }
+  .rpt-hit { fill: transparent; cursor: pointer; }
+  .rpt-hit:hover { fill: var(--c-pink-bg); opacity: .7; }
+  .rpt-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: center; font-size: 12px; font-weight: 700; color: var(--c-text-soft); margin-bottom: 4px; }
+  .rpt-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .rpt-readout { text-align: center; font-size: 12px; font-weight: 700; color: var(--c-text-soft); min-height: 18px; margin-top: 4px; }
+  .rpt-readout-mini { text-align: left; margin-top: 2px; }
+  .rpt-hint { text-align: center; color: var(--c-muted); font-size: 11.5px; font-weight: 700; margin-top: 6px; }
+  .rpt-title-note { display: block; font-size: 11px; font-weight: 700; color: var(--c-muted); margin-top: 2px; }
+  .rpt-table th.left, .rpt-table td.left { text-align: left; }
+  .rpt-table td.left { white-space: normal; min-width: 130px; max-width: 240px; }
+  .rpt-table th.sortable { cursor: pointer; user-select: none; }
+  .rpt-table th.sorted { color: var(--c-danger); }
+  .rpt-table tbody tr.rpt-sel { background: var(--c-pink-bg); }
+  .rpt-code { font-size: 10.5px; color: var(--c-muted); font-weight: 700; }
+  .rpt-old { font-size: 10px; color: var(--c-muted); background: var(--c-bg-bottom); border-radius: var(--r-pill); padding: 1px 6px; font-weight: 700; }
+  .rpt-share-cell { min-width: 84px; }
+  .rpt-share { display: block; height: 5px; border-radius: 3px; background: var(--c-line); margin-top: 3px; overflow: hidden; }
+  .rpt-share i { display: block; height: 100%; background: var(--c-primary); }
+  .rpt-detail-cap { font-size: 11px; font-weight: 800; color: var(--c-muted); margin: 4px 0 2px; }
+  .rpt-mini { width: 100%; max-width: 320px; height: 44px; display: block; }
+  .rpt-mini-cell { min-width: 160px; }
+  .rpt-mini-cell .rpt-mini { max-width: 200px; height: 30px; margin: 0 auto; }
+  .rpt-mini-bar.rpt-bar-a { fill: var(--c-primary-dark); }
+  .rpt-mini-bar.rpt-bar-b { fill: var(--c-danger); }
+  .rpt-filterbar { max-width: 900px; margin: 0 auto 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .rpt-presets { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .rpt-custom { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; color: var(--c-text-soft); }
+  .rpt-custom[hidden] { display: none; }
+  .rpt-custom input[type="date"] { font-family: var(--font-body); font-size: 13px; font-weight: 700; border: 1px solid var(--c-border); border-radius: 10px; padding: 6px 10px; background: var(--c-surface); color: var(--c-text); }
+  .rpt-chips { max-width: 900px; margin: 0 auto 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
+  .rpt-chips-label { font-size: 12px; font-weight: 800; color: var(--c-muted); }
+  .rpt-chip { font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; border: none; border-radius: var(--r-pill); padding: 4px 10px; background: var(--c-pink-bg); color: var(--c-pink-deep); }
+  .rpt-chip-clear { background: var(--c-bg-bottom); color: var(--c-text-soft); }
+  .rpt-range-note { max-width: 900px; margin: 0 auto 10px; text-align: center; font-size: 12px; font-weight: 700; color: var(--c-muted); }
+  .rpt-footnote { max-width: 900px; margin: 0 auto 10px; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--c-muted); line-height: 1.6; }
+  @media print {
+    #viewReport .rpt-tabs, #viewReport #rptRefreshBtn, #viewReport .rpt-filterbar, #viewReport .rpt-readout { display: none !important; }
+    #viewReport .rpt-panel { display: block !important; }
+    #viewReport .rpt-section { break-inside: avoid; }
+    #viewReport .rpt-table-wrap { overflow: visible; }
   }
 
   /* ===== 繪本後台（books.js）===== */
@@ -4897,33 +4965,79 @@
       <button class="task-mini-btn" id="rptRefreshBtn">🔄 重新整理</button>
     </div>
     <div class="form-status" id="rptRefreshStatus" style="text-align:center;"></div>
+    <div class="rpt-notice" id="rptDailyNotice" hidden></div>
 
-    <div id="rptOverviewCards" class="rpt-overview-grid"></div>
-
-    <div class="rpt-section">
-      <div class="rpt-section-title">📄 頁面瀏覽</div>
-      <div id="rptPageViewsTable" class="rpt-table-wrap"></div>
+    <!-- 子分頁：總覽／各頁流量／購買點擊／團購成效（做法比照繪本後台 .pba-tab） -->
+    <div class="pba-tabs rpt-tabs" id="rptTabs">
+      <button type="button" class="pba-tab rpt-tab on" data-rpt-tab="overview">總覽</button>
+      <button type="button" class="pba-tab rpt-tab" data-rpt-tab="pages">各頁流量</button>
+      <button type="button" class="pba-tab rpt-tab" data-rpt-tab="buy">購買點擊</button>
+      <button type="button" class="pba-tab rpt-tab" data-rpt-tab="perf">團購成效</button>
     </div>
 
-    <div class="rpt-section">
-      <div class="rpt-section-title">📚 繪本館按鈕點擊</div>
-      <div id="rptBooksButtonsTable" class="rpt-table-wrap"></div>
+    <!-- 1. 總覽 -->
+    <div class="rpt-panel on" data-rpt-panel="overview">
+      <div id="rptOverviewCards" class="rpt-overview-grid"></div>
+      <div class="rpt-section">
+        <div class="rpt-section-title">近30日每日趨勢</div>
+        <div id="rptTrendChart"></div>
+      </div>
     </div>
 
-    <div class="rpt-section">
-      <div class="rpt-section-title">🏆 團購成效排行</div>
-      <input type="text" id="rptGroupFilterInput" class="rpt-filter-input" placeholder="輸入團名搜尋…">
-      <div id="rptGroupRankTable" class="rpt-table-wrap"></div>
+    <!-- 2. 各頁流量 -->
+    <div class="rpt-panel" data-rpt-panel="pages">
+      <div class="rpt-section">
+        <div class="rpt-section-title">各頁流量<span class="rpt-title-note">點頁面可展開近30日每日數字</span></div>
+        <div id="rptPageViewsTable" class="rpt-table-wrap"></div>
+      </div>
+      <div class="rpt-section" id="rptBooksSection">
+        <div class="rpt-section-title">📚 繪本館按鈕點擊（累計版）</div>
+        <div id="rptBooksButtonsTable" class="rpt-table-wrap"></div>
+      </div>
     </div>
 
-    <div class="rpt-section">
-      <div class="rpt-section-title">🖱️ 點擊來源總覽</div>
-      <div id="rptSourceTable" class="rpt-table-wrap"></div>
+    <!-- 3. 購買點擊 -->
+    <div class="rpt-panel" data-rpt-panel="buy">
+      <div class="rpt-filterbar">
+        <div class="rpt-presets" id="rptBuyPresets">
+          <button type="button" class="pba-tab rpt-preset" data-preset="today">今日</button>
+          <button type="button" class="pba-tab rpt-preset" data-preset="7d">近7日</button>
+          <button type="button" class="pba-tab rpt-preset on" data-preset="30d">近30日</button>
+          <button type="button" class="pba-tab rpt-preset" data-preset="custom">自訂</button>
+        </div>
+        <div class="rpt-custom" id="rptBuyCustom" hidden>
+          <input type="date" id="rptBuyFrom"> ～ <input type="date" id="rptBuyTo">
+          <button type="button" class="task-mini-btn" id="rptBuyApply">套用</button>
+          <span id="rptBuyRangeStatus" style="color:var(--c-danger);"></span>
+        </div>
+        <input type="text" id="rptBuyQ" class="rpt-filter-input" placeholder="輸入團名搜尋…" style="margin-bottom:0;">
+      </div>
+      <div id="rptBuyChips"></div>
+      <div id="rptBuyBody"></div>
     </div>
 
-    <div class="rpt-section">
-      <div class="rpt-section-title">🔖 自訂區塊</div>
-      <div id="rptBlockTable" class="rpt-table-wrap"></div>
+    <!-- 4. 團購成效 -->
+    <div class="rpt-panel" data-rpt-panel="perf">
+      <div class="pba-tabs rpt-tabs" id="rptPerfModes" style="margin-top:0;">
+        <button type="button" class="pba-tab rpt-perfmode on" data-mode="30d">近30日</button>
+        <button type="button" class="pba-tab rpt-perfmode" data-mode="all">累計</button>
+      </div>
+
+      <div class="rpt-section">
+        <div class="rpt-section-title">🏆 團購成效排行</div>
+        <input type="text" id="rptGroupFilterInput" class="rpt-filter-input" placeholder="輸入團名搜尋…">
+        <div id="rptGroupRankTable" class="rpt-table-wrap"></div>
+      </div>
+
+      <div class="rpt-section">
+        <div class="rpt-section-title">🖱️ 點擊來源總覽</div>
+        <div id="rptSourceTable" class="rpt-table-wrap"></div>
+      </div>
+
+      <div class="rpt-section">
+        <div class="rpt-section-title">🔖 自訂區塊</div>
+        <div id="rptBlockTable" class="rpt-table-wrap"></div>
+      </div>
     </div>
   </div>
 
@@ -7123,7 +7237,7 @@
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=2"></script>
 <script src="tools.js?v=18"></script>
-<script src="report.js?v=4"></script>
+<script src="report.js?v=5"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
 <script src="books.js?v=30"></script>

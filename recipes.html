@@ -2540,6 +2540,7 @@ function openIngredientModal(item) {
     if (isValidUrl(ownShopee)) status.shopeeUrl = ownShopee; // 食材自己的優先，空白才用品牌預設
     if (status.status === 'open') {
       if (status.evKey) sendStat(status.evKey + '_src_recipesing', 'click');
+      if (status.evKey) sendStat(status.evKey + '_buy_recipesing', 'click');
       // 有折扣碼：順手複製＋把折扣碼區塊留在按鈕下方（客人從團購頁回來還看得到）
       if (status.discountCode) {
         rcpCopyCode(status.discountCode);
@@ -2874,6 +2875,7 @@ function handleBuyClick(recipe, statusListEl) {
 
   if (openOnes.length === 1) {
     if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_src_recipesbrand', 'click');
+    if (openOnes[0].evKey) sendStat(openOnes[0].evKey + '_buy_recipesbrand', 'click');
     // 有折扣碼：順手複製＋把折扣碼區塊留在按鈕下方（規則同食材視窗）
     if (openOnes[0].discountCode) {
       rcpCopyCode(openOnes[0].discountCode);
@@ -2915,6 +2917,7 @@ function renderBuyStatusList(statuses, statusListEl) {
       const btn = row.querySelector('.bsi-btn');
       if (btn) btn.addEventListener('click', () => {
         sendStat(s.evKey + '_src_recipeslist', 'click');
+        sendStat(s.evKey + '_buy_recipeslist', 'click');
         if (s.discountCode) rcpCopyCode(s.discountCode);
       });
     }
@@ -3048,6 +3051,7 @@ function buildPromoCard(st) {
       return;
     }
     if (st.evKey) sendStat(st.evKey + '_src_recipespromo', 'click');
+    if (st.evKey) sendStat(st.evKey + '_buy_recipespromo', 'click');
   });
   return card;
 }
@@ -3083,6 +3087,7 @@ function openPromoCodeModal(st) {
   go.href = st.url;
   go.addEventListener('click', () => {
     if (st.evKey) sendStat(st.evKey + '_src_recipespromo', 'click');
+    if (st.evKey) sendStat(st.evKey + '_buy_recipespromo', 'click');
     rcpCopyCode(st.discountCode);
     closeModal('promoCodeModal');
   });
@@ -3381,7 +3386,7 @@ loadChangelog();
 </script>
 
 <!-- 「現正開團中」置頂橫列：跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css） -->
-<script src="openGroupBuy.js?v=6"></script>
+<script src="openGroupBuy.js?v=7"></script>
 
 </body>
 </html>

@@ -229,6 +229,7 @@
     gc.orderBtn.href = o.url;
     gc.orderBtn.onclick = () => {
       sendStat(baseKey + '_order', 'click');
+      sendStat(baseKey + '_buy_' + SRC_CODE, 'click');
       // 有折扣碼時，點「前往下單」順手幫使用者複製（不擋跳轉）
       if (code) copyToClipboard(code).then(flashGcCopied);
     };
@@ -347,6 +348,9 @@
           if (needsGroupModal(o)) {
             e.preventDefault();
             openChoiceModal(o);
+          } else {
+            // 直連跳轉＝這次點擊就是開啟購買網址
+            sendStat(o.evKey + '_buy_' + SRC_CODE, 'click');
           }
         });
       }

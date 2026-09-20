@@ -1403,7 +1403,7 @@ function openSchoolItemModal(item) {
       } else if (status.status === 'open' && status.evKey) {
         // 沒有折扣碼：點下去就是直接進團購網址，是真正的下單出口，統計點擊送在這裡
         const openBtn = row.querySelector('.sbi-open-order');
-        if (openBtn) openBtn.addEventListener('click', () => { sendStat(status.evKey + '_src_schoolcard', 'click'); });
+        if (openBtn) openBtn.addEventListener('click', () => { sendStat(status.evKey + '_src_schoolcard', 'click'); sendStat(status.evKey + '_buy_schoolcard', 'click'); });
       }
 
       // 品牌介紹/心得：有填才顯示，沒填就不會多出空白區塊
@@ -1770,6 +1770,7 @@ function openDiscountModal(brand, url, code, desc, evKey, srcCode) {
     orderBtn.onclick = () => {
       copyDiscountCode(code).then(markCopied);
       if (evKey) sendStat(evKey + '_src_' + (srcCode || 'school'), 'click');
+      if (evKey) sendStat(evKey + '_buy_' + (srcCode || 'school'), 'click');
     };
   } else {
     orderBtn.style.display = 'none';
@@ -2030,7 +2031,7 @@ loadAll();
 
 <!-- 「現正開團中」置頂橫列邏輯已抽成跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css）；
      取代原本只挑開學相關品牌的 getOpenSchoolBrands/renderOpenGroupBuyBar，改抓全站目前開團中的團購 -->
-<script src="openGroupBuy.js?v=6"></script>
+<script src="openGroupBuy.js?v=7"></script>
 
 </body>
 </html>

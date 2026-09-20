@@ -1071,6 +1071,8 @@ function attachStatTracking(el, ev, clickable, srcOverride) {
     el.addEventListener('click', () => {
       sendStat(key, 'click');
       sendStat(key + '_src_' + (srcOverride || currentMode), 'click');
+      // 購買點擊：沒有選擇視窗（直連跳轉）＝這次點擊就是開啟購買網址；有視窗的等按「前往下單」才算
+      if (ev.url && !needsGroupModal(ev)) sendStat(key + '_buy_' + (srcOverride || currentMode), 'click');
     });
   }
 }
@@ -1634,7 +1636,7 @@ function buildGroupCard(ev, grayOut, srcOverride) {
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
   } else if (advanced) {
-    card.addEventListener('click', () => openGroupChoiceModal(ev));
+    card.addEventListener('click', () => openGroupChoiceModal(ev, srcOverride || 'now'));
   }
   attachStatTracking(card, ev, clickable, srcOverride || 'now');
   card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
@@ -1838,7 +1840,7 @@ function renderAllMode() {
         bar.target = '_blank';
         bar.rel = 'noopener noreferrer';
       } else if (advanced) {
-        bar.addEventListener('click', () => openGroupChoiceModal(item.ev));
+        bar.addEventListener('click', () => openGroupChoiceModal(item.ev, currentMode));
       } else if (hasEarlyBird) {
         bar.addEventListener('click', () => showEarlyBirdModal(item.ev));
       }
@@ -1964,7 +1966,7 @@ function renderSingleDayMode(mode) {
             bar.target = '_blank';
             bar.rel = 'noopener noreferrer';
           } else if (advanced) {
-            bar.addEventListener('click', () => openGroupChoiceModal(ev));
+            bar.addEventListener('click', () => openGroupChoiceModal(ev, currentMode));
           } else if (hasEarlyBird) {
             bar.addEventListener('click', () => showEarlyBirdModal(ev));
           }
@@ -2036,7 +2038,7 @@ function closeEarlyBirdModal() {
   document.getElementById('earlyBirdModal').classList.remove('show');
 }
 
-function openGroupChoiceModal(ev) {
+function openGroupChoiceModal(ev, srcCode) {
   const brand = (ev.recipeBrand || '').trim();
   const code = (ev.discountCode || '').trim();
   const bookBrand = bookTeamBrandOf(ev);
@@ -2070,6 +2072,7 @@ function openGroupChoiceModal(ev) {
   orderBtn.href = ev.url;
   orderBtn.onclick = () => {
     sendStat(baseKey + '_order', 'click');
+    sendStat(baseKey + '_buy_' + (srcCode || currentMode), 'click');
     // 有折扣碼時，點「前往下單」順手幫使用者複製，貼到下單頁就能用（不擋跳轉）
     if (code) copyToClipboard(code).then(flashGcCopied);
   };
