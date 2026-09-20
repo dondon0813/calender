@@ -1807,13 +1807,23 @@ function renderSetEventOptions(selectedId) {
   const sel = document.getElementById('sEvent');
   if (!sel) return;
   sel.innerHTML = '<option value="">不綁定</option>';
+  const known = new Set(['']);
   (PACKAGE_DATA.setEventChoices || []).forEach(e => {
+    known.add(e.id);
     const opt = document.createElement('option');
     opt.value = e.id;
     const range = (e.startDate && e.endDate) ? `（${formatAvailableFrom(e.startDate)}–${formatAvailableFrom(e.endDate)}）` : '';
     opt.textContent = `${e.title || '未命名團購'}${range}`;
     sel.appendChild(opt);
   });
+  // 下拉只列繪本相關書團（2026-09-21）；套組若綁著清單以外的團（太舊或已下架），補進下拉，避免編輯存檔時綁定被洗掉
+  if (selectedId && !known.has(selectedId)) {
+    const s = (PACKAGE_DATA.sets || []).find(x => x.eventId === selectedId);
+    const opt = document.createElement('option');
+    opt.value = selectedId;
+    opt.textContent = (s && s.eventTitle) || '（已下架或未發布的團）';
+    sel.appendChild(opt);
+  }
   sel.value = selectedId || '';
 }
 
