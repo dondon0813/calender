@@ -1,0 +1,17 @@
+/* ============================================================
+   原本的粉橘色系（classic）— 2026-09-20 存檔
+   原色本體＝ shared.css 與各頁 <style> 裡的變數（改版時完全沒動），所以「切回舊色」＝不載入 theme-lotus.css。
+   這份只補一件事：藕粉奶茶改版時，冷凍團的標記方式從 class「cat-frozen」（整顆藍底）改成「cat-狀態 ＋ is-frozen」
+   （疊加屬性），index.html 不再輸出 cat-frozen；為了切回舊色時冷凍團仍是藍底雪花，把舊規則原樣搬到 is-frozen。
+   完整還原點（含 HTML 標記）＝ git tag theme-default-20260919（兩個 repo 都有）。
+   載入方式見 theme.js。
+   ============================================================ */
+.ebar-wrap.is-frozen {
+  background-color: var(--ix-frozen-bg);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><text x='8' y='46' font-size='42' fill='white' fill-opacity='0.35'>%E2%9D%84</text></svg>");
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  background-size: 34px 34px;
+  border: 1px solid var(--ix-frozen-border);
+  color: var(--ix-frozen-text);
+}

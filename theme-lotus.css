@@ -1,11 +1,11 @@
 /* ============================================================
    藕粉奶茶色系（正式版）— 2026-09-19 雪莉逐項預覽定案
    規格正本：dondon-platform/docs/11-theme-lotus-milktea.md
-   還原點：git tag theme-default-20260919；要整個改回＝把各頁 <head> 最後那行
-   <link rel="stylesheet" href="theme-lotus.css?v=N"> 拿掉即可。
-   過渡期作法：這是一層「覆寫」（放在各頁 <style> 之後載入，所以用 !important）。
-   目前掛載：index／recipes／school-list／picture-books／star-card／learn／kids／school-labels／ibon-upload／name-sticker-generator。
-   其餘頁面（後台、calendar-poster 等工具頁）尚未掛＝維持舊配色；全部轉完後再把數值收進 shared.css。
+   還原點：git tag theme-default-20260919。切換色系＝改 theme.js 的 SITE_THEME（或網址加 ?theme=classic 自己先試），原本的粉橘色存檔在 theme-classic.css。
+   作法：這是一層「覆寫」（放在各頁 <style> 之後載入，所以用 !important）。
+   目前透過 theme.js 載入（各頁 <head> 最後一行 <script src="theme.js">）：index／recipes／school-list／picture-books／star-card／learn／kids／school-labels／ibon-upload／name-sticker-generator。
+   後台另有 theme-lotus-admin.css（只掛 admin／office／file-inbox）；會員端（/member、/materials、/blog）在 Vercel 各自的 layout。
+   刻意不把數值收進 shared.css（2026-09-20 定）：保留覆寫層架構，才能用 theme.js 一鍵切回舊色。
    ============================================================ */
 :root{
 --c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
