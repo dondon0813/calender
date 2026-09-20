@@ -11,7 +11,7 @@
    ============================================================ */
 (function () {
   var SITE_THEME = 'lotus';
-  var CSS_VERSION = '4'; // theme-lotus.css／theme-classic.css 任一改動就加 1
+  var CSS_VERSION = '5'; // theme-lotus.css／theme-classic.css 任一改動就加 1
   var theme = SITE_THEME;
   var m = /[?&]theme=(lotus|classic|default)(?![\w-])/.exec(location.search);
   if (m && m[1] !== 'default') theme = m[1]; // 就算下面 localStorage 被擋，當次載入也照網址生效

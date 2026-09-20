@@ -120,8 +120,12 @@ body{background:#FFFFFF!important}
 .learn-card:hover{box-shadow:0 8px 18px rgba(90,74,66,.10)!important}
 .learn-card-books{background:#F3E3E1!important}
 .learn-card-toys{background:#EAF0E6!important}
-.learn-card:not(.learn-card-books):not(.learn-card-toys){background:#F4ECE3!important}
+.learn-card:not(.learn-card-books):not(.learn-card-toys){background:#E6EFCF!important} /* 教材館：青蘋果綠（2026-09-20 雪莉選 C，與食譜的奶茶色分開） */
 /* 標籤頁 school-labels.html：說明方塊改奶茶色、小標題膠囊改奶茶淡底、強調字改深藕粉 */
 .box{background:#F5EFE9!important}
 .box .desc b{color:#B07F83!important}
 body:has(.box) .section-title{background:#F1E8E0!important}
+/* 首頁入口卡「教材館」（2026-09-20 雪莉選 C 青蘋果綠）：原本和「觀看食譜」同為奶茶色、太像；經典色系不受影響 */
+.home-card-yellow{background:#E6EFCF!important}
+.home-card-yellow .home-card-title,.home-card-yellow .home-card-icon{color:#5F7A38!important}
+.home-card-yellow .home-card-title-divider{border-color:#5F7A38!important}
