@@ -84,3 +84,7 @@ body{background:#FFFFFF!important}
   50%{box-shadow:0 2px 6px rgba(0,0,0,.2),0 0 0 6px color-mix(in srgb,#B5485A 0%,transparent)}
 }
 @media (prefers-reduced-motion:reduce){.gs-today-badge{animation:none!important}}
+
+/* 工作首頁按鈕／便利小工具圖示：不要外框、不要陰影（雪莉 09-20：按鈕周圍灰灰的一層）。框線本身已在 admin.html 改透明，這裡補拿掉暖棕陰影 */
+.home-card{border-color:transparent!important;box-shadow:none!important}
+.tool-icon-img-wrap{border-color:transparent!important;box-shadow:none!important}

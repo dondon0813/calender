@@ -466,7 +466,7 @@
   }
   .home-card {
     position: relative;
-    border: 1px solid #E6DCD2;
+    border: 1px solid transparent;
     border-radius: 18px;
     background: #F5EFE9;
     padding: 26px 10px 20px;
@@ -506,7 +506,7 @@
     height: 58px;
     border-radius: 16px;
     background: #F5EFE9;
-    border: 1px solid #E6DCD2;
+    border: 1px solid transparent;
     box-shadow: 0 3px 8px rgba(180,130,90,0.18);
     display: flex;
     align-items: center;
@@ -2041,7 +2041,7 @@
     align-items: center;
     gap: 18px;
     background: #F5EFE9;
-    border: 1px solid #E6DCD2;
+    border: 1px solid transparent;
     border-top: none;
     border-radius: 0 0 14px 14px;
     padding: 9px 18px;
@@ -3313,7 +3313,7 @@
   .acct-recon-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .acct-recon-actions .form-status{ margin:0; font-size:12px; }
   /* 對帳清單裡的虛擬列（行事曆帶入、資料庫還沒有帳務紀錄）：提示＋回填按鈕，取代輸入表單 */
-  .acct-recon-virtual-hint{font-size:12.5px;color:#8B6E5E;background:#F5EFE9;border:1px solid #E6DCD2;border-radius:8px;padding:8px 10px;margin:6px 0}
+  .acct-recon-virtual-hint{font-size:12.5px;color:#8B6E5E;background:#F1E8E0;border:1px solid transparent;border-radius:8px;padding:8px 10px;margin:6px 0}
   /* 帳務編輯視窗裡的「修改紀錄」清單 */
   #acctHistoryBox{margin-top:8px;max-height:160px;overflow:auto;font-size:11.5px;color:#7D6A5F;border-top:1px dashed #E6DCD2;padding-top:6px}
   #acctHistoryBox .acct-hist-item{margin:0 0 6px}
@@ -4251,7 +4251,7 @@
   #pbaToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #pbaToast.error { background: var(--c-danger); }
 </style>
-<link rel="stylesheet" href="theme-lotus-admin.css?v=6">
+<link rel="stylesheet" href="theme-lotus-admin.css?v=7">
 </head>
 <body>
 
@@ -6279,7 +6279,7 @@
   <div class="modal-box">
     <button class="modal-close" onclick="closeSettingsModal()">✕</button>
     <h3>⚙️ 設定：修改密碼</h3>
-    <p id="settingsForceHint" style="display:none; font-size:12.5px; color:#8B6E5E; background:#F5EFE9; border:1px solid #E6DCD2; border-radius:8px; padding:8px 10px; margin:0 0 10px;">🔒 你目前使用的是一次性密碼，請先更換密碼，完成前無法使用其他功能。</p>
+    <p id="settingsForceHint" style="display:none; font-size:12.5px; color:#8B6E5E; background:#F1E8E0; border:1px solid transparent; border-radius:8px; padding:8px 10px; margin:0 0 10px;">🔒 你目前使用的是一次性密碼，請先更換密碼，完成前無法使用其他功能。</p>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="oldPasswordInput">目前密碼</label>
       <input type="password" id="oldPasswordInput" autocomplete="off">
@@ -6302,7 +6302,7 @@
     <button class="modal-close" onclick="closeAcctEditModal()">✕</button>
     <h3 id="acctEditTitle">➕ 新增開團紀錄</h3>
     <div id="acctEditLinks" style="display:none; gap:8px; margin-bottom:10px;"></div>
-    <div id="acctBackfillHint" style="display:none; font-size:12.5px; color:#8B6E5E; background:#F5EFE9; border:1px solid #E6DCD2; border-radius:8px; padding:8px 10px; margin-bottom:10px;">
+    <div id="acctBackfillHint" style="display:none; font-size:12.5px; color:#8B6E5E; background:#F1E8E0; border:1px solid transparent; border-radius:8px; padding:8px 10px; margin-bottom:10px;">
       ⚠️ 這個按鈕只用來補登「系統沒有自動抓到」的舊帳務。正常情況下只要有開團就會在行事曆排日期，對帳畫面會自動列出待回填的團，不需要在這裡手動新增。
     </div>
     <div class="task-form" style="margin:0; padding:0; background:none;">
@@ -7141,11 +7141,11 @@
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
-<script src="subscriptions.js?v=5"></script>
+<script src="subscriptions.js?v=6"></script>
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=4"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=13"></script>
+<script src="fans.js?v=14"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
@@ -7191,7 +7191,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=13"></script>
+<script src="lottery.js?v=14"></script>
 <script src="admin.js?v=100"></script>
 <script src="memo.js?v=5"></script>
 
