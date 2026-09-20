@@ -590,7 +590,8 @@
     text-align: center;
     flex: 1;
   }
-  .rc-info-item .rc-info-icon { font-size: 15px; }
+  .rc-info-item .rc-info-icon { font-size: 15px; color: var(--c-brown); }
+  .rc-info-item .rc-info-icon svg { display: block; margin: 0 auto; }
   .rc-info-item .rc-info-label {
     font-size: 10px;
     color: var(--c-muted);
@@ -1118,7 +1119,7 @@
     margin-top: 10px;
   }
   .prep-seasoning-line::before {
-    content: '🧂 調味料：';
+    content: '調味料：';
     font-weight: 800;
     color: var(--rcp-peach-accent);
   }
@@ -2621,13 +2622,18 @@ function openRecipeModal(recipe) {
 
   const infoRowEl = document.getElementById('recModalInfoRow');
   const infoItems = [];
+  // 三個小資訊的圖示改線條 SVG（2026-09-20 雪莉指示，不用 emoji）
+  const rcInfoSvg = d => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const RC_ICON_TIME = rcInfoSvg('<circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />');
+  const RC_ICON_AGE = rcInfoSvg('<circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" />');
+  const RC_ICON_LEVEL = rcInfoSvg('<path d="M6 19v-4" /><path d="M12 19v-8" /><path d="M18 19V6" />');
   const cookTime = String(recipe['烹調時間'] || '').trim();
-  if (cookTime) infoItems.push({ icon: '⏱', label: '烹調時間', value: cookTime });
+  if (cookTime) infoItems.push({ icon: RC_ICON_TIME, label: '烹調時間', value: cookTime });
   const age = recipe['適合月齡'];
-  if (age) infoItems.push({ icon: '👶', label: '適合年齡', value: age });
+  if (age) infoItems.push({ icon: RC_ICON_AGE, label: '適合年齡', value: age });
   const diffRaw = parseInt(recipe['難易度'], 10);
   if (diffRaw >= 1 && diffRaw <= 5) {
-    infoItems.push({ icon: '🩷', label: '難易度', value: '★'.repeat(diffRaw) + '☆'.repeat(5 - diffRaw) });
+    infoItems.push({ icon: RC_ICON_LEVEL, label: '難易度', value: '★'.repeat(diffRaw) + '☆'.repeat(5 - diffRaw) });
   }
   if (infoItems.length) {
     infoRowEl.innerHTML = infoItems.map(it => `
