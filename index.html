@@ -106,6 +106,12 @@
     flex-wrap: wrap;
   }
 
+  /* ===== 主選單：顯示模式（2026-09-21 兩層選單規則）＝整條有底色的大按鈕列，單選；放不下整條左右滑 ===== */
+  .mode-tabs { display: flex; background: var(--c-orange-bg-2); border-radius: 999px; padding: 3px; margin: 0 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mode-tabs::-webkit-scrollbar { display: none; }
+  .mode-tab { flex: 1 0 auto; border: 0; background: transparent; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; color: var(--c-brown); cursor: pointer; font-family: inherit; white-space: nowrap; -webkit-appearance: none; appearance: none; }
+  .mode-tab.on { background: #fff; color: var(--c-primary-dark); }
+
   /* ===== 團購搜尋框（控制列最前面）===== */
   .search-box {
     position: relative;
@@ -750,16 +756,13 @@
         <input type="search" id="calSearchInput" class="ico-search" placeholder="搜尋團名…" aria-label="搜尋團購" autocomplete="off" enterkeyhint="search">
         <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="清除搜尋" style="display:none;">✕</button>
       </div>
-      <select id="modeSelect">
-        <option value="all">顯示全部</option>
-        <option value="start">開團日</option>
-        <option value="end">結團日</option>
-        <option value="list" selected>現正開團中</option>
-      </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
     </div>
   </div>
+
+  <!-- 主選單：顯示模式（現正開團中／開團日／結團日／顯示全部）；搜尋、月份、重新整理是副選單，留在上面的控制列 -->
+  <div class="mode-tabs" id="modeTabs" role="tablist"></div>
 
   <div class="status" id="status">資料載入中…</div>
 
@@ -1085,8 +1088,35 @@ let currentSearchQuery = '';
 const urlMode = new URLSearchParams(location.search).get('mode');
 if (['all', 'start', 'end', 'list'].includes(urlMode)) {
   currentMode = urlMode;
-  document.getElementById('modeSelect').value = urlMode;
 }
+
+// 顯示模式大按鈕列（原本是下拉選單）；順序＝預設「現正開團中」排第一
+const MODE_TABS = [
+  { v: 'list', t: '現正開團中' },
+  { v: 'start', t: '開團日' },
+  { v: 'end', t: '結團日' },
+  { v: 'all', t: '顯示全部' },
+];
+function renderModeTabs() {
+  const el = document.getElementById('modeTabs');
+  el.innerHTML = '';
+  MODE_TABS.forEach(m => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'tab');
+    btn.className = 'mode-tab' + (currentMode === m.v ? ' on' : '');
+    btn.textContent = m.t;
+    btn.addEventListener('click', () => {
+      if (currentMode === m.v) return;
+      clearSearch();
+      currentMode = m.v;
+      renderModeTabs();
+      render();
+    });
+    el.appendChild(btn);
+  });
+}
+renderModeTabs();
 
 const MODE_VISIBLE_DAYS = {
   all:   [0,1,2,3,4,5,6],
@@ -2152,11 +2182,6 @@ function closeGroupChoiceModal() {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', loadData);
-document.getElementById('modeSelect').addEventListener('change', (e) => {
-  clearSearch();
-  currentMode = e.target.value;
-  render();
-});
 
 loadCustomBlocks().then(() => { if (currentMode === 'list') render(); });
 loadData();
