@@ -62,7 +62,7 @@ function clSetStatus(text, isError) {
   const el = document.getElementById('changelogStatus');
   if (!el) return;
   el.textContent = text || '';
-  el.style.color = isError ? 'var(--c-danger, #e0654f)' : '';
+  el.style.color = isError ? 'var(--c-danger, #B5485A)' : '';
 }
 
 /** 把選定日期那天已存的內容帶進文字框 */
@@ -108,10 +108,10 @@ function renderChangelogList() {
     const items = day.lines.map(line => {
       const onFront = shown < CHANGELOG_PUBLIC_LIMIT;
       shown++;
-      return `<li style="padding:4px 0; line-height:1.6;">${clEscapeHtml(line)}${onFront ? ' <span style="font-size:11px; font-weight:700; color:#FF6F91; background:#FFF0F3; border-radius:999px; padding:1px 7px; white-space:nowrap;">前台顯示中</span>' : ''}</li>`;
+      return `<li style="padding:4px 0; line-height:1.6;">${clEscapeHtml(line)}${onFront ? ' <span style="font-size:11px; font-weight:700; color:#8B6E5E; background:#F3E3E1; border-radius:999px; padding:1px 7px; white-space:nowrap;">前台顯示中</span>' : ''}</li>`;
     }).join('');
     return `
-      <div style="background:#fff; border:1px solid #FFE3CC; border-radius:12px; padding:10px 14px; margin-bottom:10px;">
+      <div style="background:#fff; border:1px solid #E6DCD2; border-radius:12px; padding:10px 14px; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <strong style="flex:1; min-width:140px;">${clEscapeHtml(clDateLabel(day.date))}</strong>
           <button class="task-mini-btn" data-cl-edit="${clEscapeHtml(day.date)}">✏️ 編輯</button>

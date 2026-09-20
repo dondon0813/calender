@@ -68,7 +68,7 @@ function faPaidBadge(order) {
   const label = order.status || (ok ? '已付款' : '未付款');
   return ok
     ? '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#e6f4ea; color:#1e7a3c; font-size:11px; white-space:nowrap;">' + faEscapeHtml(label) + '</span>'
-    : '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#fff0f3; color:#b23a2e; font-size:11px; white-space:nowrap;">' + faEscapeHtml(label) + '</span>';
+    : '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F3E3E1; color:#B5485A; font-size:11px; white-space:nowrap;">' + faEscapeHtml(label) + '</span>';
 }
 
 // ===== 表尚未建立時鎖住操作 =====
@@ -96,7 +96,7 @@ function loadFanAdminView(forceReload) {
     if (data.tableReady === false) {
       FAN_TABLE_READY = false;
       FAN_UNCLAIMED_LIST = [];
-      banner.innerHTML = '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 會員資料表尚未建立（待 db push）</div>';
+      banner.innerHTML = '<div style="background:#F5EFE9; border:1px solid #E6DCD2; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 會員資料表尚未建立（待 db push）</div>';
       area.innerHTML = '<div class="task-empty">資料表尚未建立</div>';
       faSetControlsDisabled(true);
       return;
@@ -267,7 +267,7 @@ function renderFanBirthdayReminders() {
   }
   if (!lines.length) { box.innerHTML = ''; return; }
   lines.sort((a, b) => a.d - b.d);
-  box.innerHTML = '<div style="background:#fff0f3; border:1.5px dashed var(--c-primary); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:2;">' +
+  box.innerHTML = '<div style="background:#F3E3E1; border:1.5px dashed var(--c-primary); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:2;">' +
     '<b>🎁 生日提醒（已分級會員，14 天內）</b><br>' + lines.map(l => l.html).join('<br>') + '</div>';
 }
 
@@ -322,7 +322,7 @@ function renderFanMemberList() {
     if (m.lineId || m.lineNickname) badges.push('<span title="LINE：' + faEscapeHtml([m.lineId, m.lineNickname].filter(Boolean).join('／')) + '">💬</span>');
     if (m.childrenCount > 0) badges.push('<span title="寶貝 ' + m.childrenCount + ' 位">👶×' + m.childrenCount + '</span>');
     if (m.marketingConsent) badges.push('<span title="同意收到行銷訊息">✉️</span>');
-    const emailNote = m.emailsCount > 1 ? '<span style="color:#a05a00; font-size:11px;">（+' + (m.emailsCount - 1) + ' 信箱）</span>' : '';
+    const emailNote = m.emailsCount > 1 ? '<span style="color:#8B6E5E; font-size:11px;">（+' + (m.emailsCount - 1) + ' 信箱）</span>' : '';
     const tierBadge = m.adminTier
       ? ' <span style="background:var(--c-primary); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;">' + faEscapeHtml(m.adminTier) + '</span>' : '';
     const open = FAN_MEMBER_OPEN === m.userId;
@@ -368,7 +368,7 @@ function faMemberDetailRow(m) {
   const info = (label, val) =>
     '<div style="min-width:160px;"><div style="font-size:11px; color:var(--c-text-light);">' + label + '</div>' +
     '<div style="font-weight:700;">' + (val || '—') + '</div></div>';
-  return '<tr class="fa-mem-detail"><td colspan="7" style="padding:12px 16px; background:#fffbf5; border-bottom:2px solid var(--c-line);">' +
+  return '<tr class="fa-mem-detail"><td colspan="7" style="padding:12px 16px; background:#F5EFE9; border-bottom:2px solid var(--c-line);">' +
     '<div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:10px;">' +
     info('🎂 生日', faEscapeHtml(m.birthday)) +
     info('📞 電話', faEscapeHtml(m.phone)) +
@@ -408,7 +408,7 @@ async function faLoadMemberOrders(userId) {
     renderFanMemberOrders(userId);
   } catch (err) {
     const b = document.getElementById('faMemOrdersBox');
-    if (b && b.dataset.uid === userId) b.innerHTML = '<div style="font-size:12px; color:#b23a2e;">訂單讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
+    if (b && b.dataset.uid === userId) b.innerHTML = '<div style="font-size:12px; color:#B5485A;">訂單讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
   }
 }
 
@@ -596,7 +596,7 @@ function renderFanClaimsBadge() {
   const el = document.getElementById('fanClaimsBadge');
   if (!el) return;
   const n = FAN_CLAIMS_STATS.pending || 0;
-  el.innerHTML = n ? ' <span style="display:inline-block; min-width:16px; padding:0 5px; border-radius:999px; background:#FF6F91; color:#fff; font-size:11px; line-height:16px; text-align:center;">' + n + '</span>' : '';
+  el.innerHTML = n ? ' <span style="display:inline-block; min-width:16px; padding:0 5px; border-radius:999px; background:#B07F83; color:#fff; font-size:11px; line-height:16px; text-align:center;">' + n + '</span>' : '';
 }
 
 async function faLoadClaimReports(force) {
@@ -654,7 +654,7 @@ function faClaimsDiffCell(orderVal, reportVal, isMoney) {
   const text = isMoney ? faMoney(orderVal) : o;
   const masked = o.indexOf('*') !== -1;
   const same = isMoney ? Number(orderVal) === Number(reportVal) : o.trim().toLowerCase() === String(reportVal || '').trim().toLowerCase();
-  const style = (!masked && !same) ? ' style="padding:6px 8px; color:#b23a2e; font-weight:600;"' : ' style="padding:6px 8px;"';
+  const style = (!masked && !same) ? ' style="padding:6px 8px; color:#B5485A; font-weight:600;"' : ' style="padding:6px 8px;"';
   return '<td' + style + '>' + faEscapeHtml(text || '—') + '</td>';
 }
 
@@ -664,10 +664,10 @@ function faClaimsStatusBadge(r) {
       (r.resolvedBy === 'auto' ? '（系統自動）' : r.resolvedBy ? '（' + faEscapeHtml(r.resolvedBy) + '）' : '') + '</span>';
   }
   if (r.status === 'rejected') {
-    return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#fff0f3; color:#b23a2e; font-size:11px;">已駁回' +
+    return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F3E3E1; color:#B5485A; font-size:11px;">已駁回' +
       (r.resolvedBy ? '（' + faEscapeHtml(r.resolvedBy) + '）' : '') + '</span>';
   }
-  return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#fff7ee; color:#a05a00; font-size:11px;">待核對</span>';
+  return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F5EFE9; color:#8B6E5E; font-size:11px;">待核對</span>';
 }
 
 function faClaimsCardHtml(r) {
@@ -708,7 +708,7 @@ function faClaimsCardHtml(r) {
       '<span style="margin-left:auto;">' + actions + '</span>' +
     '</div>' +
     '<div style="font-size:13px; margin-bottom:6px;">客人填的：<b>' + faEscapeHtml(faMoney(r.amount)) + '</b>｜' + faEscapeHtml(r.buyerName) + '｜' + faEscapeHtml(r.buyerEmail) + '</div>' +
-    (r.hint ? '<div style="font-size:12px; color:#a05a00; margin-bottom:6px;">💡 系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
+    (r.hint ? '<div style="font-size:12px; color:#8B6E5E; margin-bottom:6px;">💡 系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
     (r.note ? '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">📝 備註（客人看得到）：' + faEscapeHtml(r.note) + '</div>' : '') +
     candHtml +
     '</div>';
@@ -905,7 +905,7 @@ function loadFanRewards(force) {
     if (data.tableReady === false) {
       FAN_REWARDS_READY = false;
       FAN_REWARDS_CFG = data;
-      banner.innerHTML = '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 第二期資料表尚未建立（待 db push）</div>';
+      banner.innerHTML = '<div style="background:#F5EFE9; border:1px solid #E6DCD2; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 第二期資料表尚未建立（待 db push）</div>';
       ['fanRuleListArea', 'fanVruleListArea', 'fanShopListArea'].forEach(id => {
         document.getElementById(id).innerHTML = '<div class="task-empty">資料表尚未建立</div>';
       });
@@ -1281,7 +1281,7 @@ function renderFanWallet(data) {
   const ledgerRows = ledger.map(l => {
     const delta = Number(l.delta) || 0;
     const deltaStr = (delta > 0 ? '+' : '') + delta;
-    const deltaColor = delta > 0 ? '#1e7a3c' : (delta < 0 ? '#b23a2e' : 'inherit');
+    const deltaColor = delta > 0 ? '#1e7a3c' : (delta < 0 ? '#B5485A' : 'inherit');
     return '<tr style="border-bottom:1px solid var(--c-line);">' +
       '<td style="padding:6px 10px; white-space:nowrap;">' + faEscapeHtml(faDate(l.createdAt)) + '</td>' +
       '<td style="padding:6px 10px; white-space:nowrap;">' + faEscapeHtml(l.currencyName) + '</td>' +
@@ -1405,7 +1405,7 @@ async function faLoadFanAttempts() {
     const rows = attempts.map(a => {
       const mark = a.success
         ? '<span style="color:#1e7a3c;">✓ 成功</span>'
-        : '<span style="color:#b23a2e;">✗ 失敗</span>';
+        : '<span style="color:#B5485A;">✗ 失敗</span>';
       return '<tr style="border-bottom:1px solid var(--c-line);">' +
         '<td style="padding:6px 10px; white-space:nowrap;">' + faEscapeHtml(faDate(a.createdAt)) + '</td>' +
         '<td style="padding:6px 10px;">' + faEscapeHtml(a.member || '') + '</td>' +

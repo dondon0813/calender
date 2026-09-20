@@ -751,7 +751,8 @@ function renderSingleDayMode(mode) {
           const bar = document.createElement('div');
           // 已結團的灰色優先於冷凍團藍色（跟前台 index.html 同一套規則）：冷凍標示只在團還沒結束時
           // 才有意義，不然冷凍團結團後會永遠掛著藍色，在後台看起來像還在開團
-          const catClass = unpublished ? 'cat-unpublished' : ((frozen && status !== 'ended') ? 'cat-frozen' : `cat-${status}`);
+          // 2026-09-20 藕粉奶茶改版：冷凍團改「疊加屬性」（底色跟狀態、另加 is-frozen 雪花；樣式在 theme-lotus-admin.css，同前台）
+          const catClass = unpublished ? 'cat-unpublished' : (`cat-${status}` + ((frozen && status !== 'ended') ? ' is-frozen' : ''));
           bar.className = `ebar ebar-wrap ${catClass} clickable`;
           bar.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1305,7 +1306,7 @@ function setPrMsg(id, text, ok) {
   const el = document.getElementById(id);
   if (!el) return;
   el.textContent = text;
-  el.style.color = ok === true ? '#72A576' : (ok === false ? '#d9534f' : '#c9a892');
+  el.style.color = ok === true ? '#72A576' : (ok === false ? '#B5485A' : '#CDBBAD');
 }
 
 // 送出公關品狀態更新（樂觀更新，失敗還原）
@@ -1313,7 +1314,7 @@ async function savePrStatus(key, fields, msgElId) {
   const prev = prStatusMap[key] ? Object.assign({}, prStatusMap[key]) : { status: '', url: '', location: '' };
   prStatusMap[key] = Object.assign({}, prev, fields);
   const msgEl = msgElId ? document.getElementById(msgElId) : null;
-  if (msgEl) { msgEl.textContent = '儲存中…'; msgEl.style.color = '#c9a892'; }
+  if (msgEl) { msgEl.textContent = '儲存中…'; msgEl.style.color = '#CDBBAD'; }
   // 若行事曆正顯示狀態小圖示，即時更新
   if (isViewShown('calendar') && prChipOn) render();
   try {
@@ -1325,7 +1326,7 @@ async function savePrStatus(key, fields, msgElId) {
     refreshPrItemViews_();
   } catch (err) {
     prStatusMap[key] = prev;
-    if (msgEl) { msgEl.textContent = '儲存失敗'; msgEl.style.color = '#d9534f'; }
+    if (msgEl) { msgEl.textContent = '儲存失敗'; msgEl.style.color = '#B5485A'; }
     if (isViewShown('calendar') && prChipOn) render();
     throw err;
   }
@@ -2242,13 +2243,13 @@ async function saveMemo() {
 
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
     statusEl.textContent = '尚未設定同步網址';
-    statusEl.style.color = '#e0654f';
+    statusEl.style.color = '#B5485A';
     return;
   }
 
   saveBtn.disabled = true;
   statusEl.textContent = '儲存中…';
-  statusEl.style.color = '#a89888';
+  statusEl.style.color = '#A3948A';
   try {
     await postTask({ type: 'memo', key, text });
     memoMap[key] = text;
@@ -2256,7 +2257,7 @@ async function saveMemo() {
     statusEl.style.color = '#9ACB85';
   } catch (err) {
     statusEl.textContent = '儲存失敗：' + err.message;
-    statusEl.style.color = '#e0654f';
+    statusEl.style.color = '#B5485A';
   }
   saveBtn.disabled = false;
 }
@@ -2270,13 +2271,13 @@ async function saveBackendUrl() {
 
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
     statusEl.textContent = '尚未設定同步網址';
-    statusEl.style.color = '#e0654f';
+    statusEl.style.color = '#B5485A';
     return;
   }
 
   saveBtn.disabled = true;
   statusEl.textContent = '儲存中…';
-  statusEl.style.color = '#a89888';
+  statusEl.style.color = '#A3948A';
   try {
     await postTask({ type: 'url', key, text });
     urlMap[key] = text;
@@ -2294,7 +2295,7 @@ async function saveBackendUrl() {
     statusEl.style.color = '#9ACB85';
   } catch (err) {
     statusEl.textContent = '儲存失敗：' + err.message;
-    statusEl.style.color = '#e0654f';
+    statusEl.style.color = '#B5485A';
   }
   saveBtn.disabled = false;
 }
@@ -3786,7 +3787,7 @@ function renderDispatchedList() {
     const summary = extraSummary(task);
     row.innerHTML =
       `<span class="di-to">👤 ${escHtml(owner)}</span>` +
-      `<span class="di-name">${escHtml(taskDisplayName(task))}${summary ? '<span style="color:#4a7fb5; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}${task.date ? ' <span style="color:#a89888; font-size:11px;">📅 ' + escHtml(task.date) + '</span>' : ''}</span>` +
+      `<span class="di-name">${escHtml(taskDisplayName(task))}${summary ? '<span style="color:#4A6A8F; font-size:11.5px;">（' + escHtml(summary) + '）</span>' : ''}${task.urgent ? ' 🚨' : ''}${task.date ? ' <span style="color:#A3948A; font-size:11px;">📅 ' + escHtml(task.date) + '</span>' : ''}</span>` +
       statusTagHtml(taskStatus(task));
     row.addEventListener('click', () => openTaskModal(owner, task, true));
 

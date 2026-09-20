@@ -424,7 +424,7 @@ const PBI_ENGINE_URL = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1
 const PBI_MODEL = 'isnet_quint8';
 const PBI_WEBP_QUALITY = 0.92;
 // 透明格棋盤底，讓人一眼看出「這塊真的是透明的」（抄自 bgRemover.js 的 BGR_CHECKER_BG）
-const PBI_CHECKER_BG = 'background:repeating-conic-gradient(#f3e2d3 0% 25%, #fffbf5 0% 50%) 0 0/16px 16px; border-radius:10px;';
+const PBI_CHECKER_BG = 'background:repeating-conic-gradient(#E6DCD2 0% 25%, #F5EFE9 0% 50%) 0 0/16px 16px; border-radius:10px;';
 
 let pbiEnginePromise = null; // 去背引擎只載一次
 let pbiWebpChecked = false;

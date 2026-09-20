@@ -594,7 +594,7 @@ function openBrandDetailModal(brand) {
   }
   // 廠商名稱做成連結，點了跳到廠商檢視彈窗（跟廠商彈窗點品牌跳品牌檢視對稱）
   const vendorLinks = vendorObjs.map(v =>
-    `<a href="javascript:void(0)" class="bv-vendor-link" data-vid="${escHtml(v.id)}" style="color:#4a7fb5; font-weight:800;">${escHtml(v.name)}</a>`
+    `<a href="javascript:void(0)" class="bv-vendor-link" data-vid="${escHtml(v.id)}" style="color:#4A6A8F; font-weight:800;">${escHtml(v.name)}</a>`
   ).join('、');
   lines.push(`<div><b>所屬廠商：</b>${vendorLinks || '－'}</div>`);
   // 分潤沒填也要顯示「尚未登記」，不然會分不出「沒填」和「這個彈窗不顯示分潤」
@@ -688,7 +688,7 @@ function renderEvBrandMatchInfo() {
     const vendors = (brand.vendorIds || []).map(vid => vendorDb.find(v => v.id === vid)).filter(Boolean);
     const pastDates = findGroupBuyDatesForBrand_(brand, excludeId);
 
-    let html = `<div style="font-weight:900; color:#4a7fb5; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
+    let html = `<div style="font-weight:900; color:#4A6A8F; margin-bottom:6px;">📇 比對到品牌資料庫：${escHtml(brand.name)}</div>`;
     const lines = [];
     const commission = bvCanSeeCommission_() ? bvCommissionText_(brand) : '';
     if (commission) lines.push('分潤：' + commission);

@@ -1,0 +1,86 @@
+/* ============================================================
+   藕粉奶茶色系 — 後台「跟前台相關」部分（2026-09-20）
+   規格正本：dondon-platform/docs/11-theme-lotus-milktea.md；數值與前台 theme-lotus.css 完全同步。
+   只掛在 admin.html（放在最後一個 <style> 之後）；回退＝拿掉那行 <link>（＋ admin.js 的 is-frozen 寫法向下相容，不需還原）。
+   範圍：整個後台（09-20 整批版）。:root 變數與前台 theme-lotus.css 同一組；食譜貼文產生器的離畫面繪製區另外釘回原值（html2canvas 成品圖不能變色）。
+   ============================================================ */
+
+/* ===== 整批版（09-20）：變數與前台同一組 ===== */
+:root{
+--c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
+--c-bg-top:#FFFFFF;--c-bg-bottom:#FFFFFF;--c-surface:#F5EFE9;--c-surface-2:#F5EFE9;--c-surface-3:#F5EFE9;
+--c-border:transparent;--c-border-light:transparent;--c-line:#E6DCD2;--c-line-2:#E6DCD2;
+--c-primary:#C99A9B;--c-primary-dark:#B07F83;--c-danger:#B5485A;
+--c-cat-0:#C99A9B;--c-cat-1:#D4A98A;--c-cat-2:#A9B99A;--c-cat-3:#9DBDB8;--c-cat-4:#8FA9C7;--c-cat-5:#B3A3C9;--c-cat-6:#D6BE8A;
+--c-coral-text:#B5485A;--c-coral-bg:#F3E3E1;--c-coral-border:transparent;
+--c-mint-text:#6F8466;--c-mint-bg:#EAF0E6;--c-mint-border:transparent;
+--c-pink-deep:#B07F83;--c-pink-text:#C99A9B;--c-pink-bg:#F3E3E1;--c-pink-bg-2:#F3E3E1;
+--c-purple-text:#84709E;--c-purple-bg:#EEE9F3;--c-purple-border:transparent;
+--c-blue-text:#4A6A8F;--c-blue-bg:#E6ECF3;--c-blue-border:transparent;
+--c-gold-text:#A8876A;--c-gold-badge-bg:#F4ECE3;--c-gold-border:transparent;--c-gold-gradient:#F4ECE3;
+--c-orange-bg:#F5EFE9;--c-orange-bg-2:#F1E8E0;--c-orange-badge-bg:#F1E8E0;--c-orange-dash:#DCCBBE;--c-orange-dash-2:#DCCBBE;--c-orange-text:#8B6E5E;
+--c-placeholder:#B9ACA2;--c-tag-bg:#BFA18B;--c-tan-border:#DCCBBE;--c-title-rule:#E5CFCD;--c-badge-bg:#F3E3E1;
+--ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#F5EFE9;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
+--ix-closing-title:#BA6B78;--ix-active-title:#A8876A;
+--ix-card-bg:#BFA18B;--ix-card-today-bg:#B07F83;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
+--ix-today-badge-bg:#B5485A;--ix-tag-bg:#C49A45;--ix-social-icon-default:#5A4A42;
+--ix-btn-intro-hover:#6F8FB3;--ix-btn-recipe-hover:#C4936F;--ix-code-hover-bg:#F1E8E0;
+--ix-c0-badge-bg:#F3E3E1;--ix-c1-badge-bg:#F1E8E0;--ix-c3-badge-bg:#E6EFEE;--ix-c6-badge-bg:#F4ECE3;--ix-c6-text:#A8876A;
+}
+body{background:#FFFFFF!important}
+:root{--c-input-bg:#FFFFFF}
+/* 食譜貼文產生器：畫成品圖用，維持原配色（只釘它用到的四個變數） */
+#pgPosterStage{--c-bg-bottom:#FFF1E6;--c-border-light:#FFE3CC;--c-text:#5a4a3f;--c-text-soft:#8a7462}
+/* 月份大數字 */
+.month-num{color:#C99A9B!important;text-shadow:2px 2px 0 #F3E3E1!important}
+/* 星期色條（同前台中間值） */
+.wd-0,.wd-6{background:#E4959F!important}
+.wd-1{background:#EAAE82!important}
+.wd-2{background:#A2C290!important}
+.wd-3{background:#86C3BD!important}
+.wd-4{background:#85ACD9!important}
+.wd-5{background:#B59FD9!important}
+/* 日期格：本月白、非本月淡奶茶、今天藕粉 */
+.month-grid{border-color:#E6DCD2!important}
+.week{border-bottom-color:#E6DCD2!important}
+.daycell,.daycell-list{background:#FFFFFF!important;border-right-color:#E6DCD2!important}
+.daycell.dim,.daycell-list.dim{background:#F5EFE9!important}
+.daycell.dim .daynum{color:#D8CFC7!important}
+.daycell.today,.daycell-list.today{background:#F3E3E1!important;box-shadow:inset 0 0 0 2px #C99A9B!important}
+.daycell.today .daynum,.daycell-list.today .daynum{color:#9C5F68!important}
+.daycell.editable:hover,.daycell-list.editable:hover{outline-color:#C99A9B!important}
+/* 膠囊與圖例：維持鮮豔配色；開團預告、已結單去框 */
+.ebar-wrap.cat-upcoming{background:#FFF6DD!important;border-color:transparent!important;color:#8A6D1F!important}
+.ebar-wrap.cat-active{background:#FFECD9!important;border-color:#FF9F4A!important;color:#B5601C!important}
+.ebar-wrap.cat-closingSoon{background:#FFE7ED!important;border-color:#FF6F91!important;color:#C1315A!important}
+.ebar-wrap.cat-ended{background:#F3EDE7!important;border-color:transparent!important;color:#7A7166!important}
+.legend-upcoming{background:#FFF6DD!important;border-color:transparent!important}
+.legend-active{background:#FFECD9!important;border-color:#FF9F4A!important}
+.legend-closingSoon{background:#FFE7ED!important;border-color:#FF6F91!important}
+.legend-ended{background:#F3EDE7!important;border-color:transparent!important}
+/* 活動標籤（抽免單等）＝暖金 */
+.ev-tag,.gs-tag-badge{background:#C49A45!important}
+/* 冷凍團＝疊加屬性：底色跟著狀態走，只加雙角雪花浮水印（admin.js 的 catClass 同步改成 cat-${status} + is-frozen） */
+.ebar-wrap.is-frozen{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>"),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>")!important;
+  background-repeat:no-repeat,no-repeat!important;
+  background-position:right -5px bottom -7px,left -4px top -5px!important;
+  background-size:28px 28px,18px 18px!important;
+}
+.legend-frozen{background:#FFFFFF url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235F97DB' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'><path d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(60 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(120 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(180 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(240 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/><path transform='rotate(300 12 12)' d='M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5'/></svg>") center/contain no-repeat!important;border-color:transparent!important}
+
+/* 現正開團中清單卡 */
+.gs-title-closing{color:#BA6B78!important}
+.gs-title-active{color:#A8876A!important}
+.gs-title-ended{color:#7D6A5F!important}
+.gs-card{background:#BFA18B!important}
+.gs-card.gs-today{background:#B07F83!important;box-shadow:none!important}
+.gs-card.gs-card-gray{background:#D8CFC7!important;color:#7A6D64!important}
+.gs-stats-bar{background:#F5EFE9!important;border-color:transparent!important}
+.gs-today-badge{background:#B5485A!important;color:#FFFFFF!important;animation:adminGsTodayBreath 2.2s ease-in-out infinite}
+.gs-frozen-badge{background:#6F8FB3!important}
+@keyframes adminGsTodayBreath{
+  0%,100%{box-shadow:0 2px 6px rgba(0,0,0,.2),0 0 0 0 color-mix(in srgb,#B5485A 45%,transparent)}
+  50%{box-shadow:0 2px 6px rgba(0,0,0,.2),0 0 0 6px color-mix(in srgb,#B5485A 0%,transparent)}
+}
+@media (prefers-reduced-motion:reduce){.gs-today-badge{animation:none!important}}

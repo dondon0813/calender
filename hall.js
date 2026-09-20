@@ -103,7 +103,7 @@ function hallRenderBanner() {
   const box = document.getElementById('hallBanner');
   if (!box) return;
   box.innerHTML = HALL_TABLE_READY ? '' :
-    '<div style="background:#ffe9c2; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
+    '<div style="background:#F3E3E1; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
     '⚠️ 教材館資料表尚未建立（待 db push），目前無法新增或儲存資源。</div>';
 }
 
@@ -123,17 +123,17 @@ function hallRenderList() {
     return;
   }
   const html = rows.map(({ r, i }) => {
-    const kindBadge = '<span style="background:#e2ebfd; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
+    const kindBadge = '<span style="background:#E6ECF3; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
       (r.kind === 'game' ? '🎮 遊戲' : r.kind === 'audio' ? '🎵 音檔' : '📄 檔案') + '</span>';
     const freeBadge = r.isFree
       ? '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">免費</span>'
-      : '<span style="background:#fff0f3; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">付費</span>';
+      : '<span style="background:#F3E3E1; color:#B5485A; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">付費</span>';
     const pubBadge = r.isPublished
       ? '<span style="background:#3ddc84; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已發布</span>'
       : '<span style="background:#ccc; color:#fff; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">草稿</span>';
     const cover = r.coverUrl
-      ? '<img src="' + hallEscape(r.coverUrl) + '" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex:none; background:#eeeeee;">'
-      : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#eeeeee; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : r.kind === 'audio' ? '🎵' : '📄') + '</div>';
+      ? '<img src="' + hallEscape(r.coverUrl) + '" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; flex:none; background:#E6DCD2;">'
+      : '<div style="width:64px; height:64px; border-radius:8px; flex:none; background:#E6DCD2; display:flex; align-items:center; justify-content:center; font-size:22px;">' + (r.kind === 'game' ? '🎮' : r.kind === 'audio' ? '🎵' : '📄') + '</div>';
     const ruleCount = (r.rules || []).length;
     const grantCount = (r.grants || []).length;
     const pageUrl = HALL_MATERIALS_PAGE_BASE + encodeURIComponent(r.slug || '');
@@ -143,13 +143,13 @@ function hallRenderList() {
         '<div style="font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + hallEscape(r.title) + '</div>' +
         '<div style="font-size:11px; color:var(--c-text-light); margin-top:2px;">/' + hallEscape(r.slug) + '　排序 ' + hallEscape(r.sort) + '</div>' +
         '<div style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">' + kindBadge + freeBadge + pubBadge +
-          (function () { const b = r.brandId && HALL_BRAND_CHOICES.find(x => x.id === r.brandId); return b ? '<span style="background:#fff0f3; color:#d9677f; border:1px solid #f3c6d3; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">' + hallEscape(b.name) + '</span>' : ''; })() +
+          (function () { const b = r.brandId && HALL_BRAND_CHOICES.find(x => x.id === r.brandId); return b ? '<span style="background:#F3E3E1; color:#8B6E5E; border:1px solid #E5CFCD; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">' + hallEscape(b.name) + '</span>' : ''; })() +
           '<span style="font-size:11px; color:var(--c-text-light);">規則 ' + ruleCount + '　開通 ' + grantCount + ' 人</span>' +
         '</div>' +
       '</div>' +
       '<a href="' + hallEscape(pageUrl) + '" target="_blank" class="task-mini-btn" style="flex:none; text-decoration:none;" onclick="event.stopPropagation();">🔗 前台頁</a>' +
       '<button type="button" class="task-mini-btn" style="flex:none;" onclick="hallOpenEdit(' + i + ')">✏️ 編輯</button>' +
-      '<button type="button" class="task-mini-btn" style="flex:none; color:#c0392b;" onclick="hallDeleteFromList(' + i + ')">🗑</button>' +
+      '<button type="button" class="task-mini-btn" style="flex:none; color:#B5485A;" onclick="hallDeleteFromList(' + i + ')">🗑</button>' +
     '</div>';
   }).join('');
   area.innerHTML = html;
@@ -244,7 +244,7 @@ function hallRenderEditor() {
       '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">' +
         '<button type="button" class="task-mini-btn" onclick="hallCloseEdit()">← 返回教材館</button>' +
         '<div style="flex:1;"></div>' +
-        (e.id ? '<button type="button" class="task-mini-btn" style="color:#c0392b;" onclick="hallDelete()">🗑 刪除</button>' : '') +
+        (e.id ? '<button type="button" class="task-mini-btn" style="color:#B5485A;" onclick="hallDelete()">🗑 刪除</button>' : '') +
       '</div>' +
 
       label('名稱 *') +
@@ -280,7 +280,7 @@ function hallRenderEditor() {
 
       label('封面圖') +
       '<div style="display:flex; gap:8px; align-items:center;">' +
-        '<div id="hfCoverPreview" style="width:96px; height:96px; border-radius:8px; background:#fff7ee; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
+        '<div id="hfCoverPreview" style="width:96px; height:96px; border-radius:8px; background:#F5EFE9; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
           (e.coverUrl ? '<img src="' + hallEscape(e.coverUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : '尚未設定') + '</div>' +
         '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
           '<input id="hfCoverUrl" style="' + inputStyle + '" value="' + hallEscape(e.coverUrl) + '" placeholder="圖片網址，或用下面按鈕上傳" oninput="hallCoverUrlInput(this.value)">' +
@@ -292,7 +292,7 @@ function hallRenderEditor() {
       '<div id="hfScreenshots"></div>' +
       '<button type="button" class="task-mini-btn" onclick="hallPickImage(function(url){ HALL_EDIT.screenshots.push(url); hallRenderScreenshots(); })">＋ 新增截圖</button>' +
 
-      label('品牌標籤（顯示在會員收藏庫、教材館、點數商城、我的兌換碼的卡片上）' + (HALL_BRAND_READY ? '' : '　<span style="color:#c0392b;">⚠ 資料庫待更新，選了也存不起來</span>')) +
+      label('品牌標籤（顯示在會員收藏庫、教材館、點數商城、我的兌換碼的卡片上）' + (HALL_BRAND_READY ? '' : '　<span style="color:#B5485A;">⚠ 資料庫待更新，選了也存不起來</span>')) +
       '<select id="hfBrand" style="' + inputStyle + '">' + brandOptions.join('') + '</select>' +
 
       label('綁定團購（純標記用，例如搭配某次開團的加購贈品；不綁定就跟團購無關）') +
@@ -390,7 +390,7 @@ function hallRenderScreenshots() {
     ? '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
       list.map((url, i) =>
         '<div style="position:relative; width:96px; height:96px;">' +
-          '<img src="' + hallEscape(url) + '" style="width:100%; height:100%; object-fit:cover; border-radius:8px; background:#eeeeee;">' +
+          '<img src="' + hallEscape(url) + '" style="width:100%; height:100%; object-fit:cover; border-radius:8px; background:#E6DCD2;">' +
           '<button type="button" class="task-mini-btn" style="position:absolute; top:-8px; right:-8px; padding:0 6px; line-height:20px; border-radius:999px;" onclick="hallRemoveScreenshot(' + i + ')">✕</button>' +
         '</div>'
       ).join('') + '</div>'
@@ -611,8 +611,8 @@ async function hallLoadCodesList() {
       return;
     }
     const statusBadge = st => {
-      if (st === 'redeemed') return '<span style="background:#dddddd; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
-      if (st === 'revoked') return '<span style="background:#fff0f3; color:#b23a2e; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
+      if (st === 'redeemed') return '<span style="background:#E6DCD2; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
+      if (st === 'revoked') return '<span style="background:#F3E3E1; color:#B5485A; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
       return '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">未使用</span>';
     };
     box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px;">' +

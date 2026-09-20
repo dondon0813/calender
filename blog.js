@@ -72,7 +72,7 @@ function blogRenderBanner() {
   const box = document.getElementById('blogBanner');
   if (!box) return;
   box.innerHTML = BLOG_TABLE_READY ? '' :
-    '<div style="background:#ffe9c2; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
+    '<div style="background:#F3E3E1; color:#8a6d3b; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:10px;">' +
     '⚠️ 文章資料表尚未建立（要先請雪莉執行 db push），目前無法新增或儲存文章。</div>';
 }
 
@@ -99,8 +99,8 @@ function blogRenderList() {
     const pin = p.pinned ? '<span style="font-size:11px;">📌</span> ' : '';
     const ev = p.eventTitle ? '<span style="font-size:11px; color:var(--c-brown);">🔗 ' + blogEscape(p.eventTitle) + '</span>' : '';
     const cover = p.coverUrl
-      ? '<img src="' + blogEscape(p.coverUrl) + '" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#eeeeee;">'
-      : '<div style="width:64px; height:44px; border-radius:8px; flex:none; background:#fff7ee; display:flex; align-items:center; justify-content:center; font-size:18px;">📝</div>';
+      ? '<img src="' + blogEscape(p.coverUrl) + '" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#E6DCD2;">'
+      : '<div style="width:64px; height:44px; border-radius:8px; flex:none; background:#F5EFE9; display:flex; align-items:center; justify-content:center; font-size:18px;">📝</div>';
     html +=
       '<div style="display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer;" onclick="blogOpenEdit(' + i + ')">' +
         cover +
@@ -170,7 +170,7 @@ function blogRenderEditor() {
         '<button class="task-mini-btn" onclick="blogCloseEdit()">← 返回列表</button>' +
         '<div style="flex:1;"></div>' +
         (e.id ? '<button class="task-mini-btn" onclick="blogPreview()">👀 預覽</button>' : '') +
-        (e.id ? '<button class="task-mini-btn" style="color:#c0392b;" onclick="blogDelete()">🗑 刪除</button>' : '') +
+        (e.id ? '<button class="task-mini-btn" style="color:#B5485A;" onclick="blogDelete()">🗑 刪除</button>' : '') +
       '</div>' +
       label('文章標題 *') +
       '<input id="bfTitle" style="' + inputStyle + '" value="' + blogEscape(e.title) + '" placeholder="例如：禾流繪本團開團啦！雪莉家私藏書單">' +
@@ -178,7 +178,7 @@ function blogRenderEditor() {
       '<textarea id="bfExcerpt" rows="2" style="' + inputStyle + '" placeholder="一兩句話介紹這篇文章">' + blogEscape(e.excerpt) + '</textarea>' +
       label('封面圖（分享到 LINE／FB 顯示的預覽圖）') +
       '<div style="display:flex; gap:8px; align-items:center;">' +
-        '<div id="bfCoverPreview" style="width:120px; height:63px; border-radius:8px; background:#fff7ee; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
+        '<div id="bfCoverPreview" style="width:120px; height:63px; border-radius:8px; background:#F5EFE9; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
           (e.coverUrl ? '<img src="' + blogEscape(e.coverUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : '尚未設定') + '</div>' +
         '<button class="task-mini-btn" onclick="blogPickImage(function(url){ BLOG_EDIT.coverUrl = url; blogRenderEditor(); })">📤 上傳封面</button>' +
         (e.coverUrl ? '<button class="task-mini-btn" onclick="BLOG_EDIT.coverUrl=\'\'; blogRenderEditor();">✕ 移除</button>' : '') +
@@ -207,7 +207,7 @@ function blogRenderEditor() {
         '<label style="font-size:13px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="bfPublished"' + (e.isPublished ? ' checked' : '') + '> ✅ 發布（勾了大家才看得到）</label>' +
       '</div>' +
       '<div style="display:flex; gap:8px; margin-top:14px;">' +
-        '<button class="task-mini-btn" style="background:var(--c-primary, #FF8FA3); color:#fff; border-color:transparent; font-weight:700; padding:9px 22px;" id="bfSaveBtn" onclick="blogSave()">💾 儲存</button>' +
+        '<button class="task-mini-btn" style="background:var(--c-primary, #C99A9B); color:#fff; border-color:transparent; font-weight:700; padding:9px 22px;" id="bfSaveBtn" onclick="blogSave()">💾 儲存</button>' +
         '<button class="task-mini-btn" onclick="blogCloseEdit()">取消</button>' +
       '</div>' +
     '</div>';
@@ -237,13 +237,13 @@ function blogRenderBlocks() {
         '<input style="' + inputStyle + '" placeholder="按鈕文字（例如：🛒 前往下單）" value="' + blogEscape(b.label || '') + '" oninput="BLOG_EDIT.blocks[' + i + '].label=this.value">' +
         '<input style="' + inputStyle + ' margin-top:6px;" placeholder="按鈕連結網址 https://…" value="' + blogEscape(b.url || '') + '" oninput="BLOG_EDIT.blocks[' + i + '].url=this.value">';
     }
-    return '<div style="border:1px dashed var(--c-border); border-radius:10px; padding:10px; margin-bottom:8px; background:#fffbf5;">' +
+    return '<div style="border:1px dashed var(--c-border); border-radius:10px; padding:10px; margin-bottom:8px; background:#F5EFE9;">' +
       '<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">' +
-        '<span style="font-size:12px; font-weight:700; color:var(--c-brown, #b5755a);">' + names[b.type] + '</span>' +
+        '<span style="font-size:12px; font-weight:700; color:var(--c-brown, #B07F83);">' + names[b.type] + '</span>' +
         '<div style="flex:1;"></div>' +
         '<button class="task-mini-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="blogMoveBlock(' + i + ',-1)">↑</button>' +
         '<button class="task-mini-btn" ' + (i === BLOG_EDIT.blocks.length - 1 ? 'disabled' : '') + ' onclick="blogMoveBlock(' + i + ',1)">↓</button>' +
-        '<button class="task-mini-btn" style="color:#c0392b;" onclick="blogRemoveBlock(' + i + ')">✕</button>' +
+        '<button class="task-mini-btn" style="color:#B5485A;" onclick="blogRemoveBlock(' + i + ')">✕</button>' +
       '</div>' + inner + '</div>';
   }).join('') || '<div style="font-size:12px; color:var(--c-text-light);">還沒有內容，用下面的按鈕加入第一塊。</div>';
 }

@@ -157,19 +157,19 @@ function renderCardSubAlerts() {
   });
   let html = '';
   if (!CARD_SUB_CYCLE_READY) {
-    html += '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+    html += '<div style="background:#F5EFE9; border:1px solid #E6DCD2; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 週期／費用欄位尚未建立（migration 20260829000001），請先在 PowerShell 執行 npx supabase db push，否則這幾欄存不進去。</div>';
   }
   if (!CARD_SUB_STAFF_READY) {
-    html += '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
+    html += '<div style="background:#F5EFE9; border:1px solid #E6DCD2; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
       '⚠️ 員工訂閱欄位尚未建立（migration 20260907000002），請先在 PowerShell 執行 npx supabase db push，否則「使用人／付款方式」存不進去。</div>';
   }
   if (billingLines.length) {
-    html += '<div style="background:#fff0f3; border:1px solid #f1998f; color:#b23a2e; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
+    html += '<div style="background:#F3E3E1; border:1px solid #D9A3A8; color:#B5485A; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
       billingLines.join('<br>') + '</div>';
   }
   if (expiryLines.length) {
-    html += '<div style="background:#fff7ee; border:1px solid #ffdb99; color:#a05a00; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
+    html += '<div style="background:#F5EFE9; border:1px solid #E6DCD2; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; line-height:1.8;">' +
       expiryLines.join('<br>') + '</div>';
   }
   box.innerHTML = html;
@@ -255,8 +255,8 @@ function renderCardSubList() {
   const rows = CARD_SUB_LIST.map(s => {
     const due = s.dueDate || s.nextBillingDate;
     let rowStyle = 'border-bottom:1px solid var(--c-line);';
-    if (due && csDaysUntil(due) <= 7) rowStyle += 'background:#fff0f3;';
-    else if (s.cardExpiry && csCardExpiryDaysUntil(s.cardExpiry) <= 60) rowStyle += 'background:#fff7ee;';
+    if (due && csDaysUntil(due) <= 7) rowStyle += 'background:#F3E3E1;';
+    else if (s.cardExpiry && csCardExpiryDaysUntil(s.cardExpiry) <= 60) rowStyle += 'background:#F5EFE9;';
 
     // 自動續費徽章：一眼看出這筆會不會自己扣錢
     const renewBadge = s.autoRenew === false
@@ -270,7 +270,7 @@ function renderCardSubList() {
     // 使用人欄：員工訂閱顯示名字，代墊請款再掛個徽章提醒「這筆錢是走請款流程」
     const whoCell = s.staffName
       ? csEscapeHtml(s.staffName) + (s.payMethod === 'staff'
-          ? '<br><span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#e2ebfd; color:#3949ab; font-size:11px; white-space:nowrap;">🧾 代墊請款</span>'
+          ? '<br><span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#E6ECF3; color:#3949ab; font-size:11px; white-space:nowrap;">🧾 代墊請款</span>'
           : '')
       : '<span style="opacity:.5;">自己</span>';
 
