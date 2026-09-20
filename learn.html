@@ -42,6 +42,17 @@
   .learn-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(160, 120, 130, .22); }
   .learn-card-books { background: linear-gradient(135deg, #ffe7ed, #ffd6e0); }
   .learn-card-toys { background: linear-gradient(135deg, #e4f5df, #cdeae0); }
+  /* 準備中：不可點、不浮起、淡化 */
+  .learn-card-soon { pointer-events: none; cursor: default; opacity: .72; }
+  .learn-card-soon-badge {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 800;
+    color: #8a6a70;
+    background: rgba(255, 255, 255, .8);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
   .learn-card-icon {
     font-size: 46px;
     line-height: 1;
@@ -104,14 +115,17 @@
       <div class="learn-card-arrow">➜</div>
     </a>
 
-    <a class="learn-card learn-card-toys" href="picture-books.html?kind=toy">
+    <!-- 玩具館暫時「準備中」不可點（2026-09-20 雪莉指示，之後會開放）：
+         要恢復就把這個 div 換回 <a class="learn-card learn-card-toys" href="picture-books.html?kind=toy">…</a>，
+         並把「準備中」徽章換回 <div class="learn-card-arrow">➜</div> -->
+    <div class="learn-card learn-card-toys learn-card-soon" aria-disabled="true">
       <div class="learn-card-icon">🧸</div>
       <div class="learn-card-body">
         <div class="learn-card-title">玩具館</div>
         <div class="learn-card-desc">教具與玩具介紹｜怎麼玩、玩什麼，教材直接印</div>
       </div>
-      <div class="learn-card-arrow">➜</div>
-    </a>
+      <div class="learn-card-soon-badge">準備中</div>
+    </div>
 
     <!-- 教材館（2026-09-13 正式開放）：與會員中心同網域 -->
     <a class="learn-card" style="background:linear-gradient(135deg,#fff6dd,#ffe9c2);" href="https://member.sheridondon.com.tw/materials">
