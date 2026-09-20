@@ -1242,7 +1242,7 @@
 </head>
 <body>
 
-<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=3"></script>
+<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=4"></script>
 
 <div class="wrap">
   <!-- 首頁 -->
@@ -1273,7 +1273,7 @@
 
 
     <div class="home-cards">
-      <a class="home-card home-card-gift" href="index.html?mode=start" style="text-decoration:none; display:block;">
+      <a class="home-card home-card-gift" data-stat="calendar" href="index.html?mode=start" style="text-decoration:none; display:block;">
         <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17" /><path d="M8.5 3v4" /><path d="M15.5 3v4" /><path d="M12 18c-.3-.2-2.6-1.6-2.6-3.1a1.3 1.3 0 0 1 2.6-.6 1.3 1.3 0 0 1 2.6.6c0 1.5-2.3 2.9-2.6 3.1z" /></svg></div>
         <div class="home-card-title">團購行事曆</div>
         <div class="home-card-title-divider"></div>
@@ -1288,7 +1288,7 @@
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">認識豐富的食材</div>
       </div>
-      <div class="home-card home-card-peach" id="tabRecipes">
+      <div class="home-card home-card-peach" id="tabRecipes" data-stat="recipes">
         <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5c-1.8-1.4-4.6-2-8-1.8v13.2c3.4-.2 6.2.4 8 1.8 1.8-1.4 4.6-2 8-1.8V4.7c-3.4-.2-6.2.4-8 1.8z" /><path d="M12 6.5v13.2" /><path d="M6.6 9.2c1.2 0 2.3.3 3.1.7" /><path d="M6.6 12.2c1.2 0 2.3.3 3.1.7" /><path d="M17.4 9.2c-1.2 0-2.3.3-3.1.7" /></svg></div>
         <div class="home-card-title">觀看食譜</div>
         <div class="home-card-title-divider"></div>
@@ -1305,26 +1305,26 @@
       </div>
       <!-- 繪本館正式接入口（2026-08-25）：原「教材分享」「玩具繪本」兩張即將推出佔位卡合併成這張，
            繪本介紹＋延伸教材下載都在繪本館內 -->
-      <a class="home-card home-card-purple" href="picture-books.html" style="text-decoration:none; display:block;">
+      <a class="home-card home-card-purple" data-stat="books" href="picture-books.html" style="text-decoration:none; display:block;">
         <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="5.5" height="16" rx="1.3" /><rect x="9.5" y="7" width="5" height="13.5" rx="1.3" /><path d="M15.6 9.4l2.5-.7a1 1 0 0 1 1.2.7l2.8 10.1-3.2.9z" /><path d="M6.75 8.5v2.5" /><path d="M2.5 20.5h19" /></svg></div>
         <div class="home-card-title">繪本館</div>
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">精選繪本介紹、延伸教材免費下載</div>
       </a>
       <!-- 教材館入口（2026-09-20 雪莉指示接上首頁）：與會員中心同網域（Vercel），同 learn.html 的連結 -->
-      <a class="home-card home-card-yellow" href="https://member.sheridondon.com.tw/materials" style="text-decoration:none; display:block;">
+      <a class="home-card home-card-yellow" data-stat="materials" href="https://member.sheridondon.com.tw/materials" style="text-decoration:none; display:block;">
         <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7.5A1.5 1.5 0 0 0 6 5v14a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19V7.5z" /><path d="M14 3.5v4h4" /><path d="M9 12h6" /><path d="M9 15.5h6" /></svg></div>
         <div class="home-card-title">教材館</div>
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">教材、遊戲、音檔一次逛</div>
       </a>
-      <a class="home-card home-card-blue" href="school-list.html" style="text-decoration:none; display:block;">
+      <a class="home-card home-card-blue" data-stat="school" href="school-list.html" style="text-decoration:none; display:block;">
         <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5a2.5 2.5 0 0 1 5 0" /><path d="M6 10.5a6 6 0 0 1 12 0V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19z" /><path d="M8.8 20.5v-3.7a1 1 0 0 1 1-1h4.4a1 1 0 0 1 1 1v3.7" /><path d="M9.3 11.5h5.4" /></svg></div>
         <div class="home-card-title">開學清單</div>
         <div class="home-card-title-divider"></div>
         <div class="home-card-desc">開學用品清單參考</div>
       </a>
-      <a class="home-card home-card-coral" href="kids.html" style="text-decoration:none; display:block;">
+      <a class="home-card home-card-coral" data-stat="free" href="kids.html" style="text-decoration:none; display:block;">
         <div class="home-card-icon"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="8" width="17" height="4" rx="1" /><path d="M5 12v7.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V12" /><path d="M12 8v13" /><path d="M12 8c-.9-2.6-4.6-3.6-4.6-1.3 0 1.1 2.3 1.3 4.6 1.3z" /><path d="M12 8c.9-2.6 4.6-3.6 4.6-1.3 0 1.1-2.3 1.3-4.6 1.3z" /></svg></div>
         <div class="home-card-title">免費資源</div>
         <div class="home-card-title-divider"></div>
@@ -2954,6 +2954,14 @@ function switchView(view) {
 }
 document.getElementById('tabIngredients').addEventListener('click', () => switchView('ingredients'));
 document.getElementById('tabRecipes').addEventListener('click', () => switchView('recipes'));
+// 首頁入口卡片點擊計數（2026-09-20）：key＝page_homecard<代號>_<日期>（clicks 欄，走既有 page_ 白名單）。
+// 卡片多半是跳頁連結，sendStat 用 sendBeacon 所以離頁後仍會送出
+document.querySelector('.home-cards').addEventListener('click', e => {
+  const card = e.target.closest ? e.target.closest('.home-card[data-stat]') : null;
+  if (!card) return;
+  const d = new Date();
+  sendStat(`page_homecard${card.dataset.stat}_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, 'click');
+});
 document.querySelectorAll('.soon-card').forEach(card => {
   card.addEventListener('click', () => {
     alert('這個功能還在準備中，敬請期待！🩷');

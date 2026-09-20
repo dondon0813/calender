@@ -3981,6 +3981,7 @@
   .rpt-chip { font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; border: none; border-radius: var(--r-pill); padding: 4px 10px; background: var(--c-pink-bg); color: var(--c-pink-deep); }
   .rpt-chip-clear { background: var(--c-bg-bottom); color: var(--c-text-soft); }
   .rpt-range-note { max-width: 900px; margin: 0 auto 10px; text-align: center; font-size: 12px; font-weight: 700; color: var(--c-muted); }
+  .rpt-table tbody tr.rpt-total-row td { font-weight: 800; background: var(--c-bg-bottom); }
   .rpt-footnote { max-width: 900px; margin: 0 auto 10px; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--c-muted); line-height: 1.6; }
   @media print {
     #viewReport .rpt-tabs, #viewReport #rptRefreshBtn, #viewReport .rpt-filterbar, #viewReport .rpt-readout { display: none !important; }
@@ -4989,6 +4990,10 @@
       <div class="rpt-section">
         <div class="rpt-section-title">各頁流量<span class="rpt-title-note">點頁面可展開近30日每日數字</span></div>
         <div id="rptPageViewsTable" class="rpt-table-wrap"></div>
+      </div>
+      <div class="rpt-section" id="rptHomeCardsSection">
+        <div class="rpt-section-title">首頁入口卡片點擊<span class="rpt-title-note">食譜大全首頁各入口卡片被點了幾次</span></div>
+        <div id="rptHomeCardsTable" class="rpt-table-wrap"></div>
       </div>
       <div class="rpt-section" id="rptBooksSection">
         <div class="rpt-section-title">📚 繪本館按鈕點擊（累計版）</div>
@@ -7237,7 +7242,7 @@
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=2"></script>
 <script src="tools.js?v=18"></script>
-<script src="report.js?v=5"></script>
+<script src="report.js?v=6"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
 <script src="books.js?v=30"></script>

@@ -49,6 +49,18 @@ const RPT_BOOKS_BUTTON_DEFS = [
   { key: 'booksshopee', label: '蝦皮購買' },
   { key: 'booksdownload', label: '教材下載' }
 ];
+// 首頁（recipes.html）入口卡片點擊（2026-09-20）：前台每張卡送 page_homecard<代號>_<日期> 的 clicks，
+// 每日資料為 entity_type='page'、entity_key='homecard<代號>'、kind='click'。順序＝首頁卡片排列
+const RPT_HOME_CARD_DEFS = [
+  { key: 'calendar', label: '團購行事曆' },
+  { key: 'recipes', label: '觀看食譜' },
+  { key: 'books', label: '繪本館' },
+  { key: 'materials', label: '教材館' },
+  { key: 'school', label: '開學清單' },
+  { key: 'free', label: '免費資源' }
+];
+const RPT_HOME_CARD_PREFIX = 'homecard';
+const RPT_HOME_VIEW_KEY = 'recipes';   // 點擊率分母＝首頁（page/recipes）瀏覽
 // 事件層級按鈕（不分來源）：來源欄位就是 intro/recipe/order/code 本身
 const RPT_EVENT_BUTTON_DEFS = [
   { key: 'order', label: '下單按鈕' },
@@ -164,9 +176,10 @@ function rptNormEvKey(k) {
   return m ? (m[1] + '_' + m[2] + '-' + (+m[3]) + '-' + (+m[4])) : String(k);
 }
 
-// 每日彙總「頁面流量」排除：會員資料卡漏斗 fanpf*、繪本館按鈕（那是 click 不是頁面）
+// 每日彙總「頁面流量」排除：會員資料卡漏斗 fanpf*、首頁入口卡片點擊 homecard*、繪本館按鈕（那是 click 不是頁面）
 function rptIsTrafficPage(key) {
   if (/^fanpf/.test(key)) return false;
+  if (key.indexOf(RPT_HOME_CARD_PREFIX) === 0) return false;
   return !RPT_BOOKS_BUTTON_DEFS.some(b => b.key === key);
 }
 
@@ -331,6 +344,62 @@ function rptComputePageTableDaily(idx, stats, today) {
       daily: rptDailyValues(map, dates30)
     };
   });
+}
+
+// ----- 首頁入口卡片點擊 -----
+// 'YYYY-M-D'（statsMap 慣用不補零）→ 'YYYY-MM-DD'，方便字串比大小
+function rptPadDate(ds) {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(ds));
+  return m ? (m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2)) : '';
+}
+
+// idx 為 null（每日明細不可用，tableReady:false）→ 只算累計欄，其餘欄與點擊率為 null（畫面顯示「—」）
+// 回傳 { hasData, since, daily, homeViews30, rows:[{key,label,today,yesterday,seven,thirty,total,ctr}], totalRow }
+// hasData＝任何一張卡有點擊紀錄（每日資料或 statsMap 累計）；since＝最早有點擊的日期 YYYY-MM-DD
+function rptComputeHomeCards(idx, stats, today) {
+  stats = stats || {};
+  const daily = !!idx;
+  const y = rptAddDays(today, -1);
+  const d7 = rptAddDays(today, -6), d30 = rptAddDays(today, -29);
+  const homeViews30 = daily ? rptSumRange(((idx.page[RPT_HOME_VIEW_KEY] || {}).view), d30, today) : null;
+  let since = '';
+  const noteDate = (ds) => { const p = rptPadDate(ds); if (p && (!since || p < since)) since = p; };
+  let hasData = false;
+
+  const rows = RPT_HOME_CARD_DEFS.map(def => {
+    const key = RPT_HOME_CARD_PREFIX + def.key;
+    // 累計：statsMap 的 page_homecard<代號>_<日期>.clicks 加總
+    const prefix = 'page_' + key + '_';
+    let cum = 0;
+    Object.keys(stats).forEach(k => {
+      if (k.indexOf(prefix) !== 0) return;
+      const ds = k.slice(prefix.length);
+      if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(ds)) return;
+      const c = (stats[k] || {}).clicks || 0;
+      if (c > 0) { cum += c; noteDate(ds); }
+    });
+    const row = { key: def.key, label: def.label, today: null, yesterday: null, seven: null, thirty: null, total: cum, ctr: null };
+    if (daily) {
+      const map = ((idx.page[key] || {}).click) || {};
+      Object.keys(map).forEach(d => { if (map[d] > 0) noteDate(d); });
+      row.today = rptSumRange(map, today, today);
+      row.yesterday = rptSumRange(map, y, y);
+      row.seven = rptSumRange(map, d7, today);
+      row.thirty = rptSumRange(map, d30, today);
+      row.total = Math.max(cum, rptSumRange(map, '0000-00-00', '9999-99-99'));
+      row.ctr = homeViews30 > 0 ? row.thirty / homeViews30 * 100 : null;
+    }
+    if (row.total > 0) hasData = true;
+    return row;
+  });
+
+  const sum = f => rows.reduce((s, r) => s + (r[f] || 0), 0);
+  const totalRow = { key: 'total', label: '合計', today: null, yesterday: null, seven: null, thirty: null, total: sum('total'), ctr: null };
+  if (daily) {
+    ['today', 'yesterday', 'seven', 'thirty'].forEach(f => { totalRow[f] = sum(f); });
+    totalRow.ctr = homeViews30 > 0 ? totalRow.thirty / homeViews30 * 100 : null;
+  }
+  return { hasData, since, daily, homeViews30, rows, totalRow };
 }
 
 // ----- 團購成效排行（每日版）：輸出形狀與 rptComputeGroupRanking 相同，可直接餵 rptRenderGroupRankTable -----
@@ -885,6 +954,31 @@ function rptRenderPageViewsTableDaily(stats) {
   el.innerHTML = html;
 }
 
+// 首頁入口卡片點擊（各頁流量分頁、頁面表下方）；idx＝rptState.idx 或 null（每日明細不可用→只顯示累計欄）
+function rptRenderHomeCards(stats) {
+  const el = rptEl('rptHomeCardsTable');
+  if (!el) return;
+  const idx = (rptState.ready === true && rptState.idx) ? rptState.idx : null;
+  const h = rptComputeHomeCards(idx, stats, rptToday());
+  if (!h.hasData) {
+    el.innerHTML = '<div class="rpt-empty">首頁入口卡片點擊計數已上線，資料從上線當天開始累積</div>';
+    return;
+  }
+  const num = v => (v === null ? '—' : rptFmtNum(v));
+  const pct = v => (v === null ? '—' : v.toFixed(1) + '%');
+  const tr = (r, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="left">' + escHtml(r.label) + '</td><td>' + num(r.today) +
+    '</td><td>' + num(r.yesterday) + '</td><td>' + num(r.seven) + '</td><td>' + num(r.thirty) +
+    '</td><td>' + num(r.total) + '</td><td>' + pct(r.ctr) + '</td></tr>';
+  let html = '<table class="rpt-table"><thead><tr><th class="left">入口卡片</th><th>今日</th><th>昨日</th><th>近7日</th><th>近30日</th><th>累計</th><th>點擊率</th></tr></thead><tbody>';
+  h.rows.forEach(r => { html += tr(r, ''); });
+  html += tr(h.totalRow, 'rpt-total-row');
+  html += '</tbody></table>';
+  html += '<div class="rpt-footnote">' + (h.since ? '自 ' + escHtml(rptFmtMD(h.since)) + ' 起計數。' : '') +
+    '點擊率＝近30日卡片點擊 ÷ 首頁（食譜大全）近30日瀏覽' +
+    (h.daily ? '。' : '；每日明細暫不可用，僅顯示累計。') + '</div>';
+  el.innerHTML = html;
+}
+
 function rptRenderBooksButtonsTable(stats) {
   const el = rptEl('rptBooksButtonsTable');
   if (!el) return;
@@ -1241,6 +1335,9 @@ function rptRenderAllPanels() {
     rptRenderBooksButtonsTable(stats);
     if (booksSec) booksSec.hidden = false;
   }
+
+  // 首頁入口卡片點擊（每日明細可用→全欄；否則只累計）
+  rptRenderHomeCards(stats);
 
   // 購買點擊
   rptRenderBuy();

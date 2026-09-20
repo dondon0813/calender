@@ -17,6 +17,7 @@
     recipe: '<path d="M12 6.5c-1.8-1.4-4.6-2-8-1.8v13.2c3.4-.2 6.2.4 8 1.8 1.8-1.4 4.6-2 8-1.8V4.7c-3.4-.2-6.2.4-8 1.8z" /><path d="M12 6.5v13.2" /><path d="M6.6 9.2c1.2 0 2.3.3 3.1.7" /><path d="M6.6 12.2c1.2 0 2.3.3 3.1.7" /><path d="M17.4 9.2c-1.2 0-2.3.3-3.1.7" />',
     school: '<path d="M9.5 5a2.5 2.5 0 0 1 5 0" /><path d="M6 10.5a6 6 0 0 1 12 0V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19z" /><path d="M8.8 20.5v-3.7a1 1 0 0 1 1-1h4.4a1 1 0 0 1 1 1v3.7" /><path d="M9.3 11.5h5.4" />',
     books: '<rect x="4" y="4.5" width="5.5" height="16" rx="1.3" /><rect x="9.5" y="7" width="5" height="13.5" rx="1.3" /><path d="M15.6 9.4l2.5-.7a1 1 0 0 1 1.2.7l2.8 10.1-3.2.9z" /><path d="M6.75 8.5v2.5" /><path d="M2.5 20.5h19" />',
+    doc: '<path d="M14 3.5H7.5A1.5 1.5 0 0 0 6 5v14a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19V7.5z" /><path d="M14 3.5v4h4" /><path d="M9 12h6" /><path d="M9 15.5h6" />',
     gift: '<rect x="3.5" y="8" width="17" height="4" rx="1" /><path d="M5 12v7.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V12" /><path d="M12 8v13" /><path d="M12 8c-.9-2.6-4.6-3.6-4.6-1.3 0 1.1 2.3 1.3 4.6 1.3z" /><path d="M12 8c.9-2.6 4.6-3.6 4.6-1.3 0 1.1-2.3 1.3-4.6 1.3z" />',
     member: '<circle cx="12" cy="8.8" r="4.2" /><path d="M10.5 9.6c.8.7 2.2.7 3 0" /><path d="M4.8 20.3c.9-3.5 3.8-5.7 7.2-5.7s6.3 2.2 7.2 5.7" />',
     menu: '<path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" />',
@@ -27,8 +28,9 @@
     { label: '首頁', icon: 'home', href: 'recipes.html', page: 'recipes.html', view: 'home' },
     { label: '團購行事曆', icon: 'calendar', href: 'index.html?mode=start', page: 'index.html' },
     { label: '觀看食譜', icon: 'recipe', href: 'recipes.html?view=recipes', page: 'recipes.html', view: 'recipes' },
-    { label: '開學清單', icon: 'school', href: 'school-list.html', page: 'school-list.html' },
     { label: '繪本館', icon: 'books', href: 'picture-books.html', page: 'picture-books.html' },
+    { label: '教材館', icon: 'doc', href: MEMBER_ORIGIN + '/materials', page: '' },
+    { label: '開學清單', icon: 'school', href: 'school-list.html', page: 'school-list.html' },
     { label: '免費資源', icon: 'gift', href: 'kids.html', page: 'kids.html' }
   ];
 
