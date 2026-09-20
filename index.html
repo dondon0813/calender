@@ -747,7 +747,7 @@
     <img class="title-img" id="titleImg" alt="雪莉與朵栗 團購行事曆" src="https://dondon0813.github.io/calender/images/title-logo.png">
     <div class="controls">
       <div class="search-box" id="searchBox">
-        <input type="search" id="calSearchInput" placeholder="🔍 搜尋團名…" aria-label="搜尋團購" autocomplete="off" enterkeyhint="search">
+        <input type="search" id="calSearchInput" class="ico-search" placeholder="搜尋團名…" aria-label="搜尋團購" autocomplete="off" enterkeyhint="search">
         <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="清除搜尋" style="display:none;">✕</button>
       </div>
       <select id="modeSelect">
@@ -1541,7 +1541,9 @@ function renderSearchResults(rawQuery) {
 
   const header = document.createElement('div');
   header.className = 'search-results-header';
-  header.textContent = `🔎「${query}」找到 ${total} 團`;
+  // 放大鏡改線條 SVG（原本是 🔎 emoji）；query 是使用者輸入，一律走 text node 不用 innerHTML 拼接
+  header.innerHTML = '<svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>';
+  header.appendChild(document.createTextNode(`「${query}」找到 ${total} 團`));
   container.appendChild(header);
 
   const buildSection = (title, arr, titleClass, grayOut) => {

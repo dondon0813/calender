@@ -1769,6 +1769,9 @@
     background: transparent;
   }
   .mtree-search-icon { font-size: 14px; color: var(--c-brown); }
+  /* 搜尋框放大鏡（2026-09-20，同前台 shared.css .ico-search）：線條 SVG 取代 placeholder 裡的 🔍 emoji */
+  input.ico-search { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A3948A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") !important; background-repeat: no-repeat !important; background-position: 13px center !important; background-size: 18px 18px !important; padding-left: 40px !important; }
+  .ico-inline-search { width: 1.05em; height: 1.05em; vertical-align: -0.16em; margin-right: 0.3em; flex-shrink: 0; }
   .mtree-icon-btn {
     flex: none;
     width: 42px;
@@ -4523,7 +4526,7 @@
 
     <div class="mtree-toolbar">
       <div class="mtree-search-wrap">
-        <span class="mtree-search-icon">🔍</span>
+        <span class="mtree-search-icon"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
         <input type="text" id="pnoteSearchInput" placeholder="搜尋備忘錄內容…">
       </div>
       <button class="mtree-icon-btn" id="pnoteAddNoteBtn" title="新增備忘錄">📝➕</button>
@@ -5214,7 +5217,7 @@
         </div>
         <button class="pba-add-btn" id="addBookBtn">＋ 新增繪本</button>
         <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
-          <input type="text" id="bookSearchInput" placeholder="🔍 搜尋書名">
+          <input type="text" id="bookSearchInput" class="ico-search" placeholder="搜尋書名">
         </div>
       </div>
       <div class="pba-grid-hint" id="bookGridHint"></div>
@@ -5468,7 +5471,7 @@
                   <div style="font-size:11.5px; color:var(--c-muted); line-height:1.6; margin-bottom:6px;">
                     浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝小圖，四個角可選（放下方時會自動避開浮水印/團購資訊）；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖下方的一行字（無底色，顏色/位置在上面選）、結團隔天自動拿掉，文字內容在「🎨 模板設定」的「團購資訊文字」填。
                   </div>
-                  <button type="button" class="pba-mini-btn" id="mTplPreviewBtn">🔍 重新整理預覽</button>
+                  <button type="button" class="pba-mini-btn" id="mTplPreviewBtn"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>重新整理預覽</button>
                   <button type="button" class="pba-mini-btn" id="mTplDownloadBtn" title="用目前設定產生完整解析度的成品下載到電腦看（不會存檔）">⬇ 下載測試檔</button>
                   <div id="mTplPreviewWrap" style="display:none; margin-top:8px;">
                     <div id="mTplPreviewLabel" style="font-size:11.5px; color:var(--c-muted); margin-bottom:4px;"></div>
@@ -5916,7 +5919,7 @@
     <!-- 三張表切換 chips＋搜尋＋品牌篩選（sheetdb.js 渲染內容；食譜表沒有品牌欄，用「使用食材」對到的品牌篩） -->
     <div id="recipeDbTabs" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-      <input type="text" id="recipeDbSearch" placeholder="🔍 搜尋名稱／編號／品牌…" style="flex:1; min-width:200px; max-width:360px;">
+      <input type="text" id="recipeDbSearch" class="ico-search" placeholder="搜尋名稱／編號／品牌…" style="flex:1; min-width:200px; max-width:360px;">
       <select id="recipeDbBrandFilter" style="max-width:200px;"><option value="">🏷️ 全部品牌</option></select>
     </div>
     <div id="recipeDbListArea"><div class="task-empty">讀取中…</div></div>
@@ -5958,7 +5961,7 @@
     <div class="pba-tabs">
       <button type="button" class="pba-tab on" id="fanTabBtnUnclaimed" data-fan-tab="unclaimed">📥 未歸戶訂單</button>
       <button type="button" class="pba-tab" id="fanTabBtnClaims" data-fan-tab="claims">📮 認領回報<span id="fanClaimsBadge"></span></button>
-      <button type="button" class="pba-tab" id="fanTabBtnMember" data-fan-tab="member">🔍 會員查詢</button>
+      <button type="button" class="pba-tab" id="fanTabBtnMember" data-fan-tab="member"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>會員查詢</button>
       <button type="button" class="pba-tab" id="fanTabBtnCust" data-fan-tab="cust">📊 顧客分析</button>
       <button type="button" class="pba-tab" id="fanTabBtnRewards" data-fan-tab="rewards">🎁 點數與商城</button>
     </div>
@@ -5966,7 +5969,7 @@
     <div class="pba-tab-panel" id="fanTabPanelUnclaimed">
     <h3 style="margin:18px 0 8px; font-size:15px;">📥 未歸戶訂單</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-      <input type="text" id="fanUnclaimedSearch" placeholder="🔍 搜尋姓名／email／訂單編號…" style="flex:1; min-width:200px; max-width:360px;">
+      <input type="text" id="fanUnclaimedSearch" class="ico-search" placeholder="搜尋姓名／email／訂單編號…" style="flex:1; min-width:200px; max-width:360px;">
     </div>
     <div id="fanUnclaimedArea"><div class="task-empty">讀取中…</div></div>
     </div><!-- /fanTabPanelUnclaimed -->
@@ -5977,7 +5980,7 @@
     <div style="font-size:12px; color:var(--c-text-light); margin-bottom:10px;">客人填的訂單資料系統還對不到時會先存在這裡。每天收單後會自動比對，四項全對的直接歸戶；這裡只需要處理對不上的。</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
       <div id="fanClaimsFilters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-      <input type="text" id="fanClaimsSearch" placeholder="🔍 搜尋訂單編號／姓名／email／會員編號…" style="flex:1; min-width:200px; max-width:320px;">
+      <input type="text" id="fanClaimsSearch" class="ico-search" placeholder="搜尋訂單編號／姓名／email／會員編號…" style="flex:1; min-width:200px; max-width:320px;">
       <button type="button" class="task-mini-btn" id="fanClaimsSyncBtn">⟳ 立即比對</button>
       <button type="button" class="task-mini-btn" id="fanClaimsExportBtn">⬇ 匯出給廠商核對（CSV）</button>
     </div>
@@ -5999,7 +6002,7 @@
     <div class="pba-tab-panel" id="fanTabPanelCust" style="display:none;">
     <h3 style="margin:24px 0 8px; font-size:15px;">📊 顧客分析</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-      <input type="text" id="fanCustSearch" placeholder="🔍 搜尋姓名／email…" style="flex:1; min-width:200px; max-width:360px;">
+      <input type="text" id="fanCustSearch" class="ico-search" placeholder="搜尋姓名／email…" style="flex:1; min-width:200px; max-width:360px;">
       <select id="fanCustSort" style="min-width:130px;">
         <option value="totalSpent">依累積消費</option>
         <option value="ordersCount">依訂單數</option>
@@ -6113,7 +6116,7 @@
         <button class="pba-add-btn" id="matLibAddBtn">＋ 新增教材</button>
         <button type="button" class="pba-tab" id="matLibPendingBtn" style="display:none;">🚧 待確認</button>
         <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
-          <input type="text" id="matLibSearch" placeholder="🔍 搜尋教材標題／標籤／綁定品項">
+          <input type="text" id="matLibSearch" class="ico-search" placeholder="搜尋教材標題／標籤／綁定品項">
         </div>
       </div>
       <div style="font-size:11.5px; color:var(--c-muted); margin:6px 0; line-height:1.6;">
@@ -7290,7 +7293,7 @@
   <div class="modal-box" style="width:560px; max-width:94vw;">
     <button class="modal-close" onclick="closeEvThumbPicker()">✕</button>
     <h3>🖼 選去背小圖</h3>
-    <input type="text" id="evThumbSearch" placeholder="🔍 搜尋品牌或檔名…" style="width:100%; box-sizing:border-box;">
+    <input type="text" id="evThumbSearch" class="ico-search" placeholder="搜尋品牌或檔名…" style="width:100%; box-sizing:border-box;">
     <div id="evThumbGrid"></div>
     <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
       <input type="text" id="evThumbUrlInput" placeholder="或直接貼圖片網址（https://…）" style="flex:1; min-width:0;">

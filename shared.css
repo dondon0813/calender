@@ -527,3 +527,19 @@ body {
 .ogb-items.ogb-grid5 .ogb-thumb-fallback { font-size: 20px; }
 .ogb-items.ogb-grid4 .ogb-name, .ogb-items.ogb-grid5 .ogb-name { font-size: 10px; }
 .ogb-items.ogb-grid4 .ogb-end, .ogb-items.ogb-grid5 .ogb-end { font-size: 9px; }
+
+/* ===== 搜尋框放大鏡（2026-09-20 雪莉：全站放大鏡改用線條刻的 SVG，不用 emoji） =====
+   placeholder 裡放不了 SVG，所以搜尋框加 class="ico-search"：左側畫線條放大鏡、左內距讓出位置。
+   選擇器帶 id／雙 class 是為了贏過各頁與色系覆寫層的 background 簡寫 !important。 */
+input.ico-search,
+#calSearchInput.ico-search,
+.pb-search-input.ico-search,
+.ing-search-input.ico-search {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A3948A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: 13px center !important;
+  background-size: 18px 18px !important;
+  padding-left: 40px !important;
+}
+/* 文字裡的行內放大鏡（取代 🔍／🔎 emoji），顏色跟著文字 */
+.ico-inline-search { width: 1.05em; height: 1.05em; vertical-align: -0.16em; margin-right: 0.3em; flex-shrink: 0; }
