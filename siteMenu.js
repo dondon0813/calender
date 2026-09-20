@@ -25,14 +25,31 @@
   };
   // view：recipes.html 內部畫面（在該頁時直接切換，不整頁重載）
   var SITE_MENU_ITEMS = [
-    { label: '首頁', icon: 'home', href: 'recipes.html', page: 'recipes.html', view: 'home' },
-    { label: '團購行事曆', icon: 'calendar', href: 'index.html?mode=start', page: 'index.html' },
-    { label: '觀看食譜', icon: 'recipe', href: 'recipes.html?view=recipes', page: 'recipes.html', view: 'recipes' },
-    { label: '繪本館', icon: 'books', href: 'picture-books.html', page: 'picture-books.html' },
-    { label: '教材館', icon: 'doc', href: MEMBER_ORIGIN + '/materials', page: '' },
-    { label: '開學清單', icon: 'school', href: 'school-list.html', page: 'school-list.html' },
-    { label: '免費資源', icon: 'gift', href: 'kids.html', page: 'kids.html' }
+    { label: '首頁', icon: 'home', href: 'recipes.html', page: 'recipes.html', view: 'home', stat: 'home' },
+    { label: '團購行事曆', icon: 'calendar', href: 'index.html?mode=start', page: 'index.html', stat: 'calendar' },
+    { label: '觀看食譜', icon: 'recipe', href: 'recipes.html?view=recipes', page: 'recipes.html', view: 'recipes', stat: 'recipes' },
+    { label: '繪本館', icon: 'books', href: 'picture-books.html', page: 'picture-books.html', stat: 'books' },
+    { label: '教材館', icon: 'doc', href: MEMBER_ORIGIN + '/materials', page: '', stat: 'materials' },
+    { label: '開學清單', icon: 'school', href: 'school-list.html', page: 'school-list.html', stat: 'school' },
+    { label: '免費資源', icon: 'gift', href: 'kids.html', page: 'kids.html', stat: 'free' }
   ];
+
+  // 選單項目點擊計數（2026-09-20）：key＝page_menu<代號>_<日期>（clicks，走既有 page_ 白名單）。
+  // 選單在 recipes.html 內會攔截跳頁（switchView），所以掛在面板點擊、不依賴實際跳轉；sendBeacon 離頁後仍會送出。
+  function menuStat(code) {
+    if (!code) return;
+    try {
+      var d = new Date();
+      var key = 'page_menu' + code + '_' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+      var payload = JSON.stringify({ type: 'stat-click', key: key });
+      var url = 'https://dondon-platform.vercel.app/api/legacy';
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+      } else {
+        fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: payload, keepalive: true }).catch(function () {});
+      }
+    } catch (e) { /* 統計失敗不影響使用者操作 */ }
+  }
 
   function svg(name, size) {
     return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="' +
@@ -274,6 +291,7 @@
       var a = e.target.closest ? e.target.closest('.smn-item') : null;
       if (!a) return;
       var it = SITE_MENU_ITEMS[Number(a.getAttribute('data-i'))];
+      menuStat(it.stat);
       if (it.view && page === 'recipes.html' && typeof window.switchView === 'function') {
         e.preventDefault();
         setOpen(false);

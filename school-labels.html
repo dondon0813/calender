@@ -107,7 +107,7 @@
 </head>
 <body>
 
-<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=4"></script>
+<button class="site-home-btn" id="siteMenuBtn" type="button" title="選單" aria-label="選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.06" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></button><script src="siteMenu.js?v=5"></script>
 
 <div class="wrap">
   <a class="back-btn" href="https://dondon0813.github.io/calender/recipes.html">← 前往雪莉育兒小工具</a>
@@ -158,6 +158,32 @@ const btn = document.getElementById('dlBtn');
 const statusEl = document.getElementById('status');
 const buyBtn = document.getElementById('buyBtn');
 const buyStatusEl = document.getElementById('buyStatus');
+
+/* ===== 購買標籤機按鈕點擊計數（2026-09-20 雪莉指示）=====
+   page_labelsbuy_<日期>：不論最後導去團購頁／蝦皮／行事曆，按下就記一次（按鈕級）；
+   開團中且拿得到團 id 時，另記該團 <evKey>_src_labels＋<evKey>_buy_labels（與其他頁的來源／購買點擊同規則）。
+   sendBeacon 在跳轉離頁後仍會送出。 */
+let buyEvKey = '';
+function sendLabelsStat(key) {
+  const url = 'https://dondon-platform.vercel.app/api/legacy';
+  const payload = JSON.stringify({ type: 'stat-click', key });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: payload, keepalive: true }).catch(() => {});
+    }
+  } catch (e) { /* 統計失敗不影響使用者操作 */ }
+}
+buyBtn.addEventListener('click', () => {
+  if (buyBtn.classList.contains('disabled')) return;
+  const d = new Date();
+  sendLabelsStat(`page_labelsbuy_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+  if (buyEvKey) {
+    sendLabelsStat(`${buyEvKey}_src_labels`);
+    sendLabelsStat(`${buyEvKey}_buy_labels`);
+  }
+});
 
 /* ===== 下載所有標籤圖片 ===== */
 async function downloadAll() {
@@ -259,7 +285,12 @@ async function findOpenGroupUrl() {
     if (!url) continue;
     const start = parseDateStr(c[1] && c[1].v);           // B欄：開始日期
     const end = effectiveEnd(parseDateStr(c[2] && c[2].v), c[3] ? c[3].v : null); // C欄＋D欄延長
-    if (start && startOfDay(start) <= today && (!end || startOfDay(end) >= today)) return url;
+    if (start && startOfDay(start) <= today && (!end || startOfDay(end) >= today)) {
+      // 記下這一團的統計 key（<id>_<Y-M-D>，同 index.html getStatKey），按鈕點擊時計入該團的來源／購買點擊
+      const idCell = c[0] && c[0].v !== null && c[0].v !== undefined ? String(c[0].v).trim() : '';
+      buyEvKey = idCell ? `${idCell}_${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}` : '';
+      return url;
+    }
   }
   return null;
 }
