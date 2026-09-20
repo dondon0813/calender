@@ -2087,7 +2087,9 @@ function openBookModal(book) {
   const subParts = [];
   if (book.author) subParts.push(book.author);
   if (book.publisher) subParts.push(book.publisher);
-  document.getElementById('pbModalSubline').textContent = subParts.join(' ・ ');
+  const sublineEl = document.getElementById('pbModalSubline');
+  sublineEl.textContent = subParts.join(' ・ ');
+  sublineEl.style.display = subParts.length ? '' : 'none'; // 作者、出版社都沒填就整行不顯示（雪莉 2026-09-20）
 
   const coverWrap = document.getElementById('pbModalCoverWrap');
   const coverImg = document.getElementById('pbModalCover');
