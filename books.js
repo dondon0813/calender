@@ -2803,7 +2803,7 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     // 有標題說明文字時：LOGO 直接貼在圖最底（可以蓋在說明文字上，雪莉 2026-09-20：LOGO 是去背 PNG，重疊沒關係、
     // 不要被說明條頂上去）；說明條在最底所以不會碰到說明條上方的 QR／團購資訊。沒有說明條才維持原本的疊放讓位。
     // 有 LOGO 時底部留白縮小（2026-09-21 雪莉：LOGO 再往下一些）
-    const wmBottomPad = o.logoImg ? Math.round(base * 0.006) : pad;
+    const wmBottomPad = o.logoImg ? Math.round(base * 0.009) : pad;
     let y = (captionH > 0 ? H : clearQr(bottomY, wmX0, wmX0 + wmW)) - wmBottomPad;
     if (o.logoImg) {
       const logoH = Math.round(base * 0.0297); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055→0.0275），同日再放大 120%（→0.033）；2026-09-21 縮小到 90%（→0.0297）
