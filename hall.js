@@ -34,7 +34,9 @@ let HALL_EVENT_CHOICES = [];  // {id, legacyId, title, startDate, endDate}
 let HALL_BRAND_CHOICES = [];  // {id(brands uuid), name}：前台卡片品牌標籤用（2026-09-17）
 let HALL_BRAND_READY = true;  // brand_id 欄位 migration 未 push＝false
 let HALL_WM_READY = true; // watermark_member 欄位是否已 push
-let HALL_EDIT = null;         // 編輯中的資源工作副本（含 rules/grants）；null＝顯示列表
+let HALL_BOOK_CHOICES = [];   // {id, title, kind('book'|'toy'), isPublished}：綁定繪本／玩具多選用
+let HALL_BOOKIDS_READY = true; // book_ids 欄位 migration 未 push＝false
+let HALL_EDIT = null;       // 編輯中的資源工作副本（含 rules/grants）；null＝顯示列表
 
 // ===== HTML 逃逸（自帶一份，不依賴 admin.js，同 books.js／fans.js 的做法）=====
 function hallEscape(s) {
@@ -94,6 +96,8 @@ function loadHallView(forceReload) {
     HALL_BRAND_CHOICES = Array.isArray(data.brandChoices) ? data.brandChoices : [];
     HALL_BRAND_READY = data.brandReady !== false;
     HALL_WM_READY = data.watermarkReady !== false;
+    HALL_BOOK_CHOICES = Array.isArray(data.bookChoices) ? data.bookChoices : [];
+    HALL_BOOKIDS_READY = data.bookIdsReady !== false;
     hallRenderBanner();
     hallRenderList();
   }).catch(err => {
@@ -146,6 +150,7 @@ function hallRenderList() {
         '<div style="font-size:11px; color:var(--c-text-light); margin-top:2px;">/' + hallEscape(r.slug) + '　排序 ' + hallEscape(r.sort) + '</div>' +
         '<div style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">' + kindBadge + freeBadge + pubBadge +
           (function () { const b = r.brandId && HALL_BRAND_CHOICES.find(x => x.id === r.brandId); return b ? '<span style="background:#F3E3E1; color:#8B6E5E; border:1px solid #E5CFCD; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">' + hallEscape(b.name) + '</span>' : ''; })() +
+          (Array.isArray(r.bookIds) && r.bookIds.length ? '<span style="background:#F5EFE9; color:#8B6E5E; border-radius:999px; padding:0 8px; font-size:11px; font-weight:700;">綁 ' + r.bookIds.length + ' 本書</span>' : '') +
           '<span style="font-size:11px; color:var(--c-text-light);">規則 ' + ruleCount + '　開通 ' + grantCount + ' 人</span>' +
         '</div>' +
       '</div>' +
@@ -182,6 +187,7 @@ function hallOpenEdit(i) {
         coverUrl: r.coverUrl || '', eventId: r.eventId || '', eventTitle: r.eventTitle || '', brandId: r.brandId || '',
         buyUrl: r.buyUrl || '', privatePath: r.privatePath || '', fileName: r.fileName || '',
         trialUrl: r.trialUrl || '', isPublished: !!r.isPublished, sort: r.sort || 0, watermarkMember: !!r.watermarkMember,
+        bookIds: Array.isArray(r.bookIds) ? r.bookIds.slice() : [],
         rules: JSON.parse(JSON.stringify(r.rules || [])),
         grants: JSON.parse(JSON.stringify(r.grants || [])),
         codeRules: JSON.parse(JSON.stringify(r.codeRules || []))
@@ -190,7 +196,7 @@ function hallOpenEdit(i) {
         // 新增預設類型跟著目前子分頁（教材分頁＝file）
         id: null, slug: '', title: '', kind: HALL_KIND_TAB || 'game', isFree: false, intro: '', description: '',
         screenshots: [], coverUrl: '', eventId: '', eventTitle: '', brandId: '', buyUrl: '', privatePath: '',
-        fileName: '', trialUrl: '', isPublished: false, sort: 0, watermarkMember: false, rules: [], grants: [], codeRules: []
+        fileName: '', trialUrl: '', isPublished: false, sort: 0, watermarkMember: false, bookIds: [], rules: [], grants: [], codeRules: []
       };
   hallRenderEditor();
 }
@@ -206,6 +212,22 @@ function hallSyncFormToEdit() {
   const free = document.getElementById('hfFree'); if (free) e.isFree = free.checked;
   const pub = document.getElementById('hfPublished'); if (pub) e.isPublished = pub.checked;
   const wm = document.getElementById('hfWatermark'); if (wm) e.watermarkMember = wm.checked;
+}
+
+// 綁定繪本／玩具：勾選當下直接寫進工作副本（Set 去重，維持陣列）
+function hallToggleBook(id, checked) {
+  if (!HALL_EDIT || !id) return;
+  const set = new Set(Array.isArray(HALL_EDIT.bookIds) ? HALL_EDIT.bookIds : []);
+  if (checked) set.add(id); else set.delete(id);
+  HALL_EDIT.bookIds = Array.from(set);
+}
+
+// 搜尋只切換列的顯示，不重畫表單（避免失去焦點）
+function hallBookFilter(q) {
+  const kw = String(q || '').trim().toLowerCase();
+  document.querySelectorAll('#hfBookList .hf-book-row').forEach(row => {
+    row.style.display = (!kw || (row.dataset.title || '').indexOf(kw) >= 0) ? 'flex' : 'none';
+  });
 }
 
 function hallCloseEdit() {
@@ -301,6 +323,22 @@ function hallRenderEditor() {
 
       label('品牌標籤（顯示在會員收藏庫、教材館、點數商城、我的兌換碼的卡片上）' + (HALL_BRAND_READY ? '' : '　<span style="color:#B5485A;">⚠ 資料庫待更新，選了也存不起來</span>')) +
       '<select id="hfBrand" style="' + inputStyle + '">' + brandOptions.join('') + '</select>' +
+
+      label('📚 綁定繪本／玩具') +
+      '<input id="hfBookSearch" type="search" style="' + inputStyle + ' margin-bottom:6px;" placeholder="搜尋書名…" oninput="hallBookFilter(this.value)">' +
+      '<div id="hfBookList" style="max-height:180px; overflow:auto; border:1px solid var(--c-border); border-radius:8px; padding:4px 10px; background:#fff;">' +
+        (HALL_BOOK_CHOICES.length ? HALL_BOOK_CHOICES.map(b => {
+          const checked = (e.bookIds || []).indexOf(b.id) >= 0;
+          return '<label class="hf-book-row" data-title="' + hallEscape(String(b.title || '').toLowerCase()) + '" style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:4px 0; font-size:13px;">' +
+            '<input type="checkbox" data-book-id="' + hallEscape(b.id) + '"' + (checked ? ' checked' : '') + ' style="width:auto; margin:0;" onchange="hallToggleBook(this.dataset.bookId, this.checked)">' +
+            '<span>' + hallEscape(b.title) +
+              (b.kind === 'toy' ? '<span style="color:var(--c-text-light); font-size:11.5px;">（玩具）</span>' : '') +
+              (b.isPublished === false ? '<span style="color:var(--c-text-light); font-size:11.5px;">（草稿）</span>' : '') +
+            '</span></label>';
+        }).join('') : '<div style="font-size:12px; color:var(--c-text-light); padding:6px 0;">目前沒有繪本或玩具</div>') +
+      '</div>' +
+      '<div style="font-size:11.5px; color:var(--c-text-light); margin-top:4px;">綁定後，這本書的介紹視窗會出現這份教材的卡片（書和教材都已發布才顯示）</div>' +
+      (HALL_BOOKIDS_READY ? '' : '<div style="font-size:11.5px; color:#B5485A; margin-top:4px;">⚠ 資料庫還沒更新，綁定暫時存不進去（請雪莉執行 db push）</div>') +
 
       label('綁定團購（純標記用，例如搭配某次開團的加購贈品；不綁定就跟團購無關）') +
       '<select id="hfEvent" style="' + inputStyle + '">' + evOptions.join('') + '</select>' +
@@ -806,6 +844,8 @@ async function hallSave() {
     sort: Number(document.getElementById('hfSort').value) || 0
   };
   payload.watermarkMember = document.getElementById('hfWatermark').checked;
+  // 欄位未建立時不帶 bookIds，避免每次存檔都報錯
+  if (HALL_BOOKIDS_READY) payload.bookIds = Array.isArray(e.bookIds) ? e.bookIds.slice() : [];
   if (e.id) payload.id = e.id;
 
   const btn = document.getElementById('hfSaveBtn');
@@ -827,6 +867,7 @@ async function hallSave() {
       if (merged[k] !== undefined) e[k] = merged[k];
     });
     if (Array.isArray(merged.screenshots)) e.screenshots = merged.screenshots.slice();
+    if (Array.isArray(merged.bookIds)) e.bookIds = merged.bookIds.slice();
     document.getElementById('hfSlug').value = merged.slug || '';
     statusEl.textContent = '已儲存';
     statusEl.className = 'form-status';
