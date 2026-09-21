@@ -5295,6 +5295,8 @@
               <div id="materialLibraryList" style="max-height:260px; overflow-y:auto;"></div>
             </div>
 
+            <div id="giftResourcesBox" style="margin-top:14px; border-top:1.5px dashed var(--c-border, #ddd); padding-top:10px;"></div>
+
             <!-- 教材表單：books.js 啟動時會把這個節點搬成全域 modal（教材館分頁的教材庫也要能開） -->
             <div class="pba-material-form" id="materialForm">
               <!-- 綁定類型先選（2026-09-13 雪莉定案）：選了才決定後面欄位；獨立教材＝不綁任何東西 -->
@@ -7210,7 +7212,7 @@
 <script src="report.js?v=7"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=40"></script>
+<script src="books.js?v=41"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

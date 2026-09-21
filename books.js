@@ -27,6 +27,8 @@ let materialFormEditingBookIds = null; // 編輯中教材的掛載書單（教�
 let mtplPendingFile = null; // 教材模板：這次表單新選的原始「圖檔」（File，合成來源）
 let mtplPendingCleanPath = ''; // 教材模板：已直傳 materials-private 的乾淨原檔路徑
 let setFormEditingId = null; // 目前套組表單是編輯哪個套組（null＝新增）
+let HALL_RESOURCE_CHOICES = []; // 教材館全部資源 [{id,title,kind,isPublished,bookIds}]（後台包 hallResourceChoices）
+let HALL_LINK_READY = true; // false＝資料庫欄位尚未建立（後台包 hallLinkReady）
 
 // ===== Toast =====
 let toastTimer = null;
@@ -87,6 +89,9 @@ async function loadPackage() {
     booksForceRelogin();
     return null;
   }
+  // 教材館資源綁定（跟團贈品延伸教材）：全部資源清單＋欄位是否已建立
+  HALL_RESOURCE_CHOICES = Array.isArray(data.hallResourceChoices) ? data.hallResourceChoices : [];
+  HALL_LINK_READY = data.hallLinkReady !== false;
   return data;
 }
 
@@ -153,7 +158,7 @@ function renderBookList() {
     const meta = document.createElement('div');
     meta.className = 'pba-grid-meta';
     const brandLabel = offView ? ((PACKAGE_DATA.brands || []).find(x => x.id === b.brand_id) || {}).name : '';
-    meta.textContent = (brandLabel ? brandLabel + '・' : '') + `教材 ${(b.materials || []).length}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
+    meta.textContent = (brandLabel ? brandLabel + '・' : '') + `教材 ${(b.materials || []).length}${(b.gift_resources || []).length > 0 ? '＋🎁' + (b.gift_resources || []).length : ''}・❤️ ${Number(b.likeCount) || 0}・👆 ${Number(b.clickCount) || 0}`;
     card.appendChild(meta);
 
     card.addEventListener('pointerdown', (e) => pbaDragPointerDown(e, card, b));
@@ -1218,6 +1223,94 @@ function renderMaterialsSection(book) {
   hint.style.display = 'none';
   body.style.display = 'block';
   renderMaterialList(book.materials || []);
+  renderGiftResourcesBox(book);
+}
+
+// ===== 跟團贈品教材（教材館資源綁定這本書）=====
+const GIFT_KIND_LABEL = { file: '檔案', game: '遊戲', audio: '音檔' };
+
+function renderGiftResourcesBox(book) {
+  const box = document.getElementById('giftResourcesBox');
+  if (!box || !book) return;
+  const ready = HALL_LINK_READY !== false;
+  const gifts = (book.gift_resources || []);
+  const boundIds = new Set(gifts.map(g => g.id));
+  const dis = ready ? '' : ' disabled';
+
+  const listHtml = gifts.length ? gifts.map(g => {
+    const thumb = g.cover_url
+      ? `<img src="${pbaEscapeAttr(g.cover_url)}" alt="" style="width:40px;height:40px;object-fit:contain;border-radius:6px;flex:none;">`
+      : `<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;">📦</div>`;
+    const status = (g.isPublished ? '已發布' : '🚧 草稿（未發布）') + '・' + (g.is_free ? '免費' : '下單解鎖');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;">${thumb}`
+      + `<div style="flex:1;min-width:0;"><div style="font-weight:600;">${pbaEscapeHtml(g.title || '未命名資源')}</div>`
+      + `<div style="font-size:12px;color:#999;">${pbaEscapeHtml(status)}</div></div>`
+      + `<button type="button" class="pba-mini-btn" data-gift-unlink="${pbaEscapeAttr(g.id)}"${dis}>解除</button></div>`;
+  }).join('') : '<div style="color:#999;font-size:13px;padding:4px 0;">還沒有綁定教材</div>';
+
+  const options = (HALL_RESOURCE_CHOICES || []).filter(r => !boundIds.has(r.id)).map(r =>
+    `<option value="${pbaEscapeAttr(r.id)}">${pbaEscapeHtml((r.title || '未命名資源') + '（' + (GIFT_KIND_LABEL[r.kind] || r.kind || '') + '）' + (r.isPublished ? '' : '（草稿）'))}</option>`
+  ).join('');
+
+  box.innerHTML =
+    `<div style="font-weight:700;margin-bottom:4px;">🎁 跟團贈品教材（教材館）</div>`
+    + `<div style="font-size:12px;color:#999;margin-bottom:6px;">這裡綁定的教材館資源，會在前台這本書的介紹視窗顯示成一張卡片（書和教材都已發布才顯示）。教材本身的檔案與解鎖規則在「教材館」分頁設定。</div>`
+    + listHtml
+    + `<div style="display:flex;gap:8px;margin-top:8px;">`
+    + `<select id="giftResourceSelect" style="flex:1;min-width:0;"${dis}><option value="">選擇要綁定的教材館資源…</option>${options}</select>`
+    + `<button type="button" class="pba-mini-btn" id="giftResourceLinkBtn"${dis}>綁定</button></div>`
+    + (ready ? '' : `<div style="color:#B5485A;font-size:13px;margin-top:6px;">⚠ 資料庫還沒更新，綁定暫時存不進去（請雪莉執行 db push）</div>`);
+
+  const linkBtn = box.querySelector('#giftResourceLinkBtn');
+  if (linkBtn) linkBtn.addEventListener('click', () => {
+    const sel = box.querySelector('#giftResourceSelect');
+    if (!sel || !sel.value) { showToast('請先選擇要綁定的資源', true); return; }
+    giftResourceToggle(book, sel.value, true, linkBtn);
+  });
+  box.querySelectorAll('[data-gift-unlink]').forEach(btn => {
+    btn.addEventListener('click', () => giftResourceToggle(book, btn.getAttribute('data-gift-unlink'), false, btn));
+  });
+}
+
+async function giftResourceToggle(book, resourceId, linked, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const res = await apiPost('book-hall-link', { bookId: book.id, resourceId, linked });
+    if (!res || res.success !== true) {
+      showToast((res && res.error) || (linked ? '綁定失敗' : '解除失敗'), true);
+      if (btn) btn.disabled = false;
+      return;
+    }
+    // 就地更新本機資料：資源清單的 bookIds 用回應覆蓋、書的 gift_resources 加入／移除
+    const choice = HALL_RESOURCE_CHOICES.find(r => r.id === resourceId);
+    if (choice && Array.isArray(res.bookIds)) choice.bookIds = res.bookIds;
+    const info = res.resource || choice || { id: resourceId };
+    const targets = [book];
+    const pkgBook = PACKAGE_DATA && (PACKAGE_DATA.books || []).find(x => x.id === book.id);
+    if (pkgBook && pkgBook !== book) targets.push(pkgBook);
+    if (CURRENT_BOOK && CURRENT_BOOK.id === book.id && !targets.includes(CURRENT_BOOK)) targets.push(CURRENT_BOOK);
+    targets.forEach(t => {
+      const list = (t.gift_resources || []).filter(g => g.id !== resourceId);
+      if (linked) {
+        const prev = (book.gift_resources || []).find(g => g.id === resourceId) || {};
+        list.push({
+          id: resourceId,
+          slug: info.slug || prev.slug || (choice && choice.slug) || '',
+          title: info.title || (choice && choice.title) || '',
+          cover_url: info.cover_url || prev.cover_url || (choice && choice.cover_url) || '',
+          is_free: info.is_free != null ? !!info.is_free : !!prev.is_free,
+          isPublished: info.isPublished != null ? !!info.isPublished : !!(choice && choice.isPublished)
+        });
+      }
+      t.gift_resources = list;
+    });
+    renderGiftResourcesBox(book);
+    if (typeof renderBookList === 'function' && PACKAGE_DATA && document.getElementById('bookList')) renderBookList();
+    showToast(linked ? '已綁定' : '已解除');
+  } catch (err) {
+    showToast((linked ? '綁定失敗：' : '解除失敗：') + (err && err.message ? err.message : err), true);
+    if (btn) btn.disabled = false;
+  }
 }
 
 function renderMaterialList(materials) {
