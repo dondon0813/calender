@@ -2795,16 +2795,18 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const pad = Math.round(base * 0.014);
     const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
     // 浮水印整塊（LOGO 與文字取較寬者）的水平範圍，用來判斷要不要讓位給下方 QR
-    const wmLogoW = o.logoImg ? Math.round(Math.round(base * 0.033) * (o.logoImg.width / o.logoImg.height)) : 0;
+    const wmLogoW = o.logoImg ? Math.round(Math.round(base * 0.0297) * (o.logoImg.width / o.logoImg.height)) : 0;
     ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
     const wmTextW = o.watermarkText ? ctx.measureText(o.watermarkText).width : 0;
     const wmW = Math.max(wmLogoW, wmTextW);
     const wmX0 = pos === 'left' ? pad : pos === 'center' ? (W - wmW) / 2 : W - pad - wmW;
     // 有標題說明文字時：LOGO 直接貼在圖最底（可以蓋在說明文字上，雪莉 2026-09-20：LOGO 是去背 PNG，重疊沒關係、
     // 不要被說明條頂上去）；說明條在最底所以不會碰到說明條上方的 QR／團購資訊。沒有說明條才維持原本的疊放讓位。
-    let y = (captionH > 0 ? H : clearQr(bottomY, wmX0, wmX0 + wmW)) - pad;
+    // 有 LOGO 時底部留白縮小（2026-09-21 雪莉：LOGO 再往下一些）
+    const wmBottomPad = o.logoImg ? Math.round(base * 0.006) : pad;
+    let y = (captionH > 0 ? H : clearQr(bottomY, wmX0, wmX0 + wmW)) - wmBottomPad;
     if (o.logoImg) {
-      const logoH = Math.round(base * 0.033); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055→0.0275），同日再放大 120%（→0.033）
+      const logoH = Math.round(base * 0.0297); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055→0.0275），同日再放大 120%（→0.033）；2026-09-21 縮小到 90%（→0.0297）
       const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
       const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
       // 不加光暈（2026-09-13 雪莉：外光暈怪）——貓咪 LOGO 自帶粗外框，底色深淺改由「LOGO 版本」咖啡字/白字自選
