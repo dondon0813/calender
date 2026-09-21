@@ -33,6 +33,7 @@ let HALL_KIND_TAB = 'file';   // 教材館子分頁過濾（file=教材分頁/ga
 let HALL_EVENT_CHOICES = [];  // {id, legacyId, title, startDate, endDate}
 let HALL_BRAND_CHOICES = [];  // {id(brands uuid), name}：前台卡片品牌標籤用（2026-09-17）
 let HALL_BRAND_READY = true;  // brand_id 欄位 migration 未 push＝false
+let HALL_WM_READY = true; // watermark_member 欄位是否已 push
 let HALL_EDIT = null;         // 編輯中的資源工作副本（含 rules/grants）；null＝顯示列表
 
 // ===== HTML 逃逸（自帶一份，不依賴 admin.js，同 books.js／fans.js 的做法）=====
@@ -92,6 +93,7 @@ function loadHallView(forceReload) {
     HALL_EVENT_CHOICES = Array.isArray(data.eventChoices) ? data.eventChoices : [];
     HALL_BRAND_CHOICES = Array.isArray(data.brandChoices) ? data.brandChoices : [];
     HALL_BRAND_READY = data.brandReady !== false;
+    HALL_WM_READY = data.watermarkReady !== false;
     hallRenderBanner();
     hallRenderList();
   }).catch(err => {
@@ -179,7 +181,7 @@ function hallOpenEdit(i) {
         screenshots: Array.isArray(r.screenshots) ? r.screenshots.slice() : [],
         coverUrl: r.coverUrl || '', eventId: r.eventId || '', eventTitle: r.eventTitle || '', brandId: r.brandId || '',
         buyUrl: r.buyUrl || '', privatePath: r.privatePath || '', fileName: r.fileName || '',
-        trialUrl: r.trialUrl || '', isPublished: !!r.isPublished, sort: r.sort || 0,
+        trialUrl: r.trialUrl || '', isPublished: !!r.isPublished, sort: r.sort || 0, watermarkMember: !!r.watermarkMember,
         rules: JSON.parse(JSON.stringify(r.rules || [])),
         grants: JSON.parse(JSON.stringify(r.grants || [])),
         codeRules: JSON.parse(JSON.stringify(r.codeRules || []))
@@ -188,7 +190,7 @@ function hallOpenEdit(i) {
         // 新增預設類型跟著目前子分頁（教材分頁＝file）
         id: null, slug: '', title: '', kind: HALL_KIND_TAB || 'game', isFree: false, intro: '', description: '',
         screenshots: [], coverUrl: '', eventId: '', eventTitle: '', brandId: '', buyUrl: '', privatePath: '',
-        fileName: '', trialUrl: '', isPublished: false, sort: 0, rules: [], grants: [], codeRules: []
+        fileName: '', trialUrl: '', isPublished: false, sort: 0, watermarkMember: false, rules: [], grants: [], codeRules: []
       };
   hallRenderEditor();
 }
@@ -203,6 +205,7 @@ function hallSyncFormToEdit() {
   Object.keys(map).forEach(id => { const el = document.getElementById(id); if (el) e[map[id]] = el.value; });
   const free = document.getElementById('hfFree'); if (free) e.isFree = free.checked;
   const pub = document.getElementById('hfPublished'); if (pub) e.isPublished = pub.checked;
+  const wm = document.getElementById('hfWatermark'); if (wm) e.watermarkMember = wm.checked;
 }
 
 function hallCloseEdit() {
@@ -271,6 +274,10 @@ function hallRenderEditor() {
       '<label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:8px;">' +
         '<input type="checkbox" id="hfPublished"' + (e.isPublished ? ' checked' : '') + ' style="width:auto; margin:0;"><span>✅ 發布（勾了會員才看得到這個資源）</span>' +
       '</label>' +
+      '<label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:8px;">' +
+        '<input type="checkbox" id="hfWatermark"' + (e.watermarkMember ? ' checked' : '') + ' style="width:auto; margin:0;"><span>🔖 下載時蓋會員編號浮水印（只對「教材」類的 PDF 有效；不勾＝客人拿到乾淨原檔）</span>' +
+      '</label>' +
+      (HALL_WM_READY ? '' : '<div style="font-size:11.5px; color:#B5485A; margin-top:4px;">⚠ 資料庫還沒更新，浮水印開關暫時存不進去（勾了存檔會提示，請雪莉執行 db push）</div>') +
 
       label('卡片簡介（列表用一兩句話）') +
       '<textarea id="hfIntro" rows="2" style="' + inputStyle + '" placeholder="簡短介紹，會出現在資源卡片上">' + hallEscape(e.intro) + '</textarea>' +
@@ -796,6 +803,7 @@ async function hallSave() {
     isPublished: document.getElementById('hfPublished').checked,
     sort: Number(document.getElementById('hfSort').value) || 0
   };
+  payload.watermarkMember = document.getElementById('hfWatermark').checked;
   if (e.id) payload.id = e.id;
 
   const btn = document.getElementById('hfSaveBtn');
@@ -813,7 +821,7 @@ async function hallSave() {
     else HALL_LIST.unshift(merged);
     // 工作副本改用存檔後的值（原本只同步 id/slug，重畫會把品牌等欄位跳回存檔前的值）
     ['id', 'slug', 'title', 'kind', 'isFree', 'intro', 'description', 'coverUrl', 'eventId', 'eventTitle', 'brandId',
-      'buyUrl', 'privatePath', 'fileName', 'trialUrl', 'isPublished', 'sort'].forEach(k => {
+      'buyUrl', 'privatePath', 'fileName', 'trialUrl', 'isPublished', 'sort', 'watermarkMember'].forEach(k => {
       if (merged[k] !== undefined) e[k] = merged[k];
     });
     if (Array.isArray(merged.screenshots)) e.screenshots = merged.screenshots.slice();
