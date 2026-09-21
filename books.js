@@ -2768,6 +2768,26 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
   // 底部由下往上疊：標題說明文字 → 團購資訊文字 → 浮水印（各自選左/中/右，垂直錯開不會互蓋）
   let bottomY = H - captionH;
 
+  // 浮水印幾何（先算好）：2026-09-21 雪莉——浮水印要固定貼在圖底，不能被團購資訊往上擠；
+  // 水平重疊時改由團購資訊讓位（往上抬到浮水印上方）。有標題說明文字時 LOGO 直接貼圖最底（可蓋在說明文字上）
+  let wm = null;
+  if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
+    const size = Math.round(base * 0.022);
+    const pad = Math.round(base * 0.014);
+    const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
+    const logoH = o.logoImg ? Math.round(base * 0.0297) : 0; // 2026-09-21 縮小到 90%（原 0.033）
+    const logoW = o.logoImg ? Math.round(logoH * (o.logoImg.width / o.logoImg.height)) : 0;
+    ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
+    const textW = o.watermarkText ? ctx.measureText(o.watermarkText).width : 0;
+    const w = Math.max(logoW, textW);
+    const x0 = pos === 'left' ? pad : pos === 'center' ? (W - w) / 2 : W - pad - w;
+    // 有 LOGO 時底部留白縮小（2026-09-21 雪莉：LOGO 再往下一些）
+    const bottomPad = o.logoImg ? Math.round(base * 0.009) : pad;
+    const floor = captionH > 0 ? H : clearQr(H, x0, x0 + w);
+    const blockH = bottomPad + logoH + (o.watermarkText ? (o.logoImg ? Math.round(size * 0.5) : 0) + size : 0);
+    wm = { size, pad, pos, logoH, logoW, x0, x1: x0 + w, bottomPad, floor, blockH };
+  }
+
   // 團購資訊：開團版限定。2026-09-13 雪莉改：不要底色、放圖下方、顏色與位置每份教材自選
   if (withPromo && o.promoText) {
     // 字級＝印出來約 10pt（2026-09-13 雪莉）：10pt＝3.53mm，依規格長邊公釐數換算成像素（沒選規格當 A4 297mm）
@@ -2784,30 +2804,18 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const promoW = ctx.measureText(promoLine).width;
     const promoX0 = pos === 'left' ? pad : pos === 'center' ? W / 2 - promoW / 2 : W - pad - promoW;
     bottomY = clearQr(bottomY, promoX0, promoX0 + promoW);
+    // 沒有標題說明文字時，浮水印貼底；團購資訊與浮水印水平重疊就抬到浮水印上方
+    if (captionH === 0 && wm && promoX0 + promoW > wm.x0 && promoX0 < wm.x1) bottomY = Math.min(bottomY, wm.floor - wm.blockH);
     ctx.fillText(promoLine, tx, bottomY - pad);
     ctx.textAlign = 'left';
     bottomY -= pad + size;
   }
 
-  // 浮水印圖層（文字/手寫字 LOGO）：疊在團購資訊（或 caption 條）上方，水平位置可選左/中/右
-  if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
-    const size = Math.round(base * 0.022);
-    const pad = Math.round(base * 0.014);
-    const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
-    // 浮水印整塊（LOGO 與文字取較寬者）的水平範圍，用來判斷要不要讓位給下方 QR
-    const wmLogoW = o.logoImg ? Math.round(Math.round(base * 0.0297) * (o.logoImg.width / o.logoImg.height)) : 0;
-    ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
-    const wmTextW = o.watermarkText ? ctx.measureText(o.watermarkText).width : 0;
-    const wmW = Math.max(wmLogoW, wmTextW);
-    const wmX0 = pos === 'left' ? pad : pos === 'center' ? (W - wmW) / 2 : W - pad - wmW;
-    // 有標題說明文字時：LOGO 直接貼在圖最底（可以蓋在說明文字上，雪莉 2026-09-20：LOGO 是去背 PNG，重疊沒關係、
-    // 不要被說明條頂上去）；說明條在最底所以不會碰到說明條上方的 QR／團購資訊。沒有說明條才維持原本的疊放讓位。
-    // 有 LOGO 時底部留白縮小（2026-09-21 雪莉：LOGO 再往下一些）
-    const wmBottomPad = o.logoImg ? Math.round(base * 0.009) : pad;
-    let y = (captionH > 0 ? H : clearQr(bottomY, wmX0, wmX0 + wmW)) - wmBottomPad;
+  // 浮水印圖層（文字/手寫字 LOGO）：固定貼圖底（幾何見上方 wm），團購資訊遇水平重疊會自己往上讓；水平位置可選左/中/右
+  if (wm) {
+    const { size, pad, pos, logoH, logoW } = wm;
+    let y = wm.floor - wm.bottomPad;
     if (o.logoImg) {
-      const logoH = Math.round(base * 0.0297); // 2026-09-13 雪莉：浮水印縮小 50%（原 0.055→0.0275），同日再放大 120%（→0.033）；2026-09-21 縮小到 90%（→0.0297）
-      const logoW = Math.round(logoH * (o.logoImg.width / o.logoImg.height));
       const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
       // 不加光暈（2026-09-13 雪莉：外光暈怪）——貓咪 LOGO 自帶粗外框，底色深淺改由「LOGO 版本」咖啡字/白字自選
       ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH);
