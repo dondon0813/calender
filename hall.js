@@ -508,6 +508,7 @@ function hallRenderCodeRules() {
         ? '<input style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.codeRules[' + i + '].eventLegacyId=this.value">'
         : '') +
       '<input style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（必填）" oninput="HALL_EDIT.codeRules[' + i + '].productMatch=this.value">' +
+      '<input type="number" min="0" style="width:96px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.excludeAmount == null ? '' : r.excludeAmount) + '" placeholder="單品價格" title="這個商品單買的價格（元）。填了：客人買大組合時，入點只扣這個單品價×件數，其他品項照常入點；留空＝命中品項整行都不入點" oninput="HALL_EDIT.codeRules[' + i + '].excludeAmount=this.value">' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;" title="勾選＝每組發1張碼（買1組送1張，適合下單者已由解鎖規則涵蓋的團）；不勾＝買n組發n−1張"><input type="checkbox"' + (r.includeFirst ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].includeFirst=this.checked"> 含第1組</label>' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].active=this.checked"> 啟用</label>' +
       '<button type="button" class="task-mini-btn" onclick="hallRemoveCodeRule(' + i + ')">✕</button>' +
@@ -527,7 +528,7 @@ function hallCodeRuleEventChange(i, val) {
 }
 function hallAddCodeRuleRow() {
   if (!HALL_EDIT) return;
-  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true, includeFirst: false });
+  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true, includeFirst: false, excludeAmount: null });
   hallRenderCodeRules();
 }
 function hallRemoveCodeRule(i) {
@@ -544,7 +545,8 @@ async function hallSaveCodeRules() {
     eventLegacyId: (r.eventLegacyId || '').trim(),
     productMatch: (r.productMatch || '').trim(),
     active: r.active !== false,
-    includeFirst: r.includeFirst === true
+    includeFirst: r.includeFirst === true,
+    excludeAmount: r.excludeAmount === '' || r.excludeAmount == null ? null : Number(r.excludeAmount)
   }));
   try {
     const res = await hallApiPost('fan-admin-hall-code-rule-set', { resourceId: HALL_EDIT.id, rules });
