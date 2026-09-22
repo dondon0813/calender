@@ -621,6 +621,15 @@
   @media (min-width: 640px) {
     .pb-materials-panel.show { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
   }
+  /* 教材使用聲明（2026-09-23 雪莉指定）：跨兩欄整行顯示，不擠在某張教材卡旁邊 */
+  .pb-materials-notice {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    color: var(--c-muted);
+    line-height: 1.6;
+    text-align: center;
+    margin-top: 2px;
+  }
 
   /* 跟團贈品延伸教材：教材館資源橫向小卡（整張是連結） */
   .pb-gift-res { margin-top: 14px; }
@@ -2244,6 +2253,11 @@ function renderMaterials(book) {
     card.appendChild(body);
     panel.appendChild(card);
   });
+
+  const notice = document.createElement('div');
+  notice.className = 'pb-materials-notice';
+  notice.textContent = '本教材僅供個人使用，請勿轉傳、販售、改作、用於 AI 訓練、商業使用或作為行銷贈品。';
+  panel.appendChild(notice);
 
   toggle.onclick = () => panel.classList.toggle('show');
 }
