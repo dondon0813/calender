@@ -17,6 +17,70 @@
     text-align: center;
   }
   .pb-featured-heading img { display: block; margin: 0 auto; width: min(58%, 220px); }
+  /* 「不知道怎麼選？」小測驗入口（2026-09-23 雪莉指定，只掛在 KIDsREAD 頂圖底下） */
+  .pb-quiz-entry {
+    display: block;
+    margin: 8px auto 0;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--c-primary);
+    background: none;
+    border: 1px dashed var(--c-primary);
+    border-radius: var(--r-pill);
+    padding: 6px 16px;
+    cursor: pointer;
+  }
+  .pb-quiz-entry:hover { background: var(--c-pink-bg, #FFE7ED); }
+  /* 小測驗表單／推薦結果彈窗共用樣式 */
+  .pb-quiz-q { margin-bottom: 16px; }
+  .pb-quiz-q:last-of-type { margin-bottom: 0; }
+  .pb-quiz-q-title { font-size: 13px; font-weight: 800; color: var(--c-text); margin-bottom: 8px; }
+  .pb-quiz-q-hint { font-size: 11px; font-weight: 400; color: var(--c-muted); margin-left: 4px; }
+  .pb-quiz-options { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* 小孩年齡：可新增多位小孩，每位一列「幾歲 幾個月」（2026-09-23 雪莉更正） */
+  .pb-quiz-child-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .pb-quiz-child-row select {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    padding: 7px 10px;
+    background: var(--c-input-bg);
+    outline: none;
+  }
+  .pb-quiz-child-label { font-size: 12.5px; color: var(--c-muted); }
+  .pb-quiz-child-remove {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--c-muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .pb-quiz-add-child {
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--c-primary);
+    background: none;
+    border: none;
+    padding: 2px 0;
+    cursor: pointer;
+  }
+  .pb-quiz-submit { margin-top: 18px; }
+  .pb-quiz-note {
+    font-size: 12px;
+    color: var(--c-text-soft, var(--c-muted));
+    background: var(--c-pink-bg, #FFE7ED);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+  .pb-quiz-result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; }
   /* 套組之間用細線分隔（2026-09-23 雪莉：底色色塊一格一格感覺太多、改回細線比較輕） */
   .pb-featured-set { margin: 0 0 16px; }
   .pb-featured-set:last-child { margin-bottom: 0; }
@@ -888,6 +952,46 @@
   </div>
 </div>
 
+<!-- 「不知道怎麼選？」小測驗（2026-09-23 雪莉指定）：填 4 題 → 彈窗列出符合條件的書單 -->
+<div class="modal-backdrop" id="pbQuizModal" onclick="if(event.target===this) closeQuizModal()">
+  <div class="modal-box pb-modal-box pb-promo-box">
+    <button class="rc-close-btn" onclick="closeQuizModal()">✕</button>
+    <div class="pb-promo-title">不知道怎麼選？</div>
+    <div class="pb-promo-sub" style="margin-bottom:16px;">簡單回答幾題，幫你挑出最適合的點讀繪本</div>
+
+    <div class="pb-quiz-q">
+      <div class="pb-quiz-q-title">小孩年齡</div>
+      <div id="pbQuizChildren"></div>
+      <button type="button" class="pb-quiz-add-child" id="pbQuizAddChild">＋ 新增一位小孩</button>
+    </div>
+    <div class="pb-quiz-q">
+      <div class="pb-quiz-q-title">是否已經有點讀筆？</div>
+      <div class="pb-quiz-options" id="pbQuizPen" data-quiz-group="pen" data-quiz-mode="single"></div>
+    </div>
+    <div class="pb-quiz-q">
+      <div class="pb-quiz-q-title">對自製錄音教材、點讀繪本有興趣嗎？</div>
+      <div class="pb-quiz-options" id="pbQuizMaterial" data-quiz-group="material" data-quiz-mode="single"></div>
+    </div>
+    <div class="pb-quiz-q">
+      <div class="pb-quiz-q-title">學習取向<span class="pb-quiz-q-hint">（可複選）</span></div>
+      <div class="pb-quiz-options" id="pbQuizGoal" data-quiz-group="goal" data-quiz-mode="multi"></div>
+    </div>
+
+    <button type="button" class="action-btn pb-quiz-submit" id="pbQuizSubmitBtn">看專屬推薦</button>
+  </div>
+</div>
+
+<!-- 小測驗推薦結果 -->
+<div class="modal-backdrop" id="pbQuizResultModal" onclick="if(event.target===this) closeQuizResultModal()">
+  <div class="modal-box pb-modal-box pb-promo-box">
+    <button class="rc-close-btn" onclick="closeQuizResultModal()">✕</button>
+    <div class="pb-promo-title">為你推薦</div>
+    <div id="pbQuizResultNote"></div>
+    <div class="pb-quiz-result-grid" id="pbQuizResultGrid"></div>
+    <div class="empty-state" id="pbQuizResultEmpty" style="display:none;">這個組合暫時沒有對應的書，換個年齡試試看？</div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="bookModal" onclick="if(event.target===this) closeBookModal()">
   <div class="modal-box pb-modal-box">
     <button class="rc-close-btn" onclick="closeBookModal()">✕</button>
@@ -1356,7 +1460,8 @@ function renderFeatured() {
 
     // 頂圖直接掛在最外層 wrap，不算進任何一個套組的色塊裡（2026-09-23 改色塊分隔後，
     // 頂圖若跟著塞進第一個套組的 setEl，會變成只有第一個套組帶圖、視覺上像圖是它專屬的）
-    const headingSrc = PB_SET_HEADING_BY_BRAND[list.map(b => b.brand_name).find(n => n && PB_SET_HEADING_BY_BRAND[n])];
+    const headingBrand = list.map(b => b.brand_name).find(n => n && PB_SET_HEADING_BY_BRAND[n]);
+    const headingSrc = PB_SET_HEADING_BY_BRAND[headingBrand];
     if (headingSrc && headingSrc !== lastHeadingSrc) {
       const heading = document.createElement('div');
       heading.className = 'pb-featured-heading';
@@ -1364,6 +1469,16 @@ function renderFeatured() {
       headingImg.src = headingSrc;
       headingImg.alt = '套組介紹';
       heading.appendChild(headingImg);
+      // 「不知道怎麼選？」小測驗入口（2026-09-23 雪莉指定）：只掛在 KIDsREAD 頂圖底下，
+      // 因為題目（是否已有點讀筆）是點讀筆專屬的，其他品牌的頂圖問這個沒意義。
+      if (headingBrand === 'KIDsREAD點讀筆') {
+        const quizBtn = document.createElement('button');
+        quizBtn.type = 'button';
+        quizBtn.className = 'pb-quiz-entry';
+        quizBtn.textContent = '不知道怎麼選？點我看專屬推薦';
+        quizBtn.addEventListener('click', openQuizModal);
+        heading.appendChild(quizBtn);
+      }
       wrap.appendChild(heading);
     }
     if (headingSrc) lastHeadingSrc = headingSrc; // 沒對到圖的套組不算換品牌，維持沿用前一張已顯示的圖
@@ -1425,6 +1540,182 @@ function renderFeatured() {
 
   wrap.style.display = anyShown ? 'block' : 'none';
 }
+
+// ===== 「不知道怎麼選？」小測驗（2026-09-23 雪莉指定）=====
+// 年齡是唯一的硬篩選（categories 一定要含對應年齡標籤才會列出）；學習取向／教材興趣只影響排序
+// 優先順序，不排除書籍，避免答案組合太窄時結果整個是空的。對照規則是依現有的 categories／types／
+// materials 資料算出來的合理猜測，不是精確分類——雪莉之後想調哪本書該不該被歸類，改那本書的
+// 年齡/類型標籤即可，不用改這裡的程式。
+// 小孩年齡改「幾歲＋幾個月」下拉，可新增多位小孩（2026-09-23 雪莉更正）；換算成月數再對回
+// 現有的年齡分類標籤（0y+/1y+/2y+/3y+），跟書籍 categories 的判定基準一致。
+const PB_QUIZ_YEAR_OPTIONS = [0, 1, 2, 3, 4, 5, 6];
+const PB_QUIZ_MONTH_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+function ageToCategoryTag(years, months) {
+  const totalMonths = (Number(years) || 0) * 12 + (Number(months) || 0);
+  if (totalMonths < 12) return '0y+';
+  if (totalMonths < 24) return '1y+';
+  if (totalMonths < 36) return '2y+';
+  return '3y+';
+}
+const PB_QUIZ_PEN = [
+  { value: 'has', label: '已經有了' },
+  { value: 'none', label: '還沒有' },
+];
+const PB_QUIZ_MATERIAL = [
+  { value: 'yes', label: '有興趣' },
+  { value: 'no', label: '還好' },
+];
+const PB_QUIZ_GOAL = [
+  { value: 'formal', label: '正式學習英語' },
+  { value: 'play', label: '快樂玩中學' },
+];
+// 學習取向對照現有的年齡與主題／類型標籤（同一本書可能兩邊都符合，取分數高的排前面）
+const PB_QUIZ_FORMAL_TAGS = ['語言學習', '單字書', '知識書'];
+const PB_QUIZ_PLAY_TYPES = ['操作書', '有聲書', '立體書'];
+
+let PB_QUIZ_ANSWERS = { children: [{ years: 0, months: 0 }], pen: null, material: null, goal: new Set() };
+
+function renderQuizChildren() {
+  const wrap = document.getElementById('pbQuizChildren');
+  wrap.innerHTML = '';
+  PB_QUIZ_ANSWERS.children.forEach((child, idx) => {
+    const row = document.createElement('div');
+    row.className = 'pb-quiz-child-row';
+    if (PB_QUIZ_ANSWERS.children.length > 1) {
+      const label = document.createElement('span');
+      label.className = 'pb-quiz-child-label';
+      label.textContent = `第 ${idx + 1} 位`;
+      row.appendChild(label);
+    }
+
+    const yearSel = document.createElement('select');
+    PB_QUIZ_YEAR_OPTIONS.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = y + ' 歲';
+      if (child.years === y) opt.selected = true;
+      yearSel.appendChild(opt);
+    });
+    yearSel.addEventListener('change', () => { child.years = Number(yearSel.value); });
+    row.appendChild(yearSel);
+
+    const monthSel = document.createElement('select');
+    PB_QUIZ_MONTH_OPTIONS.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = String(m);
+      opt.textContent = m + ' 個月';
+      if (child.months === m) opt.selected = true;
+      monthSel.appendChild(opt);
+    });
+    monthSel.addEventListener('change', () => { child.months = Number(monthSel.value); });
+    row.appendChild(monthSel);
+
+    if (PB_QUIZ_ANSWERS.children.length > 1) {
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'pb-quiz-child-remove';
+      removeBtn.textContent = '移除';
+      removeBtn.addEventListener('click', () => {
+        PB_QUIZ_ANSWERS.children.splice(idx, 1);
+        renderQuizChildren();
+      });
+      row.appendChild(removeBtn);
+    }
+
+    wrap.appendChild(row);
+  });
+}
+document.getElementById('pbQuizAddChild').addEventListener('click', () => {
+  PB_QUIZ_ANSWERS.children.push({ years: 0, months: 0 });
+  renderQuizChildren();
+});
+
+function renderQuizChipGroup(containerId, options, key, multi) {
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip';
+    btn.textContent = opt.label;
+    const isActive = multi ? PB_QUIZ_ANSWERS[key].has(opt.value) : PB_QUIZ_ANSWERS[key] === opt.value;
+    if (isActive) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      if (multi) {
+        if (PB_QUIZ_ANSWERS[key].has(opt.value)) PB_QUIZ_ANSWERS[key].delete(opt.value);
+        else PB_QUIZ_ANSWERS[key].add(opt.value);
+      } else {
+        PB_QUIZ_ANSWERS[key] = PB_QUIZ_ANSWERS[key] === opt.value ? null : opt.value;
+      }
+      renderQuizChipGroup(containerId, options, key, multi);
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function openQuizModal() {
+  PB_QUIZ_ANSWERS = { children: [{ years: 0, months: 0 }], pen: null, material: null, goal: new Set() };
+  renderQuizChildren();
+  renderQuizChipGroup('pbQuizPen', PB_QUIZ_PEN, 'pen', false);
+  renderQuizChipGroup('pbQuizMaterial', PB_QUIZ_MATERIAL, 'material', false);
+  renderQuizChipGroup('pbQuizGoal', PB_QUIZ_GOAL, 'goal', true);
+  document.getElementById('pbQuizModal').classList.add('show');
+}
+function closeQuizModal() {
+  document.getElementById('pbQuizModal').classList.remove('show');
+}
+function closeQuizResultModal() {
+  document.getElementById('pbQuizResultModal').classList.remove('show');
+}
+
+function computeQuizMatches(answers) {
+  // 多位小孩：任一位小孩符合的年齡分類都算，取聯集（家裡有 1 歲跟 3 歲的小孩，兩邊的書都要列出來）
+  const ageTags = new Set(answers.children.map(c => ageToCategoryTag(c.years, c.months)));
+  const list = ALL_BOOKS.filter(b => (b.kind || 'book') === 'book' && (b.categories || []).some(c => ageTags.has(c)));
+  return list
+    .map(b => {
+      let score = 0;
+      const cats = b.categories || [];
+      const types = b.types || [];
+      if (answers.goal.has('formal') && (cats.some(t => PB_QUIZ_FORMAL_TAGS.includes(t)) || types.some(t => PB_QUIZ_FORMAL_TAGS.includes(t)))) score += 1;
+      if (answers.goal.has('play') && types.some(t => PB_QUIZ_PLAY_TYPES.includes(t))) score += 1;
+      if (answers.material === 'yes' && (b.materials || []).length) score += 1;
+      return { b, score };
+    })
+    .sort((x, y) => y.score - x.score)
+    .map(x => x.b);
+}
+
+function renderQuizResult(list, answers) {
+  const noteWrap = document.getElementById('pbQuizResultNote');
+  noteWrap.innerHTML = '';
+  const notes = [];
+  if (answers.pen === 'none') notes.push('還沒有點讀筆的話，記得加購一支魔法錄音點讀筆才能使用喔！');
+  if (answers.material === 'yes') notes.push('已優先列出有附延伸教材的書給你參考。');
+  if (notes.length) {
+    const note = document.createElement('div');
+    note.className = 'pb-quiz-note';
+    note.textContent = notes.join(' ');
+    noteWrap.appendChild(note);
+  }
+
+  const grid = document.getElementById('pbQuizResultGrid');
+  grid.innerHTML = '';
+  const empty = document.getElementById('pbQuizResultEmpty');
+  if (!list.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.slice(0, 12).forEach(book => grid.appendChild(buildBookCard(book)));
+}
+
+document.getElementById('pbQuizSubmitBtn').addEventListener('click', () => {
+  const matches = computeQuizMatches(PB_QUIZ_ANSWERS);
+  renderQuizResult(matches, PB_QUIZ_ANSWERS);
+  closeQuizModal();
+  document.getElementById('pbQuizResultModal').classList.add('show');
+});
 
 function buildBookCard(book) {
   const card = document.createElement('div');
