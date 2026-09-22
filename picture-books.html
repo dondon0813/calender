@@ -79,9 +79,13 @@
     font-size: 11px;
     font-weight: 700;
     color: var(--c-text);
-    white-space: nowrap;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   .pb-search-row { margin-bottom: 14px; }
@@ -1308,6 +1312,9 @@ function renderFeatured() {
   wrap.innerHTML = '';
 
   let anyShown = false;
+  // 同品牌的套組相鄰出現時，頂圖只在該品牌第一個套組顯示一次，換品牌才換下一張圖
+  // （2026-09-23 雪莉指定：同一團一堆套組全部各自重複顯示同一張懶人包圖很奇怪）。
+  let lastHeadingSrc = null;
 
   (ALL_SETS || []).forEach(set => {
     const bookIds = set.bookIds || [];
@@ -1319,7 +1326,7 @@ function renderFeatured() {
     setEl.className = 'pb-featured-set';
 
     const headingSrc = PB_SET_HEADING_BY_BRAND[list.map(b => b.brand_name).find(n => n && PB_SET_HEADING_BY_BRAND[n])];
-    if (headingSrc) {
+    if (headingSrc && headingSrc !== lastHeadingSrc) {
       const heading = document.createElement('div');
       heading.className = 'pb-featured-heading';
       const headingImg = document.createElement('img');
@@ -1328,6 +1335,7 @@ function renderFeatured() {
       heading.appendChild(headingImg);
       setEl.appendChild(heading);
     }
+    if (headingSrc) lastHeadingSrc = headingSrc; // 沒對到圖的套組不算換品牌，維持沿用前一張已顯示的圖
 
     const title = document.createElement('div');
     title.className = 'pb-featured-title';
