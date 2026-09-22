@@ -123,3 +123,11 @@ body{background:#FFFFFF!important}
 .box{background:#F5EFE9!important}
 .box .desc b{color:#B07F83!important}
 body:has(.box) .section-title{background:#F1E8E0!important}
+
+/* 繪本館「團購開跑後才顯示」的置頂優惠視窗（2026-09-22 補上，同 theme-lotus.css） */
+.pb-top-active{background:#F7E4E2!important;border-color:transparent!important}
+.pb-top-active .pb-top-btn{background:#C99A9B!important}
+.pb-top-active .pb-top-btn:hover{background:#B07F83!important}
+.pb-top-active .pb-gift-badge{background:#C99A9B!important}
+.pb-top-active .pb-code-hint{background:#C99A9B!important}
+.pb-top-active .pb-discount{border-color:#E5CFCD!important}
