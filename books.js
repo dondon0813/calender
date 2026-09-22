@@ -1297,7 +1297,7 @@ function renderGiftResourcesBox(book) {
     + `<div style="font-size:12px;color:#999;margin-bottom:6px;">這裡綁定的教材館資源，會在前台這本書的介紹視窗顯示成一張卡片（書和教材都已發布才顯示）。教材本身的檔案與解鎖規則在「教材館」分頁設定。</div>`
     + listHtml
     + `<div style="display:flex;gap:8px;margin-top:8px;">`
-    + `<select id="giftResourceSelect" style="flex:1;min-width:0;"${dis}><option value="">選擇要綁定的教材館資源…</option>${options}</select>`
+    + `<select id="giftResourceSelect" style="flex:1;min-width:0;font-family:var(--font-body);font-size:13.5px;color:var(--c-text);border:1px solid var(--c-border);border-radius:var(--r-sm);padding:9px 12px;background:var(--c-input-bg);outline:none;box-sizing:border-box;"${dis}><option value="">選擇要綁定的教材館資源…</option>${options}</select>`
     + `<button type="button" class="pba-mini-btn" id="giftResourceLinkBtn"${dis}>綁定</button></div>`
     + (ready ? '' : `<div style="color:#B5485A;font-size:13px;margin-top:6px;">⚠ 資料庫還沒更新，綁定暫時存不進去（請雪莉執行 db push）</div>`);
 
