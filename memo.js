@@ -350,7 +350,9 @@ async function quickAddNoteToFolder(folderId) {
     const result = await postTask({ type: 'pnote-add', scope: pnoteScope, folderId, text: '' });
     await loadPnoteData(true);
     if (folderId) pnoteExpandedIds.add(folderId); // 確保該資料夾展開，才能在樹狀圖看到新備忘錄
-    if (result.note && result.note.id) openNoteInEditor(result.note.id);
+    // 後端 pnote-add 回應是 {success, id}（沒有包一層 note），之前寫成 result.note.id 恆為 undefined，
+    // 導致「立刻打開編輯器」從來沒生效過（2026-09-22 雪莉抓到：新增後畫面沒自動開）
+    if (result.id) openNoteInEditor(result.id);
   } catch (err) {
     alert('新增備忘錄失敗：' + err.message);
   }
