@@ -1,0 +1,51 @@
+# 擋知名 AI 爬蟲／訓練用途的抓取（Google/Bing 等一般搜尋引擎不受影響，維持可被搜到）
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+# 後台／內部工具頁面，所有爬蟲一律不列入索引
+User-agent: *
+Disallow: /admin.html
+Disallow: /file-inbox.html
+Disallow: /calendar-poster.html
+Disallow: /color-preview.html
+Disallow: /picture-books-admin.html
+Disallow: /office.html
