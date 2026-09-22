@@ -2284,6 +2284,7 @@ async function deleteGift(gift) {
 
 // ===== 年齡與主題／類型標籤 清單管理（⚙️ 繪本館設定子分頁；2026-08-27 從書籍編輯表單底部搬出）=====
 const OPEN_TAG = { categories: null, types: null }; // 各區展開中的名稱（重繪後保持展開狀態）
+const EDITING_TAG = { categories: null, types: null }; // 目前正在編輯名稱（＋分類還可調母分類）的標籤名稱
 
 // 兩區設定（欄位名＝picture_books 上的陣列欄；checkboxGroup＝書籍編輯表單對應勾選群）。
 // canEditNames＝名稱可否增刪：類型表 book_types 是 2026-08-27 的 migration，
@@ -2296,7 +2297,7 @@ const TAG_SECTIONS = {
     hintText: '點封面把書加入或移出這個分類（粉紅框✓＝已加入）',
     canEditNames: () => true,
     deleteTag: (name) => deleteCategory(name),
-    renameTag: (oldName, newName) => apiPost('book-category-rename', { oldName, newName }),
+    renameTag: (payload) => apiPost('book-category-rename', payload),
     refresh: () => refreshCategoriesOnly(),
     tagNames: () => orderedCategoryNames(),
     labelOf: (name) => (CATEGORY_PARENT_OF[name] ? '↳ ' : '') + name, // 子分類縮排掛在母分類底下
@@ -2309,28 +2310,97 @@ const TAG_SECTIONS = {
     hintText: '點封面把書加入或移出這個類型（粉紅框✓＝已加入）',
     canEditNames: () => !PACKAGE_DATA || PACKAGE_DATA.typesReady !== false,
     deleteTag: (name) => deleteType(name),
-    renameTag: (oldName, newName) => apiPost('book-type-rename', { oldName, newName }),
+    renameTag: (payload) => apiPost('book-type-rename', payload),
     refresh: () => refreshTypesOnly(),
     tagNames: () => (PACKAGE_DATA.types || []).slice(),
   },
 };
 
-// 分類／類型都通用的改名（2026-09-22 雪莉：後台要可以編輯名稱）：跳原生輸入框問新名字，
-// 呼叫對應的 rename API（後端同時會把所有已勾這個名字的書換成新名字，勾選關係不變）。
-async function renameTagPrompt(field, oldName) {
+// 分類／類型都通用的編輯表單（2026-09-22 雪莉：改名鈕位置怪、應該叫「編輯」、順便能調母分類）：
+// 卡片展開時內嵌一個小表單（名稱輸入框＋分類還多一個母分類下拉），取代原本的原生 prompt() 改名。
+function buildTagEditForm(field, tagName) {
   const cfg = TAG_SECTIONS[field];
-  const newName = (window.prompt(`把「${oldName}」改名為：`, oldName) || '').trim();
-  if (!newName || newName === oldName) return;
-  try {
-    const res = await cfg.renameTag(oldName, newName);
-    if (!res || res.success !== true) {
-      showToast('改名失敗：' + ((res && res.error) || '未知錯誤'), true);
-      return;
+  const fieldStyle = 'width:100%; font-family:var(--font-body); font-size:13.5px; color:var(--c-text); border:1px solid var(--c-border); border-radius:var(--r-sm); padding:9px 12px; background:var(--c-input-bg); outline:none; box-sizing:border-box;';
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'border:1px dashed var(--c-border); border-radius:12px; padding:10px; margin-bottom:10px; background:var(--c-surface);';
+  wrap.addEventListener('click', (e) => e.stopPropagation());
+
+  const nameLabel = document.createElement('label');
+  nameLabel.style.cssText = 'display:block; font-size:12px; font-weight:800; color:var(--c-muted); margin-bottom:4px;';
+  nameLabel.textContent = '名稱';
+  wrap.appendChild(nameLabel);
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.value = tagName;
+  nameInput.style.cssText = fieldStyle + ' margin-bottom:8px;';
+  wrap.appendChild(nameInput);
+
+  let parentSelect = null;
+  if (field === 'categories' && !isAgeCategory(tagName)) {
+    const hasChildren = Boolean((CATEGORY_CHILDREN[tagName] || []).length);
+    const parentLabel = document.createElement('label');
+    parentLabel.style.cssText = 'display:block; font-size:12px; font-weight:800; color:var(--c-muted); margin-bottom:4px;';
+    parentLabel.textContent = '母分類';
+    wrap.appendChild(parentLabel);
+    if (hasChildren) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:12px; color:var(--c-muted); margin-bottom:8px;';
+      note.textContent = '這個分類底下已經有子分類，不能再掛到別的母分類底下（只支援一層巢狀）';
+      wrap.appendChild(note);
+    } else {
+      parentSelect = document.createElement('select');
+      parentSelect.style.cssText = fieldStyle + ' margin-bottom:8px;';
+      const choices = topLevelCategoryChoices().filter(n => n !== tagName);
+      parentSelect.innerHTML = '<option value="">（一般分類，不掛母分類）</option>'
+        + choices.map(n => `<option value="${pbaEscapeAttr(n)}">${pbaEscapeHtml(n)}</option>`).join('');
+      const curParent = CATEGORY_PARENT_OF[tagName] || '';
+      if (Array.from(parentSelect.options).some(o => o.value === curParent)) parentSelect.value = curParent;
+      const parentReady = !PACKAGE_DATA || PACKAGE_DATA.categoryParentReady !== false;
+      if (!parentReady) {
+        parentSelect.disabled = true;
+        parentSelect.title = '母分類欄位尚未建立（需先 npx supabase db push）';
+      }
+      wrap.appendChild(parentSelect);
     }
-    if (OPEN_TAG[field] === oldName) OPEN_TAG[field] = newName;
-    showToast(`已改名為「${newName}」` + (res.affectedBooks ? `，同步更新了 ${res.affectedBooks} 本書` : ''));
-    await cfg.refresh();
-  } catch (err) { /* needLogin 已處理 */ }
+  }
+
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex; gap:8px;';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'pba-mini-btn';
+  saveBtn.textContent = '儲存';
+  saveBtn.addEventListener('click', async () => {
+    const newName = nameInput.value.trim();
+    if (!newName) { showToast('請輸入名稱', true); return; }
+    const payload = { oldName: tagName, newName };
+    if (parentSelect) payload.parentName = parentSelect.value;
+    saveBtn.disabled = true;
+    try {
+      const res = await cfg.renameTag(payload);
+      if (!res || res.success !== true) {
+        showToast('儲存失敗：' + ((res && res.error) || '未知錯誤'), true);
+        saveBtn.disabled = false;
+        return;
+      }
+      EDITING_TAG[field] = null;
+      if (OPEN_TAG[field] === tagName) OPEN_TAG[field] = newName;
+      showToast('已儲存' + (res.affectedBooks ? `，同步更新了 ${res.affectedBooks} 本書` : ''));
+      await cfg.refresh();
+    } catch (err) { /* needLogin 已處理 */ }
+  });
+  actions.appendChild(saveBtn);
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'pba-mini-btn';
+  cancelBtn.textContent = '取消';
+  cancelBtn.addEventListener('click', () => { EDITING_TAG[field] = null; renderTagManageCards(field); });
+  actions.appendChild(cancelBtn);
+
+  wrap.appendChild(actions);
+  return wrap;
 }
 
 function renderCategoryManageList() { renderTagManageCards('categories'); renderCategoryParentSelect(); }
@@ -2368,19 +2438,29 @@ function renderTagManageCards(field) {
     name.textContent = `${isOpen ? '▾' : '▸'} ${displayName}（${inTag.length} 本）` + (field === 'categories' ? ' ・ ' + categoryBrandLabel(tagName) : '');
     head.appendChild(name);
     if (cfg.canEditNames()) {
-      const renameBtn = document.createElement('button');
-      renameBtn.type = 'button';
-      renameBtn.className = 'pba-mini-btn';
-      renameBtn.textContent = '改名';
-      renameBtn.addEventListener('click', (e) => { e.stopPropagation(); renameTagPrompt(field, tagName); });
-      head.appendChild(renameBtn);
+      const actions = document.createElement('span');
+      actions.style.cssText = 'display:flex; gap:6px; flex:none;'; // 兩顆按鈕要黏在一起，不能讓 space-between 把它們拆到列中間（2026-09-22 雪莉抓到的排版問題）
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'pba-mini-btn';
+      editBtn.textContent = '編輯';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        EDITING_TAG[field] = EDITING_TAG[field] === tagName ? null : tagName;
+        OPEN_TAG[field] = tagName; // 編輯時順便展開，讓編輯表單看得到
+        renderTagManageCards(field);
+      });
+      actions.appendChild(editBtn);
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'pba-mini-btn danger';
       delBtn.textContent = '刪除';
       delBtn.addEventListener('click', (e) => { e.stopPropagation(); cfg.deleteTag(tagName); });
-      head.appendChild(delBtn);
+      actions.appendChild(delBtn);
+
+      head.appendChild(actions);
     }
     head.addEventListener('click', () => {
       OPEN_TAG[field] = isOpen ? null : tagName;
@@ -2391,6 +2471,7 @@ function renderTagManageCards(field) {
     // 展開內容：全部書的封面選取牆（仿封面牆圖卡；2026-08-27 取代 chip＋下拉，雪莉指定）
     const body = document.createElement('div');
     body.className = 'pba-cat-books';
+    if (EDITING_TAG[field] === tagName) body.appendChild(buildTagEditForm(field, tagName));
     if (field === 'categories') body.appendChild(buildCategoryBrandRow(tagName));
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:11.5px; color:var(--c-muted); margin-bottom:8px; line-height:1.6;';
