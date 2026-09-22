@@ -18,9 +18,13 @@ const MAX_MATERIAL_BYTES = 50 * 1024 * 1024;
 
 let PACKAGE_DATA = null; // 最近一次 GET ?all=1 的整包資料
 let CURRENT_BOOK = null; // 目前正在編輯的書（含 id）或 null＝新增中
-let CURRENT_FORM_KIND = 'book'; // 品項表單目前的類型（book/toy；編輯＝該品項的 kind、新增＝當下牆別）
+let CURRENT_FORM_KIND = 'book'; // 品項表單目前的類型（book/toy/product；編輯＝該品項的 kind、新增＝當下牆別）
 let BOOK_GRID_BRAND = ''; // 封面牆品牌分類：''＝全部、'none'＝未分類（沒品牌）、其餘＝brands.id
-let BOOK_GRID_KIND = 'book'; // 封面牆目前顯示哪個館（📚 繪本／🧸 玩具切換）
+let BOOK_GRID_KIND = 'book'; // 封面牆目前顯示哪個館（📚 繪本／🧸 玩具切換；牆別只有 book/toy 兩種）
+
+// 商品（kind='product'，2026-09-23 雪莉定案：非書商品如點讀筆，跟同品牌的書一起放繪本館）在所有
+// 「館別」判斷上都算繪本那一族——只有玩具（kind='toy'）算另一族，其餘（book/product/未設定）都算 book 族。
+function pbKindFamily(kind) { return kind === 'toy' ? 'toy' : 'book'; }
 let materialFormStandalone = false; // 教材表單從教材庫（教材館分頁）開啟＝true，存檔後刷新教材庫而非書
 let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（null＝新增）
 let materialFormEditingBookIds = null; // 編輯中教材的掛載書單（教材庫；null＝新增或舊資料沒帶）
@@ -101,7 +105,7 @@ function renderBookList() {
   listEl.innerHTML = '';
   const term = (document.getElementById('bookSearchInput').value || '').trim().toLowerCase();
   const hintEl = document.getElementById('bookGridHint');
-  const allKindBooks = (PACKAGE_DATA.books || []).filter(b => (b.kind || 'book') === BOOK_GRID_KIND); // 書牆/玩具牆只是同一張表的過濾
+  const allKindBooks = (PACKAGE_DATA.books || []).filter(b => pbKindFamily(b.kind) === BOOK_GRID_KIND); // 書牆/玩具牆只是同一張表的過濾；商品跟書同一族，出現在繪本牆
   // 已下架（2026-09-21）：不再販售但資料保留供再版，不混在一般封面牆裡，統一收在「已下架」分類
   const kindBooks = allKindBooks.filter(b => !b.isDiscontinued);
   const offBooks = allKindBooks.filter(b => b.isDiscontinued);
@@ -138,17 +142,18 @@ function renderBookList() {
       card.appendChild(ph);
     }
 
-    if (b.isDiscontinued) {
+    // 狀態小標（左上角疊放，最多兩顆：草稿/已下架擇一＋商品；用 inline top 錯開避免疊在一起）
+    const gridBadges = [];
+    if (b.isDiscontinued) gridBadges.push({ cls: 'pba-badge-off', text: '已下架' });
+    else if (!b.is_published) gridBadges.push({ cls: 'pba-badge-draft', text: '草稿' });
+    if (b.kind === 'product') gridBadges.push({ cls: 'pba-badge-product', text: '商品' });
+    gridBadges.forEach((bd, i) => {
       const badge = document.createElement('span');
-      badge.className = 'pba-grid-badge pba-badge-off';
-      badge.textContent = '已下架';
+      badge.className = 'pba-grid-badge ' + bd.cls;
+      badge.textContent = bd.text;
+      if (i > 0) badge.style.top = (6 + i * 20) + 'px';
       card.appendChild(badge);
-    } else if (!b.is_published) {
-      const badge = document.createElement('span');
-      badge.className = 'pba-grid-badge pba-badge-draft';
-      badge.textContent = '草稿';
-      card.appendChild(badge);
-    }
+    });
 
     const title = document.createElement('div');
     title.className = 'pba-grid-title';
@@ -203,10 +208,15 @@ function setGridKind(kind) {
   document.getElementById('gridKindBook').classList.toggle('on', kind === 'book');
   document.getElementById('gridKindToy').classList.toggle('on', kind === 'toy');
   document.getElementById('addBookBtn').textContent = kind === 'toy' ? '＋ 新增玩具' : '＋ 新增繪本';
+  // 商品只跟繪本同館顯示，玩具牆不需要「新增商品」（2026-09-23）
+  const addProductBtn = document.getElementById('addProductBtn');
+  if (addProductBtn) addProductBtn.style.display = kind === 'toy' ? 'none' : '';
   renderBookList();
 }
 document.getElementById('gridKindBook').addEventListener('click', () => setGridKind('book'));
 document.getElementById('gridKindToy').addEventListener('click', () => setGridKind('toy'));
+const addProductBtnEl = document.getElementById('addProductBtn');
+if (addProductBtnEl) addProductBtnEl.addEventListener('click', () => openBookEditor(null, 'product'));
 
 // ---- 拖曳排序 ----
 // 點一下＝進編輯；拖曳（滑鼠移超過 6px；觸控長按 300ms，先動超過 10px＝在捲頁、放棄）＝改排序。
@@ -344,8 +354,8 @@ var BOOK_BRAND_WHITELIST = ['禾流文創', 'KIDsREAD點讀筆']; // 名稱須�
 function renderBrandOptions() {
   const sel = document.getElementById('fBrand');
   sel.innerHTML = '<option value="">無</option>';
-  // 白名單只限繪本（書團兩家）；玩具品牌很多（mideer/Classic World…），全部列出
-  (PACKAGE_DATA.brands || []).filter(b => CURRENT_FORM_KIND === 'toy' || BOOK_BRAND_WHITELIST.includes(b.name)).forEach(b => {
+  // 白名單只限「繪本」（書團兩家）；玩具品牌很多（mideer/Classic World…）、商品（如點讀筆）也不受限，全部列出
+  (PACKAGE_DATA.brands || []).filter(b => CURRENT_FORM_KIND !== 'book' || BOOK_BRAND_WHITELIST.includes(b.name)).forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id;
     opt.textContent = b.name;
@@ -501,10 +511,18 @@ function selectBook(book) {
 document.getElementById('addBookBtn').addEventListener('click', () => openBookEditor(null, BOOK_GRID_KIND));
 
 function fillForm(book) {
-  // 類型調整欄位（2026-09-13 雪莉定案）：玩具沒有出版社（作者欄本來就停用隱藏）；品牌下拉玩具不受書團白名單限制
+  // 類型調整欄位（2026-09-13 雪莉定案：玩具；2026-09-23 雪莉定案：商品＝非書商品如點讀筆）：
+  // 玩具／商品都沒有出版社（作者欄本來就停用隱藏）；品牌下拉玩具／商品不受書團白名單限制；
+  // 商品另外不套「類型」標籤（操作書等，那是繪本專屬分類，商品不適用）。
   const isToy = CURRENT_FORM_KIND === 'toy';
-  document.getElementById('formTitle').textContent = book ? (isToy ? '編輯玩具' : '編輯繪本') : (isToy ? '新增玩具' : '新增繪本');
-  document.getElementById('fPublisherWrap').style.display = isToy ? 'none' : '';
+  const isProduct = CURRENT_FORM_KIND === 'product';
+  const formKindLabel = isToy ? '玩具' : (isProduct ? '商品' : '繪本');
+  document.getElementById('formTitle').textContent = (book ? '編輯' : '新增') + formKindLabel;
+  const titleLabelEl = document.getElementById('fTitleLabel');
+  if (titleLabelEl) titleLabelEl.textContent = isProduct ? '名稱 *' : '書名 *';
+  document.getElementById('fPublisherWrap').style.display = (isToy || isProduct) ? 'none' : '';
+  const typesWrapEl = document.getElementById('fTypesWrap');
+  if (typesWrapEl) typesWrapEl.style.display = isProduct ? 'none' : '';
   renderBrandOptions();
   document.getElementById('fTitle').value = book ? book.title || '' : '';
   document.getElementById('fAuthor').value = book ? book.author || '' : '';
@@ -520,7 +538,8 @@ function fillForm(book) {
     document.getElementById('fBrand').value = BOOK_GRID_BRAND;
   }
   renderCategoryCheckboxes(document.getElementById('fBrand').value, book ? book.categories || [] : []);
-  setCheckedValues('fTypes', book ? book.types || [] : []);
+  // 商品不套「類型」標籤：即使舊資料有值也不勾（存檔時 getCheckedValues('fTypes') 讀到的就是空陣列）
+  setCheckedValues('fTypes', (book && !isProduct) ? book.types || [] : []);
   document.getElementById('fPublished').checked = book ? !!book.is_published : false;
   syncDiscontinuedField(book);
   document.getElementById('fCoverWide').checked = book ? !!book.cover_wide : false;
@@ -1207,7 +1226,7 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
   if (CURRENT_BOOK) {
     payload.id = CURRENT_BOOK.id; // 編輯不送 sort（partial update 不動原值，順序只在封面牆拖曳改）；kind 建立後不可改、也不送
   } else {
-    payload.kind = CURRENT_FORM_KIND; // 只在新增時決定（book/toy，後端 update 一律忽略）
+    payload.kind = CURRENT_FORM_KIND; // 只在新增時決定（book/toy/product，後端 update 一律忽略）
     // 新書預設排最前面：比現有最小 sort 再小 1（拖曳存檔會把全部重新編成 1..n，不會一直變小）
     const sorts = (PACKAGE_DATA.books || []).map(b => Number(b.sort) || 0);
     payload.sort = sorts.length ? Math.min.apply(null, sorts) - 1 : 0;
@@ -3677,7 +3696,7 @@ function mtlbFillBindItems(type, selectedIds) {
   sel.innerHTML = '';
   if (type === 'none') return;
   ((PACKAGE_DATA && PACKAGE_DATA.books) || [])
-    .filter(b => (b.kind || 'book') === type)
+    .filter(b => pbKindFamily(b.kind) === type) // 商品跟書同一族，「綁繪本」也要列出
     .forEach(b => {
       const opt = document.createElement('option');
       opt.value = b.id;
@@ -3699,10 +3718,10 @@ function mtlbInitBindUI(material) {
     : (!material && !materialFormStandalone && CURRENT_BOOK ? [CURRENT_BOOK.id] : []);
   let type;
   if (!ids.length) {
-    type = (!material && !materialFormStandalone && CURRENT_BOOK) ? (CURRENT_BOOK.kind || 'book') : 'none';
+    type = (!material && !materialFormStandalone && CURRENT_BOOK) ? pbKindFamily(CURRENT_BOOK.kind) : 'none';
   } else {
-    const kinds = ids.map(mtlbItemKind).filter(Boolean);
-    type = kinds.includes('toy') && !kinds.includes('book') ? 'toy' : 'book';
+    const families = ids.map(mtlbItemKind).filter(Boolean).map(pbKindFamily); // 商品算 book 族
+    type = families.includes('toy') && !families.includes('book') ? 'toy' : 'book';
   }
   document.getElementById('mBindType').value = type;
   mtlbFillBindItems(type, ids);
@@ -3716,7 +3735,7 @@ function mtlbFinalBindIds() {
   if (type === 'none') return [];
   const selected = mtlbSelectedBindIds();
   const original = materialFormEditingBookIds || [];
-  const keepOther = original.filter(id => { const k = mtlbItemKind(id); return k && k !== type; });
+  const keepOther = original.filter(id => { const k = mtlbItemKind(id); return k && pbKindFamily(k) !== type; });
   return Array.from(new Set(keepOther.concat(selected)));
 }
 
@@ -3758,7 +3777,7 @@ function mtlbBindBadge(m) {
   const brandSuffix = m.brandId && mtlbBrandName(m.brandId) ? `・🏷 ${mtlbBrandName(m.brandId)}` : '';
   if (!ids.length) return (brandSuffix ? `🏷 ${mtlbBrandName(m.brandId)}（品項未建檔）` : '✨ 獨立教材');
   let books = 0, toys = 0;
-  ids.forEach(id => { const k = mtlbItemKind(id); if (k === 'toy') toys++; else if (k === 'book') books++; });
+  ids.forEach(id => { const k = mtlbItemKind(id); const fam = k ? pbKindFamily(k) : null; if (fam === 'toy') toys++; else if (fam === 'book') books++; }); // 商品併入「📚」計數
   const parts = [];
   if (books) parts.push(`📚 ${books} 本`);
   if (toys) parts.push(`🧸 ${toys} 件`);

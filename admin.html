@@ -4088,6 +4088,7 @@
   }
   .pba-badge-draft { color: var(--c-orange-text); }
   .pba-badge-off { color: var(--c-muted); }
+  .pba-badge-product { color: var(--c-pink-deep); }
   .pba-empty-list { text-align: center; color: var(--c-muted-light); font-size: 12.5px; padding: 20px 0; }
 
   .pba-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -5207,6 +5208,8 @@
           <button type="button" class="pba-tab" id="gridKindToy">🧸 玩具</button>
         </div>
         <button class="pba-add-btn" id="addBookBtn">＋ 新增繪本</button>
+        <!-- 商品（migration 20260923120000 kind='product'，2026-09-23）：非書商品如點讀筆，跟同品牌的書一起放繪本館；玩具牆不顯示這顆（books.js setGridKind 控制） -->
+        <button class="pba-add-btn" id="addProductBtn">＋ 新增商品</button>
         <div class="pba-field" style="margin:0; flex:1; min-width:180px;">
           <input type="text" id="bookSearchInput" class="ico-search" placeholder="搜尋書名">
         </div>
@@ -5224,7 +5227,7 @@
         <div class="pba-panel-title" id="formTitle">新增繪本</div>
         <form id="bookForm">
           <div class="pba-field">
-            <label>書名 *</label>
+            <label id="fTitleLabel">書名 *</label>
             <input type="text" id="fTitle">
           </div>
           <!-- 作者欄位停用（雪莉 2026-08-18：不用打）；保留隱藏 input 讓既有 JS 與 API 欄位不用改 -->
@@ -5268,7 +5271,7 @@
             <label>年齡與主題</label>
             <div class="pba-checkbox-group" id="fCategories"></div>
           </div>
-          <div class="pba-field">
+          <div class="pba-field" id="fTypesWrap">
             <label>類型</label>
             <div class="pba-checkbox-group" id="fTypes"></div>
           </div>
@@ -7251,7 +7254,7 @@
 <script src="report.js?v=7"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=49"></script>
+<script src="books.js?v=50"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

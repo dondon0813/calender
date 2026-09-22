@@ -210,6 +210,89 @@
   .pb-brand-tabs::-webkit-scrollbar { display: none; }
   .pb-brand-tab { flex: 1 0 auto; border: 0; background: transparent; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; color: var(--c-brown); cursor: pointer; font-family: inherit; white-space: nowrap; }
   .pb-brand-tab.on { background: #fff; color: var(--c-primary-dark); }
+
+  /* ===== 品牌館模式（2026-09-23）：?brand= 對到有書的品牌時，鎖定該品牌＋標題下方可點副標切換 ===== */
+  .pb-brand-hall-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    border: none;
+    background: none;
+    padding: 4px 2px;
+    font-family: var(--font-round);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--c-primary-dark);
+    cursor: pointer;
+  }
+  .pb-brand-hall-sub svg { display: block; flex: 0 0 auto; }
+  /* 品牌介紹（有填才顯示，小圖選填、高度統一寬度不設上限、不加圓底，同全站去背小圖慣例） */
+  .pb-brand-hall-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--c-surface);
+    border-radius: var(--r-lg);
+    padding: 12px 14px;
+    margin: 0 0 14px;
+    text-align: left;
+  }
+  .pb-brand-hall-intro-thumb { display: block; height: 52px; width: auto; flex: 0 0 auto; }
+  .pb-brand-hall-intro-text { font-size: 12.5px; color: var(--c-text-soft); line-height: 1.6; white-space: pre-wrap; }
+  /* 品牌館入口列（一般模式／玩具館模式）：品牌館模式下不顯示（已鎖定單一品牌） */
+  #pbBrandHalls { margin: 0 0 16px; }
+  .pb-brand-halls-label {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--c-muted);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .pb-brand-halls-row { display: flex; gap: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .pb-brand-hall-card {
+    flex: 0 0 auto;
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    max-width: 100px;
+  }
+  .pb-brand-hall-card:active { opacity: .8; }
+  .pb-brand-hall-thumb { display: block; height: 40px; width: auto; margin: 0 auto 4px; }
+  .pb-brand-hall-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-text);
+    line-height: 1.3;
+  }
+  .pb-brand-hall-pill {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 8px;
+    border-radius: var(--r-pill);
+    background: var(--c-mint-bg);
+    color: var(--c-mint-text);
+  }
+  /* 品牌切換浮動視窗（點副標開啟）：清單直排，每列小圖＋名稱＋開團中標示，選中的那列淡色底 */
+  .pb-brand-switch-list { display: flex; flex-direction: column; gap: 4px; text-align: left; margin-top: 4px; }
+  .pb-brand-switch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--r-md);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .pb-brand-switch-item.on { background: var(--c-pink-bg); }
+  .pb-brand-switch-thumb { display: block; height: 30px; width: auto; flex: 0 0 auto; }
+  .pb-brand-switch-name { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--c-text); }
+  .mini-tag-kind { background: var(--c-primary); color: #fff; }
+  .pb-tag-kind { background: var(--c-primary); color: #fff; }
+
   .chip {
     font-size: 12px;
     font-weight: 700;
@@ -896,7 +979,15 @@
   <div class="page-title-wrap">
     <a class="page-brand-logo" href="recipes.html" title="回首頁" aria-label="回首頁"><picture><source srcset="images/brand-logo.webp" type="image/webp"><img src="images/brand-logo.png" alt="Sheridondon 雪莉與朵栗" width="720" height="230"></picture></a>
     <div class="page-title">雪莉咚咚繪本館</div>
+    <!-- 品牌館模式（2026-09-23）：?brand= 對到有書的品牌時才顯示，點了開切換視窗 -->
+    <button type="button" class="pb-brand-hall-sub" id="pbBrandHallSub" style="display:none;" onclick="openBrandSwitchModal()">
+      <span class="pb-brand-hall-sub-text"></span>
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+    </button>
   </div>
+
+  <!-- 品牌介紹（品牌館模式）：品牌有填介紹文字才顯示，小圖選填；沒有 intro 就整塊不渲染 -->
+  <div class="pb-brand-hall-intro" id="pbBrandHallIntro" style="display:none;"></div>
 
   <!-- 頂端團購入口：有開團 → 下單按鈕；沒開團但有排程 → 下一團日期；都沒有 → 隱藏 -->
   <div class="pb-top-purchase" id="pbTopPurchase" style="display:none;"></div>
@@ -906,6 +997,10 @@
   <div id="statusMsg" class="status-msg">資料載入中…</div>
 
   <div id="pbContent" style="display:none;">
+    <!-- 品牌館入口列（2026-09-23）：有書的品牌各一張小圖卡，點了導向該品牌館；
+         品牌館模式（BRAND_HALL 已鎖定）或沒有品牌時整列隱藏，見 renderBrandHalls() -->
+    <div id="pbBrandHalls" style="display:none;"></div>
+
     <!-- 套組專區：分類名稱含「套組」或「雪莉精選」都算，各自獨立一排橫向滑動小圖區；
          不受搜尋/篩選影響，內容由 renderFeatured() 動態產生，排的顯示與否跟著開團狀態走 -->
     <div class="pb-featured" id="pbFeatured" style="display:none;"></div>
@@ -989,6 +1084,15 @@
     <div id="pbQuizResultNote"></div>
     <div class="pb-quiz-result-grid" id="pbQuizResultGrid"></div>
     <div class="empty-state" id="pbQuizResultEmpty" style="display:none;">這個組合暫時沒有對應的書，換個年齡試試看？</div>
+  </div>
+</div>
+
+<!-- 品牌館切換視窗（2026-09-23）：品牌館模式下點標題下方副標開啟 -->
+<div class="modal-backdrop" id="pbBrandSwitchModal" onclick="if(event.target===this) closeBrandSwitchModal()">
+  <div class="modal-box pb-modal-box pb-promo-box">
+    <button class="rc-close-btn" onclick="closeBrandSwitchModal()">✕</button>
+    <div class="pb-promo-title">切換品牌館</div>
+    <div class="pb-brand-switch-list" id="pbBrandSwitchList"></div>
   </div>
 </div>
 
@@ -1093,6 +1197,7 @@ let ALL_PROMOTIONS = []; // 優惠活動 [{id,text}]（後台維護，沒開團�
 let ALL_GIFTS = []; // 滿額贈 [{id,title,amount,note,imageUrl}]（後端已依 amount 低→高排序，2026-08-24）
 let ALL_SETS = []; // 套組專區 [{id,title,intro,bookIds}]（公開包已算好可見性，2026-08-24）
 let CURRENT_BOOK = null; // 目前開著的繪本浮動視窗，教材大圖的分享按鈕要用
+let BRAND_HALL = null; // 品牌館模式（2026-09-23）：?brand= 對到有書的品牌時＝該品牌物件 {id,name,intro,thumbUrl}，否則 null
 
 // 三組篩選狀態：null 代表選「全部」，Set 代表已選中的單一具體選項（組內單選）
 let selCats = null;
@@ -1155,6 +1260,7 @@ async function loadBooks() {
 
     renderChips();
     applyBrandParam();
+    renderBrandHalls();
     renderTopPurchase();
     renderFeatured();
     renderGrid();
@@ -1371,7 +1477,8 @@ function renderChips() {
     v => toggleSelection(selCats, v, s => { selCats = s; }));
   const hintEl = document.getElementById('pbCatHint');
   if (hintEl) hintEl.style.display = (shownCats.length < chipCats.length && selectedBrandIds().length === 0) ? '' : 'none';
-  document.getElementById('pbBrandSection').style.display = USED_BRANDS.length > 1 ? '' : 'none';
+  // 品牌館模式（BRAND_HALL 已鎖定）：品牌 chips 整列隱藏，選單交給標題下方副標的切換視窗
+  document.getElementById('pbBrandSection').style.display = (!BRAND_HALL && USED_BRANDS.length > 1) ? '' : 'none';
   buildBrandTabs('pbBrandChips', USED_BRANDS.map(b => b.name), selBrands, v => {
     selBrands = v === null ? null : new Set([v]);
     renderChips();
@@ -1386,14 +1493,151 @@ function renderChips() {
 // 效果等同使用者自己點了那顆品牌 chip；後面緊接的 renderGrid() 會套用篩選，這裡只負責
 // 設定選取狀態＋重繪 chips 讓選中的品牌 chip 亮起來。
 function applyBrandParam() {
+  BRAND_HALL = null;
   const raw = new URLSearchParams(location.search).get('brand');
-  if (!raw) return;
-  let name = raw;
-  try { name = decodeURIComponent(raw); } catch (e) { /* 已經是解碼過的字串，忽略 */ }
-  const match = USED_BRANDS.find(b => b.name === name) || USED_BRANDS.find(b => b.name.toLowerCase() === name.toLowerCase()); // 舊分享連結大小寫不同也認得
-  if (!match) return;
-  selBrands = new Set([match.name]);
-  renderChips();
+  if (raw) {
+    let name = raw;
+    try { name = decodeURIComponent(raw); } catch (e) { /* 已經是解碼過的字串，忽略 */ }
+    const match = USED_BRANDS.find(b => b.name === name) || USED_BRANDS.find(b => b.name.toLowerCase() === name.toLowerCase()); // 舊分享連結大小寫不同也認得
+    if (match) {
+      BRAND_HALL = match; // 品牌館模式（2026-09-23）：鎖定品牌＋標題下方副標＋品牌介紹
+      selBrands = new Set([match.name]);
+      document.title = `雪莉與朵栗 ${TOY_MODE ? '玩具館' : '繪本館'}｜${match.name}`;
+      renderChips();
+    }
+  }
+  renderBrandHallHeader();
+}
+
+// ===== 品牌館模式（2026-09-23）：副標／品牌介紹／品牌入口列／切換視窗 =====
+// 舊網址殘留 GitHub Pages 網域的去背小圖要改寫成正式網域（同 index.html thumbUrl()，301 轉址無 CORS 標頭載不了圖）
+function thumbUrl(u) {
+  return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
+}
+// 品牌是否有任何一本書正在開團中（給入口列／切換視窗的「開團中」小標示用）
+function brandHasOpenGroupBuy(name) {
+  return ALL_BOOKS.some(b => b.brand_name === name && b.purchase && b.purchase.status === 'open');
+}
+// 保留目前網址的其他參數（例如 kind=toy），只改 brand；name 為 null/空字串＝拿掉 brand 參數（回一般模式）
+function brandHallUrl(name) {
+  const params = new URLSearchParams(location.search);
+  if (name) params.set('brand', name); else params.delete('brand');
+  const qs = params.toString();
+  return location.pathname + (qs ? ('?' + qs) : '');
+}
+// 標題下方可點副標＋下方的品牌介紹區塊；BRAND_HALL 為 null（一般模式／找不到對應品牌）時整組隱藏
+function renderBrandHallHeader() {
+  const subBtn = document.getElementById('pbBrandHallSub');
+  const introWrap = document.getElementById('pbBrandHallIntro');
+  if (!subBtn || !introWrap) return;
+  if (!BRAND_HALL) {
+    subBtn.style.display = 'none';
+    introWrap.style.display = 'none';
+    introWrap.innerHTML = '';
+    return;
+  }
+  subBtn.style.display = 'inline-flex';
+  const subText = subBtn.querySelector('.pb-brand-hall-sub-text');
+  if (subText) subText.textContent = `${BRAND_HALL.name} 品牌館`;
+
+  introWrap.innerHTML = '';
+  const intro = String(BRAND_HALL.intro || '').trim();
+  // intro 空白就整塊不渲染（只有小圖沒介紹也不顯示，雪莉定案）
+  if (!intro) { introWrap.style.display = 'none'; return; }
+  const thumb = String(BRAND_HALL.thumbUrl || '').trim();
+  if (thumb) {
+    const img = document.createElement('img');
+    img.className = 'pb-brand-hall-intro-thumb';
+    img.src = thumbUrl(thumb);
+    img.alt = BRAND_HALL.name;
+    img.loading = 'lazy';
+    introWrap.appendChild(img);
+  }
+  const text = document.createElement('div');
+  text.className = 'pb-brand-hall-intro-text';
+  text.textContent = intro;
+  introWrap.appendChild(text);
+  introWrap.style.display = 'flex';
+}
+// 品牌館入口列（一般模式／玩具館模式）：有書的品牌各一張小圖卡，點了導向 ?brand=<品牌名>（保留 kind）；
+// 品牌館模式已鎖定品牌，或沒有任何有書的品牌時整列隱藏
+function renderBrandHalls() {
+  const wrap = document.getElementById('pbBrandHalls');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  if (BRAND_HALL || !USED_BRANDS.length) { wrap.style.display = 'none'; return; }
+  const label = document.createElement('div');
+  label.className = 'pb-brand-halls-label';
+  label.textContent = '品牌館';
+  wrap.appendChild(label);
+  const row = document.createElement('div');
+  row.className = 'pb-brand-halls-row';
+  USED_BRANDS.forEach(b => row.appendChild(buildBrandHallCard(b)));
+  wrap.appendChild(row);
+  wrap.style.display = 'block';
+}
+function buildBrandHallCard(brand) {
+  const item = document.createElement('a');
+  item.className = 'pb-brand-hall-card';
+  item.href = brandHallUrl(brand.name);
+  const thumb = String(brand.thumbUrl || '').trim();
+  if (thumb) {
+    const img = document.createElement('img');
+    img.className = 'pb-brand-hall-thumb';
+    img.src = thumbUrl(thumb);
+    img.alt = brand.name;
+    img.loading = 'lazy';
+    item.appendChild(img);
+  }
+  const name = document.createElement('div');
+  name.className = 'pb-brand-hall-name';
+  name.textContent = brand.name;
+  item.appendChild(name);
+  if (brandHasOpenGroupBuy(brand.name)) {
+    const pill = document.createElement('span');
+    pill.className = 'pb-brand-hall-pill';
+    pill.textContent = '開團中';
+    item.appendChild(pill);
+  }
+  return item;
+}
+// 品牌切換視窗：標題下方副標點擊開啟，列出全部有書的品牌＋「全部OO館」回一般模式
+function openBrandSwitchModal() {
+  const listEl = document.getElementById('pbBrandSwitchList');
+  if (listEl) {
+    listEl.innerHTML = '';
+    listEl.appendChild(buildBrandSwitchItem(null, TOY_MODE ? '全部玩具館' : '全部繪本館', '', !BRAND_HALL));
+    USED_BRANDS.forEach(b => listEl.appendChild(buildBrandSwitchItem(b.name, b.name, b.thumbUrl, !!(BRAND_HALL && BRAND_HALL.name === b.name))));
+  }
+  document.getElementById('pbBrandSwitchModal').classList.add('show');
+}
+function closeBrandSwitchModal() {
+  document.getElementById('pbBrandSwitchModal').classList.remove('show');
+}
+function buildBrandSwitchItem(brandName, label, thumb, isOn) {
+  const a = document.createElement('a');
+  a.className = 'pb-brand-switch-item' + (isOn ? ' on' : '');
+  a.href = brandHallUrl(brandName);
+  const t = String(thumb || '').trim();
+  if (t) {
+    const img = document.createElement('img');
+    img.className = 'pb-brand-switch-thumb';
+    img.src = thumbUrl(t);
+    img.alt = label;
+    img.loading = 'lazy';
+    a.appendChild(img);
+  }
+  const name = document.createElement('span');
+  name.className = 'pb-brand-switch-name';
+  name.textContent = label;
+  a.appendChild(name);
+  if (brandName && brandHasOpenGroupBuy(brandName)) {
+    const pill = document.createElement('span');
+    pill.className = 'pb-brand-hall-pill';
+    pill.textContent = '開團中';
+    a.appendChild(pill);
+  }
+  return a;
 }
 
 // ===== 篩選邏輯 =====
@@ -1459,6 +1703,8 @@ function renderFeatured() {
     const bookIds = set.bookIds || [];
     const list = bookIds.map(id => ALL_BOOKS.find(b => b.id === id)).filter(Boolean);
     if (!list.length) return;
+    // 品牌館模式：只顯示「含這個品牌品項」的套組（別的品牌的套組不出現在這個品牌館）
+    if (BRAND_HALL && !list.some(b => b.brand_name === BRAND_HALL.name)) return;
     anyShown = true;
 
     // 頂圖直接掛在最外層 wrap，不算進任何一個套組的色塊裡（2026-09-23 改色塊分隔後，
@@ -1760,6 +2006,13 @@ function buildBookCard(book) {
 
   const tags = document.createElement('div');
   tags.className = 'pb-card-tags';
+  // 商品（非書，例如點讀筆，2026-09-23）：第一顆膠囊標示「商品」
+  if (book.kind === 'product') {
+    const kindTag = document.createElement('span');
+    kindTag.className = 'mini-tag mini-tag-kind';
+    kindTag.textContent = '商品';
+    tags.appendChild(kindTag);
+  }
   (book.types || []).forEach(t => {
     const tag = document.createElement('span');
     tag.className = 'mini-tag';
@@ -2025,7 +2278,9 @@ function renderTopPurchase() {
   wrap.innerHTML = '';
   const openByUrl = new Map();   // url → 品牌名稱
   const upcoming = new Map();    // 品牌名稱 → 最近的 nextDate
-  ALL_BOOKS.forEach(b => {
+  // 品牌館模式（2026-09-23）：頂端開團區只彙總該品牌的書，不要顯示到其他品牌的團
+  const purchaseBooks = BRAND_HALL ? ALL_BOOKS.filter(b => b.brand_name === BRAND_HALL.name) : ALL_BOOKS;
+  purchaseBooks.forEach(b => {
     const p = b.purchase || {};
     const brand = b.brand_name || '';
     if (p.status === 'open' && p.url) {
@@ -2217,8 +2472,15 @@ function pbFormatMoney(n) {
 // 綁團過濾（2026-09-07）：後端只回「可見」的優惠/滿額贈，綁團的多帶 eventStatus（'open'＝當團、'upcoming'＝下一團）。
 // 沒有 eventStatus＝長期活動兩邊都列；開團活動區只列「長期＋當團」、「下一團」浮動視窗只列「長期＋下一團」，
 // 結團的後端就不會回來（自動下架）。
+// 品牌館模式（2026-09-23）：綁了團的優惠／滿額贈只留「團名對得到這個品牌」的（比對同後端 purchase：
+// 去掉空白與｜/|・後包含品牌名、保留大小寫）；沒綁團（無 eventStatus／無 eventTitle）的長期活動照舊顯示。
+function pbNormTitle(s) { return String(s || '').replace(/[\s｜|・]/g, ''); }
+function promoBelongsToHall(it) {
+  if (!BRAND_HALL || !it.eventStatus || !it.eventTitle) return true;
+  return pbNormTitle(it.eventTitle).includes(pbNormTitle(BRAND_HALL.name));
+}
 function promoItemsFor(ctx, list) {
-  return (list || []).filter(it => it && (!it.eventStatus || it.eventStatus === ctx));
+  return (list || []).filter(it => it && (!it.eventStatus || it.eventStatus === ctx) && promoBelongsToHall(it));
 }
 
 // 滿額贈橫滑卡片列（純展示，不可點擊）。gifts 空陣列時回傳 null，呼叫方自行決定不插入。
@@ -2632,6 +2894,13 @@ function openBookModal(book) {
 
   const tagsEl = document.getElementById('pbModalTags');
   tagsEl.innerHTML = '';
+  // 商品（非書，2026-09-23）：標題旁第一顆膠囊標示「商品」
+  if (book.kind === 'product') {
+    const kindTag = document.createElement('span');
+    kindTag.className = 'pb-tag pb-tag-kind';
+    kindTag.textContent = '商品';
+    tagsEl.appendChild(kindTag);
+  }
   (book.categories || []).forEach(c => {
     const t = document.createElement('span');
     t.className = 'pb-tag pb-tag-cat';
