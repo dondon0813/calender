@@ -2296,6 +2296,8 @@ const TAG_SECTIONS = {
     hintText: '點封面把書加入或移出這個分類（粉紅框✓＝已加入）',
     canEditNames: () => true,
     deleteTag: (name) => deleteCategory(name),
+    renameTag: (oldName, newName) => apiPost('book-category-rename', { oldName, newName }),
+    refresh: () => refreshCategoriesOnly(),
     tagNames: () => orderedCategoryNames(),
     labelOf: (name) => (CATEGORY_PARENT_OF[name] ? '↳ ' : '') + name, // 子分類縮排掛在母分類底下
     indentOf: (name) => Boolean(CATEGORY_PARENT_OF[name]),
@@ -2307,9 +2309,29 @@ const TAG_SECTIONS = {
     hintText: '點封面把書加入或移出這個類型（粉紅框✓＝已加入）',
     canEditNames: () => !PACKAGE_DATA || PACKAGE_DATA.typesReady !== false,
     deleteTag: (name) => deleteType(name),
+    renameTag: (oldName, newName) => apiPost('book-type-rename', { oldName, newName }),
+    refresh: () => refreshTypesOnly(),
     tagNames: () => (PACKAGE_DATA.types || []).slice(),
   },
 };
+
+// 分類／類型都通用的改名（2026-09-22 雪莉：後台要可以編輯名稱）：跳原生輸入框問新名字，
+// 呼叫對應的 rename API（後端同時會把所有已勾這個名字的書換成新名字，勾選關係不變）。
+async function renameTagPrompt(field, oldName) {
+  const cfg = TAG_SECTIONS[field];
+  const newName = (window.prompt(`把「${oldName}」改名為：`, oldName) || '').trim();
+  if (!newName || newName === oldName) return;
+  try {
+    const res = await cfg.renameTag(oldName, newName);
+    if (!res || res.success !== true) {
+      showToast('改名失敗：' + ((res && res.error) || '未知錯誤'), true);
+      return;
+    }
+    if (OPEN_TAG[field] === oldName) OPEN_TAG[field] = newName;
+    showToast(`已改名為「${newName}」` + (res.affectedBooks ? `，同步更新了 ${res.affectedBooks} 本書` : ''));
+    await cfg.refresh();
+  } catch (err) { /* needLogin 已處理 */ }
+}
 
 function renderCategoryManageList() { renderTagManageCards('categories'); renderCategoryParentSelect(); }
 function renderTypeManageList() {
@@ -2346,6 +2368,13 @@ function renderTagManageCards(field) {
     name.textContent = `${isOpen ? '▾' : '▸'} ${displayName}（${inTag.length} 本）` + (field === 'categories' ? ' ・ ' + categoryBrandLabel(tagName) : '');
     head.appendChild(name);
     if (cfg.canEditNames()) {
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.className = 'pba-mini-btn';
+      renameBtn.textContent = '改名';
+      renameBtn.addEventListener('click', (e) => { e.stopPropagation(); renameTagPrompt(field, tagName); });
+      head.appendChild(renameBtn);
+
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'pba-mini-btn danger';
