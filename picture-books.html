@@ -2037,7 +2037,7 @@ function renderPurchaseSection(book) {
     btn.href = p.url;
     btn.target = '_blank';
     btn.rel = 'noopener noreferrer';
-    btn.textContent = '🛒 前往購買';
+    btn.textContent = '現正開團中，前往下單';
     const modalCode = (p.discountCode || '').trim();
     btn.addEventListener('click', () => {
       pbTrackClick('booksbuy');
