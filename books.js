@@ -373,6 +373,14 @@ const CATEGORY_CHILDREN = { '語言學習': ['單字書', '互動式書籍'] };
 const CATEGORY_PARENT_OF = {};
 Object.keys(CATEGORY_CHILDREN).forEach(p => CATEGORY_CHILDREN[p].forEach(c => { CATEGORY_PARENT_OF[c] = p; }));
 
+// 子分類（單字書／互動式書籍）沒有母分類（語言學習）的話，前台分區判定會失準（2026-09-22 雪莉指定）；
+// 勾選子分類時自動幫忙補上母分類，存檔前也再跑一次保險。
+function ensureCategoryParents(list) {
+  const set = new Set(list || []);
+  set.forEach(name => { const parent = CATEGORY_PARENT_OF[name]; if (parent) set.add(parent); });
+  return Array.from(set);
+}
+
 // 分類清單排序＋巢狀：子分類永遠緊跟在母分類後面（不管 sort 值），其餘照 sort；
 // 母分類被刪掉時孤兒子分類仍列在最後（不憑空消失）
 function orderedCategoryNames() {
@@ -427,6 +435,15 @@ function renderCategoryCheckboxes(brandIdOverride, checkedOverride) {
     label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(name)}"${checked.has(name) ? ' checked' : ''}> ${isSub ? '↳ ' : ''}${pbaEscapeHtml(name)}${applies ? '' : ' <span style="color:var(--c-danger); font-size:11px;">（不適用這個品牌，建議取消勾選）</span>'}`;
     wrap.appendChild(label);
   });
+  // 勾子分類自動連動勾母分類（2026-09-22）；每次重畫都重新指定，不會疊加重複觸發
+  wrap.onchange = (e) => {
+    const cb = e.target;
+    if (!cb || cb.type !== 'checkbox' || !cb.checked) return;
+    const parent = CATEGORY_PARENT_OF[cb.value];
+    if (!parent) return;
+    const parentCb = Array.from(wrap.querySelectorAll('input[type=checkbox]')).find(el => el.value === parent);
+    if (parentCb && !parentCb.checked) parentCb.checked = true;
+  };
 }
 
 function renderTypeCheckboxes() {
@@ -1158,7 +1175,7 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     description: document.getElementById('fDescription').value,
     shopee_url: document.getElementById('fShopee').value.trim(),
     brand_id: document.getElementById('fBrand').value || null,
-    categories: getCheckedValues('fCategories'),
+    categories: ensureCategoryParents(getCheckedValues('fCategories')),
     types: getCheckedValues('fTypes'),
     is_published: document.getElementById('fPublished').checked,
     is_discontinued: document.getElementById('fDiscontinued').checked, // 已下架＝後端強制不公開；取消＝回到草稿
@@ -2436,8 +2453,10 @@ async function setCategoryBrands(name, brandIds) {
 
 /** 從標籤側把書加入/移出：book-upsert partial update 只送 id＋該陣列欄位，其餘欄位不動 */
 async function setBookTag(field, book, tagName, add) {
-  const next = (book[field] || []).filter(n => n !== tagName);
+  let next = (book[field] || []).filter(n => n !== tagName);
   if (add) next.push(tagName);
+  // 從設定頁封面選取牆加入語言學習的子分類時，同樣自動補上母分類（2026-09-22）
+  if (field === 'categories' && add) next = ensureCategoryParents(next);
   try {
     const res = await apiPost('book-upsert', { id: book.id, [field]: next });
     if (!res || res.success !== true) {
