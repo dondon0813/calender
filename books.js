@@ -1960,7 +1960,13 @@ function computeEventBrandIds(eventId) {
   const ev = (PACKAGE_DATA.setEventChoices || []).find(e => e.id === eventId);
   if (!ev || typeof bvBrandsInTitle_ !== 'function') return null;
   const matched = bvBrandsInTitle_(ev.title || '');
-  return matched.length ? new Set(matched.map(b => b.id)) : null;
+  if (!matched.length) return null;
+  // bvBrandsInTitle_ 回傳的是 brandDb（舊制品牌資料庫）項目，.id 是 legacy_id 短碼，
+  // 不是 picture_books.brand_id 用的品牌 UUID——兩邊 id 命名空間不同，要用品牌「名稱」轉回
+  // PACKAGE_DATA.brands（books.js 自己那份、id 是真正 UUID）才能拿去跟書比對（2026-09-22 抓到）。
+  const nameSet = new Set(matched.map(b => b.name));
+  const ids = (PACKAGE_DATA.brands || []).filter(b => nameSet.has(b.name)).map(b => b.id);
+  return ids.length ? new Set(ids) : null;
 }
 
 // 封面選取牆（沿用主題／類型管理同一套 .pba-tag-grid／.pba-tag-card 樣式，2026-09-22 雪莉指定要有封面預覽）
