@@ -4168,8 +4168,22 @@
     margin-bottom: 6px;
     font-size: 12.5px;
   }
-  .pba-cat-add-row { display: flex; gap: 8px; margin-top: 10px; }
-  .pba-cat-add-row input { flex: 1; }
+  .pba-cat-add-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .pba-cat-add-row input[type="text"],
+  .pba-cat-add-row select {
+    flex: 1;
+    min-width: 140px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    background: var(--c-input-bg);
+    outline: none;
+    box-sizing: border-box;
+  }
+  .pba-cat-add-row input:focus, .pba-cat-add-row select:focus { border-color: var(--c-primary); }
 
   /* ⚙️ 繪本館設定：分類卡（點頭部展開，直接把書加入/移出該分類） */
   .pba-cat-card { background: var(--c-input-bg); border-radius: 10px; margin-bottom: 6px; }
@@ -5613,6 +5627,7 @@
         <div id="categoryManageList"></div>
         <div class="pba-cat-add-row">
           <input type="text" id="newCategoryInput" placeholder="新增年齡與主題名稱">
+          <select id="newCategoryParent"><option value="">（一般分類，不掛母分類）</option></select>
           <button type="button" class="pba-mini-btn" id="addCategoryBtn">新增</button>
         </div>
 
@@ -7216,7 +7231,7 @@
 <script src="report.js?v=7"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=43"></script>
+<script src="books.js?v=44"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>

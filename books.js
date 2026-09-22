@@ -365,13 +365,29 @@ function ensureBrandOption(brandId) {
   sel.appendChild(opt);
 }
 
-// ===== 子分類巢狀（2026-08-27 雪莉指定）=====
-// 「單字書」「互動式書籍」資料上仍是一般分類，但屬於「語言學習」的子項目：
-// 後台介面縮排顯示在母分類底下；前台（picture-books.html）掛子分類＝自動算語言學習，
-// 點語言學習會依子分類分兩塊排版。要加新的子分類就改這裡＋picture-books.html 的 CATEGORY_SUBSECTIONS。
-const CATEGORY_CHILDREN = { '語言學習': ['單字書', '互動式書籍'] };
+// ===== 子分類巢狀（2026-08-27 雪莉指定；2026-09-22 起改資料驅動）=====
+// book_categories.parent_name（migration 20260922170000）決定子分類掛在哪個母分類底下，
+// 後台新增分類時可以選母分類（只支援一層巢狀）。欄位未 db push 時（categoryParentReady===false）
+// 退回舊版寫死清單（語言學習→單字書/互動式書籍），行為跟改資料驅動之前一樣。
+// 後台介面縮排顯示在母分類底下；前台（picture-books.html）依子分類自動算語言學習、分區排版那套
+// CATEGORY_SUBSECTIONS 是另一套機制（自訂標題/說明文字），不受影響——要讓新子分類也有前台分區效果，
+// 仍要另外手動改 picture-books.html 的 CATEGORY_SUBSECTIONS。
+const LEGACY_CATEGORY_CHILDREN = { '語言學習': ['單字書', '互動式書籍'] };
+const CATEGORY_CHILDREN = {};
 const CATEGORY_PARENT_OF = {};
-Object.keys(CATEGORY_CHILDREN).forEach(p => CATEGORY_CHILDREN[p].forEach(c => { CATEGORY_PARENT_OF[c] = p; }));
+function refreshCategoryHierarchy() {
+  Object.keys(CATEGORY_CHILDREN).forEach(k => delete CATEGORY_CHILDREN[k]);
+  Object.keys(CATEGORY_PARENT_OF).forEach(k => delete CATEGORY_PARENT_OF[k]);
+  if (PACKAGE_DATA && PACKAGE_DATA.categoryParentReady === false) {
+    Object.keys(LEGACY_CATEGORY_CHILDREN).forEach(p => LEGACY_CATEGORY_CHILDREN[p].forEach(c => { CATEGORY_PARENT_OF[c] = p; }));
+  } else {
+    (PACKAGE_DATA && PACKAGE_DATA.categories || []).forEach(c => { if (c.parentName) CATEGORY_PARENT_OF[c.name] = c.parentName; });
+  }
+  Object.keys(CATEGORY_PARENT_OF).forEach(child => {
+    const parent = CATEGORY_PARENT_OF[child];
+    (CATEGORY_CHILDREN[parent] = CATEGORY_CHILDREN[parent] || []).push(child);
+  });
+}
 
 // 子分類（單字書／互動式書籍）沒有母分類（語言學習）的話，前台分區判定會失準（2026-09-22 雪莉指定）；
 // 勾選子分類時自動幫忙補上母分類，存檔前也再跑一次保險。
@@ -384,6 +400,7 @@ function ensureCategoryParents(list) {
 // 分類清單排序＋巢狀：子分類永遠緊跟在母分類後面（不管 sort 值），其餘照 sort；
 // 母分類被刪掉時孤兒子分類仍列在最後（不憑空消失）
 function orderedCategoryNames() {
+  refreshCategoryHierarchy(); // 資料可能剛重新載入，確保母子關係跟著最新的 PACKAGE_DATA.categories 走
   const all = (PACKAGE_DATA.categories || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).map(c => c.name);
   const out = [];
   all.forEach(name => {
@@ -399,6 +416,10 @@ function orderedCategoryNames() {
 // 年齡（0y+、1.5y+…）永遠通用；主題的 brandIds 空＝通用、有值＝該書選了其中一個品牌才列出；
 // 子分類（單字書/互動式書籍）跟著母分類（語言學習）走。
 function isAgeCategory(name) { return /^\d+(\.\d+)?y\+$/.test(String(name || '')); }
+// 新增分類時「掛在哪個母分類底下」下拉的候選清單：只列既有的母分類（本身沒有母分類、也不是年齡）
+function topLevelCategoryChoices() {
+  return orderedCategoryNames().filter(n => !CATEGORY_PARENT_OF[n] && !isAgeCategory(n));
+}
 function categoryBrandIds(name) {
   const c = (PACKAGE_DATA.categories || []).find(x => x.name === name);
   return (c && c.brandIds) || [];
@@ -2290,7 +2311,7 @@ const TAG_SECTIONS = {
   },
 };
 
-function renderCategoryManageList() { renderTagManageCards('categories'); }
+function renderCategoryManageList() { renderTagManageCards('categories'); renderCategoryParentSelect(); }
 function renderTypeManageList() {
   renderTagManageCards('types');
   // 表未 push 保險絲：顯示警告、擋新增（刪除鈕在 renderTagManageCards 內依 canEditNames 不產生）
@@ -2474,17 +2495,33 @@ async function setBookTag(field, book, tagName, add) {
   } catch (err) { /* needLogin 已處理 */ }
 }
 
+// 新增分類的「掛在哪個母分類底下」下拉：每次重畫分類清單時同步更新選項（2026-09-22）
+function renderCategoryParentSelect() {
+  const sel = document.getElementById('newCategoryParent');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">（一般分類，不掛母分類）</option>' +
+    topLevelCategoryChoices().map(n => `<option value="${pbaEscapeAttr(n)}">${pbaEscapeHtml(n)}</option>`).join('');
+  if (Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+  const notReady = PACKAGE_DATA && PACKAGE_DATA.categoryParentReady === false;
+  sel.disabled = notReady;
+  sel.title = notReady ? '母分類欄位尚未建立（需先 npx supabase db push）' : '';
+}
+
 document.getElementById('addCategoryBtn').addEventListener('click', async () => {
   const input = document.getElementById('newCategoryInput');
   const name = input.value.trim();
   if (!name) { showToast('請輸入年齡與主題名稱', true); return; }
+  const parentSel = document.getElementById('newCategoryParent');
+  const parentName = parentSel ? parentSel.value : '';
   try {
-    const res = await apiPost('book-category-add', { name });
+    const res = await apiPost('book-category-add', parentName ? { name, parentName } : { name });
     if (!res || res.success !== true) {
       showToast('新增失敗：' + ((res && res.error) || '未知錯誤'), true);
       return;
     }
     input.value = '';
+    if (parentSel) parentSel.value = '';
     showToast('年齡與主題已新增');
     await refreshCategoriesOnly();
   } catch (err) { /* needLogin 已處理 */ }
