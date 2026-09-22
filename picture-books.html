@@ -385,6 +385,8 @@
     font-size: 12.5px; color: var(--c-text-2, var(--c-text));
     margin: -2px 0 8px;
   }
+  /* 時鐘改線條刻的 SVG，不用 emoji（2026-09-22） */
+  .pb-top-active-dates svg { margin-right: 4px; vertical-align: -1px; }
   .pb-top-active-promos {
     text-align: left; display: flex; flex-direction: column; gap: 5px;
     max-height: 132px; overflow-y: auto;
@@ -1281,6 +1283,12 @@ function pbStarIcon() {
   span.innerHTML = '<svg class="pb-featured-star" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6-4.5-4.2 6.1-.8z"/></svg>';
   return span.firstChild;
 }
+// 團購時間前的時鐘圖示（2026-09-22 改線條刻的 SVG，不用 emoji；固定字串無使用者資料，可直接 innerHTML）
+function pbClockIcon() {
+  const span = document.createElement('span');
+  span.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>';
+  return span.firstChild;
+}
 function renderFeatured() {
   const wrap = document.getElementById('pbFeatured');
   if (!wrap) return;
@@ -1684,7 +1692,7 @@ function renderTopPurchase() {
     const header = document.createElement('div');
     header.className = 'pb-top-active-header';
     const headline = brandNames.length ? `${brandNames.join('・')} 團購開跑中` : '團購開跑中';
-    header.textContent = `🛒 ${headline}`;
+    header.textContent = headline;
     box.appendChild(header);
 
     // 團購時間：單一團才顯示（多團日期各異，掛在各自按鈕上反而亂，省略）
@@ -1693,7 +1701,8 @@ function renderTopPurchase() {
       if (only.startDate && only.endDate) {
         const dateLine = document.createElement('div');
         dateLine.className = 'pb-top-active-dates';
-        dateLine.textContent = `⏰ 團購時間：${fmtMD(only.startDate)} – ${fmtMD(only.endDate)}`;
+        dateLine.appendChild(pbClockIcon());
+        dateLine.appendChild(document.createTextNode(`團購時間：${fmtMD(only.startDate)} – ${fmtMD(only.endDate)}`));
         box.appendChild(dateLine);
       }
     }
@@ -1722,7 +1731,7 @@ function renderTopPurchase() {
       a.href = url;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
-      a.textContent = multi && info.brand ? `🛒 ${info.brand} 前往下單` : '🛒 前往團購下單';
+      a.textContent = multi && info.brand ? `${info.brand} 前往下單` : '前往團購下單';
       a.addEventListener('click', () => {
         pbTrackClick('booksorder');
         // 有折扣碼時順手複製，貼到下單頁就能用（不擋跳轉）
