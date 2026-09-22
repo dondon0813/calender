@@ -9,8 +9,8 @@
   /* picture-books.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
 
   .pb-featured { margin: 0 0 16px; }
-  /* 套組區頂圖（雪莉提供的白色文字 PNG，2026-08-27 指定不加底色直接放）：
-     跟著套組區一起隨開團狀態顯示/消失 */
+  /* 套組頂圖（雪莉提供的文字 PNG，2026-08-27 指定不加底色直接放；2026-09-22 改依套組所屬品牌
+     各自一張，見 renderFeatured 的 PB_SET_HEADING_BY_BRAND）：跟著所屬套組排一起顯示/消失 */
   .pb-featured-heading {
     width: 100%; max-width: 420px;
     margin: 0 auto 10px;
@@ -1265,6 +1265,14 @@ function matchesFilters(book) {
 // 結團含延長就自動消失，可見性判斷全在後端），前端不再自己用分類名稱／開團狀態判斷要不要顯示。
 // 每排照 set.bookIds 順序取書，找不到（下架/刪除）的 id 跳過；整排一本都對不到就不渲染該排。
 // sets 為空/undefined（表還沒建、或都不可見）→ 整區隱藏，不留空框。點小圖走跟書卡完全同一顆 openBookModal。
+//
+// 套組頂圖（雪莉提供的「XX團購懶人包」PNG）依套組所屬品牌各自顯示（2026-09-22 雪莉指定：
+// 不同品牌的套組要用各自的圖，不能整區共用同一張）——用套組內第一本能對到圖的書的 brand_name 判斷；
+// 新增品牌的套組要在這裡補一行圖片路徑，圖檔放 images/。
+const PB_SET_HEADING_BY_BRAND = {
+  '禾流文創': 'images/pb-set-heading.png',
+  'KIDsREAD點讀筆': 'images/pb-set-heading-kidsread.png',
+};
 function renderFeatured() {
   const wrap = document.getElementById('pbFeatured');
   if (!wrap) return;
@@ -1280,6 +1288,17 @@ function renderFeatured() {
 
     const setEl = document.createElement('div');
     setEl.className = 'pb-featured-set';
+
+    const headingSrc = PB_SET_HEADING_BY_BRAND[list.map(b => b.brand_name).find(n => n && PB_SET_HEADING_BY_BRAND[n])];
+    if (headingSrc) {
+      const heading = document.createElement('div');
+      heading.className = 'pb-featured-heading';
+      const headingImg = document.createElement('img');
+      headingImg.src = headingSrc;
+      headingImg.alt = '套組介紹';
+      heading.appendChild(headingImg);
+      setEl.appendChild(heading);
+    }
 
     const title = document.createElement('div');
     title.className = 'pb-featured-title';
@@ -1327,16 +1346,6 @@ function renderFeatured() {
     setEl.appendChild(row);
     wrap.appendChild(setEl);
   });
-
-  if (anyShown) {
-    const heading = document.createElement('div');
-    heading.className = 'pb-featured-heading';
-    const headingImg = document.createElement('img');
-    headingImg.src = 'images/pb-set-heading.png';
-    headingImg.alt = '套組介紹';
-    heading.appendChild(headingImg);
-    wrap.insertBefore(heading, wrap.firstChild);
-  }
 
   wrap.style.display = anyShown ? 'block' : 'none';
 }
