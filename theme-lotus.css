@@ -74,7 +74,9 @@ body{background:#FFFFFF!important}
 .header-copy-url-btn{background:#F5EFE9!important;box-shadow:none!important}
 /* 月曆例外：日期格維持白色（格子改奶茶色的話，無框的「已結單」「開團預告」膠囊會融進去）；非本月格用淡奶茶 */
 .daycell{background:#FFFFFF!important}
-.daycell.dim,.daycell-list.dim{background:#F5EFE9!important}
+/* 非本月格＝白底、只淡化日期數字（2026-09-23 雪莉選方案 A）：奶茶底 #F5EFE9 會跟無框的已結單 #F3EDE7／開團預告 #FFF6DD 膠囊融在一起 */
+.daycell.dim,.daycell-list.dim{background:#FFFFFF!important}
+.daycell.dim .daynum,.daycell-list.dim .daynum{color:#D8CCC1!important}
 .daycell-list{background:#FFFFFF!important}
 /* 月曆星期色條（一～日）：取「原本鮮豔色」與「柔和版」的中間值（雪莉 09-19）；只改色條，其他用到分類色的地方維持柔和版 */
 .wd-0,.wd-6{background:#E4959F!important}
