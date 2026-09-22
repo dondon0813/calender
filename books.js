@@ -1952,26 +1952,67 @@ function renderSetList() {
   });
 }
 
-function renderSetBookCheckboxes(selectedIds) {
+// 綁定團購時，可勾選的書只列該團對應品牌的（2026-09-22 雪莉：不然全部品牌的書混在一起太多了）；
+// 比對規則沿用 brandVendor.js 的 bvBrandsInTitle_（跟事件編輯視窗「品牌開團前檢查清單」同一套）。
+// 比對不到品牌，或沒綁團購，就不過濾（brandFilterIds 傳 null）；已勾選的書一律照樣列出，避免編輯時被篩選洗掉。
+function computeEventBrandIds(eventId) {
+  if (!eventId) return null;
+  const ev = (PACKAGE_DATA.setEventChoices || []).find(e => e.id === eventId);
+  if (!ev || typeof bvBrandsInTitle_ !== 'function') return null;
+  const matched = bvBrandsInTitle_(ev.title || '');
+  return matched.length ? new Set(matched.map(b => b.id)) : null;
+}
+
+// 封面選取牆（沿用主題／類型管理同一套 .pba-tag-grid／.pba-tag-card 樣式，2026-09-22 雪莉指定要有封面預覽）
+function renderSetBookCheckboxes(selectedIds, brandFilterIds) {
   const wrap = document.getElementById('sBooks');
   if (!wrap) return;
+  wrap.className = 'pba-tag-grid';
   wrap.innerHTML = '';
   const selectedSet = new Set(selectedIds || []);
-  const books = (PACKAGE_DATA.books || []).slice().sort((a, b) => {
+  let books = (PACKAGE_DATA.books || []).slice();
+  if (brandFilterIds) books = books.filter(b => brandFilterIds.has(b.brand_id) || selectedSet.has(b.id));
+  books.sort((a, b) => {
     const aSel = selectedSet.has(a.id) ? 0 : 1;
     const bSel = selectedSet.has(b.id) ? 0 : 1;
     if (aSel !== bSel) return aSel - bSel;
     return String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant');
   });
   if (!books.length) {
-    wrap.innerHTML = '<div class="pba-empty-list">還沒有書籍</div>';
+    wrap.innerHTML = `<div class="pba-empty-list">${brandFilterIds ? '這個團購對應的品牌還沒有書' : '還沒有書籍'}</div>`;
     return;
   }
   books.forEach(b => {
-    const label = document.createElement('label');
-    label.className = 'pba-checkbox-item';
-    label.innerHTML = `<input type="checkbox" value="${pbaEscapeAttr(b.id)}"> ${pbaEscapeHtml(b.title || '未命名')}`;
-    wrap.appendChild(label);
+    const card = document.createElement('label');
+    card.className = 'pba-tag-card' + (selectedSet.has(b.id) ? ' on' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = b.id;
+    cb.checked = selectedSet.has(b.id);
+    cb.style.cssText = 'position:absolute; opacity:0; width:1px; height:1px; pointer-events:none;';
+    cb.addEventListener('change', () => card.classList.toggle('on', cb.checked));
+    card.appendChild(cb);
+    if (b.cover_url) {
+      const img = document.createElement('img');
+      img.className = 'pba-grid-cover';
+      img.src = b.cover_url;
+      img.draggable = false;
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'pba-grid-cover placeholder';
+      ph.textContent = '📖';
+      card.appendChild(ph);
+    }
+    const check = document.createElement('span');
+    check.className = 'pba-tag-check';
+    check.textContent = '✓';
+    card.appendChild(check);
+    const t = document.createElement('div');
+    t.className = 'pba-grid-title';
+    t.textContent = b.title;
+    card.appendChild(t);
+    wrap.appendChild(card);
   });
 }
 
@@ -2007,13 +2048,17 @@ function openSetForm(set) {
   document.getElementById('setFormTitle').textContent = set ? '編輯套組' : '新增套組';
   document.getElementById('sTitle').value = set ? set.title || '' : '';
   document.getElementById('sIntro').value = set ? set.intro || '' : '';
-  renderSetBookCheckboxes(set ? set.bookIds || [] : []);
-  setCheckedValues('sBooks', set ? set.bookIds || [] : []);
+  renderSetBookCheckboxes(set ? set.bookIds || [] : [], computeEventBrandIds(set ? set.eventId || '' : ''));
   renderSetEventOptions(set ? set.eventId || '' : '');
   document.getElementById('sShowNow').checked = !!(set && set.showNow);
   document.getElementById('deleteSetBtn').style.display = set ? '' : 'none';
   document.getElementById('setForm').classList.add('show');
 }
+
+// 換綁的團購時，書單重新依新品牌過濾（保留已勾選的書，即使不屬於新品牌也不會被洗掉）
+document.getElementById('sEvent').addEventListener('change', (e) => {
+  renderSetBookCheckboxes(getCheckedValues('sBooks'), computeEventBrandIds(e.target.value));
+});
 
 function closeSetForm() {
   setFormEditingId = null;
