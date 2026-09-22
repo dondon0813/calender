@@ -368,11 +368,10 @@
   .pb-top-btn-line1 { font-size: 13.5px; word-break: break-word; }
   .pb-top-btn-line2 { font-size: 12px; font-weight: 700; opacity: .92; letter-spacing: .3px; }
   /* 開團中：頂端活動區塊（標題＋優惠條列＋下單按鈕），手機優先、寬度貼齊搜尋列。
-     2026-08-25 只換色：底色由薄荷綠改深米色（雪莉指定），排版照原樣不動 */
+     2026-09-22 補跟上藕粉奶茶色系（docs/11）：底色比照 recipes.html 開團宣傳列 #F7E4E2、零外框 */
   .pb-top-active {
     width: 100%; max-width: 420px; margin: 0 auto;
-    background: #fff1e6;
-    border: 1.5px solid #f0c8b4;
+    background: #F7E4E2;
     border-radius: var(--r-lg, 16px);
     padding: 14px 16px;
     text-align: center;
@@ -396,15 +395,10 @@
   .pb-top-active-promo-line { font-size: 12.5px; line-height: 1.5; color: var(--c-text); white-space: pre-wrap; word-break: break-word; }
   .pb-top-active-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .pb-top-active .pb-top-btn { margin: 0; }
-  /* 開團區塊限定的按鈕／滿額標珊瑚色（2026-08-25 雪莉用調色盤選的三色組之一；
-     浮動視窗裡的同元件維持原本粉色不動） */
-  .pb-top-active .pb-top-btn { background: #df7972; }
-  .pb-top-active .pb-top-btn:hover { background: #c9615a; }
-  .pb-top-active .pb-gift-badge { background: #df7972; }
   /* 專屬折扣碼區塊（2026-09-04）：開團活動區與書籍介紹視窗共用。
      人已在品牌介紹裡，不再跳「前往觀看介紹」選擇視窗，折扣碼直接攤開＋點擊複製 */
   .pb-discount { margin-top: 10px; text-align: center; }
-  .pb-top-active .pb-discount { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #f0c8b4; }
+  .pb-top-active .pb-discount { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--c-title-rule); }
   .pb-discount-label { font-size: 12px; font-weight: 800; color: var(--c-text-soft); letter-spacing: 1px; margin-bottom: 6px; }
   .pb-code { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%;
     padding: 9px 12px; border: 1px dashed var(--c-border); border-radius: var(--r-md, 12px); background: #fff;
@@ -412,7 +406,6 @@
   .pb-code:hover { border-color: var(--c-primary); }
   .pb-code-text { font-size: 17px; font-weight: 800; letter-spacing: 2px; color: var(--c-text); line-height: 1.2; word-break: break-all; }
   .pb-code-hint { font-size: 13px; font-weight: 700; color: #fff; background: var(--c-primary); border-radius: var(--r-pill, 999px); padding: 7px 14px; white-space: nowrap; }
-  .pb-top-active .pb-code-hint { background: #df7972; }
   .pb-discount-desc { font-size: 12.5px; line-height: 1.6; color: var(--c-text-soft); margin-top: 8px; white-space: pre-line; }
   .pb-discount-remind { font-size: 12.5px; font-weight: 700; color: var(--c-primary-dark); margin-top: 8px; }
   /* 本頁限定（2026-08-25 雪莉指定）：「現正開團中」不用共用 shared.css 的多欄格線，
