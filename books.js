@@ -485,6 +485,7 @@ function fillForm(book) {
   setCheckedValues('fTypes', book ? book.types || [] : []);
   document.getElementById('fPublished').checked = book ? !!book.is_published : false;
   syncDiscontinuedField(book);
+  document.getElementById('fCoverWide').checked = book ? !!book.cover_wide : false;
 
   const coverUrl = book ? book.cover_url || '' : '';
   document.getElementById('fCoverUrl').value = coverUrl;
@@ -1161,7 +1162,8 @@ document.getElementById('bookForm').addEventListener('submit', async (e) => {
     types: getCheckedValues('fTypes'),
     is_published: document.getElementById('fPublished').checked,
     is_discontinued: document.getElementById('fDiscontinued').checked, // 已下架＝後端強制不公開；取消＝回到草稿
-    cover_url: document.getElementById('fCoverUrl').value.trim()
+    cover_url: document.getElementById('fCoverUrl').value.trim(),
+    cover_wide: document.getElementById('fCoverWide').checked // 封面較寬（兩本合封）＝前台書牆用 1.5 倍欄寬顯示
   };
   const becameDiscontinued = payload.is_discontinued && !(CURRENT_BOOK && CURRENT_BOOK.isDiscontinued);
   if (CURRENT_BOOK) {

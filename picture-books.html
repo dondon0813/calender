@@ -143,14 +143,27 @@
   .status-msg.error { color: var(--c-danger); }
   .empty-state { text-align: center; color: var(--c-muted-light); font-size: 13px; padding: 40px 0; }
 
+  /* 書牆改用 flex-wrap（非 grid）：封面較寬（兩本合封）的卡片可以用 1.5 倍欄寬顯示，
+     依序自然換行——兩張「較寬」卡片相鄰時會剛好湊成一列，不刻意搬動書籍順序（2026-09-22）。
+     --pb-cols／--pb-gap 只用來算卡片寬度，實際排版仍是 flex 自動換行。 */
   .pb-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: 16px 12px;
+    --pb-cols: 3;
+    --pb-gap: 12px;
   }
-  @media (min-width: 640px) { .pb-grid { grid-template-columns: repeat(4, 1fr); gap: 22px 18px; } }
-  @media (min-width: 900px) { .pb-grid { grid-template-columns: repeat(5, 1fr); gap: 24px 20px; } }
-  @media (min-width: 1200px) { .pb-grid { grid-template-columns: repeat(6, 1fr); gap: 24px 20px; } }
+  .pb-grid > .pb-card {
+    flex: 0 0 calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
+    max-width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
+  }
+  .pb-grid > .pb-card.pb-card-wide {
+    flex-basis: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
+    max-width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
+  }
+  @media (min-width: 640px) { .pb-grid { gap: 22px 18px; --pb-cols: 4; --pb-gap: 18px; } }
+  @media (min-width: 900px) { .pb-grid { gap: 24px 20px; --pb-cols: 5; --pb-gap: 20px; } }
+  @media (min-width: 1200px) { .pb-grid { gap: 24px 20px; --pb-cols: 6; --pb-gap: 20px; } }
 
   /* 分類子區塊（2026-08-27，語言學習細分）：分區模式時外層改直排，各區置中標題/說明＋自己的書牆 */
   .pb-grid.sectioned { display: block; }
@@ -159,7 +172,6 @@
   .pb-subsection-head { text-align: center; margin-bottom: 14px; }
   .pb-subsection-title { font-size: 17px; font-weight: 800; color: var(--c-text); }
   .pb-subsection-desc { font-size: 12.5px; color: var(--c-muted); margin-top: 4px; line-height: 1.7; }
-  .pb-subsection .pb-grid { display: grid; }
 
   .pb-card {
     background: none;
@@ -1370,7 +1382,8 @@ function renderFeatured() {
 
 function buildBookCard(book) {
   const card = document.createElement('div');
-  card.className = 'pb-card';
+  // 封面較寬（兩本合封，2026-09-22）：書牆用 1.5 倍欄寬顯示，見 .pb-card-wide CSS
+  card.className = 'pb-card' + (book.cover_wide ? ' pb-card-wide' : '');
   card.addEventListener('click', () => openBookModal(book));
 
   const coverWrap = document.createElement('div');
