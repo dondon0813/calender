@@ -321,27 +321,32 @@
   .status-msg.error { color: var(--c-danger); }
   .empty-state { text-align: center; color: var(--c-muted-light); font-size: 13px; padding: 40px 0; }
 
-  /* 書牆改用 flex-wrap（非 grid）：封面較寬（兩本合封）的卡片可以用 1.5 倍欄寬顯示，
-     依序自然換行——兩張「較寬」卡片相鄰時會剛好湊成一列，不刻意搬動書籍順序（2026-09-22）。
-     --pb-cols／--pb-gap 只用來算卡片寬度，實際排版仍是 flex 自動換行。 */
+  /* 書牆＝JS 分列（2026-09-24 雪莉定）：封面較寬（兩本合封）的卡片佔 1.5 倍欄寬。
+     原本 flex-wrap 自然換行會讓「1.5＋1」「最後一列 1＋1」歪一邊（右邊留半格空），
+     改成 appendBookRows() 先依欄數把書分成一列一列（.pb-row），每列 space-between：
+     兩本＝左右各一本、剛好湊滿（手機 1+1+1）＝排滿；桌機最後一列不足時靠左（同一般書牆）。
+     --pb-cols／--pb-gap 只用來算卡片寬度與分列，.pb-grid 本身不再是 flex 容器。 */
   .pb-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 12px;
+    display: block;
     --pb-cols: 3;
     --pb-gap: 12px;
+    --pb-rowgap: 16px;
   }
-  .pb-grid > .pb-card {
+  .pb-row { display: flex; flex-wrap: nowrap; justify-content: space-between; column-gap: var(--pb-gap); margin-bottom: var(--pb-rowgap); }
+  .pb-row:last-child { margin-bottom: 0; }
+  .pb-row.pb-row-single { justify-content: center; }
+  .pb-row.pb-row-start { justify-content: flex-start; }
+  .pb-grid .pb-card {
     flex: 0 0 calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
     max-width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
   }
-  .pb-grid > .pb-card.pb-card-wide {
+  .pb-grid .pb-card.pb-card-wide {
     flex-basis: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
     max-width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
   }
-  @media (min-width: 640px) { .pb-grid { gap: 22px 18px; --pb-cols: 4; --pb-gap: 18px; } }
-  @media (min-width: 900px) { .pb-grid { gap: 24px 20px; --pb-cols: 5; --pb-gap: 20px; } }
-  @media (min-width: 1200px) { .pb-grid { gap: 24px 20px; --pb-cols: 6; --pb-gap: 20px; } }
+  @media (min-width: 640px) { .pb-grid { --pb-cols: 4; --pb-gap: 18px; --pb-rowgap: 22px; } }
+  @media (min-width: 900px) { .pb-grid { --pb-cols: 5; --pb-gap: 20px; --pb-rowgap: 24px; } }
+  @media (min-width: 1200px) { .pb-grid { --pb-cols: 6; --pb-gap: 20px; --pb-rowgap: 24px; } }
 
   /* 分類子區塊（2026-08-27，語言學習細分）：分區模式時外層改直排，各區置中標題/說明＋自己的書牆 */
   .pb-grid.sectioned { display: block; }
@@ -1972,6 +1977,48 @@ document.getElementById('pbQuizSubmitBtn').addEventListener('click', () => {
   document.getElementById('pbQuizResultModal').classList.add('show');
 });
 
+// ===== 書牆分列（2026-09-24 雪莉定）=====
+// 一本正常書＝1 格、封面較寬（cover_wide）＝1.5 格，依書籍順序把書塞進一列一列（不搬動順序）：
+// 放不下就換列。手機 3 格＝只有剛好 1+1+1 才三本一列；1.5+1／1+1／1.5+1.5 都是兩本一列、左右各一本（space-between）。
+// 桌機（4 格以上）最後一列不足時靠左排（同一般書牆）；單獨一本在手機置中。
+let pbLastCols = null;
+function pbGridCols(grid) {
+  const v = parseInt(getComputedStyle(grid).getPropertyValue('--pb-cols'), 10);
+  return v > 0 ? v : 3;
+}
+function appendBookRows(container, books) {
+  const cols = pbGridCols(container);
+  pbLastCols = cols;
+  const unitOf = b => (b.cover_wide ? 1.5 : 1);
+  let row = [], used = 0;
+  const flush = (isLast) => {
+    if (!row.length) return;
+    const el = document.createElement('div');
+    el.className = 'pb-row';
+    if (isLast && cols > 3 && used < cols - 1e-9) el.classList.add('pb-row-start');
+    else if (row.length === 1) el.classList.add('pb-row-single');
+    row.forEach(b => el.appendChild(buildBookCard(b)));
+    container.appendChild(el);
+    row = []; used = 0;
+  };
+  books.forEach(b => {
+    const u = unitOf(b);
+    if (used + u > cols + 1e-9) flush(false);
+    row.push(b); used += u;
+    if (used >= cols - 1e-9) flush(false);
+  });
+  flush(true);
+}
+// 跨越斷點（欄數改變）才重排，一般捲動／網址列縮放不重畫
+let pbResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(pbResizeTimer);
+  pbResizeTimer = setTimeout(() => {
+    const grid = document.getElementById('pbGrid');
+    if (grid && pbLastCols !== null && pbGridCols(grid) !== pbLastCols) renderGrid();
+  }, 150);
+});
+
 function buildBookCard(book) {
   const card = document.createElement('div');
   // 封面較寬（兩本合封，2026-09-22）：書牆用 1.5 倍欄寬顯示，見 .pb-card-wide CSS
@@ -2071,7 +2118,7 @@ function renderGrid() {
       wrap.appendChild(head);
       const secGrid = document.createElement('div');
       secGrid.className = 'pb-grid';
-      inSec.forEach(b => secGrid.appendChild(buildBookCard(b)));
+      appendBookRows(secGrid, inSec);
       wrap.appendChild(secGrid);
       grid.appendChild(wrap);
     });
@@ -2082,7 +2129,7 @@ function renderGrid() {
       wrap.className = 'pb-subsection';
       const restGrid = document.createElement('div');
       restGrid.className = 'pb-grid';
-      rest.forEach(b => restGrid.appendChild(buildBookCard(b)));
+      appendBookRows(restGrid, rest);
       wrap.appendChild(restGrid);
       grid.appendChild(wrap);
     }
@@ -2090,7 +2137,7 @@ function renderGrid() {
   }
 
   grid.classList.remove('sectioned');
-  list.forEach(book => grid.appendChild(buildBookCard(book)));
+  appendBookRows(grid, list);
 }
 
 // ===== YouTube 網址解析 =====
