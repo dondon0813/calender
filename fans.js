@@ -590,7 +590,7 @@ let FAN_CLAIMS_LOADED = false;
 let FAN_CLAIMS_BUSY = false;
 
 const FAN_CLAIMS_FILTER_DEFS = [['pending', '⏳ 待核對'], ['matched', '✅ 已加入'], ['rejected', '🚫 已駁回'], ['all', '全部']];
-const FAN_CLAIMS_PLATFORM_LABELS = { gbf: '跟團買', shopline: 'Shopline', oneshop: '1shop', vendor: '廠商名單' };
+const FAN_CLAIMS_PLATFORM_LABELS = { gbf: '跟團買', shopline: 'Shopline', oneshop: '1shop', vendor: '廠商名單', manual: '人工建立' };
 
 function renderFanClaimsBadge() {
   const el = document.getElementById('fanClaimsBadge');
@@ -670,11 +670,20 @@ function faClaimsStatusBadge(r) {
   return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F5EFE9; color:#8B6E5E; font-size:11px;">待核對</span>';
 }
 
+// 2026-09-23 雪莉需求：系統裡沒這筆訂單、但找廠商核對過確認正確 → 也要能「加入這筆」。
+// 後端 canCreate＝待核對且同團沒有同編號訂單；按了會用客人填的四項建一筆「人工建立」訂單歸到該會員（入點），
+// 這個編號從此在系統裡＝別人再回報同編號會顯示已歸戶、不能再用；之後收單抓到正式訂單會自動合併成同一筆。
+function faClaimsCreateBtnHtml(r) {
+  if (!r.canCreate) return '';
+  return '<div style="padding:4px 0 2px;"><button type="button" class="task-mini-btn fa-claims-create" data-id="' + faEscapeHtml(r.id) + '">廠商核對無誤，加入這筆</button>' +
+    '<span style="font-size:11px; color:var(--c-text-light); margin-left:8px;">會用客人填的資料建立訂單並入點；這個編號之後不能再被別人回報使用</span></div>';
+}
+
 function faClaimsCardHtml(r) {
   const cands = Array.isArray(r.candidates) ? r.candidates : [];
   let candHtml;
   if (!cands.length) {
-    candHtml = '<div style="font-size:12px; color:var(--c-text-light); padding:6px 0;">系統裡還沒有這個編號的訂單（可能還沒匯入，或是要請廠商核對）</div>';
+    candHtml = '<div style="font-size:12px; color:var(--c-text-light); padding:6px 0;">系統裡還沒有這個編號的訂單（可能還沒匯入，或是要請廠商核對）</div>' + faClaimsCreateBtnHtml(r);
   } else {
     const rows = cands.map(c => {
       let who = '';
@@ -693,7 +702,7 @@ function faClaimsCardHtml(r) {
     }).join('');
     candHtml = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px; min-width:640px;">' +
       '<thead><tr style="text-align:left; font-size:11px; color:var(--c-text-light);"><th style="padding:4px 8px;">比對</th><th style="padding:4px 8px;">系統裡的訂單</th><th style="padding:4px 8px;">金額</th><th style="padding:4px 8px;">姓名</th><th style="padding:4px 8px;">email</th><th></th><th></th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table></div>';
+      '<tbody>' + rows + '</tbody></table></div>' + faClaimsCreateBtnHtml(r);
   }
 
   let actions = '';
@@ -736,6 +745,7 @@ function renderFanClaimsList() {
   ).join('');
 
   area.querySelectorAll('.fa-claims-match').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'match', btn.dataset.order)));
+  area.querySelectorAll('.fa-claims-create').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'create')));
   area.querySelectorAll('.fa-claims-reject').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reject')));
   area.querySelectorAll('.fa-claims-reopen').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reopen')));
 }
@@ -750,6 +760,8 @@ async function faResolveClaimReport(id, action, orderId) {
     const warn = c && !c.fullMatch ? '\n\n⚠ 這筆訂單和客人填的資料「不完全相符」，請確認真的是同一個人。' : '';
     if (!confirm('把訂單 ' + r.orderNo + ' 加入會員 ' + r.member + ' 名下？（會同時入點）' + warn)) return;
     extra.orderId = orderId;
+  } else if (action === 'create') {
+    if (!confirm('系統裡沒有這筆訂單。確定廠商已核對無誤，要用客人填的資料建立訂單嗎？\n\n訂單 ' + r.orderNo + '｜' + faMoney(r.amount) + '｜' + r.buyerName + '｜' + r.buyerEmail + '\n團購：' + (r.eventTitle || '（未選團）') + '\n加入會員 ' + r.member + ' 名下（會同時入點；沒有品項＝不會發兌換碼）。\n\n建立後這個訂單編號就被使用掉，其他人不能再用同一編號回報。')) return;
   } else if (action === 'reject') {
     const note = prompt('駁回原因（客人在「我的訂單」看得到，可留空）：', '');
     if (note === null) return;
@@ -759,7 +771,7 @@ async function faResolveClaimReport(id, action, orderId) {
   try {
     const res = await faApiPost('fan-admin-claim-report-resolve', extra);
     if (!res || !res.success) throw new Error((res && res.error) || '處理失敗');
-    if (action === 'match') { FAN_ADMIN_LOADED = false; } // 未歸戶清單少了一筆，下次切回去重抓
+    if (action === 'match' || action === 'create') { FAN_ADMIN_LOADED = false; } // 未歸戶清單少了一筆，下次切回去重抓
     await faLoadClaimReports(true);
   } catch (err) {
     alert('處理失敗：' + err.message);
