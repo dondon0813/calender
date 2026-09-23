@@ -118,6 +118,11 @@
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px;
   }
+  /* 橫滑列一律藏掉原生捲軸（2026-09-24 雪莉：桌機／Android 的灰色粗橫條擋住文字很醜）；
+     手機本來就不顯示捲軸，套組區另有漸層＋箭頭提示可滑，篩選 chips 早就這樣做 */
+  .pb-featured-row, .pb-gift-row, .pb-brand-halls-row, .pb-series-row, #openGroupBuyBar .ogb-items { scrollbar-width: none; }
+  .pb-featured-row::-webkit-scrollbar, .pb-gift-row::-webkit-scrollbar, .pb-brand-halls-row::-webkit-scrollbar,
+  .pb-series-row::-webkit-scrollbar, #openGroupBuyBar .ogb-items::-webkit-scrollbar { display: none; }
   /* ≤4 本的套組排置中：用彈性佔位而非 justify-content:center，
      螢幕太窄放不下時佔位縮成 0＝自動退回靠左、維持可滑動不裁切 */
   .pb-featured-row.few::before,
