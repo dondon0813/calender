@@ -126,15 +126,35 @@
      包一層 wrap 是因為漸層要蓋在「畫面看得到的右邊緣」、不能跟著內容一起被捲走，
      只有超過 4 本（真的會捲動）才加，避免湊不滿一排時誤導使用者以為還有更多。
      漸層淡到跟這一區背景一樣的白色（本頁這裡沒有底色卡片，就是純白頁面底）。 */
+  /* 2026-09-24 雪莉：原本只在「超過 4 本」才顯示漸層，但 4 本（120px×4）在手機就已經超出畫面會滑動＝她從沒看到過；
+     改成 JS 實測「內容比畫面寬」（pbInitScrollHint）才加 .scrollable，滑到最右邊時拿掉（.at-end）。
+     另加一顆線條箭頭鈕（雪莉：漸層還是不夠明顯），點了往右捲一段。 */
   .pb-featured-row-wrap { position: relative; }
-  .pb-featured-row-wrap.scrollable::after {
+  .pb-featured-row-wrap.scrollable:not(.at-end)::after {
     content: '';
     position: absolute;
     top: 0; right: 0; bottom: 4px;
-    width: 36px;
-    background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,.95) 70%);
+    width: 56px;
+    background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,.96) 60%);
     pointer-events: none;
   }
+  .pb-featured-arrow {
+    display: none;
+    position: absolute;
+    right: 2px; top: 46px; /* 對齊封面格垂直中央（格高 92px） */
+    width: 30px; height: 30px; margin-top: -15px;
+    border-radius: 50%;
+    background: var(--c-surface, #F5EFE9);
+    box-shadow: 0 2px 8px rgba(90,74,66,.18);
+    color: var(--c-text, #5A4A42);
+    align-items: center; justify-content: center;
+    cursor: pointer; z-index: 2;
+    animation: pbArrowNudge 1.6s ease-in-out infinite;
+  }
+  .pb-featured-arrow svg { display: block; }
+  .pb-featured-row-wrap.scrollable:not(.at-end) .pb-featured-arrow { display: flex; }
+  @keyframes pbArrowNudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+  @media (prefers-reduced-motion: reduce) { .pb-featured-arrow { animation: none; } }
   /* 格子加寬到 120px（原本 76px，2026-09-23 雪莉指定）：矮圖（封面較寬的合封圖，比例約 1.0~1.2）
      原本被寬度卡住縮得很小、上面留一大塊空白；120x92 讓這類圖改成被高度卡住撐滿，空白消失。
      直式封面書比例約 0.75~0.85，本來就撐滿高度，加寬格子對它們沒有負面影響。 */
@@ -1705,6 +1725,7 @@ function pbClockIcon() {
   return span.firstChild;
 }
 function renderFeatured() {
+  PB_SCROLL_HINT_ROWS.length = 0; // 重畫就丟掉舊列的量測函式
   const wrap = document.getElementById('pbFeatured');
   if (!wrap) return;
   wrap.innerHTML = '';
@@ -1766,7 +1787,7 @@ function renderFeatured() {
     }
 
     const rowWrap = document.createElement('div');
-    rowWrap.className = 'pb-featured-row-wrap' + (list.length > 4 ? ' scrollable' : '');
+    rowWrap.className = 'pb-featured-row-wrap';
 
     const row = document.createElement('div');
     row.className = 'pb-featured-row';
@@ -1800,6 +1821,7 @@ function renderFeatured() {
       row.appendChild(item);
     });
     rowWrap.appendChild(row);
+    pbInitScrollHint(rowWrap, row);
     setEl.appendChild(rowWrap);
     wrap.appendChild(setEl);
   });
@@ -1982,6 +2004,31 @@ document.getElementById('pbQuizSubmitBtn').addEventListener('click', () => {
   closeQuizModal();
   document.getElementById('pbQuizResultModal').classList.add('show');
 });
+
+// ===== 橫滑提示（2026-09-24）：右側淡出漸層＋線條箭頭鈕，只在內容真的比畫面寬、且還沒滑到底時顯示 =====
+const PB_SCROLL_HINT_ROWS = [];
+function pbInitScrollHint(wrap, row) {
+  const arrow = document.createElement('button');
+  arrow.type = 'button';
+  arrow.className = 'pb-featured-arrow';
+  arrow.setAttribute('aria-label', '往右看更多');
+  arrow.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>';
+  arrow.addEventListener('click', (e) => {
+    e.stopPropagation();
+    row.scrollBy({ left: Math.max(160, Math.round(row.clientWidth * 0.7)), behavior: 'smooth' });
+  });
+  wrap.appendChild(arrow);
+  const update = () => {
+    const scrollable = row.scrollWidth > row.clientWidth + 2;
+    const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 2;
+    wrap.classList.toggle('scrollable', scrollable);
+    wrap.classList.toggle('at-end', atEnd);
+  };
+  row.addEventListener('scroll', update, { passive: true });
+  PB_SCROLL_HINT_ROWS.push(update);
+  requestAnimationFrame(update); // 要等元素進 DOM、有寬度後才量得到
+}
+window.addEventListener('resize', () => PB_SCROLL_HINT_ROWS.forEach(fn => fn()));
 
 // ===== 書牆分列（2026-09-24 雪莉定）=====
 // 一本正常書＝1 格、封面較寬（cover_wide）＝1.5 格，依書籍順序把書塞進一列一列（不搬動順序）：
