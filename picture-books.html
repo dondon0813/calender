@@ -138,7 +138,8 @@
      JS（pbInitScrollHint）實測「內容比畫面寬」才加 .scrollable、滑到最右邊加 .at-end 收起箭頭；
      箭頭垂直位置用 --pb-arrow-top 對齊該列小圖中央（套組封面格 92px→46px、開團／滿額贈小圖 72px→36px）。
      ≤3 本的套組（.fit3）把格子縮到三本擺得下＝不會滑、不出箭頭（雪莉：三本本來就擺得下）。 */
-  .pb-featured-row.fit3 .pb-featured-item { width: calc((100% - 20px) / 3); max-width: 120px; }
+  /* 扣 4 個 gap（10px×4）：.few 的 ::before/::after 置中佔位也各吃一個 gap（實測少算會多 20px → 三本仍會滑） */
+  .pb-featured-row.fit3 .pb-featured-item { width: calc((100% - 40px) / 3); max-width: 120px; }
   .pb-scroll-wrap { position: relative; --pb-arrow-top: 50%; }
   .pb-featured-row-wrap { --pb-arrow-top: 46px; }
   .pb-scroll-arrow {
@@ -2038,6 +2039,8 @@ function pbInitScrollHint(wrap, row) {
   row.addEventListener('scroll', update, { passive: true });
   PB_SCROLL_HINT_ROWS.push(update);
   requestAnimationFrame(update); // 要等元素進 DOM、有寬度後才量得到
+  // 列本身尺寸變動（例如開團橫列從 display:none 變可見、圖片載入撐開）也要重量，否則量到 0 就永遠不出箭頭
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(row);
 }
 window.addEventListener('resize', () => PB_SCROLL_HINT_ROWS.forEach(fn => fn()));
 // 任何已在 DOM 裡的橫滑列：外面包一層 wrap 再掛箭頭（arrowTop＝箭頭中心距列頂的距離，對齊小圖中央）
