@@ -1565,14 +1565,17 @@ function renderBrandHallHeader() {
   const subBtn = document.getElementById('pbBrandHallSub');
   const introWrap = document.getElementById('pbBrandHallIntro');
   if (!subBtn || !introWrap) return;
+  const subText = subBtn.querySelector('.pb-brand-hall-sub-text');
   if (!BRAND_HALL) {
-    subBtn.style.display = 'none';
+    // 一般模式（2026-09-24 雪莉改）：同一顆副標按鈕、字改「進入品牌館」，點了開同一個品牌切換視窗；
+    // 取代原本的品牌小圖入口列（renderBrandHalls 已停用）。沒有任何有書的品牌時才隱藏。
+    subBtn.style.display = USED_BRANDS.length ? 'inline-flex' : 'none';
+    if (subText) subText.textContent = '進入品牌館';
     introWrap.style.display = 'none';
     introWrap.innerHTML = '';
     return;
   }
   subBtn.style.display = 'inline-flex';
-  const subText = subBtn.querySelector('.pb-brand-hall-sub-text');
   if (subText) subText.textContent = `${BRAND_HALL.name} 品牌館`;
 
   introWrap.innerHTML = '';
@@ -1600,6 +1603,9 @@ function renderBrandHalls() {
   const wrap = document.getElementById('pbBrandHalls');
   if (!wrap) return;
   wrap.innerHTML = '';
+  // 2026-09-24 雪莉：入口列一排小圖拿掉，改成標題下的「進入品牌館」副標（renderBrandHallHeader）。
+  // 下面的程式保留可還原：把這行 return 拿掉即恢復小圖列。
+  wrap.style.display = 'none'; return;
   if (BRAND_HALL || !USED_BRANDS.length) { wrap.style.display = 'none'; return; }
   const label = document.createElement('div');
   label.className = 'pb-brand-halls-label';
