@@ -140,6 +140,7 @@
      ≤3 本的套組（.fit3）把格子縮到三本擺得下＝不會滑、不出箭頭（雪莉：三本本來就擺得下）。 */
   /* 扣 4 個 gap（10px×4）：.few 的 ::before/::after 置中佔位也各吃一個 gap（實測少算會多 20px → 三本仍會滑） */
   .pb-featured-row.fit3 .pb-featured-item { width: calc((100% - 40px) / 3); max-width: 120px; }
+  .pb-featured-row.fit3 .pb-featured-cover-wrap { width: 100%; } /* 封面格原本固定 120px，比縮小後的格子寬會撐出捲動 */
   .pb-scroll-wrap { position: relative; --pb-arrow-top: 50%; }
   .pb-featured-row-wrap { --pb-arrow-top: 46px; }
   .pb-scroll-arrow {
