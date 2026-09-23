@@ -118,35 +118,33 @@
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px;
   }
-  /* 橫滑列一律藏掉原生捲軸（2026-09-24 雪莉：桌機／Android 的灰色粗橫條擋住文字很醜）；
-     手機本來就不顯示捲軸，套組區另有漸層＋箭頭提示可滑，篩選 chips 早就這樣做 */
-  .pb-featured-row, .pb-gift-row, .pb-brand-halls-row, .pb-series-row, #openGroupBuyBar .ogb-items { scrollbar-width: none; }
+  /* 橫滑列的捲軸（2026-09-24 雪莉定）：保留但改細（4px）、淡藕粉色（--c-primary #C99A9B）、
+     位置往下一點（padding-bottom 拉開內容與捲軸的距離）；原生灰色粗橫條擋住文字很醜。
+     手機本來就不顯示捲軸，可滑的列另有箭頭提示（.pb-scroll-arrow）。 */
+  .pb-featured-row, .pb-gift-row, .pb-brand-halls-row, .pb-series-row, #openGroupBuyBar .ogb-items {
+    scrollbar-width: thin; scrollbar-color: var(--c-primary, #C99A9B) transparent; padding-bottom: 10px;
+  }
   .pb-featured-row::-webkit-scrollbar, .pb-gift-row::-webkit-scrollbar, .pb-brand-halls-row::-webkit-scrollbar,
-  .pb-series-row::-webkit-scrollbar, #openGroupBuyBar .ogb-items::-webkit-scrollbar { display: none; }
+  .pb-series-row::-webkit-scrollbar, #openGroupBuyBar .ogb-items::-webkit-scrollbar { height: 4px; }
+  .pb-featured-row::-webkit-scrollbar-thumb, .pb-gift-row::-webkit-scrollbar-thumb, .pb-brand-halls-row::-webkit-scrollbar-thumb,
+  .pb-series-row::-webkit-scrollbar-thumb, #openGroupBuyBar .ogb-items::-webkit-scrollbar-thumb { background: var(--c-primary, #C99A9B); border-radius: 999px; }
+  .pb-featured-row::-webkit-scrollbar-track, .pb-gift-row::-webkit-scrollbar-track, .pb-brand-halls-row::-webkit-scrollbar-track,
+  .pb-series-row::-webkit-scrollbar-track, #openGroupBuyBar .ogb-items::-webkit-scrollbar-track { background: transparent; }
   /* ≤4 本的套組排置中：用彈性佔位而非 justify-content:center，
      螢幕太窄放不下時佔位縮成 0＝自動退回靠左、維持可滑動不裁切 */
   .pb-featured-row.few::before,
   .pb-featured-row.few::after { content: ''; margin: auto; }
-  /* 右側淡出漸層，提示還可以往右滑（2026-09-23 雪莉：原生捲軸太不明顯）；
-     包一層 wrap 是因為漸層要蓋在「畫面看得到的右邊緣」、不能跟著內容一起被捲走，
-     只有超過 4 本（真的會捲動）才加，避免湊不滿一排時誤導使用者以為還有更多。
-     漸層淡到跟這一區背景一樣的白色（本頁這裡沒有底色卡片，就是純白頁面底）。 */
-  /* 2026-09-24 雪莉：原本只在「超過 4 本」才顯示漸層，但 4 本（120px×4）在手機就已經超出畫面會滑動＝她從沒看到過；
-     改成 JS 實測「內容比畫面寬」（pbInitScrollHint）才加 .scrollable，滑到最右邊時拿掉（.at-end）。
-     另加一顆線條箭頭鈕（雪莉：漸層還是不夠明顯），點了往右捲一段。 */
-  .pb-featured-row-wrap { position: relative; }
-  .pb-featured-row-wrap.scrollable:not(.at-end)::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0; bottom: 4px;
-    width: 56px;
-    background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,.96) 60%);
-    pointer-events: none;
-  }
-  .pb-featured-arrow {
+  /* 橫滑箭頭（2026-09-24 雪莉定案，漸層已移除）：任何橫滑列包一層 .pb-scroll-wrap，
+     JS（pbInitScrollHint）實測「內容比畫面寬」才加 .scrollable、滑到最右邊加 .at-end 收起箭頭；
+     箭頭垂直位置用 --pb-arrow-top 對齊該列小圖中央（套組封面格 92px→46px、開團／滿額贈小圖 72px→36px）。
+     ≤3 本的套組（.fit3）把格子縮到三本擺得下＝不會滑、不出箭頭（雪莉：三本本來就擺得下）。 */
+  .pb-featured-row.fit3 .pb-featured-item { width: calc((100% - 20px) / 3); max-width: 120px; }
+  .pb-scroll-wrap { position: relative; --pb-arrow-top: 50%; }
+  .pb-featured-row-wrap { --pb-arrow-top: 46px; }
+  .pb-scroll-arrow {
     display: none;
     position: absolute;
-    right: 2px; top: 46px; /* 對齊封面格垂直中央（格高 92px） */
+    right: 2px; top: var(--pb-arrow-top);
     width: 30px; height: 30px; margin-top: -15px;
     border-radius: 50%;
     background: var(--c-surface, #F5EFE9);
@@ -156,10 +154,10 @@
     cursor: pointer; z-index: 2;
     animation: pbArrowNudge 1.6s ease-in-out infinite;
   }
-  .pb-featured-arrow svg { display: block; }
-  .pb-featured-row-wrap.scrollable:not(.at-end) .pb-featured-arrow { display: flex; }
+  .pb-scroll-arrow svg { display: block; }
+  .pb-scroll-wrap.scrollable:not(.at-end) .pb-scroll-arrow { display: flex; }
   @keyframes pbArrowNudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
-  @media (prefers-reduced-motion: reduce) { .pb-featured-arrow { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .pb-scroll-arrow { animation: none; } }
   /* 格子加寬到 120px（原本 76px，2026-09-23 雪莉指定）：矮圖（封面較寬的合封圖，比例約 1.0~1.2）
      原本被寬度卡住縮得很小、上面留一大塊空白；120x92 讓這類圖改成被高度卡住撐滿，空白消失。
      直式封面書比例約 0.75~0.85，本來就撐滿高度，加寬格子對它們沒有負面影響。 */
@@ -1803,6 +1801,7 @@ function renderFeatured() {
     const row = document.createElement('div');
     row.className = 'pb-featured-row';
     if (list.length <= 4) row.classList.add('few');
+    if (list.length <= 3) row.classList.add('fit3'); // 三本以內縮到擺得下、不滑不出箭頭
     list.forEach(book => {
       const item = document.createElement('div');
       item.className = 'pb-featured-item';
@@ -2016,12 +2015,13 @@ document.getElementById('pbQuizSubmitBtn').addEventListener('click', () => {
   document.getElementById('pbQuizResultModal').classList.add('show');
 });
 
-// ===== 橫滑提示（2026-09-24）：右側淡出漸層＋線條箭頭鈕，只在內容真的比畫面寬、且還沒滑到底時顯示 =====
+// ===== 橫滑提示（2026-09-24）：線條箭頭鈕，只在內容真的比畫面寬、且還沒滑到底時顯示（漸層已依雪莉移除）=====
 const PB_SCROLL_HINT_ROWS = [];
 function pbInitScrollHint(wrap, row) {
+  wrap.classList.add('pb-scroll-wrap');
   const arrow = document.createElement('button');
   arrow.type = 'button';
-  arrow.className = 'pb-featured-arrow';
+  arrow.className = 'pb-scroll-arrow';
   arrow.setAttribute('aria-label', '往右看更多');
   arrow.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>';
   arrow.addEventListener('click', (e) => {
@@ -2040,6 +2040,25 @@ function pbInitScrollHint(wrap, row) {
   requestAnimationFrame(update); // 要等元素進 DOM、有寬度後才量得到
 }
 window.addEventListener('resize', () => PB_SCROLL_HINT_ROWS.forEach(fn => fn()));
+// 任何已在 DOM 裡的橫滑列：外面包一層 wrap 再掛箭頭（arrowTop＝箭頭中心距列頂的距離，對齊小圖中央）
+function pbWrapScrollArrow(row, arrowTop) {
+  if (!row || row.parentElement?.classList.contains('pb-scroll-wrap')) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'pb-scroll-wrap';
+  if (arrowTop) wrap.style.setProperty('--pb-arrow-top', arrowTop);
+  row.parentNode.insertBefore(wrap, row);
+  wrap.appendChild(row);
+  pbInitScrollHint(wrap, row);
+}
+// 「現正開團中」單排小圖列由共用的 openGroupBuy.js 渲染（本頁 CSS 覆寫成單排橫滑），渲染完自動掛箭頭；
+// 開團小圖 72px 高 → 箭頭中心 36px（雪莉 09-24：開團小圖單排的也套同一模式）
+(function () {
+  const bar = document.getElementById('openGroupBuyBar');
+  if (!bar) return;
+  const hook = () => bar.querySelectorAll('.ogb-items').forEach(el => pbWrapScrollArrow(el, '36px'));
+  new MutationObserver(hook).observe(bar, { childList: true });
+  hook();
+})();
 
 // ===== 書牆分列（2026-09-24 雪莉定）=====
 // 一本正常書＝1 格、封面較寬（cover_wide）＝1.5 格，依書籍順序把書塞進一列一列（不搬動順序）：
@@ -2614,6 +2633,7 @@ function buildGiftSection(gifts) {
   row.className = 'pb-gift-row';
   gifts.forEach(g => row.appendChild(buildGiftItem(g)));
   wrap.appendChild(row);
+  pbWrapScrollArrow(row, '36px'); // 滿額贈小圖 72px 高 → 箭頭中心 36px（同開團小圖列）
   return wrap;
 }
 
