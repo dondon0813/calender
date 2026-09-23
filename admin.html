@@ -5846,6 +5846,10 @@
     .lot-meta{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12.5px; color:var(--c-text-soft); align-items:center; }
     .lot-meta .lot-kw{ background:#fff; border:1px solid var(--c-border-light); border-radius:6px; padding:1px 7px; font-size:12px; }
     .lot-meta .lot-warn{ color:var(--c-cat-1); font-weight:700; }
+    .lot-ptype{ font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; }
+    .lot-ptype-cash{ background:var(--c-gold-badge-bg); color:var(--c-gold-text); }
+    .lot-ptype-physical{ background:#F5EFE9; color:var(--c-text-soft); }
+    .lot-ptype-virtual{ background:var(--c-blue-bg); color:var(--c-blue-text); }
     .lot-progress{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px; min-width:120px; }
     .lot-progress-txt{ font-size:12px; color:var(--c-text-soft); }
     .lot-bar{ width:120px; height:7px; border-radius:999px; background:var(--c-border-light); overflow:hidden; display:flex; }
@@ -5874,6 +5878,7 @@
     .lot-ic-btn:hover{ background:#EDE4DB; color:var(--c-text); }
     .lot-ic-btn.danger{ color:var(--c-danger); }
     .lot-eye svg{ width:13px; height:13px; vertical-align:-2px; }
+    .lot-draw-block-foot .task-mini-btn svg, .lot-card-foot .task-mini-btn svg{ width:13px; height:13px; vertical-align:-2px; margin-right:2px; }
     @media (max-width:700px){
       .lot-wl-head{ display:none; }
       .lot-wl-main{ grid-template-columns:1fr auto; }
@@ -6596,6 +6601,7 @@
   <div class="modal-box" style="width:min(640px, 94vw); max-height:90vh; overflow-y:auto;">
     <button class="modal-close" onclick="closeLotteryDrawModal()">✕</button>
     <h3 id="lotDrawModalTitle">➕ 新增抽獎</h3>
+    <p id="lotDrawPrizeReadyWarn" class="hint" style="display:none; font-size:12px; color:#8B6E5E; margin:0 0 10px;">⚠️ 獎品類型欄位還沒 db push，儲存時會先略過類型／金額欄位。</p>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="lotDrawSectionSelect">分區 *</label>
       <select id="lotDrawSectionSelect">
@@ -6605,23 +6611,39 @@
       </select>
 
       <div id="lotDrawAcctGroup">
-        <label for="lotDrawAcctSearchInput">帳務團（輸入 R 號或團名搜尋）</label>
-        <input type="text" id="lotDrawAcctSearchInput" placeholder="搜尋 R 號／團名…">
+        <label for="lotDrawAcctSearchInput">團購（輸入品牌或團名搜尋）</label>
+        <input type="text" id="lotDrawAcctSearchInput" placeholder="搜尋品牌／團名…">
         <select id="lotDrawAcctSelect"><option value="">（不綁）</option></select>
         <p class="hint" id="lotDrawAcctReadyWarn" style="display:none; font-size:12px; color:#8B6E5E; margin:4px 0 0;">⚠️ 需要雪莉先在 PowerShell 執行 npx supabase db push 才能綁定帳務團。</p>
+        <p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:4px 0 0;">帳務建檔後系統會自動綁定帳務，不用回來改。</p>
       </div>
 
-      <div id="lotDrawEventGroup">
-        <label for="lotDrawEventSelect">行事曆團購（帳務未建，選填）</label>
-        <select id="lotDrawEventSelect"><option value="">（不綁）</option></select>
-        <p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:4px 0 0;">這場團的帳務列還沒建時，可以先綁行事曆團購，帳務建好後再改綁 R 號。</p>
+      <div id="lotDrawTitleAutoBox" style="display:none; font-size:12.5px; color:var(--c-text-soft); margin:2px 0 10px;">
+        <span id="lotDrawTitleAutoText"></span>
+        <a href="javascript:void(0)" id="lotDrawTitleEditLink" style="margin-left:6px; color:var(--c-primary); text-decoration:underline;">改</a>
+      </div>
+      <div id="lotDrawTitleGroup">
+        <label for="lotDrawTitleInput">活動標題 *</label>
+        <input type="text" id="lotDrawTitleInput" placeholder="例如：午茶夫人 9 月團">
       </div>
 
-      <label for="lotDrawTitleInput">活動標題 *</label>
-      <input type="text" id="lotDrawTitleInput" placeholder="例如：午茶夫人 9 月團">
-
-      <label for="lotDrawBrandSelect">贊助方（品牌）</label>
+      <label for="lotDrawBrandSelect">品牌</label>
       <select id="lotDrawBrandSelect"></select>
+
+      <label for="lotDrawPrizeTypeSelect">獎品類型</label>
+      <select id="lotDrawPrizeTypeSelect">
+        <option value="cash">現金／免單</option>
+        <option value="physical" selected>實體贈品</option>
+        <option value="virtual">虛擬贈品</option>
+      </select>
+
+      <label for="lotDrawPrizeInput">獎品 *</label>
+      <input type="text" id="lotDrawPrizeInput" placeholder="例如：免單／寶寶防曬乳 x1">
+
+      <div id="lotDrawCashAmountGroup" style="display:none;">
+        <label for="lotDrawCashAmountInput">金額（免單金額每人不同時可在得獎人各自填）</label>
+        <input type="text" id="lotDrawCashAmountInput" placeholder="數字，例如 500">
+      </div>
 
       <label for="lotDrawDateInput">抽獎日</label>
       <input type="date" id="lotDrawDateInput">
@@ -6630,14 +6652,10 @@
         <span>⚠ 年份不確定（匯入舊資料才會用到；後台會顯示提醒）</span>
       </label>
 
-      <label for="lotDrawKeywordInput">L 關鍵字</label>
-      <input type="text" id="lotDrawKeywordInput" placeholder="例如：午茶">
-
-      <label for="lotDrawShipBySelect">寄送方式</label>
+      <label for="lotDrawShipBySelect">贊助方（誰出獎品、誰寄）</label>
       <select id="lotDrawShipBySelect">
-        <option value="self">自寄</option>
-        <option value="vendor">廠商寄</option>
-        <option value="none">不用寄（折扣／整單免費）</option>
+        <option value="vendor">廠商</option>
+        <option value="self">團購主</option>
       </select>
 
       <label for="lotDrawNoteInput">備註</label>
@@ -6676,6 +6694,7 @@
   <div class="modal-box" style="width:min(460px, 94vw); max-height:90vh; overflow-y:auto;">
     <button class="modal-close" onclick="closeLotteryWinnerModal()">✕</button>
     <h3 id="lotWinnerModalTitle">➕ 新增得獎人</h3>
+    <p id="lotWinnerPrizeReadyWarn" class="hint" style="display:none; font-size:12px; color:#8B6E5E; margin:0 0 10px;">⚠️ 獎品類型欄位還沒 db push，儲存時會先略過類型／金額欄位。</p>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="lotWinnerPrizeInput">獎品 *</label>
       <input type="text" id="lotWinnerPrizeInput" placeholder="例如：禮盒 x1">
@@ -6693,15 +6712,41 @@
 
       <label for="lotWinnerNameInput">姓名</label>
       <input type="text" id="lotWinnerNameInput">
-      <label for="lotWinnerPhoneInput">電話</label>
-      <input type="text" id="lotWinnerPhoneInput">
-      <label for="lotWinnerAddressInput">地址</label>
-      <input type="text" id="lotWinnerAddressInput">
+
+      <div id="lotWinnerCashGroup">
+        <label for="lotWinnerCashAmountInput">金額</label>
+        <input type="text" id="lotWinnerCashAmountInput" placeholder="數字，例如 500">
+        <label for="lotWinnerAccountNameInput">戶名</label>
+        <input type="text" id="lotWinnerAccountNameInput">
+        <label for="lotWinnerBankNameInput">銀行名稱</label>
+        <input type="text" id="lotWinnerBankNameInput">
+        <label for="lotWinnerBankCodeInput">銀行代碼</label>
+        <input type="text" id="lotWinnerBankCodeInput">
+        <label for="lotWinnerBankBranchInput">分行</label>
+        <input type="text" id="lotWinnerBankBranchInput">
+        <label for="lotWinnerBankAccountInput">帳號</label>
+        <input type="text" id="lotWinnerBankAccountInput">
+      </div>
+
+      <div id="lotWinnerPhysicalGroup">
+        <label for="lotWinnerPhoneInput">電話</label>
+        <input type="text" id="lotWinnerPhoneInput">
+        <label for="lotWinnerZipInput">郵遞區號</label>
+        <input type="text" id="lotWinnerZipInput">
+        <label for="lotWinnerAddressInput">地址</label>
+        <input type="text" id="lotWinnerAddressInput">
+        <label for="lotWinnerShippingFeeInput">運費</label>
+        <input type="text" id="lotWinnerShippingFeeInput" placeholder="數字／免運／廠商付">
+      </div>
+
+      <div id="lotWinnerVirtualGroup">
+        <label for="lotWinnerEmailInput">email</label>
+        <input type="text" id="lotWinnerEmailInput" placeholder="name@example.com">
+      </div>
+
       <label for="lotWinnerOrderNoInput">訂單編號</label>
       <input type="text" id="lotWinnerOrderNoInput">
-      <label for="lotWinnerShippingFeeInput">運費</label>
-      <input type="text" id="lotWinnerShippingFeeInput" placeholder="數字／免運／廠商付">
-      <label for="lotWinnerShippedAtInput">寄出日</label>
+      <label for="lotWinnerShippedAtInput" id="lotWinnerShippedAtLabel">寄出日</label>
       <input type="date" id="lotWinnerShippedAtInput">
       <label for="lotWinnerSponsorNoteInput">贊助方備註</label>
       <input type="text" id="lotWinnerSponsorNoteInput" placeholder="贊助方與活動品牌不同時才填">
@@ -7338,7 +7383,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=15"></script>
+<script src="lottery.js?v=16"></script>
 <script src="admin.js?v=100"></script>
 <script src="memo.js?v=6"></script>
 
