@@ -1736,7 +1736,6 @@ function pbClockIcon() {
   return span.firstChild;
 }
 function renderFeatured() {
-  PB_SCROLL_HINT_ROWS.length = 0; // 重畫就丟掉舊列的量測函式
   const wrap = document.getElementById('pbFeatured');
   if (!wrap) return;
   wrap.innerHTML = '';
@@ -2018,7 +2017,6 @@ document.getElementById('pbQuizSubmitBtn').addEventListener('click', () => {
 });
 
 // ===== 橫滑提示（2026-09-24）：線條箭頭鈕，只在內容真的比畫面寬、且還沒滑到底時顯示（漸層已依雪莉移除）=====
-const PB_SCROLL_HINT_ROWS = [];
 function pbInitScrollHint(wrap, row) {
   wrap.classList.add('pb-scroll-wrap');
   const arrow = document.createElement('button');
@@ -2038,12 +2036,20 @@ function pbInitScrollHint(wrap, row) {
     wrap.classList.toggle('at-end', atEnd);
   };
   row.addEventListener('scroll', update, { passive: true });
-  PB_SCROLL_HINT_ROWS.push(update);
-  requestAnimationFrame(update); // 要等元素進 DOM、有寬度後才量得到
-  // 列本身尺寸變動（例如開團橫列從 display:none 變可見、圖片載入撐開）也要重量，否則量到 0 就永遠不出箭頭
+  wrap._pbUpdate = update; // 掛在元素上（不用全域陣列）：重畫時舊列跟著 DOM 一起消失，不會誤清到別的列
+  // 量測時機：進 DOM 後立刻（setTimeout 0）＋下一幀＋0.6 秒保險（圖片／字型載入撐開）；
+  // 背景分頁 rAF／ResizeObserver 不會跑（實測），所以不能只靠它們
+  setTimeout(update, 0);
+  setTimeout(update, 600);
+  requestAnimationFrame(update);
+  // 列本身尺寸變動（例如開團橫列從 display:none 變可見）也要重量，否則量到 0 就永遠不出箭頭
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(row);
 }
-window.addEventListener('resize', () => PB_SCROLL_HINT_ROWS.forEach(fn => fn()));
+function pbRefreshScrollHints() {
+  document.querySelectorAll('.pb-scroll-wrap').forEach(w => { if (w._pbUpdate) w._pbUpdate(); });
+}
+window.addEventListener('resize', pbRefreshScrollHints);
+window.addEventListener('load', pbRefreshScrollHints);
 // 任何已在 DOM 裡的橫滑列：外面包一層 wrap 再掛箭頭（arrowTop＝箭頭中心距列頂的距離，對齊小圖中央）
 function pbWrapScrollArrow(row, arrowTop) {
   if (!row || row.parentElement?.classList.contains('pb-scroll-wrap')) return;
