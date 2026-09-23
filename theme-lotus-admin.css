@@ -85,6 +85,12 @@ body{background:#FFFFFF!important}
 }
 @media (prefers-reduced-motion:reduce){.gs-today-badge{animation:none!important}}
 
+/* 輸入框／下拉／文字框一律留一條淡細線（docs/11 第四批取捨：後台密集表單需辨識）。
+   09-23 雪莉抓到：品牌廠商搜尋欄（白底＋var(--c-border) 透明框）直接放在白頁面上整個看不見；
+   同樣寫法的還有抽獎篩選列搜尋框、待配對綁定下拉等，這裡一次補齊，只動 border-color 不動 border:none 的元素（狀態膠囊 select）。 */
+input[type="text"],input[type="search"],input[type="date"],input[type="number"],input[type="email"],input[type="url"],select,textarea{border-color:#E6DCD2!important}
+input[type="text"]:focus,input[type="search"]:focus,input[type="date"]:focus,input[type="number"]:focus,input[type="email"]:focus,input[type="url"]:focus,select:focus,textarea:focus{border-color:#C99A9B!important}
+
 /* 工作首頁按鈕／便利小工具圖示：不要外框、不要陰影（雪莉 09-20：按鈕周圍灰灰的一層）。框線本身已在 admin.html 改透明，這裡補拿掉暖棕陰影 */
 .home-card{border-color:transparent!important;box-shadow:none!important}
 .tool-icon-img-wrap{border-color:transparent!important;box-shadow:none!important}
