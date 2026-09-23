@@ -336,14 +336,20 @@
   .pb-row:last-child { margin-bottom: 0; }
   .pb-row.pb-row-single { justify-content: center; }
   .pb-row.pb-row-start { justify-content: flex-start; }
+  /* 兩本一列（雪莉 09-24 第二版）：畫面切成左右兩個半格、各自置中（像兩欄），不是一本貼左一本貼右。
+     手機 3 格時 1.5 寬卡剛好等於半格寬（(100%−gap)/2），正常書在半格內置中。 */
+  .pb-row.pb-row-two { display: grid; grid-template-columns: 1fr 1fr; justify-items: center; column-gap: var(--pb-gap); }
   .pb-grid .pb-card {
-    flex: 0 0 calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
-    max-width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
+    flex: 0 0 auto;
+    width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols));
+    max-width: 100%;
   }
   .pb-grid .pb-card.pb-card-wide {
-    flex-basis: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
-    max-width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
+    width: calc((100% - (var(--pb-cols) - 1) * var(--pb-gap)) / var(--pb-cols) * 1.5 + var(--pb-gap) * 0.5);
   }
+  /* grid 半格內的卡片寬度是相對半格算的：正常書＝半格的 2/3、寬卡＝整個半格 */
+  .pb-row.pb-row-two > .pb-card { width: calc((100% - var(--pb-gap) * 0.5) * 2 / 3); }
+  .pb-row.pb-row-two > .pb-card.pb-card-wide { width: 100%; }
   @media (min-width: 640px) { .pb-grid { --pb-cols: 4; --pb-gap: 18px; --pb-rowgap: 22px; } }
   @media (min-width: 900px) { .pb-grid { --pb-cols: 5; --pb-gap: 20px; --pb-rowgap: 24px; } }
   @media (min-width: 1200px) { .pb-grid { --pb-cols: 6; --pb-gap: 20px; --pb-rowgap: 24px; } }
@@ -1997,6 +2003,7 @@ function appendBookRows(container, books) {
     el.className = 'pb-row';
     if (isLast && cols > 3 && used < cols - 1e-9) el.classList.add('pb-row-start');
     else if (row.length === 1) el.classList.add('pb-row-single');
+    else if (row.length === 2) el.classList.add('pb-row-two'); // 左右兩半格各自置中
     row.forEach(b => el.appendChild(buildBookCard(b)));
     container.appendChild(el);
     row = []; used = 0;
