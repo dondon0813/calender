@@ -786,11 +786,10 @@ function lotDrawBlockHtml(draw, opts) {
       '<span class="lot-draw-block-title">' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span>' +
       metaParts.join('') +
     '</div>' +
-    '<div style="overflow-x:auto;"><table class="lot-table lot-table-fixed">' +
-      '<colgroup><col style="width:200px"><col style="width:130px"><col style="width:120px"><col style="width:90px"><col style="width:130px"><col style="width:150px"><col style="width:80px"><col style="width:70px"><col style="width:220px"><col style="width:220px"></colgroup>' +
-      '<thead><tr><th>獎品</th><th>得獎人</th><th>狀態</th><th>姓名</th><th>電話</th><th>地址</th><th>寄出日</th><th>運費</th><th>備註</th><th></th></tr></thead>' +
-      '<tbody>' + rowsHtml + '</tbody>' +
-    '</table></div>' +
+    '<div class="lot-wl">' +
+      '<div class="lot-wl-head"><span>獎品</span><span>得獎人</span><span>狀態</span><span>姓名</span><span>備註</span><span></span></div>' +
+      (rowsHtml || '<div class="lot-wl-empty">還沒有得獎人</div>') +
+    '</div>' +
     '<div class="lot-draw-block-foot">' +
       (LOTTERY_CAN_EDIT ? '<button class="task-mini-btn" data-role="add-winner" data-draw-id="' + lotEscapeHtml(draw.id) + '">＋ 加一位得獎人</button>' : '') +
       '<button class="task-mini-btn" data-role="copy-notify" data-draw-id="' + lotEscapeHtml(draw.id) + '">📋 複製通知文</button>' +
@@ -1002,36 +1001,48 @@ function lotNoLotteryRowHtml(team) {
   '</div>';
 }
 
+// 線條圖示（藕粉奶茶色系規則：圖示用 SVG 線條、不用 emoji）
+function lotIcon(name) {
+  const P = { eye: '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    redo: '<path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/>' };
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (P[name] || '') + '</svg>';
+}
+
+// 得獎人一列＝兩層（2026-09-23 雪莉選 B 版）：上行＝處理時看的（獎品／得獎人／狀態／姓名／備註／操作），
+// 下行淡字＝寄件才要看的（電話／地址／寄出日／運費）。欄位減半＝任何寬度都放得下、不再橫向捲動。
+// data-role／data-winner-id 與舊表格版完全相同，事件綁定（lotBindSectionEvents）零改動。
 function lotWinnerRowHtml(drawId, w) {
-  const rowCls = w.status === 'redrawn' ? ' class="lot-row-redrawn"' : '';
+  const rowCls = w.status === 'redrawn' ? ' lot-wl-row-redrawn' : '';
   const statusOptions = LOT_STATUS_ORDER.map(k => '<option value="' + k + '"' + (w.status === k ? ' selected' : '') + '>' + LOT_STATUS_LABEL[k] + '</option>').join('');
   const statusSel = '<select class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" data-role="status-sel" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (LOTTERY_CAN_EDIT ? '' : ' disabled') + '>' + statusOptions + '</select>';
-
-  const phoneCell = w.phone
-    ? '<span class="lot-mask" data-full="' + lotEscapeHtml(w.phone) + '" data-masked="' + lotEscapeHtml(lotMaskPhone(w.phone)) + '" data-revealed="0"><span class="lot-mask-text">' + lotEscapeHtml(lotMaskPhone(w.phone)) + '</span><span class="lot-eye" data-role="toggle-mask">👁</span></span>'
-    : '<span class="lot-empty-cell">—</span>';
-  const addressCell = w.address
-    ? '<span class="lot-mask" data-full="' + lotEscapeHtml(w.address) + '" data-masked="' + lotEscapeHtml(lotMaskAddress(w.address)) + '" data-revealed="0"><span class="lot-mask-text">' + lotEscapeHtml(lotMaskAddress(w.address)) + '</span><span class="lot-eye" data-role="toggle-mask">👁</span></span>'
-    : '<span class="lot-empty-cell">—</span>';
-
+  const empty = '<span class="lot-empty-cell">—</span>';
+  const maskCell = (full, masked) => full
+    ? '<span class="lot-mask" data-full="' + lotEscapeHtml(full) + '" data-masked="' + lotEscapeHtml(masked) + '" data-revealed="0"><span class="lot-mask-text">' + lotEscapeHtml(masked) + '</span><span class="lot-eye" data-role="toggle-mask" title="顯示／隱藏">' + lotIcon('eye') + '</span></span>'
+    : empty;
   const actions = LOTTERY_CAN_EDIT
-    ? '<button class="task-mini-btn" style="padding:2px 8px;" data-role="edit-winner" data-winner-id="' + lotEscapeHtml(w.id) + '" data-draw-id="' + lotEscapeHtml(drawId) + '">✏️</button>' +
-      (w.status !== 'done' && w.status !== 'redrawn' ? '<button class="task-mini-btn" style="padding:2px 8px;" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">✅寄出</button>' : '') +
-      (w.status !== 'redrawn' ? '<button class="task-mini-btn danger" style="padding:2px 8px;" data-role="redraw-winner" data-winner-id="' + lotEscapeHtml(w.id) + '">🔁重抽</button>' : '')
+    ? '<button class="lot-ic-btn" title="編輯" aria-label="編輯" data-role="edit-winner" data-winner-id="' + lotEscapeHtml(w.id) + '" data-draw-id="' + lotEscapeHtml(drawId) + '">' + lotIcon('edit') + '</button>' +
+      (w.status !== 'done' && w.status !== 'redrawn' ? '<button class="lot-ic-btn" title="標記已寄出（今天）" aria-label="標記已寄出" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('check') + '</button>' : '') +
+      (w.status !== 'redrawn' ? '<button class="lot-ic-btn danger" title="重抽" aria-label="重抽" data-role="redraw-winner" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('redo') + '</button>' : '')
     : '';
-
-  return '<tr' + rowCls + '>' +
-    lotPrizeCellHtml(w.prize) +
-    '<td class="lot-td-who">' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : '<span class="lot-empty-cell">—</span>') + '</td>' +
-    '<td>' + statusSel + '</td>' +
-    '<td>' + (w.name ? lotEscapeHtml(w.name) : '<span class="lot-empty-cell">—</span>') + '</td>' +
-    '<td>' + phoneCell + '</td>' +
-    '<td>' + addressCell + '</td>' +
-    '<td>' + (w.shippedAt ? lotEscapeHtml(w.shippedAt) : '<span class="lot-empty-cell">—</span>') + '</td>' +
-    '<td>' + (w.shippingFee ? lotEscapeHtml(w.shippingFee) : '<span class="lot-empty-cell">—</span>') + '</td>' +
-    '<td class="lot-td-memo">' + (w.memo ? '<div class="lot-prize-clamp" title="' + lotEscapeHtml(w.memo) + '">' + lotEscapeHtml(w.memo) + '</div>' : '<span class="lot-empty-cell">—</span>') + '</td>' +
-    '<td style="white-space:nowrap;">' + actions + '</td>' +
-  '</tr>';
+  const sub = (label, val) => '<span><b>' + label + '</b>' + val + '</span>';
+  return '<div class="lot-wl-row' + rowCls + '">' +
+    '<div class="lot-wl-main">' +
+      '<span class="lot-wl-prize" title="' + lotEscapeHtml(w.prize) + '">' + lotEscapeHtml(w.prize) + '</span>' +
+      '<span class="lot-wl-who">' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : empty) + '</span>' +
+      '<span class="lot-wl-status">' + statusSel + '</span>' +
+      '<span class="lot-wl-name">' + (w.name ? lotEscapeHtml(w.name) : empty) + '</span>' +
+      '<span class="lot-wl-memo">' + (w.memo ? lotEscapeHtml(w.memo) : empty) + '</span>' +
+      '<span class="lot-wl-ops">' + actions + '</span>' +
+    '</div>' +
+    '<div class="lot-wl-sub">' +
+      sub('電話', maskCell(w.phone, w.phone ? lotMaskPhone(w.phone) : '')) +
+      sub('地址', maskCell(w.address, w.address ? lotMaskAddress(w.address) : '')) +
+      sub('寄出日', w.shippedAt ? lotEscapeHtml(w.shippedAt) : empty) +
+      sub('運費', w.shippingFee ? lotEscapeHtml(w.shippingFee) : empty) +
+    '</div>' +
+  '</div>';
 }
 
 // ===== 待辦清單視圖（攤平所有分區未完成的得獎人列）=====

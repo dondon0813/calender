@@ -5853,7 +5853,33 @@
     .lot-caret{ font-size:11px; color:var(--c-muted, var(--c-text-soft)); }
     .lot-card-body{ border-top:1px solid var(--c-border-light); }
     /* 團卡裡每一場抽獎自成一塊（正抽／加碼可能不只一場） */
-    .lot-draw-block{ padding:10px 14px; overflow-x:auto; }
+    .lot-draw-block{ padding:10px 14px; }
+    /* 得獎人兩層列（2026-09-23 B 版）：上行處理資訊、下行寄件資訊；分隔線用 --c-line（--c-border-light 在藕粉奶茶色系是透明） */
+    .lot-wl{ width:100%; }
+    .lot-wl-head, .lot-wl-main{ display:grid; grid-template-columns:minmax(150px,1.4fr) minmax(100px,1fr) auto minmax(70px,.8fr) minmax(120px,1.2fr) auto; gap:6px 14px; align-items:center; }
+    .lot-wl-head{ padding:0 6px 6px; font-size:11.5px; color:var(--c-text-soft); border-bottom:1px solid var(--c-line); }
+    .lot-wl-row{ padding:9px 6px; border-bottom:1px solid var(--c-line); }
+    .lot-wl-row:last-child{ border-bottom:0; }
+    .lot-wl-main > span{ min-width:0; overflow-wrap:anywhere; }
+    .lot-wl-prize{ font-weight:600; line-height:1.35; }
+    .lot-wl-memo{ color:var(--c-text-soft); font-size:12.5px; line-height:1.35; }
+    .lot-wl-ops{ display:inline-flex; gap:4px; white-space:nowrap; }
+    .lot-wl-sub{ display:flex; flex-wrap:wrap; gap:4px 18px; margin:6px 0 0 2px; font-size:12px; color:var(--c-text-soft); }
+    .lot-wl-sub > span > b{ font-weight:600; color:var(--c-muted, var(--c-text-soft)); margin-right:4px; }
+    .lot-wl-empty{ padding:10px 6px; color:var(--c-muted, var(--c-text-soft)); font-size:12.5px; }
+    .lot-wl-row-redrawn .lot-wl-main, .lot-wl-row-redrawn .lot-wl-sub{ color:var(--c-muted, #999); }
+    .lot-wl-row-redrawn .lot-wl-prize, .lot-wl-row-redrawn .lot-wl-who{ text-decoration:line-through; }
+    .lot-ic-btn{ appearance:none; border:none; width:26px; height:26px; border-radius:7px; background:#F5EFE9; color:var(--c-text-soft); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+    .lot-ic-btn svg{ width:14px; height:14px; }
+    .lot-ic-btn:hover{ background:#EDE4DB; color:var(--c-text); }
+    .lot-ic-btn.danger{ color:var(--c-danger); }
+    .lot-eye svg{ width:13px; height:13px; vertical-align:-2px; }
+    @media (max-width:700px){
+      .lot-wl-head{ display:none; }
+      .lot-wl-main{ grid-template-columns:1fr auto; }
+      .lot-wl-main > span{ grid-column:1 / -1; }
+      .lot-wl-main > .lot-wl-status, .lot-wl-main > .lot-wl-ops{ grid-column:auto; }
+    }
     .lot-draw-block + .lot-draw-block{ border-top:1px dashed var(--c-border-light); }
     .lot-draw-block-head{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:6px; }
     .lot-draw-block-title{ font-size:13.5px; font-weight:700; }
@@ -5865,8 +5891,8 @@
     .lot-table.lot-table-fixed td.lot-td-memo{ white-space:normal; vertical-align:top; }
     .lot-table.lot-table-fixed td{ overflow:hidden; text-overflow:ellipsis; }
     .lot-prize-clamp{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; line-height:1.35; }
-    .lot-table th{ text-align:left; font-weight:600; color:var(--c-text-soft); padding:7px 9px; border-bottom:1px solid var(--c-border-light); white-space:nowrap; }
-    .lot-table td{ padding:7px 9px; border-bottom:1px solid var(--c-border-light); vertical-align:middle; white-space:nowrap; }
+    .lot-table th{ text-align:left; font-weight:600; color:var(--c-text-soft); padding:7px 9px; border-bottom:1px solid var(--c-line); white-space:nowrap; }
+    .lot-table td{ padding:7px 9px; border-bottom:1px solid var(--c-line); vertical-align:middle; white-space:nowrap; }
     .lot-table tr:last-child td{ border-bottom:0; }
     .lot-table tr.lot-row-redrawn td{ color:var(--c-muted, #999); }
     .lot-table tr.lot-row-redrawn td.lot-td-prize, .lot-table tr.lot-row-redrawn td.lot-td-who{ text-decoration:line-through; }
@@ -7312,7 +7338,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=14"></script>
+<script src="lottery.js?v=15"></script>
 <script src="admin.js?v=100"></script>
 <script src="memo.js?v=6"></script>
 
