@@ -13,6 +13,7 @@
   /* picture-books.html 專屬樣式。共用的 reset / 版面 / 標題 / 頁尾 / modal 在 shared.css。 */
 
   .pb-featured { margin: 0 0 16px; }
+  .pb-products { margin: 0 0 22px; }
   /* 套組頂圖（雪莉提供的文字 PNG，2026-08-27 指定不加底色直接放；2026-09-22 改依套組所屬品牌
      各自一張，見 renderFeatured 的 PB_SET_HEADING_BY_BRAND）：跟著所屬套組排一起顯示/消失 */
   .pb-featured-heading {
@@ -1043,6 +1044,9 @@
 
     <!-- 套組專區：分類名稱含「套組」或「雪莉精選」都算，各自獨立一排橫向滑動小圖區；
          不受搜尋/篩選影響，內容由 renderFeatured() 動態產生，排的顯示與否跟著開團狀態走 -->
+    <!-- 商品區（2026-09-24 雪莉定）：kind=product 的品項（點讀筆、錄音貼紙…）不進書牆，獨立排在套組區（懶人包頂圖）上方；
+         品牌館模式只列該品牌的商品；不受搜尋／篩選影響；沒有商品整塊隱藏。排版沿用書牆分列規則。 -->
+    <div class="pb-products" id="pbProducts" style="display:none;"><div class="pb-grid" id="pbProductsGrid"></div></div>
     <div class="pb-featured" id="pbFeatured" style="display:none;"></div>
 
     <!-- 主選單（第一層）：品牌。品牌決定下面「年齡與主題」有哪些主題，所以放最上面優先選；只有一個品牌時整列隱藏 -->
@@ -1302,6 +1306,7 @@ async function loadBooks() {
     applyBrandParam();
     renderBrandHalls();
     renderTopPurchase();
+    renderProducts();
     renderFeatured();
     renderGrid();
     handleHashOpen();
@@ -1735,6 +1740,17 @@ function pbClockIcon() {
   span.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>';
   return span.firstChild;
 }
+// 商品區（2026-09-24）：套組區上方，品牌館只列該品牌、一般模式列全部商品；書牆本身不再放商品
+function renderProducts() {
+  const wrap = document.getElementById('pbProducts');
+  const grid = document.getElementById('pbProductsGrid');
+  if (!wrap || !grid) return;
+  grid.innerHTML = '';
+  const list = ALL_BOOKS.filter(b => b.kind === 'product' && (!BRAND_HALL || b.brand_name === BRAND_HALL.name));
+  if (!list.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  appendBookRows(grid, list);
+}
 function renderFeatured() {
   const wrap = document.getElementById('pbFeatured');
   if (!wrap) return;
@@ -2109,7 +2125,7 @@ window.addEventListener('resize', () => {
   clearTimeout(pbResizeTimer);
   pbResizeTimer = setTimeout(() => {
     const grid = document.getElementById('pbGrid');
-    if (grid && pbLastCols !== null && pbGridCols(grid) !== pbLastCols) renderGrid();
+    if (grid && pbLastCols !== null && pbGridCols(grid) !== pbLastCols) { renderGrid(); renderProducts(); }
   }, 150);
 });
 
@@ -2132,7 +2148,7 @@ function buildBookCard(book) {
     coverWrap.classList.add('placeholder');
     coverWrap.textContent = '📖';
   }
-  if (book.isNew) {
+  if (book.isNew && book.kind !== 'product') { // 商品不掛 New（2026-09-24 雪莉）
     const nb = document.createElement('span');
     nb.className = 'pb-card-new';
     nb.textContent = 'New';
@@ -2151,13 +2167,7 @@ function buildBookCard(book) {
 
   const tags = document.createElement('div');
   tags.className = 'pb-card-tags';
-  // 商品（非書，例如點讀筆，2026-09-23）：第一顆膠囊標示「商品」
-  if (book.kind === 'product') {
-    const kindTag = document.createElement('span');
-    kindTag.className = 'mini-tag mini-tag-kind';
-    kindTag.textContent = '商品';
-    tags.appendChild(kindTag);
-  }
+  // 商品（非書，例如點讀筆）原本第一顆膠囊標示「商品」，2026-09-24 雪莉指定拿掉（商品自成一區，不需標示）
   (book.types || []).forEach(t => {
     const tag = document.createElement('span');
     tag.className = 'mini-tag';
@@ -2175,7 +2185,7 @@ function renderGrid() {
   const empty = document.getElementById('pbEmpty');
   // New 徽章的書預設排最前面（2026-08-27 雪莉指定）；sort 是穩定排序，
   // 其餘書維持後台拖曳順序，分區模式下每一區內也一樣 New 在前
-  const list = ALL_BOOKS.filter(matchesFilters)
+  const list = ALL_BOOKS.filter(b => b.kind !== 'product').filter(matchesFilters) // 商品另有商品區（renderProducts）
     .sort((a, b) => (b.isNew === true ? 1 : 0) - (a.isNew === true ? 1 : 0));
   document.getElementById('pbCount').textContent = `共 ${list.length} 本`;
   grid.innerHTML = '';
@@ -3040,13 +3050,7 @@ function openBookModal(book) {
 
   const tagsEl = document.getElementById('pbModalTags');
   tagsEl.innerHTML = '';
-  // 商品（非書，2026-09-23）：標題旁第一顆膠囊標示「商品」
-  if (book.kind === 'product') {
-    const kindTag = document.createElement('span');
-    kindTag.className = 'pb-tag pb-tag-kind';
-    kindTag.textContent = '商品';
-    tagsEl.appendChild(kindTag);
-  }
+  // 商品的「商品」膠囊已拿掉（2026-09-24 雪莉）
   (book.categories || []).forEach(c => {
     const t = document.createElement('span');
     t.className = 'pb-tag pb-tag-cat';
