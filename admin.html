@@ -4332,7 +4332,7 @@
   #pbaToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #pbaToast.error { background: var(--c-danger); }
 </style>
-<link rel="stylesheet" href="theme-lotus-admin.css?v=9">
+<link rel="stylesheet" href="theme-lotus-admin.css?v=10">
 </head>
 <body>
 
@@ -5473,7 +5473,7 @@
                     浮水印＝共用素材的手寫字圖/文字（位置左/中/右，都在圖底部）；QR CODE＝小圖，四個角可選（放下方時會自動避開浮水印/團購資訊）；標題與說明＝疊在圖底部；團購資訊＝開團期間自動印在圖下方的一行字（無底色，顏色/位置在上面選）、結團隔天自動拿掉，文字內容在「🎨 模板設定」的「團購資訊文字」填。
                   </div>
                   <button type="button" class="pba-mini-btn" id="mTplPreviewBtn"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>重新整理預覽</button>
-                  <button type="button" class="pba-mini-btn" id="mTplDownloadBtn" title="用目前設定產生完整解析度的成品下載到電腦看（不會存檔）">⬇ 下載測試檔</button>
+                  <button type="button" class="pba-mini-btn" id="mTplDownloadBtn" title="用目前設定產生完整解析度的成品下載到電腦看（不會存檔）"><svg class="btn-ico"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>下載測試檔</button>
                   <div id="mTplPreviewWrap" style="display:none; margin-top:8px;">
                     <div id="mTplPreviewLabel" style="font-size:11.5px; color:var(--c-muted); margin-bottom:4px;"></div>
                     <img id="mTplPreviewImg" style="max-width:100%; border-radius:10px; border:1px solid var(--c-border, #ddd);">
@@ -6077,7 +6077,7 @@
       <div id="fanClaimsFilters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
       <input type="text" id="fanClaimsSearch" class="ico-search" placeholder="搜尋訂單編號／姓名／email／會員編號…" style="flex:1; min-width:200px; max-width:320px;">
       <button type="button" class="task-mini-btn" id="fanClaimsSyncBtn">⟳ 立即比對</button>
-      <button type="button" class="task-mini-btn" id="fanClaimsExportBtn">⬇ 匯出給廠商核對（CSV）</button>
+      <button type="button" class="task-mini-btn" id="fanClaimsExportBtn"><svg class="btn-ico"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>匯出給廠商核對（CSV）</button>
     </div>
     <div id="fanClaimsArea"><div class="task-empty">讀取中…</div></div>
     </div><!-- /fanTabPanelClaims -->
@@ -6391,7 +6391,7 @@
     </div>
     <div class="backend-edit-row">
       <input type="text" id="backendUrlInput" placeholder="貼上後台網址...">
-      <button class="icon-btn" id="saveBackendUrlBtn" title="儲存後台網址">💾</button>
+      <button class="icon-btn" id="saveBackendUrlBtn" title="儲存後台網址"><svg class="btn-ico" style="margin:0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg></button>
       <span class="memo-status" id="backendUrlStatus"></span>
     </div>
 
@@ -6400,7 +6400,7 @@
       <textarea id="memoText" rows="4" placeholder="記錄客人問題或回覆內容，員工之間會共用這則備忘錄…"></textarea>
       <div class="memo-actions">
         <button id="saveMemoBtn" class="save-btn">儲存</button>
-        <button class="icon-btn" id="copyMemoBtn" title="複製備忘錄內容">📋</button>
+        <button class="icon-btn" id="copyMemoBtn" title="複製備忘錄內容"><svg class="btn-ico" style="margin:0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
         <span class="memo-status" id="memoStatus"></span>
       </div>
     </div>
@@ -6461,7 +6461,7 @@
         </div>
         <div id="pgOutputImgWrap" style="display:none;">
           <img id="pgOutputImg" src="" alt="" style="width:100%; border-radius:12px; border: 1px solid #E6DCD2;">
-          <a class="task-mini-btn" id="pgDownloadImgBtn" download style="margin-top:10px; width:100%; padding:9px 0; display:block; text-align:center; text-decoration:none;">⬇️ 下載圖片</a>
+          <a class="task-mini-btn" id="pgDownloadImgBtn" download style="margin-top:10px; width:100%; padding:9px 0; display:block; text-align:center; text-decoration:none;"><svg class="btn-ico"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>下載圖片</a>
         </div>
       </div>
     </div>
@@ -7390,7 +7390,7 @@
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
-<script src="customBlocks.js?v=3"></script>
+<script src="customBlocks.js?v=4"></script>
 <script src="tools.js?v=18"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>

@@ -90,7 +90,7 @@ body{background:#FFFFFF!important}
    同樣寫法的還有抽獎篩選列搜尋框、待配對綁定下拉等，這裡一次補齊，只動 border-color 不動 border:none 的元素（狀態膠囊 select）。 */
 input[type="text"],input[type="search"],input[type="date"],input[type="number"],input[type="email"],input[type="url"],select,textarea{border-color:#E6DCD2!important}
 /* 小按鈕（.task-mini-btn）同輸入框例外：白底放在白頁面上會整顆消失只剩文字（雪莉 09-25 行事曆工具列），保留一圈淡線 */
-.task-mini-btn{border-color:#E6DCD2!important}
+.task-mini-btn,.icon-btn{border-color:#E6DCD2!important}
 .task-mini-btn.danger{border-color:#D9A3A8!important}
 .task-mini-btn.working{border-color:#C4936F!important}
 .task-mini-btn.restore{border-color:var(--c-cat-2)!important}

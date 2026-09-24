@@ -65,7 +65,7 @@ function appendCustomBlocksAdmin(listEl, position) {
 
     const upBtn = document.createElement('button');
     upBtn.className = 'task-mini-btn';
-    upBtn.textContent = '↑';
+    upBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5\"/><path d=\"M6 11l6-6 6 6\"/></svg>"; // 線條圖示（09-25，取代 ↑ 文字符號）
     upBtn.title = '往上移';
     upBtn.disabled = idx === 0;
     upBtn.addEventListener('click', (e) => { e.stopPropagation(); moveCustomBlock(b, 'up'); });
@@ -73,7 +73,7 @@ function appendCustomBlocksAdmin(listEl, position) {
 
     const downBtn = document.createElement('button');
     downBtn.className = 'task-mini-btn';
-    downBtn.textContent = '↓';
+    downBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14\"/><path d=\"M6 13l6 6 6-6\"/></svg>";
     downBtn.title = '往下移';
     downBtn.disabled = idx === items.length - 1;
     downBtn.addEventListener('click', (e) => { e.stopPropagation(); moveCustomBlock(b, 'down'); });
@@ -81,21 +81,21 @@ function appendCustomBlocksAdmin(listEl, position) {
 
     const editBtn = document.createElement('button');
     editBtn.className = 'task-mini-btn';
-    editBtn.textContent = '✏️';
+    editBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z\"/></svg>";
     editBtn.title = '編輯這個區塊';
     editBtn.addEventListener('click', (e) => { e.stopPropagation(); openBlockEditModal(b); });
     bar.appendChild(editBtn);
 
     const dupBtn = document.createElement('button');
     dupBtn.className = 'task-mini-btn';
-    dupBtn.textContent = '📋';
+    dupBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1\"/></svg>";
     dupBtn.title = '複製這個區塊';
     dupBtn.addEventListener('click', (e) => { e.stopPropagation(); duplicateCustomBlock(b); });
     bar.appendChild(dupBtn);
 
     const delBtn = document.createElement('button');
     delBtn.className = 'task-mini-btn danger';
-    delBtn.textContent = '🗑';
+    delBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"M19 6l-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/></svg>";
     delBtn.title = '刪除這個區塊';
     delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteCustomBlock(b); });
     bar.appendChild(delBtn);
