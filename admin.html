@@ -5834,8 +5834,14 @@
     .lot-td-title{ font-weight:800; white-space:nowrap; width:1%; }
     .lot-td-prize{ min-width:140px; }
     .lot-td-winners{ white-space:nowrap; width:1%; }
-    .lot-td-contact{ color:var(--c-text-soft); min-width:220px; font-size:12.5px; }
+    .lot-td-contact{ color:var(--c-text-soft); min-width:220px; max-width:460px; font-size:12.5px; }
     .lot-brief-line{ line-height:1.6; white-space:nowrap; }
+    /* 電話／地址欄可換行（免單的銀行資料一長串會把整張表撐寬，其他欄跟著被擠歪，雪莉 09-25） */
+    .lot-td-contact .lot-brief-line{ white-space:normal; overflow-wrap:anywhere; }
+    .lot-copy-btn{ appearance:none; border:none; background:transparent; color:var(--c-muted, var(--c-text-soft)); cursor:pointer; padding:0 2px; margin-left:4px; vertical-align:-2px; line-height:1; }
+    .lot-copy-btn svg{ width:13px; height:13px; }
+    .lot-copy-btn:hover{ color:var(--c-primary-dark); }
+    .lot-copy-btn.copied{ color:var(--c-cat-2); }
     .lot-brief-done{ color:var(--c-muted, var(--c-text-soft)); }
     .lot-brief-line.lot-more{ color:var(--c-muted, var(--c-text-soft)); font-size:12px; }
     .lot-detail-brand{ font-size:12.5px; color:var(--c-text-soft); }
@@ -7441,7 +7447,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=22"></script>
+<script src="lottery.js?v=23"></script>
 <script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 

@@ -721,14 +721,19 @@ function lotWinnersRows(draws) {
       } else {
         contact = [w.phone, [w.zip, w.address].filter(Boolean).join(' ')].filter(Boolean).join('　');
       }
-      rows.push({ prize: w.prize || '', who: w.name || w.winnerHandle || '（未填）', contact, done: w.status === 'done' });
+      // copy＝複製鈕用的完整文字（帳號不遮罩；其餘同 contact）
+      const copy = (pt === 'cash' && w.bankAccount) ? contact.replace('帳號 ' + lotMaskAccount(w.bankAccount), '帳號 ' + w.bankAccount) : contact;
+      rows.push({ prize: w.prize || '', who: w.name || w.winnerHandle || '（未填）', contact, copy, done: w.status === 'done' });
     });
   });
   return rows;
 }
 function lotBriefCol(rows, field) {
   if (!rows.length) return field === 'who' ? '<span class="lot-empty-cell">尚未抽出</span>' : '';
-  const shown = rows.slice(0, LOT_BRIEF_MAX).map(r => '<div class="lot-brief-line' + (r.done ? ' lot-brief-done' : '') + '">' + (r[field] ? lotEscapeHtml(r[field]) : '<span class="lot-empty-cell">—</span>') + '</div>').join('');
+  // 電話／地址欄每行尾端一顆複製鈕（複製「電話 地址」或匯款資料整段，雪莉 09-25）；data-role 由 lotBindSectionEvents 綁，點了不會展開列
+  const copyBtn = (txt) => '<button type="button" class="lot-copy-btn" data-role="copy-text" data-copy="' + lotEscapeHtml(txt) + '" title="複製">' + lotIcon('copy') + '</button>';
+  const shown = rows.slice(0, LOT_BRIEF_MAX).map(r => '<div class="lot-brief-line' + (r.done ? ' lot-brief-done' : '') + '">' +
+    (r[field] ? lotEscapeHtml(r[field]) + (field === 'contact' ? copyBtn((r.copy || r[field]).replace(/\u3000/g, ' ')) : '') : '<span class="lot-empty-cell">—</span>') + '</div>').join('');
   return shown + (rows.length > LOT_BRIEF_MAX && field === 'who' ? '<div class="lot-brief-line lot-more">+' + (rows.length - LOT_BRIEF_MAX) + ' 位</div>' : '');
 }
 function lotWinnersBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'who'); }
@@ -1382,6 +1387,17 @@ function lotBindSectionEvents(box) {
       if (key === 'unopened') lotSaveUnopenedCollapsed(LOTTERY_SECTION_COLLAPSED[key]);
       if (key === 'archived') lotSaveArchivedCollapsed(LOTTERY_SECTION_COLLAPSED[key]);
       renderLotterySections();
+    });
+  });
+  // 複製鈕（表格電話／地址欄）：複製後圖示變綠 1.2 秒；stopPropagation 免得觸發同一列的展開
+  box.querySelectorAll('[data-role="copy-text"]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const txt = btn.dataset.copy || '';
+      try { await navigator.clipboard.writeText(txt); }
+      catch (err) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1200);
     });
   });
   box.querySelectorAll('[data-role="toggle-card"]').forEach(el => {
