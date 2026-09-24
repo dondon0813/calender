@@ -2720,7 +2720,8 @@ document.querySelectorAll('.menu-item[data-view]').forEach(mi => {
 function initAppUI() {
   // 每一步都獨立包起來：任何一步失敗都不可以讓後面的介面接線沒跑到。
   // （歷史事故：fetchMemos 失敗 → initAppUI 沒執行 → 側邊欄沒監聽、整頁點不動。）
-  try { document.getElementById('userChip').textContent = '👤 ' + currentUser; } catch (e) { console.error('userChip', e); }
+  // 圖示是 SVG（admin.html #userChip），只填名字那個 span
+  try { document.getElementById('userChipName').textContent = currentUser; } catch (e) { console.error('userChip', e); }
   try { switchView('home'); } catch (e) { console.error('switchView(home)', e); }
   try { renderTaskUI(); } catch (e) { console.error('renderTaskUI', e); }
   try { initSplitWorkspace(); } catch (e) { console.error('initSplitWorkspace', e); }

@@ -246,6 +246,12 @@
     gap: 10px;
     margin-bottom: 12px;
   }
+  /* 按鈕／分頁／頂列裡的線條圖示（emoji 改 SVG，2026-09-24 起） */
+  .btn-ico { width: 15px; height: 15px; vertical-align: -0.2em; margin-right: 4px; flex-shrink: 0; }
+  .user-chip { display: inline-flex; align-items: center; }
+  .user-chip .btn-ico { width: 14px; height: 14px; }
+  .home-btn .btn-ico { width: 20px; height: 20px; margin: 0; }
+  .mochi-btn .btn-ico { width: 18px; height: 18px; margin: 0; }
   .user-chip {
     font-size: 12.5px;
     font-weight: 800;
@@ -3032,8 +3038,14 @@
   }
   .acct-filters input{
     flex:0 1 auto; width:auto; min-width:110px; margin:0;
-    font-size:13px; padding:7px 10px;
+    font-family:var(--font-body); font-size:13px; font-weight:700; color:var(--c-text);
+    padding:7px 12px; outline:none;
+    border: 1px solid var(--c-border-light); border-radius:var(--r-pill);
+    background:var(--c-surface);
+    -webkit-appearance:none; appearance:none;   /* type=search 的瀏覽器預設外觀會蓋掉圓角（雪莉 09-24：搜尋欄沒套樣式） */
   }
+  .acct-filters input:focus{ border-color:var(--c-primary); }
+  .acct-filters input::placeholder{ color:var(--c-muted); font-weight:600; }
   .acct-filters input[type="search"]{ flex:1 1 180px; }
   .acct-summary{
     display:grid; grid-template-columns:repeat(auto-fit, minmax(112px,1fr));
@@ -4381,13 +4393,13 @@
   </div>
 
   <div class="topbar">
-    <span class="user-chip" id="userChip">👤</span>
+    <span class="user-chip" id="userChip"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span id="userChipName"></span></span>
     <div class="topbar-right">
       <!-- 另開分頁：後台這頁很大、開機要跟 Apps Script 要一輪資料，跳走再回來要整個重載，很慢。
            開新分頁後台就原封不動留著，切回去是瞬間的。（不加 rel="noopener"，
            指揮中心的「回後台」要靠 window.opener 判斷自己是不是被另開的。） -->
-      <a class="mochi-btn" id="mochiOfficeBtn" href="office.html" target="_blank" title="前往麻糬指揮中心（另開分頁）" style="display:none;">🐱<span class="mochi-btn-text">麻糬指揮中心</span></a>
-      <button class="home-btn" id="homeBtn" title="回到首頁" aria-label="回到首頁">🏠</button>
+      <a class="mochi-btn" id="mochiOfficeBtn" href="office.html" target="_blank" title="前往麻糬指揮中心（另開分頁）" style="display:none;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5l3.2 3.5h7.6L19 4.5v8.5a7 7 0 0 1-14 0z"/><path d="M9.2 12.5h.01M14.8 12.5h.01" stroke-width="2.6"/><path d="M10.5 15.5c.5.6 2.5.6 3 0"/></svg><span class="mochi-btn-text">麻糬指揮中心</span></a>
+      <button class="home-btn" id="homeBtn" title="回到首頁" aria-label="回到首頁"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5L12 4.5l8.5 7"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1h3.5v-6h4v6h3.5a1 1 0 0 0 1-1V10"/></svg></button>
       <div class="menu-wrap">
         <button class="menu-btn" id="menuBtn" title="選單" aria-label="選單">
           <span></span><span></span><span></span>
@@ -4706,7 +4718,7 @@
   <!-- ===== 抽獎小幫手 ===== -->
   <div class="view" id="viewLotteryTool">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🎉 抽獎小幫手</h2>
+    <h2 class="view-title">抽獎小幫手</h2>
     <div class="task-form">
       <label for="lotteryPrizesInput">獎項清單（每行一個，格式：獎項*數量。由上到下＝大獎到小獎，實際會從最下面開始抽；隨時都可以編輯）</label>
       <textarea id="lotteryPrizesInput" rows="5" placeholder="例如：&#10;iPhone*1&#10;悠遊卡*10&#10;美妝組*3"></textarea>
@@ -4741,7 +4753,7 @@
   <!-- ===== 圖片庫 ===== -->
   <div class="view" id="viewImageLibrary">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🖼️ 圖片庫</h2>
+    <h2 class="view-title">圖片庫</h2>
 
     <div class="il-upload-box">
       <div style="font-size:13px; font-weight:800; color:#B07F83; margin-bottom:8px;">📤 上傳新圖片（會自動壓縮並轉成 WebP）</div>
@@ -4794,7 +4806,7 @@
   <!-- ===== 轉檔小工具（介面先做好，轉檔功能之後再串） ===== -->
   <div class="view" id="viewConvertTool">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🔄 轉檔小工具</h2>
+    <h2 class="view-title">轉檔小工具</h2>
     <div class="task-form">
       <label for="convertFileInput">選擇檔案（Word／PDF／Excel／JPG）</label>
       <input type="file" id="convertFileInput" accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png" onchange="convertOnFileChange()">
@@ -4813,7 +4825,7 @@
   <!-- ===== 圖片去背器（AI 去背 → 裁邊 → 縮圖 → 轉WebP → 上傳；邏輯在 bgRemover.js） ===== -->
   <div class="view" id="viewBgRemover">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">✂️ 圖片去背器</h2>
+    <h2 class="view-title">圖片去背器</h2>
     <div class="task-form">
       <p style="font-size:12.5px; color:#7D6A5F; margin:0 0 10px; line-height:1.6;">
         選好照片後會自動：<b>AI 去背 → 裁掉透明邊 → 縮圖 → 轉 WebP</b>，確認檔名就能直接上傳圖片庫。<br>
@@ -4855,7 +4867,7 @@
   <!-- ===== 計算機（基本四則運算 + 稅率互算） ===== -->
   <div class="view" id="viewCalculator">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🧮 計算機</h2>
+    <h2 class="view-title">計算機</h2>
 
     <div class="calc-display" id="calcDisplay">0</div>
     <div class="calc-grid">
@@ -4899,7 +4911,7 @@
   <!-- ===== 線上合約用印（純前端，零後端；檔案與印章圖只留在瀏覽器記憶體） ===== -->
   <div class="view" id="viewContractSign">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
-    <h2 class="view-title">🖋️ 線上合約用印</h2>
+    <h2 class="view-title">線上合約用印</h2>
     <p class="cs-privacy-note">合約與印章圖只在你的裝置上處理，不會上傳到任何伺服器；離開或按「全部重來」即清除。</p>
 
     <div class="cs-toolbar">
@@ -5021,21 +5033,21 @@
   <!-- ===== 開團帳務（業績／分潤，欄位依權限遮蔽，資料在獨立試算表）===== -->
   <div class="view" id="viewAccounting">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">💰 開團帳務</h2>
+      <h2 class="view-title">開團帳務</h2>
       <div style="display:flex; gap:8px;">
-        <button class="task-mini-btn" id="acctReloadBtn" data-perm="revenue|commission|acctRecon">🔄 重新整理</button>
-        <button class="task-mini-btn" id="acctAddBtn" data-perm="revenue|commission|acctRecon">📝 帳務補登</button>
+        <button class="task-mini-btn" id="acctReloadBtn" data-perm="revenue|commission|acctRecon"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
+        <button class="task-mini-btn" id="acctAddBtn" data-perm="revenue|commission|acctRecon"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V9z"/><path d="M13.5 3.5V9H19"/><path d="M12 12v6"/><path d="M9 15h6"/></svg>帳務補登</button>
       </div>
     </div>
     <div class="form-status" id="acctStatus" style="text-align:center;"></div>
 
     <div class="acct-tabs">
-      <button class="acct-tab on" data-tab="list" data-perm="revenue|commission">📋 明細</button>
-      <button class="acct-tab" data-tab="trend" data-perm="revenue|commission">📈 月營收趨勢</button>
-      <button class="acct-tab" data-tab="rank" data-perm="revenue|commission">🏆 品牌排行</button>
-      <button class="acct-tab" data-tab="print" data-perm="revenue|commission">🖨️ 列印報表</button>
-      <button class="acct-tab" data-tab="recon" data-perm="revenue|acctRecon">✅ 對帳</button>
-      <button class="acct-tab" data-tab="lottery" data-perm="lotteryEdit">🎁 抽獎</button>
+      <button class="acct-tab on" data-tab="list" data-perm="revenue|commission"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6.5h12"/><path d="M8 12h12"/><path d="M8 17.5h12"/><path d="M4 6.5h.01M4 12h.01M4 17.5h.01" stroke-width="2.6"/></svg>明細</button>
+      <button class="acct-tab" data-tab="trend" data-perm="revenue|commission"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V4"/><path d="M4 20.5h16.5"/><path d="M7.5 16.5l3.5-4 3 2.5 5-6"/></svg>月營收趨勢</button>
+      <button class="acct-tab" data-tab="rank" data-perm="revenue|commission"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="5" height="9.5" rx="1"/><rect x="9.5" y="5" width="5" height="15.5" rx="1"/><rect x="16" y="13.5" width="5" height="7" rx="1"/></svg>品牌排行</button>
+      <button class="acct-tab" data-tab="print" data-perm="revenue|commission"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8.5v-5h10v5"/><path d="M7 16.5H5.5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H17"/><rect x="7" y="13.5" width="10" height="7" rx="1"/></svg>列印報表</button>
+      <button class="acct-tab" data-tab="recon" data-perm="revenue|acctRecon"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5"/></svg>對帳</button>
+      <button class="acct-tab" data-tab="lottery" data-perm="lotteryEdit"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9.5" width="17" height="11" rx="2"/><path d="M3.5 13.5h17"/><path d="M12 9.5v11"/><path d="M12 9.5c-1.2-2.8-4.3-4.4-5.3-2.8S9.2 9.5 12 9.5z"/><path d="M12 9.5c1.2-2.8 4.3-4.4 5.3-2.8S14.8 9.5 12 9.5z"/></svg>抽獎</button>
     </div>
 
     <div class="acct-filters">
@@ -5164,7 +5176,7 @@
   <!-- ===== 繪本後台（books.js；前身是獨立頁面 picture-books-admin.html，2026-08-20 併入原生分頁）===== -->
   <div class="view" id="viewBooks">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">📚 繪本後台</h2>
+      <h2 class="view-title">繪本後台</h2>
       <button class="task-mini-btn" id="booksRefreshBtn">🔄 重新整理</button>
     </div>
 
@@ -5742,7 +5754,7 @@
   <!-- ===== 訂閱管理（subscriptions.js；信用卡訂閱個人財務工具）===== -->
   <div class="view" id="viewCardSub">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">💳 訂閱管理</h2>
+      <h2 class="view-title">訂閱管理</h2>
       <button class="task-mini-btn" id="cardSubAddBtn">＋ 新增訂閱</button>
       <button class="task-mini-btn" id="cardSubRefreshBtn">🔄 重新整理</button>
     </div>
@@ -5754,7 +5766,7 @@
   <!-- ===== 雪莉更新日誌（changelog.js；官網育兒小幫手首頁顯示最新 5 條）===== -->
   <div class="view" id="viewChangelog">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">📣 更新日誌</h2>
+      <h2 class="view-title">更新日誌</h2>
       <button class="task-mini-btn" id="changelogRefreshBtn">🔄 重新整理</button>
     </div>
     <div id="changelogNotReady" style="display:none; background:#F4ECE3; border:1px solid #F0DBA0; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
@@ -5926,7 +5938,7 @@
   <!-- ===== 食譜資料庫（sheetdb.js；食譜/食材/成品，原本只能直接改試算表）===== -->
   <div class="view" id="viewRecipeDb">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">🥕 食譜資料庫</h2>
+      <h2 class="view-title">食譜資料庫</h2>
       <button class="task-mini-btn" id="recipeDbAddBtn">＋ 新增</button>
       <button class="task-mini-btn" id="recipeDbRefreshBtn">🔄 重新整理</button>
     </div>
@@ -5942,7 +5954,7 @@
   <!-- ===== 開學清單（sheetdb.js；原本只能直接改試算表）===== -->
   <div class="view" id="viewSchoolList">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">🎒 開學清單</h2>
+      <h2 class="view-title">開學清單</h2>
       <button class="task-mini-btn" id="schoolListAddBtn">＋ 新增項目</button>
       <button class="task-mini-btn" id="schoolListRefreshBtn">🔄 重新整理</button>
     </div>
@@ -5953,7 +5965,7 @@
   <!-- ===== 文章管理（blog.js；部落格開團介紹文，文章頁在 dondon-platform.vercel.app/blog/）===== -->
   <div class="view" id="viewBlog">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">✍️ 文章管理</h2>
+      <h2 class="view-title">文章管理</h2>
       <button class="task-mini-btn" id="blogAddBtn">＋ 新文章</button>
       <button class="task-mini-btn" id="blogRefreshBtn">🔄 重新整理</button>
     </div>
@@ -5966,7 +5978,7 @@
   <!-- ===== 會員管理（fans.js；粉絲會員系統後台，見 dondon-platform docs/07）===== -->
   <div class="view" id="viewFanAdmin">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">👥 會員管理</h2>
+      <h2 class="view-title">會員管理</h2>
       <button class="task-mini-btn" id="fanUnclaimedRefreshBtn">🔄 重新整理</button>
     </div>
     <div id="fanAdminBanner"></div>
@@ -6113,7 +6125,7 @@
   <!-- ===== 教材館（hall.js；教材館資源/解鎖規則/手動開通後台）===== -->
   <div class="view" id="viewHall">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">🎮 教材館</h2>
+      <h2 class="view-title">教材館</h2>
     </div>
     <!-- 教材總管理（2026-09-13 雪莉定案二版）：前後台一致分三類＝📄 教材｜🎮 遊戲｜🎵 音檔。
          教材分頁＝教材庫（book_materials 全部）＋下單解鎖教材檔（hall kind=file）；
@@ -7360,7 +7372,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=16"></script>
-<script src="admin.js?v=101"></script>
+<script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 
 </body>
