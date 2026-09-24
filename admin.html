@@ -5833,7 +5833,8 @@
     .lot-td-date{ white-space:nowrap; font-weight:800; width:1%; }
     .lot-td-title{ font-weight:800; white-space:nowrap; width:1%; }
     .lot-td-prize{ min-width:140px; }
-    .lot-td-winners{ white-space:nowrap; width:1%; }
+    .lot-td-winners{ white-space:nowrap; width:1%; max-width:220px; }
+    .lot-td-winners .lot-brief-line{ overflow:hidden; text-overflow:ellipsis; }   /* 姓名欄若又被塞整串文字，最多 220px 用刪節號，不撐開表格（09-25） */
     .lot-td-contact{ color:var(--c-text-soft); min-width:220px; max-width:460px; font-size:12.5px; }
     .lot-brief-line{ line-height:1.6; white-space:nowrap; }
     /* 電話／地址欄可換行（免單的銀行資料一長串會把整張表撐寬，其他欄跟著被擠歪，雪莉 09-25） */
