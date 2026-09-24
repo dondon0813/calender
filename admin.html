@@ -6747,6 +6747,15 @@
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="lotWinnerPrizeInput">獎品 *</label>
       <input type="text" id="lotWinnerPrizeInput" placeholder="例如：禮盒 x1">
+      <!-- 得獎人自己的獎品類型（2026-09-25）：同一場可混現金與實體；空＝跟活動 -->
+      <label for="lotWinnerPrizeTypeSel">獎品類型</label>
+      <select id="lotWinnerPrizeTypeSel">
+        <option value="">跟活動一樣</option>
+        <option value="cash">現金／免單</option>
+        <option value="physical">實體贈品</option>
+        <option value="virtual">虛擬贈品</option>
+      </select>
+      <p id="lotWinnerTypeReadyWarn" class="hint" style="display:none; font-size:12px; color:#8B6E5E; margin:-4px 0 10px;">得獎人獎品類型欄位還沒 db push（migration 20260925130000），儲存時「跟活動一樣」以外的選擇會被擋下</p>
       <label for="lotWinnerHandleInput">得獎人暱稱／帳號</label>
       <input type="text" id="lotWinnerHandleInput" placeholder="LINE 或 IG 帳號">
       <label for="lotWinnerStatusSel">狀態</label>
@@ -7432,7 +7441,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=21"></script>
+<script src="lottery.js?v=22"></script>
 <script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 

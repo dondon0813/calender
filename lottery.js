@@ -24,7 +24,8 @@ let LOTTERY_LOADED = false;
 let LOTTERY_LOAD_PROMISE = null;   // 同時觸發（帳務明細小標預抓＋使用者點開子分頁）共用同一個請求
 let LOTTERY_TABLE_READY = true;
 let LOTTERY_ACCT_READY = true;     // §11.2 三個新欄位（acct_id/section/no_lottery）還沒 push 時 false
-let LOTTERY_PRIZE_READY = true;    // 2026-09-23 獎品類型欄位（prize_type/prize/cash_amount 等）還沒 push 時 false
+let LOTTERY_PRIZE_READY = true;
+let LOTTERY_WINNER_TYPE_READY = true; // migration 20260925130000（得獎人自訂類型）    // 2026-09-23 獎品類型欄位（prize_type/prize/cash_amount 等）還沒 push 時 false
 let LOTTERY_TODAY = '';
 let LOTTERY_ACCT_TEAMS = [];       // 全部帳務根列（continuation_of 為空），legacyId 升冪
 let LOTTERY_DRAWS = [];
@@ -97,6 +98,11 @@ const LOT_SHIP_BY_LABEL = { self: '團購主', vendor: '廠商', none: '團購�
 const LOT_PRIZE_TYPE_LABEL = { cash: '現金／免單', physical: '實體贈品', virtual: '虛擬贈品' };
 // 狀態文字依獎品類型變化：info_ready／done 這兩格在三種類型底下說法不同（待匯款/待寄出/待發送、已匯款/已完成/已發送），
 // 其餘狀態（待聯絡／待回填資料／廠商寄送中／已重抽）三種類型共用同一套文字，直接查 LOT_STATUS_LABEL。
+// 得獎人的有效獎品類型（2026-09-25）：自己有設就用自己的，沒設跟活動；同一場可混現金與實體（雪莉抓到的 bug）
+function lotWinnerType(w, drawOrType) {
+  const base = (drawOrType && typeof drawOrType === 'object') ? (drawOrType.prizeType || 'physical') : (drawOrType || 'physical');
+  return (w && w.prizeType) || base;
+}
 function lotStatusLabel(status, prizeType) {
   if (status === 'info_ready') {
     if (prizeType === 'cash') return '待匯款';
@@ -369,6 +375,7 @@ function loadLotteryView(forceReload) {
     LOTTERY_TABLE_READY = data.tableReady !== false;
     LOTTERY_ACCT_READY = data.acctReady !== false;
     LOTTERY_PRIZE_READY = data.prizeReady !== false;
+    LOTTERY_WINNER_TYPE_READY = data.winnerTypeReady !== false; // 得獎人自訂類型欄位（migration 20260925130000）
     LOTTERY_TODAY = data.today || lotToday();
     LOTTERY_ACCT_TEAMS = Array.isArray(data.acctTeams) ? data.acctTeams : [];
     LOTTERY_DRAWS = Array.isArray(data.draws) ? data.draws : [];
@@ -700,13 +707,15 @@ const LOT_BRIEF_MAX = 4;
 function lotWinnersRows(draws) {
   const rows = [];
   (draws || []).forEach(d => {
-    const pt = d.prizeType || 'physical';
     (d.winners || []).forEach(w => {
       if (w.status === 'redrawn') return;
+      const pt = lotWinnerType(w, d);
       let contact = '';
       if (pt === 'cash') {
         const bank = [w.bankName, w.bankCode, w.bankBranch].filter(Boolean).join(' ');
         contact = [bank, w.bankAccount ? '帳號 ' + lotMaskAccount(w.bankAccount) : '', (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join('　');
+        // 歷史匯入的現金得獎人常把銀行資料整串放在地址／電話欄：銀行欄位都空就退回顯示那些文字
+        if (!contact) contact = [w.phone, w.address].filter(v => v && v !== '-').join('　').replace(/\s+/g, ' ');
       } else if (pt === 'virtual') {
         contact = w.email || '';
       } else {
@@ -952,7 +961,7 @@ function lotDrawBlockHtml(draw, opts) {
   // ①團購抽獎專屬：acctId 是靠對應的行事曆團「後來才建了帳務列」自動補上的（非雪莉手綁）
   if (draw.acctDerived) metaParts.push(chip('由行事曆團自動對應', 'lot-chip-hint'));
 
-  const rowsHtml = (draw.winners || []).map(w => lotWinnerRowHtml(draw.id, w, prizeType)).join('');
+  const rowsHtml = (draw.winners || []).map(w => lotWinnerRowHtml(draw.id, w, lotWinnerType(w, prizeType), prizeType)).join('');
 
   return '<div class="lot-draw-block" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
     '<div class="lot-draw-block-head">' +
@@ -1235,8 +1244,11 @@ function lotIcon(name) {
 // 得獎人一列＝兩層（2026-09-23 雪莉選 B 版）：上行＝處理時看的（獎品／得獎人／狀態／姓名／備註／操作），
 // 下行淡字＝寄件才要看的（電話／地址／寄出日／運費）。欄位減半＝任何寬度都放得下、不再橫向捲動。
 // data-role／data-winner-id 與舊表格版完全相同，事件綁定（lotBindSectionEvents）零改動。
-function lotWinnerRowHtml(drawId, w, prizeType) {
+function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
   prizeType = prizeType || 'physical';
+  // 得獎人類型跟活動不同（例：免單場裡的實體贈品）→ 獎品名後標小膠囊
+  const typeTag = (drawPrizeType && prizeType !== drawPrizeType)
+    ? ' <span class="lot-ptype lot-ptype-' + lotEscapeHtml(prizeType) + '">' + (LOT_PRIZE_TYPE_LABEL[prizeType] || '') + '</span>' : '';
   const rowCls = w.status === 'redrawn' ? ' lot-wl-row-redrawn' : '';
   const statusOptions = LOT_STATUS_ORDER.map(k => '<option value="' + k + '"' + (w.status === k ? ' selected' : '') + '>' + lotStatusLabel(k, prizeType) + '</option>').join('');
   const statusSel = '<select class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" data-role="status-sel" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (LOTTERY_CAN_EDIT ? '' : ' disabled') + '>' + statusOptions + '</select>';
@@ -1263,6 +1275,10 @@ function lotWinnerRowHtml(drawId, w, prizeType) {
     if (w.bankAccount) subParts.push(sub('帳號', maskCell(w.bankAccount, lotMaskAccount(w.bankAccount))));
     if (w.cashAmount || w.cashAmount === 0) subParts.push(sub('金額', lotEscapeHtml(w.cashAmount)));
     if (w.shippedAt) subParts.push(sub('匯款日', lotEscapeHtml(w.shippedAt)));
+    if (!subParts.length) { // 歷史匯入：銀行資料整串在地址／電話欄
+      const legacy = [w.phone, w.address].filter(v => v && v !== '-').join('　');
+      if (legacy) subParts.push(sub('匯款資料', lotEscapeHtml(legacy)));
+    }
     emptyMsg = '尚未填寫匯款資料';
   } else if (prizeType === 'virtual') {
     if (w.email) subParts.push(sub('email', lotEscapeHtml(w.email)));
@@ -1280,7 +1296,7 @@ function lotWinnerRowHtml(drawId, w, prizeType) {
 
   return '<div class="lot-wl-row' + rowCls + '">' +
     '<div class="lot-wl-main">' +
-      '<span class="lot-wl-prize" title="' + lotEscapeHtml(w.prize) + '">' + lotEscapeHtml(w.prize) + '</span>' +
+      '<span class="lot-wl-prize" title="' + lotEscapeHtml(w.prize) + '">' + lotEscapeHtml(w.prize) + typeTag + '</span>' +
       '<span class="lot-wl-who">' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : empty) + '</span>' +
       '<span class="lot-wl-status">' + statusSel + '</span>' +
       '<span class="lot-wl-name">' + (w.name ? lotEscapeHtml(w.name) : empty) + '</span>' +
@@ -1332,7 +1348,8 @@ function renderLotteryTodo() {
         nextBtns = '<button class="lot-next-btn" data-role="edit-winner" data-winner-id="' + lotEscapeHtml(w.id) + '" data-draw-id="' + lotEscapeHtml(draw.id) + '">填入資料 ›</button>' +
           '<button class="lot-next-btn danger" data-role="redraw-winner" data-winner-id="' + lotEscapeHtml(w.id) + '">重抽</button>';
       } else if (w.status === 'info_ready') {
-        const shipLabel = draw.prizeType === 'cash' ? '標記已匯款（今天）›' : (draw.prizeType === 'virtual' ? '標記已發送（今天）›' : '標記已寄出（今天）›');
+        const wt = lotWinnerType(w, draw);
+        const shipLabel = wt === 'cash' ? '標記已匯款（今天）›' : (wt === 'virtual' ? '標記已發送（今天）›' : '標記已寄出（今天）›');
         nextBtns = '<button class="lot-next-btn" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">' + shipLabel + '</button>';
       } else if (w.status === 'handed_to_vendor') {
         nextBtns = '<button class="lot-next-btn" data-role="todo-done" data-winner-id="' + lotEscapeHtml(w.id) + '">標記已完成 ›</button>';
@@ -1342,7 +1359,7 @@ function renderLotteryTodo() {
       '<td>' + teamLabel + sheetRefTxt + '</td>' +
       lotPrizeCellHtml(w.prize) +
       '<td>' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : '<span class="lot-empty-cell">—</span>') + '</td>' +
-      '<td><span class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" style="display:inline-block; cursor:default;">' + lotStatusLabel(w.status, draw.prizeType) + '</span></td>' +
+      '<td><span class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" style="display:inline-block; cursor:default;">' + lotStatusLabel(w.status, lotWinnerType(w, draw)) + '</span></td>' +
       '<td class="lot-todo-stuck">' + stuckTxt + '</td>' +
       '<td style="white-space:nowrap;">' + nextBtns + '</td>' +
     '</tr>';
@@ -2003,7 +2020,16 @@ function lotSyncWinnerModalFields(prizeType) {
 function openLotteryWinnerModal(drawId, winner) {
   LOTTERY_WINNER_EDIT = { drawId, winnerId: winner ? winner.id : null };
   const draw = LOTTERY_DRAWS.find(d => d.id === drawId);
-  const prizeType = (draw && draw.prizeType) || 'physical';
+  const drawType = (draw && draw.prizeType) || 'physical';
+  const typeSel = document.getElementById('lotWinnerPrizeTypeSel');
+  if (typeSel) {
+    typeSel.value = (winner && winner.prizeType) || '';
+    typeSel.options[0].textContent = '跟活動一樣（' + (LOT_PRIZE_TYPE_LABEL[drawType] || '') + '）';
+    typeSel.onchange = () => lotSyncWinnerModalFields(typeSel.value || drawType);
+  }
+  const typeWarn = document.getElementById('lotWinnerTypeReadyWarn');
+  if (typeWarn) typeWarn.style.display = LOTTERY_WINNER_TYPE_READY ? 'none' : '';
+  const prizeType = lotWinnerType(winner, drawType);
   document.getElementById('lotWinnerModalTitle').textContent = winner ? '編輯得獎人' : '新增得獎人';
   document.getElementById('lotWinnerDeleteBtn').style.display = winner ? 'inline-block' : 'none';
   const readyWarn = document.getElementById('lotWinnerPrizeReadyWarn');
@@ -2040,7 +2066,8 @@ function closeLotteryWinnerModal() {
 document.getElementById('lotWinnerSaveBtn').addEventListener('click', async () => {
   if (!LOTTERY_WINNER_EDIT) return;
   const draw = LOTTERY_DRAWS.find(d => d.id === LOTTERY_WINNER_EDIT.drawId);
-  const prizeType = (draw && draw.prizeType) || 'physical';
+  const typeSelVal = (document.getElementById('lotWinnerPrizeTypeSel') || {}).value || '';
+  const prizeType = typeSelVal || ((draw && draw.prizeType) || 'physical');
   const prize = document.getElementById('lotWinnerPrizeInput').value.trim();
   if (!prize) { lotSetStatus('lotWinnerFormStatus', '請填寫獎品', 'error'); return; }
   const payload = {
@@ -2052,7 +2079,8 @@ document.getElementById('lotWinnerSaveBtn').addEventListener('click', async () =
     orderNo: document.getElementById('lotWinnerOrderNoInput').value.trim(),
     shippedAt: document.getElementById('lotWinnerShippedAtInput').value || null,
     sponsorNote: document.getElementById('lotWinnerSponsorNoteInput').value.trim(),
-    memo: document.getElementById('lotWinnerMemoInput').value.trim()
+    memo: document.getElementById('lotWinnerMemoInput').value.trim(),
+    prizeType: typeSelVal // ''＝跟活動
   };
   // 只送該類型有顯示的欄位（partial）
   if (prizeType === 'cash') {
