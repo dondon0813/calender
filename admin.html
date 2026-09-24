@@ -334,6 +334,8 @@
     overflow: hidden;
   }
   .menu-panel.show { display: block; }
+  /* 選單／側欄圖示：線條 SVG（2026-09-24 雪莉定：刻的、不移除），顏色跟文字走、稍淡 */
+  .menu-item .nav-ico, #sideNav .sn-item .nav-ico { width: 17px; height: 17px; flex-shrink: 0; opacity: .8; }
   .menu-item {
     display: flex;
     align-items: center;
@@ -4329,38 +4331,38 @@
   <!-- ===== 寬螢幕側邊欄（≥1200px 才顯示，取代漢堡選單）===== -->
   <div id="sideNav">
     <div class="sn-group-title">工作</div>
-    <button class="sn-item" data-view="home">🏠 工作首頁</button>
-    <button class="sn-item" data-view="calendar" data-perm="calendarEdit">📅 行事曆</button>
-    <button class="sn-item" data-view="myTasks">📋 任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
-    <button class="sn-item" data-view="memo">📝 備忘錄</button>
-    <button class="sn-item" data-view="todoList">🗒️ 待辦事項</button>
-    <button class="sn-item" data-view="prItems">🎀 公關品狀態</button>
-    <button class="sn-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
-    <button class="sn-item" data-view="report" data-perm="report">📊 報表統計</button>
-    <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">💰 開團帳務</button>
-    <button class="sn-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
-    <button class="sn-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
-    <button class="sn-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
-    <button class="sn-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
-    <button class="sn-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
-    <button class="sn-item" data-view="fanAdmin" data-perm="fanEdit">👥 會員管理</button>
-    <button class="sn-item" data-view="hall" data-perm="bookEdit">🎮 教材館</button>
-    <button class="sn-item" data-view="changelog" data-perm="changelogEdit">📣 更新日誌</button>
+    <button class="sn-item" data-view="home"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5L12 4.5l8.5 7"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1h3.5v-6h4v6h3.5a1 1 0 0 0 1-1V10"/></svg>工作首頁</button>
+    <button class="sn-item" data-view="calendar" data-perm="calendarEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17"/><path d="M8.5 3v4"/><path d="M15.5 3v4"/></svg>行事曆</button>
+    <button class="sn-item" data-view="myTasks"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="3" rx="1.2"/><path d="M8.8 13.2l2.2 2.2 4.4-4.6"/></svg>任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
+    <button class="sn-item" data-view="memo"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 20.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5h8L19 8v4"/><path d="M14.5 3.5V8H19"/><path d="M8.5 12h6"/><path d="M20.6 14.9l-5.1 5.1-2.4.5.5-2.4 5.1-5.1a1.35 1.35 0 0 1 1.9 1.9z"/></svg>備忘錄</button>
+    <button class="sn-item" data-view="todoList"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.8l1.6 1.6 2.6-3"/><path d="M11.5 6.5H20"/><path d="M4 12.3l1.6 1.6 2.6-3"/><path d="M11.5 12H20"/><path d="M4 17.8l1.6 1.6 2.6-3"/><path d="M11.5 17.5H20"/></svg>待辦事項</button>
+    <button class="sn-item" data-view="prItems"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.5L13.5 20.5a1.5 1.5 0 0 1-2.1 0l-7.4-7.4V3.5h9.6l6.9 6.9a1.5 1.5 0 0 1 0 2.1z"/><path d="M8 8h.01" stroke-width="2.6"/></svg>公關品狀態</button>
+    <button class="sn-item" data-view="brandVendor" data-perm="brandVendorEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M3.5 20.5h17"/><path d="M8.5 7.5h2M13.5 7.5h2M8.5 11h2M13.5 11h2M8.5 14.5h2M13.5 14.5h2"/><path d="M10.5 20.5v-3h3v3"/></svg>品牌廠商</button>
+    <button class="sn-item" data-view="report" data-perm="report"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V4"/><path d="M4 20.5h16.5"/><path d="M7.5 16.5l3.5-4 3 2.5 5-6"/></svg>報表統計</button>
+    <button class="sn-item" data-view="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 6.5v11"/><path d="M14.8 9.2c-.4-.8-1.5-1.2-2.8-1.2-1.6 0-2.8.9-2.8 2s1.2 2 2.8 2 2.8.9 2.8 2-1.2 2-2.8 2c-1.3 0-2.4-.4-2.8-1.2"/></svg>開團帳務</button>
+    <button class="sn-item" data-view="books" data-perm="bookEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11a2 2 0 0 1 2 2v15.5a1.5 1.5 0 0 0-1.5-1.5H4z"/><path d="M20 4.5A1.5 1.5 0 0 0 18.5 3H13a2 2 0 0 0-2 2v15.5a1.5 1.5 0 0 1 1.5-1.5H20z"/></svg>繪本後台</button>
+    <button class="sn-item" data-view="cardSub" data-perm="cardSubEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M6.5 14.5h4"/></svg>訂閱管理</button>
+    <button class="sn-item" data-view="recipeDb" data-perm="recipeEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5v17"/><path d="M4.5 3.5v4a2.5 2.5 0 0 0 5 0v-4"/><path d="M17.5 3.5c-1.7 1.6-2.7 4-2.7 6.8 0 1.2.6 2 1.7 2.4v7.8"/></svg>食譜資料庫</button>
+    <button class="sn-item" data-view="schoolList" data-perm="schoolEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 8.5h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><path d="M9 8.5V6a3 3 0 0 1 6 0v2.5"/><path d="M4.5 14h15"/><path d="M10 14v2.5h4V14"/></svg>開學清單</button>
+    <button class="sn-item" data-view="blog" data-perm="blogEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M18.4 3.6a1.9 1.9 0 0 1 2.7 2.7L13 14.4l-3.5.8.8-3.5z"/></svg>文章管理</button>
+    <button class="sn-item" data-view="fanAdmin" data-perm="fanEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M17.5 13.6a6.5 6.5 0 0 1 4 6.4"/></svg>會員管理</button>
+    <button class="sn-item" data-view="hall" data-perm="bookEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7.5h10a4.5 4.5 0 0 1 4.5 4.5v.8a4 4 0 0 1-7 2.7l-.7-.9h-3.6l-.7.9a4 4 0 0 1-7-2.7V12A4.5 4.5 0 0 1 7 7.5z"/><path d="M7.5 11v3M6 12.5h3"/><path d="M16.5 11.5h.01M18.5 13h.01" stroke-width="2.6"/></svg>教材館</button>
+    <button class="sn-item" data-view="changelog" data-perm="changelogEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5v3a1 1 0 0 0 1 1h2.5l7 4V5.5l-7 4H5a1 1 0 0 0-1 1z"/><path d="M18 9.5a3.5 3.5 0 0 1 0 5"/><path d="M8 14.5l1 5"/></svg>更新日誌</button>
     <div class="sn-group-title">工具</div>
-    <button class="sn-item" data-view="tools">🧰 便利小工具</button>
-    <button class="sn-item" data-view="lotteryTool">🎉 抽獎小幫手</button>
-    <button class="sn-item" data-view="imageLibrary" data-perm="imageLibrary">🖼️ 圖片庫</button>
-    <button class="sn-item" data-view="convertTool">🔄 轉檔小工具</button>
-    <button class="sn-item" data-view="bgRemover">✂️ 圖片去背器</button>
-    <button class="sn-item" data-view="calculator">🧮 計算機</button>
+    <button class="sn-item" data-view="tools"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>便利小工具</button>
+    <button class="sn-item" data-view="lotteryTool"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9.5" width="17" height="11" rx="2"/><path d="M3.5 13.5h17"/><path d="M12 9.5v11"/><path d="M12 9.5c-1.2-2.8-4.3-4.4-5.3-2.8S9.2 9.5 12 9.5z"/><path d="M12 9.5c1.2-2.8 4.3-4.4 5.3-2.8S14.8 9.5 12 9.5z"/></svg>抽獎小幫手</button>
+    <button class="sn-item" data-view="imageLibrary" data-perm="imageLibrary"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="9.5" r="1.6"/><path d="M3.5 17l4.5-4.5 4 4 2.5-2.5 6 6"/></svg>圖片庫</button>
+    <button class="sn-item" data-view="convertTool"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>轉檔小工具</button>
+    <button class="sn-item" data-view="bgRemover"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><path d="M20 4L8.3 15.7"/><path d="M14.7 14.7L20 20"/><path d="M8.3 8.3l3.9 3.9"/></svg>圖片去背器</button>
+    <button class="sn-item" data-view="calculator"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 7.5h7"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h.01M15.5 18.5h.01" stroke-width="2.4"/></svg>計算機</button>
     <div class="sn-group-title">版面</div>
     <!-- 右欄的下拉選單在 #paneRight 裡面，右欄關閉時會一起消失，所以開關必須放在
          側邊欄這種永遠看得到的地方，否則關掉就再也打不開了。 -->
-    <button class="sn-item" id="sideNavRightToggle">▥ 開啟右欄</button>
+    <button class="sn-item" id="sideNavRightToggle"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M14 4.5v15"/></svg><span id="sideNavRightToggleLabel">開啟右欄</span></button>
     <div class="sn-group-title">系統</div>
     <!-- ⚠️ 寬螢幕會用側邊欄取代漢堡選單，所以漢堡選單有的入口這裡都要有一份，
          否則桌機使用者永遠點不到（權限設定就曾經因此完全進不去）。 -->
-    <button class="sn-item" id="sideNavSettingsBtn">⚙️ 設定</button>
+    <button class="sn-item" id="sideNavSettingsBtn"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>
   </div>
 
   <div id="mainContentCol">
@@ -4386,24 +4388,24 @@
           <span></span><span></span><span></span>
         </button>
         <div class="menu-panel" id="menuPanel">
-          <button class="menu-item" data-view="home">🏠 工作首頁</button>
-          <button class="menu-item" data-view="calendar" data-perm="calendarEdit">📅 行事曆</button>
-          <button class="menu-item" data-view="myTasks">📋 任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
-          <button class="menu-item" data-view="memo">📝 備忘錄</button>
-          <button class="menu-item" data-view="todoList">🗒️ 待辦事項</button>
-          <button class="menu-item" data-view="tools">🧰 便利小工具</button>
-          <button class="menu-item" data-view="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</button>
-          <button class="menu-item" data-view="report" data-perm="report">📊 報表統計</button>
-          <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">💰 開團帳務</button>
-          <button class="menu-item" data-view="books" data-perm="bookEdit">📚 繪本後台</button>
-          <button class="menu-item" data-view="cardSub" data-perm="cardSubEdit">💳 訂閱管理</button>
-          <button class="menu-item" data-view="recipeDb" data-perm="recipeEdit">🥕 食譜資料庫</button>
-          <button class="menu-item" data-view="schoolList" data-perm="schoolEdit">🎒 開學清單</button>
-          <button class="menu-item" data-view="blog" data-perm="blogEdit">✍️ 文章管理</button>
-          <button class="menu-item" data-view="fanAdmin" data-perm="fanEdit">👥 會員管理</button>
-          <button class="menu-item" data-view="hall" data-perm="bookEdit">🎮 教材館</button>
-          <button class="menu-item" data-view="changelog" data-perm="changelogEdit">📣 更新日誌</button>
-          <button class="menu-item" id="menuSettingsBtn">⚙️ 設定</button>
+          <button class="menu-item" data-view="home"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5L12 4.5l8.5 7"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1h3.5v-6h4v6h3.5a1 1 0 0 0 1-1V10"/></svg>工作首頁</button>
+          <button class="menu-item" data-view="calendar" data-perm="calendarEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17"/><path d="M8.5 3v4"/><path d="M15.5 3v4"/></svg>行事曆</button>
+          <button class="menu-item" data-view="myTasks"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="3" rx="1.2"/><path d="M8.8 13.2l2.2 2.2 4.4-4.6"/></svg>任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
+          <button class="menu-item" data-view="memo"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 20.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5h8L19 8v4"/><path d="M14.5 3.5V8H19"/><path d="M8.5 12h6"/><path d="M20.6 14.9l-5.1 5.1-2.4.5.5-2.4 5.1-5.1a1.35 1.35 0 0 1 1.9 1.9z"/></svg>備忘錄</button>
+          <button class="menu-item" data-view="todoList"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.8l1.6 1.6 2.6-3"/><path d="M11.5 6.5H20"/><path d="M4 12.3l1.6 1.6 2.6-3"/><path d="M11.5 12H20"/><path d="M4 17.8l1.6 1.6 2.6-3"/><path d="M11.5 17.5H20"/></svg>待辦事項</button>
+          <button class="menu-item" data-view="tools"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>便利小工具</button>
+          <button class="menu-item" data-view="brandVendor" data-perm="brandVendorEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M3.5 20.5h17"/><path d="M8.5 7.5h2M13.5 7.5h2M8.5 11h2M13.5 11h2M8.5 14.5h2M13.5 14.5h2"/><path d="M10.5 20.5v-3h3v3"/></svg>品牌廠商</button>
+          <button class="menu-item" data-view="report" data-perm="report"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V4"/><path d="M4 20.5h16.5"/><path d="M7.5 16.5l3.5-4 3 2.5 5-6"/></svg>報表統計</button>
+          <button class="menu-item" data-view="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 6.5v11"/><path d="M14.8 9.2c-.4-.8-1.5-1.2-2.8-1.2-1.6 0-2.8.9-2.8 2s1.2 2 2.8 2 2.8.9 2.8 2-1.2 2-2.8 2c-1.3 0-2.4-.4-2.8-1.2"/></svg>開團帳務</button>
+          <button class="menu-item" data-view="books" data-perm="bookEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11a2 2 0 0 1 2 2v15.5a1.5 1.5 0 0 0-1.5-1.5H4z"/><path d="M20 4.5A1.5 1.5 0 0 0 18.5 3H13a2 2 0 0 0-2 2v15.5a1.5 1.5 0 0 1 1.5-1.5H20z"/></svg>繪本後台</button>
+          <button class="menu-item" data-view="cardSub" data-perm="cardSubEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M6.5 14.5h4"/></svg>訂閱管理</button>
+          <button class="menu-item" data-view="recipeDb" data-perm="recipeEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5v17"/><path d="M4.5 3.5v4a2.5 2.5 0 0 0 5 0v-4"/><path d="M17.5 3.5c-1.7 1.6-2.7 4-2.7 6.8 0 1.2.6 2 1.7 2.4v7.8"/></svg>食譜資料庫</button>
+          <button class="menu-item" data-view="schoolList" data-perm="schoolEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 8.5h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><path d="M9 8.5V6a3 3 0 0 1 6 0v2.5"/><path d="M4.5 14h15"/><path d="M10 14v2.5h4V14"/></svg>開學清單</button>
+          <button class="menu-item" data-view="blog" data-perm="blogEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M18.4 3.6a1.9 1.9 0 0 1 2.7 2.7L13 14.4l-3.5.8.8-3.5z"/></svg>文章管理</button>
+          <button class="menu-item" data-view="fanAdmin" data-perm="fanEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M17.5 13.6a6.5 6.5 0 0 1 4 6.4"/></svg>會員管理</button>
+          <button class="menu-item" data-view="hall" data-perm="bookEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7.5h10a4.5 4.5 0 0 1 4.5 4.5v.8a4 4 0 0 1-7 2.7l-.7-.9h-3.6l-.7.9a4 4 0 0 1-7-2.7V12A4.5 4.5 0 0 1 7 7.5z"/><path d="M7.5 11v3M6 12.5h3"/><path d="M16.5 11.5h.01M18.5 13h.01" stroke-width="2.6"/></svg>教材館</button>
+          <button class="menu-item" data-view="changelog" data-perm="changelogEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5v3a1 1 0 0 0 1 1h2.5l7 4V5.5l-7 4H5a1 1 0 0 0-1 1z"/><path d="M18 9.5a3.5 3.5 0 0 1 0 5"/><path d="M8 14.5l1 5"/></svg>更新日誌</button>
+          <button class="menu-item" id="menuSettingsBtn"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>
         </div>
       </div>
     </div>
@@ -7353,7 +7355,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=16"></script>
-<script src="admin.js?v=100"></script>
+<script src="admin.js?v=101"></script>
 <script src="memo.js?v=7"></script>
 
 </body>

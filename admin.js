@@ -2520,7 +2520,10 @@ function syncPaneRightPicker() {
   const emptyEl = document.getElementById('paneRightEmpty');
   if (emptyEl) emptyEl.style.display = currentRightView ? 'none' : 'block';
   const toggleBtn = document.getElementById('sideNavRightToggle');
-  if (toggleBtn) toggleBtn.textContent = currentRightView ? '▥ 關閉右欄' : '▥ 開啟右欄';
+  // 圖示是 SVG（admin.html 側欄），只改文字 span，不要用 textContent 蓋掉整顆按鈕
+  const toggleLabel = document.getElementById('sideNavRightToggleLabel');
+  if (toggleLabel) toggleLabel.textContent = currentRightView ? '關閉右欄' : '開啟右欄';
+  else if (toggleBtn) toggleBtn.textContent = currentRightView ? '關閉右欄' : '開啟右欄';
 }
 
 // 側邊欄的右欄開關：右欄關著時開啟（挑一個不跟左欄撞的分頁），開著時關閉。
