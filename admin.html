@@ -6352,6 +6352,8 @@
 
     <!-- 產生貼文文案：比對到的品牌有存模板才顯示（brandVendor.js 的 syncPostGenBtnForEvent_） -->
     <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:12px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
+    <!-- 產生連結文案：固定三行（團名開團中／開團日期／下單連結），有下單網址的團都顯示（brandVendor.js） -->
+    <button class="task-mini-btn" id="evLinkGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">🔗 產生連結文案</button>
   </div>
 </div>
 
@@ -7306,7 +7308,7 @@
 <div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closePostGenModal()">✕</button>
-    <h3>📝 貼文文案</h3>
+    <h3 id="postGenTitle">📝 貼文文案</h3>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <select id="postGenBrandSelect" style="display:none; width:100%; box-sizing:border-box; margin-top:12px; padding:9px 12px; border: 1px solid #E6DCD2; border-radius:12px; font-family:inherit; font-size:13px; color:#5A4A42;"></select>
       <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #E6DCD2; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5A4A42; resize:vertical;"></textarea>
@@ -7319,7 +7321,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=23"></script>
+<script src="brandVendor.js?v=24"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

@@ -864,8 +864,10 @@ function bvBuildPostCopy_(brand, ev) {
 
 let postGenCtx_ = null; // { brands, ev }：多品牌時記住候選清單，供切換選項重新產生文案
 
-function openPostGenModalWith_(text) {
+function openPostGenModalWith_(text, title) {
   postGenCtx_ = null;
+  const h = document.getElementById('postGenTitle');
+  if (h) h.textContent = title || '📝 貼文文案';
   document.getElementById('postGenBrandSelect').style.display = 'none';
   document.getElementById('postGenOutput').value = text;
   setFormStatus('postGenStatus', '', '');
@@ -880,6 +882,8 @@ function openPostGenModalForBrands_(brands, ev) {
     return;
   }
   postGenCtx_ = { brands, ev };
+  const h = document.getElementById('postGenTitle');
+  if (h) h.textContent = '📝 貼文文案';
   select.innerHTML = brands.map((b, i) => '<option value="' + i + '">' + escHtml(b.name) + '</option>').join('');
   select.selectedIndex = 0;
   select.style.display = 'block';
@@ -895,12 +899,33 @@ document.getElementById('postGenBrandSelect').addEventListener('change', functio
   document.getElementById('postGenOutput').value = bvBuildPostCopy_(brand, postGenCtx_.ev);
 });
 
-// 活動檢視彈窗打開時由 openAdminModal 呼叫：比對到的品牌有存模板才顯示按鈕
+// 連結文案（雪莉 09-24：貼文改附連結）：固定三行，不看品牌模板，有下單網址的團都能產。
+// 團名沿用行事曆團名（「｜」接回空白），日期用開團日～結團日（含延長）。
+function bvBuildLinkCopy_(ev) {
+  const startLabel = bvPostDateLabel_(ev.start);
+  const endLabel = bvPostDateLabel_(ev.displayEnd || ev.end);
+  const dateRange = startLabel && endLabel ? startLabel + '～' + endLabel : (startLabel || endLabel);
+  return [
+    plainTitle(ev.title || '') + '開團中',
+    '開團日期：' + dateRange,
+    '下單連結：' + (ev.url || ''),
+  ].join('\n');
+}
+
+// 活動檢視彈窗打開時由 openAdminModal 呼叫：比對到的品牌有存模板才顯示貼文按鈕；
+// 連結按鈕只要這團有下單網址就顯示
 function syncPostGenBtnForEvent_(ev) {
   const btn = document.getElementById('evPostGenBtn');
-  if (!btn) return;
-  btn.style.display = ev && bvBrandsWithPostTemplate_(ev.title).length ? 'block' : 'none';
+  if (btn) btn.style.display = ev && bvBrandsWithPostTemplate_(ev.title).length ? 'block' : 'none';
+  const linkBtn = document.getElementById('evLinkGenBtn');
+  if (linkBtn) linkBtn.style.display = ev && String(ev.url || '').trim() ? 'block' : 'none';
 }
+
+document.getElementById('evLinkGenBtn').addEventListener('click', () => {
+  const ev = currentModalEv;
+  if (!ev || !String(ev.url || '').trim()) return;
+  openPostGenModalWith_(bvBuildLinkCopy_(ev), '🔗 連結文案');
+});
 
 document.getElementById('evPostGenBtn').addEventListener('click', () => {
   const ev = currentModalEv;
