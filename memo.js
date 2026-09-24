@@ -275,6 +275,8 @@ function renderEditor() {
     .concat(buildPnoteFolderOptions(note.folderId))
     .join('');
   body.innerHTML = `
+    <!-- 狀態文字（儲存中／已儲存／失敗）疊在卡片右上角、不占版面：原本獨立一行常年空著＝卡片底部留白（雪莉 09-24） -->
+    <span class="pnote-card-status" id="mtreeCardStatus"></span>
     <textarea class="pnote-textarea" id="mtreeTextarea" placeholder="輸入要保存的文字內容…（第一行會當成標題）">${escapeHtml(note.text || '')}</textarea>
     <div class="pnote-card-row">
       <select class="pnote-folder-select" id="mtreeFolderSelect">${folderOptions}</select>
@@ -284,7 +286,6 @@ function renderEditor() {
         <button class="pnote-btn pnote-btn-delete" id="mtreeDeleteBtn">🗑 刪除</button>
       </div>
     </div>
-    <div class="pnote-card-status" id="mtreeCardStatus"></div>
   `;
   document.getElementById('mtreeSaveBtn').addEventListener('click', saveMtreeNote);
   document.getElementById('mtreeCopyBtn').addEventListener('click', (e) => {

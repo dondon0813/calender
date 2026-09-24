@@ -1769,12 +1769,13 @@
   }
   .mtree-list-pane { flex: 1 1 340px; min-width: 0; }
   .mtree-editor-pane {
+    position: relative;   /* .pnote-card-status 絕對定位的基準 */
     flex: 1 1 380px;
     min-width: 0;
     background: #F5EFE9;
     border: 1px solid var(--c-border-light);
     border-radius: 16px;
-    padding: 14px 16px;
+    padding: 16px 16px 12px;
   }
   .mtree-back-btn {
     display: none;
@@ -1916,13 +1917,17 @@
   .pnote-btn-save { background: var(--c-cat-2); }
   .pnote-btn-copy { background: #7FB6D9; }
   .pnote-btn-delete { background: var(--c-danger); }
+  /* 狀態文字與按鈕同一列（memo.js renderEditor），空著時不占任何高度 */
+  /* 狀態文字疊在編輯卡右上角（.mtree-editor-pane 是定位基準），不占版面、不截斷、不擠按鈕 */
   .pnote-card-status {
-    text-align: right;
+    position: absolute;
+    top: 2px;
+    right: 16px;
+    line-height: 1;
     font-size: 11.5px;
     font-weight: 800;
     color: var(--c-muted);
-    min-height: 14px;
-    margin-top: 6px;
+    pointer-events: none;
   }
   .pnote-card-status.ok { color: var(--c-cat-2); }
   .pnote-card-status.error { color: var(--c-danger); }
@@ -7387,7 +7392,7 @@
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=16"></script>
 <script src="admin.js?v=100"></script>
-<script src="memo.js?v=6"></script>
+<script src="memo.js?v=7"></script>
 
 </body>
 </html>
