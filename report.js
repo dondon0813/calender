@@ -263,6 +263,14 @@ function rptDailyValues(map, dates) {
   return dates.map(d => (map && map[d]) || 0);
 }
 
+// 購買網址點擊是 2026-09-20 才上線的精準計數：上線日（idx.buyFirst＝第一筆有資料的日子）之前沒有資料，
+// 趨勢圖要用 null 斷線而不是畫成 0（雪莉 09-24：「19 號以前購買網址點擊為 0」看起來像沒人買）
+function rptMaskBeforeBuyStart(values, dates, idx) {
+  const first = idx && idx.buyFirst;
+  if (!first) return values;
+  return values.map((v, i) => (dates[i] < first ? null : v));
+}
+
 // 把 map 的區間值累加進 arr（dateIndex = {日期: 陣列位置}）
 function rptAccumRange(map, arr, dateIndex) {
   if (!map) return;
@@ -319,7 +327,7 @@ function rptComputeOverviewDaily(idx, today, earliest) {
   const dates = rptDateList(rptAddDays(today, -29), today);
   return {
     views, buy, hasBuy: !!idx.hasBuy,
-    trend: { dates, views: rptDailyValues(idx.pageViewTotal, dates), buy: rptDailyValues(idx.buyTotal, dates) }
+    trend: { dates, views: rptDailyValues(idx.pageViewTotal, dates), buy: rptMaskBeforeBuyStart(rptDailyValues(idx.buyTotal, dates), dates, idx) }
   };
 }
 
@@ -576,7 +584,7 @@ function rptComputeBuyView(idx, from, to, opts) {
   const evFiltered = all.filter(r => !evF || r.evKey === evF);
   return {
     dates, bySource, byEvent, buttons, booksButtons, pageButtons,
-    trend: { dates, entry: tEntry, buy: tBuy },
+    trend: { dates, entry: tEntry, buy: rptMaskBeforeBuyStart(tBuy, dates, idx) },
     totals: {
       views: evFiltered.reduce((s, r) => s + r.views, 0),
       entry: srcF ? evFiltered.reduce((s, r) => s + (r.src[srcF] || 0), 0) : evFiltered.reduce((s, r) => s + r.entry, 0),
@@ -832,7 +840,7 @@ function rptLineChartSvg(dates, series, opts) {
   const R = dual ? 40 : 14;
   const pw = W - L - R, ph = H - T - B, n = dates.length;
   const maxOf = axis => rptNiceMax(Math.max.apply(null, [0].concat(
-    series.filter(s => (s.axis || 'l') === axis).map(s => Math.max.apply(null, [0].concat(s.values))))));
+    series.filter(s => (s.axis || 'l') === axis).map(s => Math.max.apply(null, [0].concat(s.values.filter(v => v != null)))))));
   const maxL = maxOf('l'), maxR = dual ? maxOf('r') : 0;
   const xAt = i => n <= 1 ? L + pw / 2 : L + pw * i / (n - 1);
   const yAt = (v, max) => T + ph - (v / max) * ph;
@@ -850,17 +858,24 @@ function rptLineChartSvg(dates, series, opts) {
   }
   series.forEach(s => {
     const max = (s.axis === 'r') ? maxR : maxL;
-    const pts = s.values.map((v, i) => xAt(i).toFixed(1) + ',' + yAt(v, max).toFixed(1));
-    if (pts.length) svg += '<polyline class="rpt-line rpt-line-' + (s.cls || 'a') + '" points="' + pts.join(' ') + '"/>';
+    // null＝該日沒有資料（例如購買計數上線前）：線在這裡斷開、不畫點
+    let seg = [];
+    const flush = () => { if (seg.length) svg += '<polyline class="rpt-line rpt-line-' + (s.cls || 'a') + '" points="' + seg.join(' ') + '"/>'; seg = []; };
+    s.values.forEach((v, i) => {
+      if (v == null) { flush(); return; }
+      seg.push(xAt(i).toFixed(1) + ',' + yAt(v, max).toFixed(1));
+    });
+    flush();
     if (n <= 35) {
       s.values.forEach((v, i) => {
+        if (v == null) return;
         svg += '<circle class="rpt-dot rpt-dot-' + (s.cls || 'a') + '" cx="' + xAt(i).toFixed(1) + '" cy="' + yAt(v, max).toFixed(1) + '" r="2.4"/>';
       });
     }
   });
   const colW = n <= 1 ? pw : pw / (n - 1);
   for (let i = 0; i < n; i++) {
-    const tip = rptFmtMD(dates[i]) + '　' + series.map(s => s.name + ' ' + rptFmtNum(s.values[i])).join('｜');
+    const tip = rptFmtMD(dates[i]) + '　' + series.map(s => s.name + ' ' + (s.values[i] == null ? '—' : rptFmtNum(s.values[i]))).join('｜');
     svg += '<rect class="rpt-hit" x="' + (xAt(i) - colW / 2).toFixed(1) + '" y="' + T + '" width="' + colW.toFixed(1) +
       '" height="' + ph + '" data-tip="' + escHtml(tip) + '"><title>' + escHtml(tip) + '</title></rect>';
   }

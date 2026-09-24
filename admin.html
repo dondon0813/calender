@@ -3765,6 +3765,9 @@
     }
     #splitWorkspace.right-closed #paneLeft {
       flex: 1 1 auto;
+      /* 右欄關閉＝沒有第二欄要對齊，改回整頁捲動；固定高度的內捲會讓內容在視窗中段被切掉、下面直接接頁尾（雪莉 09-24） */
+      max-height: none;
+      overflow-y: visible;
     }
 
     body.split-dragging,
@@ -3896,18 +3899,20 @@
   .rpt-card-delta span { font-weight: 700; color: var(--c-muted); }
   .rpt-card-delta.up { color: var(--c-mint-text); }
   .rpt-card-delta.down { color: var(--c-danger); }
-  .rpt-mini-cards { margin-bottom: 14px; }
+  /* 三張摘要磚：auto-fit 讓不足一列時平均撐滿（auto-fill 會留空格在右邊＝看起來歪一邊，雪莉 09-24）；寬度對齊下方趨勢圖 */
+  .rpt-mini-cards { margin-bottom: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); max-width: 640px; }
   .rpt-chart-wrap { max-width: 640px; margin: 0 auto 6px; }
   .rpt-chart { width: 100%; height: auto; display: block; }
   .rpt-chart .rpt-grid { stroke: var(--c-line); stroke-width: 1; }
   .rpt-chart .rpt-axis { font-size: 12px; fill: var(--c-muted); }
   .rpt-chart .rpt-axis-b { fill: var(--c-danger); }
   .rpt-line { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
-  .rpt-line-a { stroke: var(--c-primary-dark); }
+  /* 線 a（入口點擊／頁面瀏覽）用後台藍 #5F97DB，線 b（購買網址點擊）維持莓果紅：原本藕粉＋莓果紅太接近（雪莉 09-24） */
+  .rpt-line-a { stroke: #5F97DB; }
   .rpt-line-b { stroke: var(--c-danger); }
-  circle.rpt-dot-a { fill: var(--c-primary-dark); }
+  circle.rpt-dot-a { fill: #5F97DB; }
   circle.rpt-dot-b { fill: var(--c-danger); }
-  i.rpt-dot-a { background: var(--c-primary-dark); }
+  i.rpt-dot-a { background: #5F97DB; }
   i.rpt-dot-b { background: var(--c-danger); }
   .rpt-hit { fill: transparent; cursor: pointer; }
   .rpt-hit:hover { fill: var(--c-pink-bg); opacity: .7; }
@@ -4925,8 +4930,8 @@
   <!-- ===== 報表統計 ===== -->
   <div class="view" id="viewReport">
     <div class="rpt-header-wrap">
-      <h2 class="view-title">📊 報表統計</h2>
-      <button class="task-mini-btn" id="rptRefreshBtn">🔄 重新整理</button>
+      <h2 class="view-title">報表統計</h2>
+      <button class="task-mini-btn" id="rptRefreshBtn"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
     <div class="form-status" id="rptRefreshStatus" style="text-align:center;"></div>
     <div class="rpt-notice" id="rptDailyNotice" hidden></div>
@@ -7296,7 +7301,7 @@
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=2"></script>
 <script src="tools.js?v=18"></script>
-<script src="report.js?v=7"></script>
+<script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
 <script src="books.js?v=50"></script>
