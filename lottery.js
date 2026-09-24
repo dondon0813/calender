@@ -692,16 +692,39 @@ function lotComputeHideDoneCount() {
 // 點列（data-role="toggle-card"，事件綁定與卡片版同一段）展開下一列＝原本的抽獎場白框＋操作鈕。
 function lotTableWrap(rowsHtml) {
   return '<div class="lot-tbl-wrap"><table class="lot-tbl"><thead><tr>' +
-    '<th>開團日期</th><th>團名</th><th>品牌</th><th>得獎人</th><th class="lot-td-num">進度</th><th>狀態</th>' +
+    '<th>開團日期</th><th>團名</th><th>獎品</th><th>得獎人</th><th>電話／地址</th><th class="lot-td-num">進度</th><th>狀態</th>' +
     '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
 }
-function lotWinnersBrief(draws) {
-  const names = [];
-  (draws || []).forEach(d => (d.winners || []).forEach(w => { if (w.status !== 'redrawn') names.push(w.name || w.winnerHandle || '（未填）'); }));
-  if (!names.length) return '<span class="lot-empty-cell">尚未抽出</span>';
-  const shown = names.slice(0, 4).map(lotEscapeHtml).join('、');
-  return shown + (names.length > 4 ? '<span class="lot-more"> +' + (names.length - 4) + '</span>' : '');
+// 得獎人相關三欄（獎品｜姓名｜電話／地址或匯款資料）：一位一行、三欄同序對齊；最多列 4 位，其餘「+N 位」；重抽的不列
+const LOT_BRIEF_MAX = 4;
+function lotWinnersRows(draws) {
+  const rows = [];
+  (draws || []).forEach(d => {
+    const pt = d.prizeType || 'physical';
+    (d.winners || []).forEach(w => {
+      if (w.status === 'redrawn') return;
+      let contact = '';
+      if (pt === 'cash') {
+        const bank = [w.bankName, w.bankCode, w.bankBranch].filter(Boolean).join(' ');
+        contact = [bank, w.bankAccount ? '帳號 ' + lotMaskAccount(w.bankAccount) : '', (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join('　');
+      } else if (pt === 'virtual') {
+        contact = w.email || '';
+      } else {
+        contact = [w.phone, [w.zip, w.address].filter(Boolean).join(' ')].filter(Boolean).join('　');
+      }
+      rows.push({ prize: w.prize || '', who: w.name || w.winnerHandle || '（未填）', contact, done: w.status === 'done' });
+    });
+  });
+  return rows;
 }
+function lotBriefCol(rows, field) {
+  if (!rows.length) return field === 'who' ? '<span class="lot-empty-cell">尚未抽出</span>' : '';
+  const shown = rows.slice(0, LOT_BRIEF_MAX).map(r => '<div class="lot-brief-line' + (r.done ? ' lot-brief-done' : '') + '">' + (r[field] ? lotEscapeHtml(r[field]) : '<span class="lot-empty-cell">—</span>') + '</div>').join('');
+  return shown + (rows.length > LOT_BRIEF_MAX && field === 'who' ? '<div class="lot-brief-line lot-more">+' + (rows.length - LOT_BRIEF_MAX) + ' 位</div>' : '');
+}
+function lotWinnersBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'who'); }
+function lotPrizeBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'prize'); }
+function lotContactBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'contact'); }
 function lotProgressOf(draws) {
   const all = (draws || []).flatMap(d => d.winners || []).filter(w => w.status !== 'redrawn');
   const done = all.filter(w => w.status === 'done').length;
@@ -713,7 +736,7 @@ function lotDrawStatusPill(draws) {
   if (!p.total) return lotPill('待抽', 'draw');
   return p.pending ? lotPill('待處理 ' + p.pending, 'pending') : lotPill('已完成', 'done');
 }
-// 一列：o = { key, toggle(bool), date, title(html), brand, winners(html), progress(html), status(html), detail(html, 展開時), cls }
+// 一列：o = { key, toggle(bool), date, title(html), brand(展開列才顯示), prize(html), winners(html), contact(html), progress(html), status(html), detail(html, 展開時), cls }
 function lotRowHtml(o) {
   const expanded = o.toggle && (Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, o.key) ? LOTTERY_EXPANDED_OVERRIDE[o.key] : false);
   const caret = o.toggle ? '<span class="lot-tr-caret">' + lotChevron(expanded ? 'down' : 'right') + '</span>' : '<span class="lot-tr-caret"></span>';
@@ -721,12 +744,14 @@ function lotRowHtml(o) {
     (o.toggle ? ' data-role="toggle-card" data-card-key="' + lotEscapeHtml(o.key) + '"' : '') + (o.attrs || '') + '>' +
     '<td class="lot-td-date">' + caret + lotEscapeHtml(o.date || '') + '</td>' +
     '<td class="lot-td-title">' + (o.title || '') + '</td>' +
-    '<td class="lot-td-brand">' + lotEscapeHtml(o.brand || '') + '</td>' +
+    '<td class="lot-td-prize">' + (o.prize || '') + '</td>' +
     '<td class="lot-td-winners">' + (o.winners || '') + '</td>' +
+    '<td class="lot-td-contact">' + (o.contact || '') + '</td>' +
     '<td class="lot-td-num">' + (o.progress || '') + '</td>' +
     '<td class="lot-td-status">' + (o.status || '') + '</td>' +
   '</tr>';
-  if (expanded) html += '<tr class="lot-tr-detail"><td colspan="6"><div class="lot-detail">' + (o.detail || '') + '</div></td></tr>';
+  if (expanded) html += '<tr class="lot-tr-detail"><td colspan="7"><div class="lot-detail">' +
+    (o.brand ? '<div class="lot-detail-brand">品牌：' + lotEscapeHtml(o.brand) + '</div>' : '') + (o.detail || '') + '</div></td></tr>';
   return html;
 }
 function lotProgressTxt(draws) { const p = lotProgressOf(draws); return p.total ? p.done + ' / ' + p.total : '—'; }
@@ -746,7 +771,7 @@ function lotTeamRowHtml(team, draws) {
     key: 'team:' + team.acctId, toggle: true, attrs: ' data-acct-id="' + lotEscapeHtml(team.acctId) + '"',
     date: team.recordDate ? lotFmtYMD(team.recordDate) : '（無日期）',
     title: '<span>' + lotEscapeHtml(team.title || '') + '</span>' + (team.legacyId ? ' <span class="lot-r-muted">（' + lotEscapeHtml(team.legacyId) + '）</span>' : '') + (team.failed ? ' <span class="lot-warn">未成團</span>' : ''),
-    brand: team.brandName, winners: lotWinnersBrief(draws), progress: lotProgressTxt(draws), status: lotDrawStatusPill(draws), detail,
+    brand: team.brandName, prize: lotPrizeBrief(draws), winners: lotWinnersBrief(draws), contact: lotContactBrief(draws), progress: lotProgressTxt(draws), status: lotDrawStatusPill(draws), detail,
   });
 }
 function lotPendingTeamRowHtml(team) {
@@ -773,14 +798,14 @@ function lotSimpleDrawRowHtml(draw) {
   return lotRowHtml({
     key: 'draw:' + draw.id, toggle: true, attrs: ' data-draw-id="' + lotEscapeHtml(draw.id) + '"',
     date: lotFmtDrawDate(draw) || '（無日期）', title: lotTitleWithRef(draw.title, draw), brand: draw.brandName,
-    winners: lotWinnersBrief([draw]), progress: lotProgressTxt([draw]), status: lotDrawStatusPill([draw]), detail: lotDrawBlockHtml(draw),
+    prize: lotPrizeBrief([draw]), winners: lotWinnersBrief([draw]), contact: lotContactBrief([draw]), progress: lotProgressTxt([draw]), status: lotDrawStatusPill([draw]), detail: lotDrawBlockHtml(draw),
   });
 }
 function lotUnpairedRowHtml(draw) {
   return lotRowHtml({
     key: 'draw:' + draw.id, toggle: true, attrs: ' data-draw-id="' + lotEscapeHtml(draw.id) + '"',
     date: lotFmtDrawDate(draw) || '（無日期）', title: lotTitleWithRef(draw.title, draw), brand: draw.brandName,
-    winners: lotWinnersBrief([draw]), progress: lotProgressTxt([draw]), status: lotPill('待配對', 'info'),
+    prize: lotPrizeBrief([draw]), winners: lotWinnersBrief([draw]), contact: lotContactBrief([draw]), progress: lotProgressTxt([draw]), status: lotPill('待配對', 'info'),
     detail: lotDrawBlockHtml(draw) + lotUnpairedExtrasHtml(draw),
   });
 }
@@ -791,7 +816,7 @@ function lotUnopenedRowHtml(draw) {
     key: 'draw:' + draw.id, toggle: true, attrs: ' data-draw-id="' + lotEscapeHtml(draw.id) + '"',
     date: rangeTxt || lotFmtDrawDate(draw) || '（無日期）',
     title: lotTitleWithRef(draw.eventTitle || draw.title, draw) + (evChoice && evChoice.isPublished === false ? ' <span class="lot-warn">未發布</span>' : ''),
-    brand: draw.brandName, winners: lotWinnersBrief([draw]), progress: lotProgressTxt([draw]), status: lotPill('未開團', 'info'),
+    brand: draw.brandName, prize: lotPrizeBrief([draw]), winners: lotWinnersBrief([draw]), contact: lotContactBrief([draw]), progress: lotProgressTxt([draw]), status: lotPill('未開團', 'info'),
     detail: lotDrawBlockHtml(draw) + lotUnopenedExtrasHtml(draw),
   });
 }
@@ -799,7 +824,7 @@ function lotArchivedRowHtml(draw) {
   return lotRowHtml({
     key: 'draw:' + draw.id, toggle: true, cls: 'lot-tr-muted', attrs: ' data-draw-id="' + lotEscapeHtml(draw.id) + '"',
     date: lotFmtDrawDate(draw) || '（無日期）', title: lotTitleWithRef(draw.title, draw), brand: draw.brandName,
-    winners: lotWinnersBrief([draw]), progress: lotProgressTxt([draw]), status: lotPill('已結案', 'muted'),
+    prize: lotPrizeBrief([draw]), winners: lotWinnersBrief([draw]), contact: lotContactBrief([draw]), progress: lotProgressTxt([draw]), status: lotPill('已結案', 'muted'),
     detail: lotDrawBlockHtml(draw) + (LOTTERY_CAN_EDIT ? '<div class="lot-card-foot"><button class="task-mini-btn" data-role="unarchive-draw" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('undo') + ' 取消結案</button></div>' : ''),
   });
 }
