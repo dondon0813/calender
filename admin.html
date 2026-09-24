@@ -4332,7 +4332,7 @@
   #pbaToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #pbaToast.error { background: var(--c-danger); }
 </style>
-<link rel="stylesheet" href="theme-lotus-admin.css?v=8">
+<link rel="stylesheet" href="theme-lotus-admin.css?v=9">
 </head>
 <body>
 
@@ -5155,15 +5155,15 @@
       <button class="modal-close" id="calEditDayCloseBtn" style="position:static;">✕</button>
     </div>
     <div id="calEditDayList"></div>
-    <button class="task-submit-btn" id="calEditDayAddBtn" style="margin-top:10px;">➕ 新增活動</button>
+    <button class="task-submit-btn" id="calEditDayAddBtn" style="margin-top:10px;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>新增活動</button>
   </div>
 
  <div id="calGroupListWrap" style="display:none;">
     <div style="text-align:center; margin:10px 0 4px;">
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="copySiteUrl(this)">🔗 複製網址</button>
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openCopyGenModal()">📋 開團文案產生器</button>
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openBlockEditModal(null)">➕ 新增文字按鈕</button>
-      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openSocialLinkEditor()">🔗 社群連結設定</button>
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="copySiteUrl(this)"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/></svg>複製網址</button>
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openCopyGenModal()"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8h8"/><path d="M8 11.5h8"/><path d="M8 15h5"/></svg>開團文案產生器</button>
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openBlockEditModal(null)"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>新增文字按鈕</button>
+      <button class="task-mini-btn" style="font-size:13px; padding:8px 16px;" onclick="openSocialLinkEditor()"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.2 10.8l7.6-4.1M8.2 13.2l7.6 4.1"/></svg>社群連結設定</button>
     </div>
     <div class="group-list" id="calGroupList"></div>
   </div>
@@ -6384,7 +6384,7 @@
 
     <div class="action-row">
       <a id="adminGoUrl" class="action-btn" target="_blank" rel="noopener noreferrer">前往網頁</a>
-      <button class="icon-btn" id="copyUrlBtn" title="複製網址給客人">📋</button>
+      <button class="icon-btn" id="copyUrlBtn" title="複製網址給客人"><svg class="btn-ico" style="margin:0; width:16px; height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
     </div>
     <div class="action-row">
       <a id="adminBackendUrl" class="action-btn action-btn-alt" target="_blank" rel="noopener noreferrer">前往後台觀看報表</a>
@@ -6416,7 +6416,7 @@
 <div class="modal-backdrop" id="copyGenModal" onclick="if(event.target===this) closeCopyGenModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closeCopyGenModal()">✕</button>
-    <h3>📋 開團文案產生器</h3>
+    <h3>開團文案產生器</h3>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="copyGenDate">選擇日期</label>
       <input type="date" id="copyGenDate">
@@ -7109,7 +7109,7 @@
 <div class="modal-backdrop" id="blockEditModal" onclick="if(event.target===this) closeBlockEditModal()">
   <div class="modal-box" style="width:400px;">
     <button class="modal-close" onclick="closeBlockEditModal()">✕</button>
-    <h3 id="blockEditTitle">➕ 新增文字按鈕</h3>
+    <h3 id="blockEditTitle">新增文字按鈕</h3>
     <div class="task-form" style="margin:0; padding:0; background:none;">
 
       <label for="blkTitleInput">標題</label>
@@ -7348,7 +7348,7 @@
 <div class="modal-backdrop" id="socialLinkModal" onclick="if(event.target===this) closeSocialLinkEditor()">
   <div class="modal-box" style="width:380px;">
     <button class="modal-close" onclick="closeSocialLinkEditor()">✕</button>
-    <h3>🔗 社群連結設定</h3>
+    <h3>社群連結設定</h3>
     <p style="font-size:12px; color:#A3948A; margin:-6px 0 14px;">設定後會顯示在前台與後台「現正開團中」清單最上方，留空則不顯示該圖示。</p>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="socialLinkIgInput">📷 Instagram 網址</label>
@@ -7390,7 +7390,7 @@
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
-<script src="customBlocks.js?v=2"></script>
+<script src="customBlocks.js?v=3"></script>
 <script src="tools.js?v=18"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>
@@ -7451,7 +7451,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=25"></script>
-<script src="admin.js?v=102"></script>
+<script src="admin.js?v=103"></script>
 <script src="memo.js?v=7"></script>
 
 </body>

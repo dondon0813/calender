@@ -89,6 +89,11 @@ body{background:#FFFFFF!important}
    09-23 雪莉抓到：品牌廠商搜尋欄（白底＋var(--c-border) 透明框）直接放在白頁面上整個看不見；
    同樣寫法的還有抽獎篩選列搜尋框、待配對綁定下拉等，這裡一次補齊，只動 border-color 不動 border:none 的元素（狀態膠囊 select）。 */
 input[type="text"],input[type="search"],input[type="date"],input[type="number"],input[type="email"],input[type="url"],select,textarea{border-color:#E6DCD2!important}
+/* 小按鈕（.task-mini-btn）同輸入框例外：白底放在白頁面上會整顆消失只剩文字（雪莉 09-25 行事曆工具列），保留一圈淡線 */
+.task-mini-btn{border-color:#E6DCD2!important}
+.task-mini-btn.danger{border-color:#D9A3A8!important}
+.task-mini-btn.working{border-color:#C4936F!important}
+.task-mini-btn.restore{border-color:var(--c-cat-2)!important}
 input[type="text"]:focus,input[type="search"]:focus,input[type="date"]:focus,input[type="number"]:focus,input[type="email"]:focus,input[type="url"]:focus,select:focus,textarea:focus{border-color:#C99A9B!important}
 
 /* 工作首頁按鈕／便利小工具圖示：不要外框、不要陰影（雪莉 09-20：按鈕周圍灰灰的一層）。框線本身已在 admin.html 改透明，這裡補拿掉暖棕陰影 */

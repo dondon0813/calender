@@ -1393,9 +1393,10 @@ function closeAdminModal() {
 function copyText(text, btnEl) {
   if (!text) return;
   const done = () => {
-    const original = btnEl.textContent;
-    btnEl.textContent = '✅';
-    setTimeout(() => { btnEl.textContent = original; }, 1200);
+    // 按鈕裡可能有 SVG 圖示（09-25 起 emoji 改線條圖示）：用 innerHTML 存還原，不能用 textContent（會把 SVG 丟掉）
+    const original = btnEl.innerHTML;
+    btnEl.innerHTML = '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>已複製';
+    setTimeout(() => { btnEl.innerHTML = original; }, 1200);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));

@@ -205,7 +205,7 @@ function updateBlockPreview() {
 function openBlockEditModal(block) {
   const isNew = !block;
   blockEditCtx = { isNew, block };
-  document.getElementById('blockEditTitle').textContent = isNew ? '➕ 新增文字按鈕' : '✏️ 編輯文字按鈕';
+  document.getElementById('blockEditTitle').textContent = isNew ? '新增文字按鈕' : '編輯文字按鈕';
   document.getElementById('blkDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
   document.getElementById('blkSaveBtn').textContent = isNew ? '➕ 新增按鈕' : '💾 儲存變更';
   setFormStatus('blkEditStatus', '', '');
