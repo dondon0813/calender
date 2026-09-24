@@ -5812,25 +5812,27 @@
     .lot-seg span.on{ background:var(--c-primary); color:#fff; font-weight:700; }
     /* 四個分區（團購／非團購／特殊／待配對），每區可收合 */
     .lot-zone{ margin-bottom:18px; }
-    .lot-zone-head{ display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 2px; margin-bottom:8px; border-bottom:1px solid var(--c-border-light); }
+    .lot-zone-head{ display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 2px; margin-bottom:8px; }
     .lot-zone-caret{ font-size:11px; color:var(--c-text-soft); flex:none; }
     .lot-zone-title{ font-size:14.5px; font-weight:800; }
-    .lot-zone-count{ font-size:12px; color:var(--c-text-soft); background:var(--c-bg-bottom); border-radius:999px; padding:1px 9px; }
+    .lot-zone-count{ font-size:12px; color:var(--c-text-soft); background:#F5EFE9; border-radius:999px; padding:1px 9px; }
     .lot-zone-empty{ padding:10px 2px; }
-    .lot-cards{ display:flex; flex-direction:column; gap:12px; }
-    .lot-card{ border:1px solid var(--c-border-light); border-radius:12px; background:var(--c-bg-bottom); overflow:hidden; margin-bottom:12px; }
-    .lot-card:last-child{ margin-bottom:0; }
-    .lot-card-head{ display:flex; gap:12px; align-items:center; padding:12px 14px; cursor:pointer; }
+    /* A 版（雪莉 09-24）：一團一張奶茶色卡片、每場抽獎一個白色內框、meta 小膠囊、品牌小圖拿掉 */
+    .lot-cards{ display:flex; flex-direction:column; gap:14px; }
+    .lot-card{ border:none; border-radius:16px; background:#F5EFE9; overflow:hidden; margin:0; }
+    .lot-card-head{ display:flex; gap:12px; align-items:center; padding:14px 18px 10px; cursor:pointer; }
+    .lot-card-head .lot-sheet-ref{ background:#fff; }
+    .lot-chev{ width:12px; height:12px; vertical-align:-1px; }
+    .lot-chev-up{ transform:rotate(180deg); }
+    .lot-chev-right{ transform:rotate(-90deg); }
+    .lot-zone-caret .lot-chev{ width:14px; height:14px; display:block; }
     /* 卡頭 R 號徽章（現只用在未開團卡的行事曆日期範圍） */
     .lot-r-badge{ flex:none; font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; background:var(--c-cat-4); color:#fff; white-space:nowrap; }
     /* 團卡標題句尾的 R 號小灰字（日期＋團名才是主識別，R 號降成附註） */
     .lot-r-muted{ font-size:11.5px; color:var(--c-text-soft); font-weight:600; white-space:nowrap; }
-    .lot-thumb-img{ height:44px; width:auto; max-width:80px; flex:none; border-radius:8px; object-fit:contain; background:#fff; }
-    .lot-thumb-fallback{ height:44px; width:44px; flex:none; border-radius:10px; background:linear-gradient(135deg,#E6DCD2,#C99A9B); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
     .lot-head-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
     .lot-head-title{ font-size:16px; font-weight:800; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .lot-meta{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12.5px; color:var(--c-text-soft); align-items:center; }
-    .lot-meta .lot-kw{ background:#fff; border:1px solid var(--c-border-light); border-radius:6px; padding:1px 7px; font-size:12px; }
     .lot-meta .lot-warn{ color:var(--c-cat-1); font-weight:700; }
     .lot-ptype{ font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; }
     .lot-ptype-cash{ background:var(--c-gold-badge-bg); color:var(--c-gold-text); }
@@ -5838,12 +5840,12 @@
     .lot-ptype-virtual{ background:var(--c-blue-bg); color:var(--c-blue-text); }
     .lot-progress{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px; min-width:120px; }
     .lot-progress-txt{ font-size:12px; color:var(--c-text-soft); }
-    .lot-bar{ width:120px; height:7px; border-radius:999px; background:var(--c-border-light); overflow:hidden; display:flex; }
+    .lot-bar{ width:120px; height:7px; border-radius:999px; background:#E6DCD2; overflow:hidden; display:flex; }
     .lot-bar i{ display:block; height:100%; }
-    .lot-caret{ font-size:11px; color:var(--c-muted, var(--c-text-soft)); }
-    .lot-card-body{ border-top:1px solid var(--c-border-light); }
-    /* 團卡裡每一場抽獎自成一塊（正抽／加碼可能不只一場） */
-    .lot-draw-block{ padding:10px 14px; }
+    .lot-caret{ font-size:11px; color:var(--c-muted, var(--c-text-soft)); display:inline-flex; align-items:center; gap:2px; }
+    .lot-card-body{ padding:0 12px 12px; display:flex; flex-direction:column; gap:10px; }
+    /* 團卡裡每一場抽獎自成一個白色內框（正抽／加碼可能不只一場） */
+    .lot-draw-block{ background:#fff; border-radius:12px; padding:12px 14px; }
     /* 得獎人兩層列（2026-09-23 B 版）：上行處理資訊、下行寄件資訊；分隔線用 --c-line（--c-border-light 在藕粉奶茶色系是透明） */
     .lot-wl{ width:100%; }
     .lot-wl-head, .lot-wl-main{ display:grid; grid-template-columns:minmax(150px,1.4fr) minmax(100px,1fr) auto minmax(70px,.8fr) minmax(120px,1.2fr) auto; gap:6px 14px; align-items:center; }
@@ -5871,9 +5873,15 @@
       .lot-wl-main > span{ grid-column:1 / -1; }
       .lot-wl-main > .lot-wl-status, .lot-wl-main > .lot-wl-ops{ grid-column:auto; }
     }
-    .lot-draw-block + .lot-draw-block{ border-top:1px dashed var(--c-border-light); }
-    .lot-draw-block-head{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:6px; }
-    .lot-draw-block-title{ font-size:13.5px; font-weight:700; }
+    .lot-draw-block-head{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:8px; }
+    .lot-draw-block-title{ font-size:14px; font-weight:700; }
+    .lot-draw-meta{ display:flex; flex-wrap:wrap; gap:6px; }
+    .lot-chip{ font-size:11.5px; font-weight:600; color:var(--c-text-soft); background:#F5EFE9; border-radius:999px; padding:2px 9px; display:inline-flex; align-items:center; gap:4px; }
+    .lot-chip svg{ width:12px; height:12px; }
+    .lot-chip.lot-ptype{ font-size:11px; font-weight:700; }
+    .lot-chip.lot-warn{ color:var(--c-cat-1); }
+    .lot-chip.lot-chip-hint{ font-weight:500; }
+    .lot-wl-sub .lot-sub-empty{ color:var(--c-muted, var(--c-text-soft)); }
     .lot-sheet-ref{ font-size:11.5px; color:var(--c-text-soft); background:#F5EFE9; border-radius:999px; padding:1px 8px; white-space:nowrap; }
     .lot-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
     /* 固定欄寬：所有卡片共用同一組欄寬，讓「狀態」欄永遠在同一 x 位置（容器要有 overflow-x:auto） */
@@ -5890,7 +5898,7 @@
     .lot-mask{ cursor:default; }
     .lot-eye{ cursor:pointer; margin-left:4px; opacity:.6; }
     .lot-empty-cell{ color:var(--c-muted, #bbb); }
-    .lot-card-foot, .lot-draw-block-foot{ display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--c-border-light); flex-wrap:wrap; align-items:center; }
+    .lot-card-foot, .lot-draw-block-foot{ display:flex; gap:8px; padding:0 18px 14px; flex-wrap:wrap; align-items:center; }
     .lot-draw-block-foot{ padding:8px 0 0; border-top:none; }
     .lot-card-foot .lot-spacer{ flex:1; }
     .lot-status-sel{
@@ -5912,10 +5920,10 @@
     .lot-winner-row input{ flex:1; min-width:0; }
     .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#F5EFE9; color:#7a7166; }
     /* 「待抽」虛擬卡：帳務團已達待抽門檻但還沒建抽獎 */
-    .lot-card-pending{ border-style:dashed; border-color:var(--c-danger); }
+    .lot-card-pending{ border:1px dashed var(--c-danger); }
     .lot-card-pending .lot-card-head{ cursor:default; }
     /* 已標「這團不抽」的列（預設隱藏在 chip 後面） */
-    .lot-nolottery-row{ display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px dashed var(--c-border-light); border-radius:8px; margin-bottom:8px; font-size:12.5px; color:var(--c-text-soft); }
+    .lot-nolottery-row{ display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px dashed var(--c-line); border-radius:8px; margin-bottom:8px; font-size:12.5px; color:var(--c-text-soft); }
     .lot-nolottery-row .lot-spacer{ flex:1; }
     /* 待配對卡：綁定帳務團下拉＋改為非團購 */
     .lot-unpaired-bind{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:10px 14px; border-top:1px solid var(--c-border-light); }
@@ -7371,7 +7379,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=16"></script>
+<script src="lottery.js?v=17"></script>
 <script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 

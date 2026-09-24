@@ -110,7 +110,7 @@ function lotStatusLabel(status, prizeType) {
   }
   return LOT_STATUS_LABEL[status] || status;
 }
-const LOT_SECTION_LABEL = { groupbuy: '🛍️ 團購抽獎', non_groupbuy: '📌 非團購', special: '🎂 特殊抽獎專區' };
+const LOT_SECTION_LABEL = { groupbuy: '團購抽獎', non_groupbuy: '非團購', special: '特殊抽獎專區' };
 // 篩選 chips：待聯絡刻意不列（原本設計就只有這六顆）；待抽／待配對是分區虛擬狀態，一併放進 chip 方便直接篩。
 const LOT_FILTER_CHIPS = [
   { key: 'all', label: '全部' },
@@ -120,7 +120,7 @@ const LOT_FILTER_CHIPS = [
   { key: 'handed_to_vendor', label: '廠商寄送中' },
   { key: 'done', label: '已完成' },
   { key: 'redrawn', label: '已重抽' },
-  { key: 'unpaired', label: '🔗 待配對' }
+  { key: 'unpaired', label: '待配對' }
 ];
 // 待辦清單視圖不含已完成/已重抽/待抽/待配對（本來就篩掉了），chips 只留跟它相關的四顆
 const LOT_TODO_CHIPS = ['all', 'awaiting_info', 'info_ready', 'handed_to_vendor'];
@@ -199,7 +199,7 @@ function lotFmtYM(dateStr) {
 // 卡頭抽獎日顯示：日期確定＝完整「抽獎日 YYYY-MM-DD」；不確定（估算值）＝只到月「約 YYYY年M月 ⚠」
 function lotFmtDrawDate(draw) {
   if (!draw.drawDate) return '';
-  if (draw.dateUncertain) return '約 ' + lotFmtYM(draw.drawDate) + ' ⚠';
+  if (draw.dateUncertain) return '約 ' + lotFmtYM(draw.drawDate) + '（估）';
   return '抽獎日 ' + draw.drawDate;
 }
 // 依 eventId 查 eventChoices（行事曆團購但帳務還沒建的清單）；查無回 null（=「未知」，未發布徽章跳過不顯示）
@@ -323,7 +323,7 @@ function lotApplyDir(items) {
   return LOTTERY_SORT_DIR === 'desc' ? items.slice().reverse() : items;
 }
 function lotSortDirLabel() {
-  return LOTTERY_SORT_DIR === 'desc' ? '📅 新→舊 ↓' : '📅 舊→新 ↑';
+  return LOTTERY_SORT_DIR === 'desc' ? '新→舊 ↓' : '舊→新 ↑';
 }
 // 固定欄寬表格的獎品欄：white-space:normal＋最多 2 行截斷（CSS -webkit-line-clamp）＋ title 全文
 function lotPrizeCellHtml(prize) {
@@ -407,10 +407,10 @@ function renderLotteryBanner() {
   if (!box) return;
   if (!LOTTERY_TABLE_READY) {
     box.innerHTML = '<div style="background:#F5EFE9; border:1px solid transparent; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
-      '⚠️ 抽獎資料表尚未建立，請雪莉先在 PowerShell 執行 npx supabase db push。</div>';
+      '抽獎資料表尚未建立，請雪莉先在 PowerShell 執行 npx supabase db push。</div>';
   } else if (!LOTTERY_ACCT_READY) {
     box.innerHTML = '<div style="background:#F5EFE9; border:1px solid transparent; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">' +
-      '⚠️ 抽獎掛帳務團所需的欄位（acct_id／section／no_lottery）尚未建立，請雪莉先在 PowerShell 執行 npx supabase db push。' +
+      '抽獎掛帳務團所需的欄位（acct_id／section／no_lottery）尚未建立，請雪莉先在 PowerShell 執行 npx supabase db push。' +
       '目前綁定帳務團、分區、「這團不抽」都先關閉，其他功能（新增得獎人、改狀態…）不受影響。</div>';
   } else {
     box.innerHTML = '';
@@ -461,11 +461,11 @@ function renderLotteryFilters() {
 
   const noLotteryCount = LOTTERY_ACCT_TEAMS.filter(t => t.noLottery && !lotDrawsForAcct(t.acctId).length).length;
   const showToggleHtml = LOTTERY_VIEW === 'cards'
-    ? '<span class="lot-toggle-chip' + (LOTTERY_SHOW_NO_LOTTERY ? ' on' : '') + '" id="lotShowNoLotteryToggle">🙈 已標不抽（' + noLotteryCount + '）</span>'
+    ? '<span class="lot-toggle-chip' + (LOTTERY_SHOW_NO_LOTTERY ? ' on' : '') + '" id="lotShowNoLotteryToggle">已標不抽（' + noLotteryCount + '）</span>'
     : '';
   const hideDoneCount = LOTTERY_VIEW === 'cards' ? lotComputeHideDoneCount() : 0;
   const hideDoneToggleHtml = LOTTERY_VIEW === 'cards'
-    ? '<span class="lot-toggle-chip' + (LOTTERY_HIDE_DONE ? ' on' : '') + '" id="lotHideDoneToggle">✅ 隱藏已完成（' + hideDoneCount + '）</span>'
+    ? '<span class="lot-toggle-chip' + (LOTTERY_HIDE_DONE ? ' on' : '') + '" id="lotHideDoneToggle">隱藏已完成（' + hideDoneCount + '）</span>'
     : '';
 
   box.innerHTML =
@@ -694,7 +694,7 @@ function lotRenderZone(key, label, items, itemRenderer) {
     : '<div class="task-empty lot-zone-empty">（沒有符合條件的項目）</div>');
   return '<div class="lot-zone" data-zone="' + key + '">' +
     '<div class="lot-zone-head" data-zone-toggle="' + key + '">' +
-      '<span class="lot-zone-caret">' + (collapsed ? '▶' : '▼') + '</span>' +
+      '<span class="lot-zone-caret">' + lotChevron(collapsed ? 'right' : 'down') + '</span>' +
       '<span class="lot-zone-title">' + label + '</span>' +
       '<span class="lot-zone-count">' + items.length + '</span>' +
     '</div>' +
@@ -719,11 +719,11 @@ function renderLotterySections() {
 
   const parts = [];
   if (lotZoneVisible('groupbuy')) parts.push(lotRenderZone('groupbuy', LOT_SECTION_LABEL.groupbuy, groupbuyItems, lotGroupbuyItemHtml));
-  if (lotZoneVisible('unopened')) parts.push(lotRenderZone('unopened', '🗓 未開團／帳務未建', unopenedDraws, d => lotUnopenedCardHtml(d)));
+  if (lotZoneVisible('unopened')) parts.push(lotRenderZone('unopened', '未開團／帳務未建', unopenedDraws, d => lotUnopenedCardHtml(d)));
   if (lotZoneVisible('non_groupbuy')) parts.push(lotRenderZone('non_groupbuy', LOT_SECTION_LABEL.non_groupbuy, nonGroupbuyDraws, d => lotSimpleDrawCardHtml(d)));
   if (lotZoneVisible('special')) parts.push(lotRenderZone('special', LOT_SECTION_LABEL.special, specialDraws, d => lotSimpleDrawCardHtml(d)));
-  if (lotZoneVisible('unpaired')) parts.push(lotRenderZone('unpaired', '🔗 待配對（團購但還沒綁帳務團）', unpairedDraws, d => lotUnpairedCardHtml(d)));
-  if (lotZoneVisible('archived')) parts.push(lotRenderZone('archived', '📦 舊資料（已結案）', archivedDraws, d => lotArchivedCardHtml(d)));
+  if (lotZoneVisible('unpaired')) parts.push(lotRenderZone('unpaired', '待配對（團購但還沒綁帳務團）', unpairedDraws, d => lotUnpairedCardHtml(d)));
+  if (lotZoneVisible('archived')) parts.push(lotRenderZone('archived', '舊資料（已結案）', archivedDraws, d => lotArchivedCardHtml(d)));
 
   box.innerHTML = parts.join('') || '<div class="task-empty">沒有符合條件的抽獎活動</div>';
   lotBindSectionEvents(box);
@@ -758,7 +758,7 @@ function lotTeamCardHtml(team, draws) {
   const cardKey = 'team:' + team.acctId;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : unfinished;
 
-  const thumb = team.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(team.brandThumb) + '" alt="">' : '';
+  const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
   const counts = { done: 0, handed_to_vendor: 0, info_ready: 0, awaiting_info: 0, pending: 0 };
   allWinners.forEach(w => { if (counts[w.status] !== undefined) counts[w.status]++; });
   const barTotal = total || 1;
@@ -779,7 +779,7 @@ function lotTeamCardHtml(team, draws) {
         '<div class="lot-head-title">' + lotTeamTitleHtml(team) + '</div>' +
         '<div class="lot-meta">' + lotTeamHeaderMetaHtml(team) + '</div>' +
       '</div>' +
-      '<div class="lot-progress">' + progressHtml + '<span class="lot-caret">' + (expanded ? '▲ 收合' : '▼ 展開') + '</span></div>' +
+      '<div class="lot-progress">' + progressHtml + '<span class="lot-caret">' + lotCaretHtml(expanded, '收合', '展開') + '</span></div>' +
     '</div>' +
     (expanded ? (
       '<div class="lot-card-body">' + drawBlocksHtml + '</div>' +
@@ -795,25 +795,27 @@ function lotTeamCardHtml(team, draws) {
 function lotDrawBlockHtml(draw, opts) {
   opts = opts || {};
   const prizeType = draw.prizeType || 'physical';
+  // meta 一律做成小膠囊（.lot-chip），排在標題下一行（雪莉 09-24 A 版：原本跟標題擠成一行＝一整片文字）
+  const chip = (inner, cls, attrs) => '<span class="lot-chip' + (cls ? ' ' + cls : '') + '"' + (attrs || '') + '>' + inner + '</span>';
   const metaParts = [];
   const dateTxt = lotFmtDrawDate(draw);
-  if (dateTxt) metaParts.push('<span class="' + (draw.dateUncertain ? 'lot-warn' : '') + '">' + dateTxt + '</span>');
-  metaParts.push('<span class="lot-ptype lot-ptype-' + lotEscapeHtml(prizeType) + '">' + (LOT_PRIZE_TYPE_LABEL[prizeType] || '') + '</span>');
-  if (draw.prize) metaParts.push('<span>獎品：' + lotEscapeHtml(draw.prize) + '</span>');
-  if (prizeType === 'cash' && (draw.cashAmount || draw.cashAmount === 0)) metaParts.push('<span>$' + lotEscapeHtml(draw.cashAmount) + '</span>');
-  if (draw.lineKeyword) metaParts.push('<span class="lot-kw">L關鍵字：' + lotEscapeHtml(draw.lineKeyword) + '</span>');
-  metaParts.push('<span>贊助：' + (LOT_SHIP_BY_LABEL[draw.shipBy] || '團購主') + '</span>');
-  if (draw.note) metaParts.push('<span title="' + lotEscapeHtml(draw.note) + '">📝 有備註</span>');
-  if (draw.sheetRef) metaParts.push('<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>');
+  if (dateTxt) metaParts.push(chip(dateTxt, draw.dateUncertain ? 'lot-warn' : ''));
+  metaParts.push(chip(LOT_PRIZE_TYPE_LABEL[prizeType] || '', 'lot-ptype lot-ptype-' + lotEscapeHtml(prizeType)));
+  if (draw.prize) metaParts.push(chip('獎品：' + lotEscapeHtml(draw.prize)));
+  if (prizeType === 'cash' && (draw.cashAmount || draw.cashAmount === 0)) metaParts.push(chip('$' + lotEscapeHtml(draw.cashAmount)));
+  if (draw.lineKeyword) metaParts.push(chip('L關鍵字：' + lotEscapeHtml(draw.lineKeyword)));
+  metaParts.push(chip('贊助：' + (LOT_SHIP_BY_LABEL[draw.shipBy] || '團購主')));
+  if (draw.note) metaParts.push(chip(lotIcon('note') + ' 有備註', '', ' title="' + lotEscapeHtml(draw.note) + '"'));
+  if (draw.sheetRef) metaParts.push(chip(lotIcon('sheet') + ' ' + lotEscapeHtml(draw.sheetRef), 'lot-sheet-ref'));
   // ①團購抽獎專屬：acctId 是靠對應的行事曆團「後來才建了帳務列」自動補上的（非雪莉手綁）
-  if (draw.acctDerived) metaParts.push('<span class="hint">由行事曆團自動對應</span>');
+  if (draw.acctDerived) metaParts.push(chip('由行事曆團自動對應', 'lot-chip-hint'));
 
   const rowsHtml = (draw.winners || []).map(w => lotWinnerRowHtml(draw.id, w, prizeType)).join('');
 
   return '<div class="lot-draw-block" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
     '<div class="lot-draw-block-head">' +
       '<span class="lot-draw-block-title">' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span>' +
-      metaParts.join('') +
+      '<div class="lot-draw-meta">' + metaParts.join('') + '</div>' +
     '</div>' +
     '<div class="lot-wl">' +
       '<div class="lot-wl-head"><span>獎品</span><span>得獎人</span><span>狀態</span><span>姓名</span><span>備註</span><span></span></div>' +
@@ -836,7 +838,7 @@ function lotSimpleDrawCardHtml(draw) {
   const unfinished = (draw.winners || []).some(w => w.status !== 'done' && w.status !== 'redrawn');
   const cardKey = 'draw:' + draw.id;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : unfinished;
-  const thumb = draw.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(draw.brandThumb) + '" alt="">' : '';
+  const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
   const metaParts = [];
   if (draw.brandName) metaParts.push('<span>贊助：' + lotEscapeHtml(draw.brandName) + '</span>');
   const dateTxt = lotFmtDrawDate(draw);
@@ -849,7 +851,7 @@ function lotSimpleDrawCardHtml(draw) {
         '<div class="lot-head-title"><span>' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span></div>' +
         '<div class="lot-meta">' + metaParts.join('') + '</div>' +
       '</div>' +
-      '<div class="lot-progress"><span class="lot-progress-txt">' + doneCount + ' / ' + total + ' 已完成</span><span class="lot-caret">' + (expanded ? '▲ 收合' : '▼ 展開') + '</span></div>' +
+      '<div class="lot-progress"><span class="lot-progress-txt">' + doneCount + ' / ' + total + ' 已完成</span><span class="lot-caret">' + lotCaretHtml(expanded, '收合', '展開') + '</span></div>' +
     '</div>' +
     (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
   '</div>';
@@ -860,7 +862,7 @@ function lotUnpairedCardHtml(draw) {
   const total = (draw.winners || []).length;
   const cardKey = 'draw:' + draw.id;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : false;
-  const thumb = draw.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(draw.brandThumb) + '" alt="">' : '';
+  const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
   const metaParts = [];
   if (draw.brandName) metaParts.push('<span>贊助：' + lotEscapeHtml(draw.brandName) + '</span>');
   const dateTxt = lotFmtDrawDate(draw);
@@ -874,7 +876,7 @@ function lotUnpairedCardHtml(draw) {
       '<button class="task-mini-btn" data-role="unpaired-bind" data-draw-id="' + lotEscapeHtml(draw.id) + '">綁定</button>' +
       '<button class="task-mini-btn" data-role="unpaired-to-nongroupbuy" data-draw-id="' + lotEscapeHtml(draw.id) + '">改為非團購</button>' +
     '</div>'
-  ) : (LOTTERY_ACCT_READY ? '' : '<div class="lot-unpaired-bind"><span class="hint">⚠ 帳務欄位還沒 db push，暫時不能綁定</span></div>');
+  ) : (LOTTERY_ACCT_READY ? '' : '<div class="lot-unpaired-bind"><span class="hint">帳務欄位還沒 db push，暫時不能綁定</span></div>');
 
   // 或綁行事曆團購（帳務還沒建）：選了直接送出（不用另外按綁定鍵），沒有候選團購就整條不顯示
   const eventOptionsHtml = lotEventChoicesForUnpairedDraw(draw).map(ev =>
@@ -890,7 +892,7 @@ function lotUnpairedCardHtml(draw) {
   ) : '';
   // 呆帳寫死結案：不需要 LOTTERY_ACCT_READY（archived 不吃 acct 欄位），只要有編輯權限就能結案
   const archiveBtnHtml = LOTTERY_CAN_EDIT
-    ? '<div class="lot-unpaired-bind"><button class="task-mini-btn" data-role="unpaired-archive" data-draw-id="' + lotEscapeHtml(draw.id) + '">📦 結案</button></div>'
+    ? '<div class="lot-unpaired-bind"><button class="task-mini-btn" data-role="unpaired-archive" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('archive') + ' 結案</button></div>'
     : '';
 
   return '<div class="lot-card" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
@@ -898,11 +900,11 @@ function lotUnpairedCardHtml(draw) {
       thumb +
       '<div class="lot-head-main">' +
         '<div class="lot-head-title"><span>' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span>' +
-          (draw.sheetRef ? '<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
+          (draw.sheetRef ? '<span class="lot-sheet-ref">' + lotIcon('sheet') + ' ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
         '</div>' +
         '<div class="lot-meta">' + metaParts.join('') + '</div>' +
       '</div>' +
-      '<span class="lot-caret">' + (expanded ? '▲ 收合明細' : '▼ 展開明細') + '</span>' +
+      '<span class="lot-caret">' + lotCaretHtml(expanded, '收合明細', '展開明細') + '</span>' +
     '</div>' +
     (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
     bindHtml +
@@ -919,7 +921,7 @@ function lotUnopenedCardHtml(draw) {
   const unfinished = (draw.winners || []).some(w => w.status !== 'done' && w.status !== 'redrawn');
   const cardKey = 'draw:' + draw.id;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : unfinished;
-  const thumb = draw.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(draw.brandThumb) + '" alt="">' : '';
+  const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
   const rangeTxt = lotFmtEventRangeYMD(draw.eventStartDate, draw.eventEndDate);
   const evChoice = lotEventChoiceById(draw.eventId);
 
@@ -939,13 +941,13 @@ function lotUnopenedCardHtml(draw) {
         '<input type="text" placeholder="搜尋 R 號／團名…" data-role="unopened-search" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
         '<select data-role="unopened-select" data-draw-id="' + lotEscapeHtml(draw.id) + '"></select>' +
         '<button class="task-mini-btn" data-role="unopened-bind" data-draw-id="' + lotEscapeHtml(draw.id) + '">綁定帳務團</button>'
-      ) : '<span class="hint">⚠ 帳務欄位還沒 db push，暫時不能綁定帳務團</span>') +
+      ) : '<span class="hint">帳務欄位還沒 db push，暫時不能綁定帳務團</span>') +
       unbindBtn +
     '</div>';
   }
   // 呆帳寫死結案：不需要 LOTTERY_ACCT_READY，只要有編輯權限就能結案
   const archiveBtnHtml = LOTTERY_CAN_EDIT
-    ? '<div class="lot-unpaired-bind"><button class="task-mini-btn" data-role="unopened-archive" data-draw-id="' + lotEscapeHtml(draw.id) + '">📦 結案</button></div>'
+    ? '<div class="lot-unpaired-bind"><button class="task-mini-btn" data-role="unopened-archive" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('archive') + ' 結案</button></div>'
     : '';
 
   return '<div class="lot-card" data-draw-id="' + lotEscapeHtml(draw.id) + '">' +
@@ -955,11 +957,11 @@ function lotUnopenedCardHtml(draw) {
         '<div class="lot-head-title">' +
           (rangeTxt ? '<span class="lot-r-badge">' + lotEscapeHtml(rangeTxt) + '</span>' : '') +
           '<span>' + lotEscapeHtml(draw.eventTitle || draw.title || '(未命名活動)') + '</span>' +
-          (draw.sheetRef ? '<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
+          (draw.sheetRef ? '<span class="lot-sheet-ref">' + lotIcon('sheet') + ' ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
         '</div>' +
         '<div class="lot-meta">' + metaParts.join('') + '</div>' +
       '</div>' +
-      '<span class="lot-caret">' + (expanded ? '▲ 收合明細' : '▼ 展開明細') + '</span>' +
+      '<span class="lot-caret">' + lotCaretHtml(expanded, '收合明細', '展開明細') + '</span>' +
     '</div>' +
     (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
     bindHtml +
@@ -974,7 +976,7 @@ function lotArchivedCardHtml(draw) {
   const doneCount = (draw.winners || []).filter(w => w.status === 'done').length;
   const cardKey = 'draw:' + draw.id;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : false;
-  const thumb = draw.brandThumb ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(draw.brandThumb) + '" alt="">' : '';
+  const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
   const metaParts = [];
   if (draw.brandName) metaParts.push('<span>贊助：' + lotEscapeHtml(draw.brandName) + '</span>');
   const dateTxt = lotFmtDrawDate(draw);
@@ -986,21 +988,19 @@ function lotArchivedCardHtml(draw) {
       thumb +
       '<div class="lot-head-main">' +
         '<div class="lot-head-title"><span>' + lotEscapeHtml(draw.title || '(未命名活動)') + '</span>' +
-          (draw.sheetRef ? '<span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
+          (draw.sheetRef ? '<span class="lot-sheet-ref">' + lotIcon('sheet') + ' ' + lotEscapeHtml(draw.sheetRef) + '</span>' : '') +
         '</div>' +
         '<div class="lot-meta">' + metaParts.join('') + '</div>' +
       '</div>' +
-      '<div class="lot-progress"><span class="lot-progress-txt">' + doneCount + ' / ' + total + ' 已完成</span><span class="lot-caret">' + (expanded ? '▲ 收合' : '▼ 展開') + '</span></div>' +
+      '<div class="lot-progress"><span class="lot-progress-txt">' + doneCount + ' / ' + total + ' 已完成</span><span class="lot-caret">' + lotCaretHtml(expanded, '收合', '展開') + '</span></div>' +
     '</div>' +
     (expanded ? '<div class="lot-card-body">' + lotDrawBlockHtml(draw) + '</div>' : '') +
-    (LOTTERY_CAN_EDIT ? '<div class="lot-card-foot"><button class="task-mini-btn" data-role="unarchive-draw" data-draw-id="' + lotEscapeHtml(draw.id) + '">↩️ 取消結案</button></div>' : '') +
+    (LOTTERY_CAN_EDIT ? '<div class="lot-card-foot"><button class="task-mini-btn" data-role="unarchive-draw" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('undo') + ' 取消結案</button></div>' : '') +
   '</div>';
 }
 
 function lotPendingTeamCardHtml(team) {
-  const thumb = team.brandThumb
-    ? '<img class="lot-thumb-img" src="' + lotEscapeHtml(team.brandThumb) + '" alt="">'
-    : '<div class="lot-thumb-fallback">' + lotEscapeHtml(((team.brandName || team.title || '?').trim().charAt(0)) || '?') + '</div>';
+  const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
   const metaParts = [];
   if (team.brandName) metaParts.push('<span>品牌：' + lotEscapeHtml(team.brandName) + '</span>');
   metaParts.push('<span class="lot-warn">已達待抽門檻</span>');
@@ -1031,13 +1031,24 @@ function lotNoLotteryRowHtml(team) {
 }
 
 // 線條圖示（藕粉奶茶色系規則：圖示用 SVG 線條、不用 emoji）
+// 線條箭頭（取代 ▲▼▶ 文字符號）：dir = down|up|right，CSS .lot-chev-* 負責旋轉
+function lotChevron(dir) {
+  return '<svg class="lot-chev lot-chev-' + dir + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+}
+function lotCaretHtml(expanded, closeTxt, openTxt) {
+  return lotChevron(expanded ? 'up' : 'down') + ' ' + (expanded ? closeTxt : openTxt);
+}
 function lotIcon(name) {
   const P = { eye: '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
     edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
     redo: '<path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/>',
     copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
-    trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>' };
+    trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
+    note: '<path d="M13.5 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V9z"/><path d="M13.5 3.5V9H19"/><path d="M8.5 13h7M8.5 16.5h4.5"/>',
+    sheet: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9"/><path d="M10 13h4"/>',
+    undo: '<path d="M3 10h11a5 5 0 0 1 0 10h-3"/><path d="M7 6l-4 4 4 4"/>' };
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (P[name] || '') + '</svg>';
 }
 
@@ -1062,27 +1073,30 @@ function lotWinnerRowHtml(drawId, w, prizeType) {
     : '';
   const sub = (label, val) => '<span><b>' + label + '</b>' + val + '</span>';
 
-  let subHtml;
+  // 只列「有填」的欄位；一個都沒填就一句淡字（雪莉 09-24：一排「—」讓畫面散亂）
+  const subParts = [];
+  let emptyMsg;
   if (prizeType === 'cash') {
     const bankLine = [w.bankName, w.bankCode, w.bankBranch].filter(Boolean).join(' ');
-    subHtml =
-      sub('戶名', w.accountName ? lotEscapeHtml(w.accountName) : empty) +
-      sub('銀行', bankLine ? lotEscapeHtml(bankLine) : empty) +
-      sub('帳號', maskCell(w.bankAccount, w.bankAccount ? lotMaskAccount(w.bankAccount) : '')) +
-      sub('金額', (w.cashAmount || w.cashAmount === 0) ? lotEscapeHtml(w.cashAmount) : empty) +
-      sub('匯款日', w.shippedAt ? lotEscapeHtml(w.shippedAt) : empty);
+    if (w.accountName) subParts.push(sub('戶名', lotEscapeHtml(w.accountName)));
+    if (bankLine) subParts.push(sub('銀行', lotEscapeHtml(bankLine)));
+    if (w.bankAccount) subParts.push(sub('帳號', maskCell(w.bankAccount, lotMaskAccount(w.bankAccount))));
+    if (w.cashAmount || w.cashAmount === 0) subParts.push(sub('金額', lotEscapeHtml(w.cashAmount)));
+    if (w.shippedAt) subParts.push(sub('匯款日', lotEscapeHtml(w.shippedAt)));
+    emptyMsg = '尚未填寫匯款資料';
   } else if (prizeType === 'virtual') {
-    subHtml =
-      sub('email', w.email ? lotEscapeHtml(w.email) : empty) +
-      sub('發送日', w.shippedAt ? lotEscapeHtml(w.shippedAt) : empty);
+    if (w.email) subParts.push(sub('email', lotEscapeHtml(w.email)));
+    if (w.shippedAt) subParts.push(sub('發送日', lotEscapeHtml(w.shippedAt)));
+    emptyMsg = '尚未填寫 email';
   } else {
-    subHtml =
-      sub('電話', maskCell(w.phone, w.phone ? lotMaskPhone(w.phone) : '')) +
-      sub('郵遞區號', w.zip ? lotEscapeHtml(w.zip) : empty) +
-      sub('地址', maskCell(w.address, w.address ? lotMaskAddress(w.address) : '')) +
-      sub('寄出日', w.shippedAt ? lotEscapeHtml(w.shippedAt) : empty) +
-      sub('運費', w.shippingFee ? lotEscapeHtml(w.shippingFee) : empty);
+    if (w.phone) subParts.push(sub('電話', maskCell(w.phone, lotMaskPhone(w.phone))));
+    if (w.zip) subParts.push(sub('郵遞區號', lotEscapeHtml(w.zip)));
+    if (w.address) subParts.push(sub('地址', maskCell(w.address, lotMaskAddress(w.address))));
+    if (w.shippedAt) subParts.push(sub('寄出日', lotEscapeHtml(w.shippedAt)));
+    if (w.shippingFee) subParts.push(sub('運費', lotEscapeHtml(w.shippingFee)));
+    emptyMsg = '尚未填寫寄件資料';
   }
+  const subHtml = subParts.length ? subParts.join('') : '<span class="lot-sub-empty">' + emptyMsg + '</span>';
 
   return '<div class="lot-wl-row' + rowCls + '">' +
     '<div class="lot-wl-main">' +
@@ -1121,7 +1135,7 @@ function renderLotteryTodo() {
   rows = lotApplyDir(rows);
 
   if (!rows.length) {
-    box.innerHTML = '<div class="task-empty">目前沒有待辦事項 🎉</div>';
+    box.innerHTML = '<div class="task-empty">目前沒有待辦事項</div>';
     return;
   }
 
@@ -1129,7 +1143,7 @@ function renderLotteryTodo() {
     const stuck = lotDaysSince(draw.drawDate || (draw.createdAt || '').slice(0, 10));
     const stuckTxt = stuck === null ? '—' : (stuck < 0 ? '未到' : stuck + ' 天');
     const teamLabel = team ? lotTeamTitleHtml(team) : lotEscapeHtml(draw.title || '');
-    const sheetRefTxt = draw.sheetRef ? '<div><span class="lot-sheet-ref">📄 ' + lotEscapeHtml(draw.sheetRef) + '</span></div>' : '';
+    const sheetRefTxt = draw.sheetRef ? '<div><span class="lot-sheet-ref">' + lotIcon('sheet') + ' ' + lotEscapeHtml(draw.sheetRef) + '</span></div>' : '';
     let nextBtns = '';
     if (LOTTERY_CAN_EDIT) {
       if (w.status === 'pending') {
@@ -1252,7 +1266,7 @@ function lotBindSectionEvents(box) {
   box.querySelectorAll('[data-role="pending-no-lottery"]').forEach(el => {
     el.addEventListener('click', ev => {
       ev.stopPropagation();
-      if (!confirm('確定這團不用抽獎嗎？（之後可在篩選列「🙈 已標不抽」清單裡還原）')) return;
+      if (!confirm('確定這團不用抽獎嗎？（之後可在篩選列「已標不抽」清單裡還原）')) return;
       lotSetNoLottery(el.dataset.acctId, true);
     });
   });
@@ -1441,16 +1455,16 @@ function lotBadgeForAcctRow(legacyId, contFromLegacyId) {
   if (!key) return null;
   const team = lotTeamByLegacyId(key);
   if (!team) return null;
-  if (team.noLottery) return { label: '🎁 不抽', cls: 'lot-acct-badge-off' };
+  if (team.noLottery) return { label: '不抽', cls: 'lot-acct-badge-off' };
   const draws = lotDrawsForAcct(team.acctId);
   if (!draws.length) {
-    if (team.pendingDraw) return { label: '🎁 待抽', cls: 'lot-acct-badge-draw' };
+    if (team.pendingDraw) return { label: '待抽', cls: 'lot-acct-badge-draw' };
     return null;
   }
   const winners = draws.flatMap(d => d.winners || []);
   const pending = winners.filter(w => w.status !== 'done' && w.status !== 'redrawn');
-  if (!pending.length) return { label: '🎁 已完成 ' + winners.length, cls: 'lot-acct-badge-done' };
-  return { label: '🎁 待處理 ' + pending.length, cls: 'lot-acct-badge-pending' };
+  if (!pending.length) return { label: '已完成 ' + winners.length, cls: 'lot-acct-badge-done' };
+  return { label: '待處理 ' + pending.length, cls: 'lot-acct-badge-pending' };
 }
 // 點帳務明細列上的抽獎小標：切到抽獎子分頁，捲到並閃一下對應的團卡
 function lotJumpToAcctTeamCard(legacyId) {
