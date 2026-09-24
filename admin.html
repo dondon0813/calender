@@ -248,6 +248,10 @@
   }
   /* 按鈕／分頁／頂列裡的線條圖示（emoji 改 SVG，2026-09-24 起） */
   .btn-ico { width: 15px; height: 15px; vertical-align: -0.2em; margin-right: 4px; flex-shrink: 0; }
+  /* 會員總覽（fans.js）：列上的小圖示與生日提醒連結 */
+  .fa-ico { width: 13px; height: 13px; vertical-align: -2px; margin-right: 2px; flex-shrink: 0; }
+  .fa-bday-link { color: inherit; text-decoration: none; font-weight: 700; }
+  .fa-bday-link:hover { text-decoration: underline; color: var(--c-primary-dark); }
   .user-chip { display: inline-flex; align-items: center; }
   .user-chip .btn-ico { width: 14px; height: 14px; }
   .home-btn .btn-ico { width: 20px; height: 20px; margin: 0; }
@@ -6005,11 +6009,11 @@
 
     <!-- 子分頁（做法比照 books.js 的 .pba-tab：📖 繪本管理／🎁 優惠活動／⚙️ 繪本館設定，admin.html 5077-5081） -->
     <div class="pba-tabs">
-      <button type="button" class="pba-tab on" id="fanTabBtnUnclaimed" data-fan-tab="unclaimed">📥 未歸戶訂單</button>
-      <button type="button" class="pba-tab" id="fanTabBtnClaims" data-fan-tab="claims">📮 認領回報<span id="fanClaimsBadge"></span></button>
+      <button type="button" class="pba-tab on" id="fanTabBtnUnclaimed" data-fan-tab="unclaimed"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 10.5l-2 3.5v4.5a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5V14l-2-3.5"/><path d="M3.5 14h4.5l1.5 2.5h5l1.5-2.5h4.5"/><path d="M12 3.5v8"/><path d="M9.3 9l2.7 2.5L14.7 9"/></svg>未歸戶訂單</button>
+      <button type="button" class="pba-tab" id="fanTabBtnClaims" data-fan-tab="claims"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5A4.5 4.5 0 0 1 8.5 5H16a4 4 0 0 1 4 4v6.5H4z"/><path d="M4 15.5v3h16v-3"/><path d="M13 5v6h4"/><path d="M8 9.5h4"/></svg>認領回報<span id="fanClaimsBadge"></span></button>
       <button type="button" class="pba-tab" id="fanTabBtnMember" data-fan-tab="member"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>會員查詢</button>
-      <button type="button" class="pba-tab" id="fanTabBtnCust" data-fan-tab="cust">📊 顧客分析</button>
-      <button type="button" class="pba-tab" id="fanTabBtnRewards" data-fan-tab="rewards">🎁 點數與商城</button>
+      <button type="button" class="pba-tab" id="fanTabBtnCust" data-fan-tab="cust"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V4"/><path d="M4 20.5h16.5"/><path d="M7.5 16.5l3.5-4 3 2.5 5-6"/></svg>顧客分析</button>
+      <button type="button" class="pba-tab" id="fanTabBtnRewards" data-fan-tab="rewards"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9.5" width="17" height="11" rx="2"/><path d="M3.5 13.5h17"/><path d="M12 9.5v11"/><path d="M12 9.5c-1.2-2.8-4.3-4.4-5.3-2.8S9.2 9.5 12 9.5z"/><path d="M12 9.5c1.2-2.8 4.3-4.4 5.3-2.8S14.8 9.5 12 9.5z"/></svg>點數與商城</button>
     </div>
 
     <div class="pba-tab-panel" id="fanTabPanelUnclaimed">
@@ -6034,7 +6038,7 @@
     </div><!-- /fanTabPanelClaims -->
 
     <div class="pba-tab-panel" id="fanTabPanelMember" style="display:none;">
-    <h3 style="margin:24px 0 8px; font-size:15px;">👥 會員總覽</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">會員總覽</h3>
     <div id="fanMemberBirthdays"></div>
     <div id="fanMemberStats" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
@@ -7345,7 +7349,7 @@
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=4"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=15"></script>
+<script src="fans.js?v=16"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->

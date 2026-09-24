@@ -219,7 +219,7 @@ function faProfileFillHtml(s) {
   const pct = (g) => g.total ? Math.round(g.filled / g.total * 100) + '%' : '—';
   const cut = String(f.cutoff || '').slice(5, 10).replace('-', '/');
   let h = '<div style="flex-basis:100%; background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:10px; padding:10px 14px; font-size:13px; line-height:1.8;">' +
-    '<b>📋 個人資料填寫率</b>（填了生日／電話／LINE／寶貝任一項）<br>' +
+    '<b>個人資料填寫率</b>（填了生日／電話／LINE／寶貝任一項）<br>' +
     cut + ' 改版前註冊：<b>' + pct(f.before) + '</b>（' + f.before.filled + '／' + f.before.total + ' 人）　' +
     cut + ' 改版後註冊：<b>' + pct(f.after) + '</b>（' + f.after.filled + '／' + f.after.total + ' 人）';
   if (p) {
@@ -227,6 +227,21 @@ function faProfileFillHtml(s) {
       ' 次｜在設定頁儲存 ' + p.savesettings + ' 次（次數以裝置計）</span>';
   }
   return h + '</div>';
+}
+
+// 會員總覽用的線條小圖示（emoji 改 SVG，2026-09-25）
+function faIco(name, cls) {
+  const P = {
+    cake: '<path d="M4 20.5h16"/><path d="M5 20.5v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7"/><path d="M5 15.5c1.2 1 2.3 1 3.5 0s2.3-1 3.5 0 2.3 1 3.5 0 2.3-1 3.5 0"/><path d="M8.5 11.5v-3M12 11.5v-3M15.5 11.5v-3"/><path d="M8.5 6.5c-.6-.8-.6-1.6 0-2.3.6.7.6 1.5 0 2.3zM12 6.5c-.6-.8-.6-1.6 0-2.3.6.7.6 1.5 0 2.3zM15.5 6.5c-.6-.8-.6-1.6 0-2.3.6.7.6 1.5 0 2.3z"/>',
+    baby: '<circle cx="12" cy="13" r="7.5"/><path d="M9.5 12.5h.01M14.5 12.5h.01" stroke-width="2.6"/><path d="M9.8 16c1.2 1 3.2 1 4.4 0"/><path d="M12 5.5c0-1.5.8-2.3 2-2.3"/>',
+    phone: '<path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A15.5 15.5 0 0 1 4.5 5.5a2 2 0 0 1 2-2z"/>',
+    chat: '<path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5z"/>',
+    mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4 7l8 6 8-6"/>',
+    gift: '<rect x="3.5" y="9.5" width="17" height="11" rx="2"/><path d="M3.5 13.5h17"/><path d="M12 9.5v11"/><path d="M12 9.5c-1.2-2.8-4.3-4.4-5.3-2.8S9.2 9.5 12 9.5z"/><path d="M12 9.5c1.2-2.8 4.3-4.4 5.3-2.8S14.8 9.5 12 9.5z"/>',
+    chevDown: '<path d="M6 9l6 6 6-6"/>',
+    chevRight: '<path d="M9 6l6 6-6 6"/>',
+  };
+  return '<svg class="' + (cls || 'fa-ico') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (P[name] || '') + '</svg>';
 }
 
 // ===== 生日提醒（只提醒「已分級標註」的會員：本人生日＋寶貝生日月，14 天內）=====
@@ -256,24 +271,40 @@ function renderFanBirthdayReminders() {
     const bd = /(\d{2}-\d{2})$/.exec(String(m.birthday || ''));
     if (bd) {
       const d = faDaysUntil(bd[1]);
-      if (d !== null && d <= 14) lines.push({ d, html: '🎂 ' + faEscapeHtml(who) + ' 生日 ' + bd[1].replace('-', '/') + (d === 0 ? '（今天！）' : '（' + d + ' 天後）') });
+      if (d !== null && d <= 14) lines.push({ d, html: '<a href="#" class="fa-bday-link" data-uid="' + faEscapeHtml(m.userId) + '">' + faIco('cake') + faEscapeHtml(who) + ' 生日 ' + bd[1].replace('-', '/') + (d === 0 ? '（今天！）' : '（' + d + ' 天後）') + '</a>' });
     }
     (m.children || []).forEach((c, i) => {
       const ym = /^(\d{4})-(\d{2})$/.exec(String(c.birthYm || ''));
       if (!ym) return;
       const d = faDaysUntil(ym[2] + '-01');
-      if (d !== null && d <= 14) lines.push({ d, html: '👶 ' + faEscapeHtml(who) + ' 寶貝' + (m.children.length > 1 ? (i + 1) : '') + ' 生日月 ' + Number(ym[2]) + ' 月（' + faEscapeHtml(faChildAge(c.birthYm) || '') + '）' + (d === 0 ? '（本月）' : '（' + d + ' 天後進入）') });
+      if (d !== null && d <= 14) lines.push({ d, html: '<a href="#" class="fa-bday-link" data-uid="' + faEscapeHtml(m.userId) + '">' + faIco('baby') + faEscapeHtml(who) + ' 寶貝' + (m.children.length > 1 ? (i + 1) : '') + ' 生日月 ' + Number(ym[2]) + ' 月（' + faEscapeHtml(faChildAge(c.birthYm) || '') + '）' + '</a>' + '' + (d === 0 ? '（本月）' : '（' + d + ' 天後進入）') });
     });
   }
   if (!lines.length) { box.innerHTML = ''; return; }
   lines.sort((a, b) => a.d - b.d);
   box.innerHTML = '<div style="background:#F3E3E1; border:1.5px dashed var(--c-primary); border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:2;">' +
-    '<b>🎁 生日提醒（已分級會員，14 天內）</b><br>' + lines.map(l => l.html).join('<br>') + '</div>';
+    '<b>' + faIco('gift') + '生日提醒（已分級會員，14 天內）</b><br>' + lines.map(l => l.html).join('<br>') + '</div>';
+  // 點一行＝展開那位會員的資料（雪莉 09-25）：清掉篩選與搜尋確保列在清單裡，展開後捲到那一列
+  box.querySelectorAll('.fa-bday-link').forEach(a => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    faOpenMemberInOverview(a.dataset.uid);
+  }));
+}
+function faOpenMemberInOverview(uid) {
+  if (!uid) return;
+  FAN_MEMBER_FILTER = 'all';
+  const search = document.getElementById('fanMemberSearchInput');
+  if (search) search.value = '';
+  FAN_MEMBER_OPEN = uid;
+  renderFanMemberFilters();
+  renderFanMemberList();
+  const row = document.querySelector('#fanMemberArea .fa-mem-row[data-uid="' + uid + '"]');
+  if (row && row.scrollIntoView) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 const FAN_MEMBER_FILTER_DEFS = [
-  ['all', '全部'], ['orders', '🛒 有訂單'], ['new', '🆕 本週'], ['marketing', '✉️ 行銷同意'],
-  ['birthday', '🎂 生日'], ['phone', '📞 電話'], ['line', '💬 LINE'], ['children', '👶 寶貝'], ['tiered', '⭐ 已分級'],
+  ['all', '全部'], ['orders', '有訂單'], ['new', '本週'], ['marketing', '行銷同意'],
+  ['birthday', '生日'], ['phone', '電話'], ['line', 'LINE'], ['children', '寶貝'], ['tiered', '已分級'],
 ];
 function renderFanMemberFilters() {
   const box = document.getElementById('fanMemberFilters');
@@ -317,23 +348,23 @@ function renderFanMemberList() {
   if (!list.length) { area.innerHTML = '<div class="task-empty">沒有符合條件的會員</div>'; return; }
   const rows = list.map(m => {
     const badges = [];
-    if (m.birthday) badges.push('<span title="生日：' + faEscapeHtml(m.birthday) + '">🎂</span>');
-    if (m.phone) badges.push('<span title="電話：' + faEscapeHtml(m.phone) + '">📞</span>');
-    if (m.lineId || m.lineNickname) badges.push('<span title="LINE：' + faEscapeHtml([m.lineId, m.lineNickname].filter(Boolean).join('／')) + '">💬</span>');
-    if (m.childrenCount > 0) badges.push('<span title="寶貝 ' + m.childrenCount + ' 位">👶×' + m.childrenCount + '</span>');
-    if (m.marketingConsent) badges.push('<span title="同意收到行銷訊息">✉️</span>');
+    if (m.birthday) badges.push('<span title="生日：' + faEscapeHtml(m.birthday) + '">' + faIco('cake') + '</span>');
+    if (m.phone) badges.push('<span title="電話：' + faEscapeHtml(m.phone) + '">' + faIco('phone') + '</span>');
+    if (m.lineId || m.lineNickname) badges.push('<span title="LINE：' + faEscapeHtml([m.lineId, m.lineNickname].filter(Boolean).join('／')) + '">' + faIco('chat') + '</span>');
+    if (m.childrenCount > 0) badges.push('<span title="寶貝 ' + m.childrenCount + ' 位">' + faIco('baby') + '×' + m.childrenCount + '</span>');
+    if (m.marketingConsent) badges.push('<span title="同意收到行銷訊息">' + faIco('mail') + '</span>');
     const emailNote = m.emailsCount > 1 ? '<span style="color:#8B6E5E; font-size:11px;">（+' + (m.emailsCount - 1) + ' 信箱）</span>' : '';
     const tierBadge = m.adminTier
       ? ' <span style="background:var(--c-primary); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;">' + faEscapeHtml(m.adminTier) + '</span>' : '';
     const open = FAN_MEMBER_OPEN === m.userId;
     let html = '<tr class="fa-mem-row" data-uid="' + faEscapeHtml(m.userId) + '" style="border-bottom:1px solid var(--c-line); cursor:pointer;' + (open ? ' background:var(--c-bg-bottom);' : '') + '">' +
-      '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + (open ? '▾ ' : '▸ ') + faEscapeHtml(m.memberNo) + '</td>' +
+      '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + (open ? faIco('chevDown') : faIco('chevRight')) + faEscapeHtml(m.memberNo) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(m.displayName) + tierBadge + '</td>' +
       '<td style="padding:8px 10px;">' + faEscapeHtml(m.primaryEmail) + emailNote + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap;">' + faEscapeHtml(String(m.createdAt || '').slice(0, 10)) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap; text-align:right;">' + faEscapeHtml(m.ordersCount) + '</td>' +
       '<td style="padding:8px 10px; white-space:nowrap; text-align:right;">' + faEscapeHtml(faMoney(m.totalSpent)) + '</td>' +
-      '<td style="padding:8px 10px; white-space:nowrap; font-size:15px;">' + (badges.join(' ') || '<span style="color:var(--c-text-light); font-size:12px;">—</span>') + '</td>' +
+      '<td style="padding:8px 10px; white-space:nowrap; font-size:13px; color:var(--c-text-soft);">' + (badges.join(' ') || '<span style="color:var(--c-text-light); font-size:12px;">—</span>') + '</td>' +
       '</tr>';
     if (open) html += faMemberDetailRow(m);
     return html;
@@ -370,16 +401,16 @@ function faMemberDetailRow(m) {
     '<div style="font-weight:700;">' + (val || '—') + '</div></div>';
   return '<tr class="fa-mem-detail"><td colspan="7" style="padding:12px 16px; background:#F5EFE9; border-bottom:2px solid var(--c-line);">' +
     '<div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:10px;">' +
-    info('🎂 生日', faEscapeHtml(m.birthday)) +
-    info('📞 電話', faEscapeHtml(m.phone)) +
-    info('💬 LINE 帳號', faEscapeHtml(m.lineId)) +
-    info('💬 社群暱稱', faEscapeHtml(m.lineNickname)) +
-    info('✉️ 行銷同意', m.marketingConsent ? '✅ 同意' : '未同意') +
-    info('👶 寶貝', kids) +
-    info('📧 綁定信箱', emails) +
+    info('生日', faEscapeHtml(m.birthday)) +
+    info('電話', faEscapeHtml(m.phone)) +
+    info('LINE 帳號', faEscapeHtml(m.lineId)) +
+    info('社群暱稱', faEscapeHtml(m.lineNickname)) +
+    info('行銷同意', m.marketingConsent ? '同意' : '未同意') +
+    info('寶貝', kids) +
+    info('綁定信箱', emails) +
     '</div>' +
     '<div style="border-top:1px dashed var(--c-border-light); padding:10px 0;">' +
-    '<div style="font-size:12px; font-weight:800; margin-bottom:6px;">🛒 訂單紀錄</div>' +
+    '<div style="font-size:12px; font-weight:800; margin-bottom:6px;">訂單紀錄</div>' +
     '<div id="faMemOrdersBox" data-uid="' + faEscapeHtml(m.userId) + '"><div style="font-size:12px; color:var(--c-text-light);">讀取中…</div></div>' +
     '</div>' +
     '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; border-top:1px dashed var(--c-border-light); padding-top:10px;">' +
@@ -387,7 +418,7 @@ function faMemberDetailRow(m) {
     '<input type="text" id="faMemTierInput" list="faMemTierPresets" value="' + faEscapeHtml(m.adminTier) + '" placeholder="例如 VIP／高級" style="width:120px;">' +
     '<datalist id="faMemTierPresets"><option value="VIP"><option value="高級"><option value="一般"><option value="黑名單"></datalist>' +
     '<input type="text" id="faMemNoteInput" value="' + faEscapeHtml(m.adminNote) + '" placeholder="內部備註（客人看不到）" style="flex:1; min-width:200px;">' +
-    '<button type="button" class="task-mini-btn" id="faMemTierSaveBtn" data-uid="' + faEscapeHtml(m.userId) + '">💾 儲存</button>' +
+    '<button type="button" class="task-mini-btn" id="faMemTierSaveBtn" data-uid="' + faEscapeHtml(m.userId) + '">儲存</button>' +
     '</div>' +
     '</td></tr>';
 }
@@ -421,7 +452,7 @@ function renderFanMemberOrders(userId) {
   const rows = orders.map((o, i) => {
     const items = (o.items || []).map(it =>
       '<div style="display:flex; gap:8px; justify-content:space-between; padding:2px 0;">' +
-      '<span>' + (it.isGift ? '🎁 ' : '') + faEscapeHtml(it.name) + ' × ' + faEscapeHtml(it.qty) + '</span>' +
+      '<span>' + (it.isGift ? faIco('gift') : '') + faEscapeHtml(it.name) + ' × ' + faEscapeHtml(it.qty) + '</span>' +
       '<span style="white-space:nowrap; color:var(--c-text-light);">' + faEscapeHtml(faMoney(it.lineTotal)) + '</span></div>'
     ).join('') || '<div style="color:var(--c-text-light);">（這筆訂單沒有品項明細）</div>';
     return '<tr class="fa-mo-row" data-idx="' + i + '" style="border-top:1px solid var(--c-line); cursor:pointer;">' +
