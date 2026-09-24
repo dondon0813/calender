@@ -710,6 +710,7 @@ function lotWinnersRows(draws) {
     (d.winners || []).forEach(w => {
       if (w.status === 'redrawn') return;
       const pt = lotWinnerType(w, d);
+      const v = (x) => { const s = (x == null ? '' : String(x)).trim(); return /^[-－—]+$/.test(s) ? '' : s; }; // 試算表空值寫法「-」當空
       let contact = '';
       if (pt === 'cash') {
         const bank = [w.bankName, w.bankCode, w.bankBranch].filter(Boolean).join(' ');
@@ -719,11 +720,11 @@ function lotWinnersRows(draws) {
       } else if (pt === 'virtual') {
         contact = w.email || '';
       } else {
-        contact = [w.phone, [w.zip, w.address].filter(Boolean).join(' ')].filter(Boolean).join('　');
+        contact = [v(w.phone), [v(w.zip), v(w.address)].filter(Boolean).join(' ')].filter(Boolean).join('　');
       }
       // copy＝複製鈕用的完整文字（帳號不遮罩；其餘同 contact）
       const copy = (pt === 'cash' && w.bankAccount) ? contact.replace('帳號 ' + lotMaskAccount(w.bankAccount), '帳號 ' + w.bankAccount) : contact;
-      rows.push({ prize: w.prize || '', who: w.name || w.winnerHandle || '（未填）', contact, copy, done: w.status === 'done' });
+      rows.push({ prize: w.prize || '', who: v(w.name) || v(w.winnerHandle) || '（未填）', contact, copy, done: w.status === 'done' });
     });
   });
   return rows;
@@ -757,7 +758,7 @@ function lotRowHtml(o) {
   let html = '<tr class="lot-tr' + (expanded ? ' on' : '') + (o.cls ? ' ' + o.cls : '') + '"' +
     (o.toggle ? ' data-role="toggle-card" data-card-key="' + lotEscapeHtml(o.key) + '"' : '') + (o.attrs || '') + '>' +
     '<td class="lot-td-date">' + caret + lotEscapeHtml(o.date || '') + '</td>' +
-    '<td class="lot-td-title">' + (o.title || '') + '</td>' +
+    '<td class="lot-td-title"' + (o.titleText ? ' title="' + lotEscapeHtml(o.titleText) + '"' : '') + '>' + (o.title || '') + '</td>' +
     '<td class="lot-td-prize">' + (o.prize || '') + '</td>' +
     '<td class="lot-td-winners">' + (o.winners || '') + '</td>' +
     '<td class="lot-td-contact">' + (o.contact || '') + '</td>' +
@@ -765,7 +766,7 @@ function lotRowHtml(o) {
     '<td class="lot-td-status">' + (o.status || '') + '</td>' +
   '</tr>';
   if (expanded) html += '<tr class="lot-tr-detail"><td colspan="7"><div class="lot-detail">' +
-    (o.brand ? '<div class="lot-detail-brand">品牌：' + lotEscapeHtml(o.brand) + '</div>' : '') + (o.detail || '') + '</div></td></tr>';
+    ((o.brand || o.ref) ? '<div class="lot-detail-brand">' + [o.brand ? '品牌：' + lotEscapeHtml(o.brand) : '', o.ref ? lotEscapeHtml(o.ref) : ''].filter(Boolean).join('　') + '</div>' : '') + (o.detail || '') + '</div></td></tr>';
   return html;
 }
 function lotProgressTxt(draws) { const p = lotProgressOf(draws); return p.total ? p.done + ' / ' + p.total : '—'; }
@@ -784,7 +785,9 @@ function lotTeamRowHtml(team, draws) {
   return lotRowHtml({
     key: 'team:' + team.acctId, toggle: true, attrs: ' data-acct-id="' + lotEscapeHtml(team.acctId) + '"',
     date: team.recordDate ? lotFmtYMD(team.recordDate) : '（無日期）',
-    title: '<span>' + lotEscapeHtml(team.title || '') + '</span>' + (team.legacyId ? ' <span class="lot-r-muted">（' + lotEscapeHtml(team.legacyId) + '）</span>' : '') + (team.failed ? ' <span class="lot-warn">未成團</span>' : ''),
+    // R 號不進表格（雪莉 09-25：團名固定寬度、後面 R 號不用），改放展開列的品牌那行
+    title: '<span>' + lotEscapeHtml(team.title || '') + '</span>' + (team.failed ? ' <span class="lot-warn">未成團</span>' : ''),
+    titleText: team.title || '', ref: team.legacyId || '',
     brand: team.brandName, prize: lotPrizeBrief(draws), winners: lotWinnersBrief(draws), contact: lotContactBrief(draws), progress: lotProgressTxt(draws), status: lotDrawStatusPill(draws), detail,
   });
 }
@@ -795,7 +798,7 @@ function lotPendingTeamRowHtml(team) {
   return lotRowHtml({
     key: 'pending:' + team.acctId, toggle: false, cls: 'lot-tr-pending', attrs: ' data-acct-id="' + lotEscapeHtml(team.acctId) + '"',
     date: team.recordDate ? lotFmtYMD(team.recordDate) : '（無日期）',
-    title: '<span>' + lotEscapeHtml(team.title || '') + '</span>' + (team.legacyId ? ' <span class="lot-r-muted">（' + lotEscapeHtml(team.legacyId) + '）</span>' : ''),
+    title: '<span>' + lotEscapeHtml(team.title || '') + '</span>', titleText: team.title || '', ref: team.legacyId || '',
     brand: team.brandName, winners: '<span class="lot-warn">已達待抽門檻</span>', progress: '—', status: lotPill('待抽', 'draw') + '<span class="lot-td-ops">' + ops + '</span>',
   });
 }
@@ -804,7 +807,7 @@ function lotNoLotteryTableRowHtml(team) {
   return lotRowHtml({
     key: 'nolot:' + team.acctId, toggle: false, cls: 'lot-tr-muted', attrs: ' data-acct-id="' + lotEscapeHtml(team.acctId) + '"',
     date: team.recordDate ? lotFmtYMD(team.recordDate) : '（無日期）',
-    title: '<span>' + lotEscapeHtml(team.title || '') + '</span>' + (team.legacyId ? ' <span class="lot-r-muted">（' + lotEscapeHtml(team.legacyId) + '）</span>' : ''),
+    title: '<span>' + lotEscapeHtml(team.title || '') + '</span>', titleText: team.title || '', ref: team.legacyId || '',
     brand: team.brandName, winners: '', progress: '—', status: lotPill('不抽', 'muted') + '<span class="lot-td-ops">' + ops + '</span>',
   });
 }

@@ -5831,7 +5831,7 @@
     .lot-tr-caret svg{ width:12px; height:12px; display:block; }
     /* 欄寬：width:1% ＝縮到內容寬（date／title／winners／progress／status），多餘寬度給獎品與電話地址（雪莉 09-25：得獎人後面空一大塊） */
     .lot-td-date{ white-space:nowrap; font-weight:800; width:1%; }
-    .lot-td-title{ font-weight:800; white-space:nowrap; width:1%; }
+    .lot-td-title{ font-weight:800; width:240px; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }   /* 固定寬度、超過用刪節號（滑過看全名 title 屬性）；R 號不進表格（雪莉 09-25） */
     .lot-td-prize{ min-width:140px; }
     .lot-td-winners{ white-space:nowrap; width:1%; max-width:220px; }
     .lot-td-winners .lot-brief-line{ overflow:hidden; text-overflow:ellipsis; }   /* 姓名欄若又被塞整串文字，最多 220px 用刪節號，不撐開表格（09-25） */
@@ -7448,7 +7448,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=23"></script>
+<script src="lottery.js?v=24"></script>
 <script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 
