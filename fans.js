@@ -96,7 +96,7 @@ function loadFanAdminView(forceReload) {
     if (data.tableReady === false) {
       FAN_TABLE_READY = false;
       FAN_UNCLAIMED_LIST = [];
-      banner.innerHTML = '<div style="background:#F5EFE9; border:1px solid transparent; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 會員資料表尚未建立（待 db push）</div>';
+      banner.innerHTML = '<div style="background:#F5EFE9; border:1px solid transparent; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">會員資料表尚未建立（待 db push）</div>';
       area.innerHTML = '<div class="task-empty">資料表尚未建立</div>';
       faSetControlsDisabled(true);
       return;
@@ -122,7 +122,7 @@ function renderFanUnclaimedList() {
     : FAN_UNCLAIMED_LIST;
 
   if (!list.length) {
-    area.innerHTML = '<div class="task-empty">' + (FAN_UNCLAIMED_LIST.length ? '沒有符合搜尋的訂單' : '目前沒有未歸戶的訂單 🎉') + '</div>';
+    area.innerHTML = '<div class="task-empty">' + (FAN_UNCLAIMED_LIST.length ? '沒有符合搜尋的訂單' : '目前沒有未歸戶的訂單') + '</div>';
     return;
   }
 
@@ -183,7 +183,7 @@ async function faLoadMemberOverview(force) {
       return;
     }
     if (data.tableReady === false) {
-      area.innerHTML = '<div class="task-empty">⚠️ 會員資料表尚未建立（待 db push）</div>';
+      area.innerHTML = '<div class="task-empty">會員資料表尚未建立（待 db push）</div>';
       return;
     }
     FAN_MEMBER_LIST = Array.isArray(data.members) ? data.members : [];
@@ -510,7 +510,7 @@ async function faLoadCustomers() {
       return;
     }
     if (data.tableReady === false) {
-      area.innerHTML = '<div class="task-empty">⚠️ 會員資料表尚未建立（待 db push）</div>';
+      area.innerHTML = '<div class="task-empty">會員資料表尚未建立（待 db push）</div>';
       return;
     }
     FAN_CUST_LIST = Array.isArray(data.customers) ? data.customers : [];
@@ -620,7 +620,7 @@ let FAN_CLAIMS_FILTER = 'pending';
 let FAN_CLAIMS_LOADED = false;
 let FAN_CLAIMS_BUSY = false;
 
-const FAN_CLAIMS_FILTER_DEFS = [['pending', '⏳ 待核對'], ['matched', '✅ 已加入'], ['rejected', '🚫 已駁回'], ['all', '全部']];
+const FAN_CLAIMS_FILTER_DEFS = [['pending', '待核對'], ['matched', '已加入'], ['rejected', '已駁回'], ['all', '全部']];
 const FAN_CLAIMS_PLATFORM_LABELS = { gbf: '跟團買', shopline: 'Shopline', oneshop: '1shop', vendor: '廠商名單', manual: '人工建立' };
 
 function renderFanClaimsBadge() {
@@ -637,7 +637,7 @@ async function faLoadClaimReports(force) {
   try {
     const data = await faApiPost('fan-admin-claim-reports', { status: 'all' });
     if (data && data.tableReady === false) { // 後端表缺失時 success 也是 false，要先判這個
-      area.innerHTML = '<div class="task-empty">⚠️ 認領回報資料表尚未建立（待 db push）</div>';
+      area.innerHTML = '<div class="task-empty">認領回報資料表尚未建立（待 db push）</div>';
       return;
     }
     if (!data || !data.success) {
@@ -719,7 +719,7 @@ function faClaimsCardHtml(r) {
     const rows = cands.map(c => {
       let who = '';
       if (c.claimedBySelf) who = '已歸到這位會員';
-      else if (c.claimedByMemberNo) who = '⚠ 已歸到 ' + c.claimedByMemberNo;
+      else if (c.claimedByMemberNo) who = '已歸到 ' + c.claimedByMemberNo;
       const canMatch = r.status === 'pending' && (!c.claimedByMemberNo || c.claimedBySelf);
       return '<tr style="border-top:1px solid var(--c-line);">' +
         '<td style="padding:6px 8px; white-space:nowrap;">' + (c.fullMatch ? '<span title="四項全部相符" style="color:#1e7a3c; font-weight:600;">★ 全符</span>' : '<span style="color:var(--c-text-light);">不符</span>') + '</td>' +
@@ -748,8 +748,8 @@ function faClaimsCardHtml(r) {
       '<span style="margin-left:auto;">' + actions + '</span>' +
     '</div>' +
     '<div style="font-size:13px; margin-bottom:6px;">客人填的：<b>' + faEscapeHtml(faMoney(r.amount)) + '</b>｜' + faEscapeHtml(r.buyerName) + '｜' + faEscapeHtml(r.buyerEmail) + '</div>' +
-    (r.hint ? '<div style="font-size:12px; color:#8B6E5E; margin-bottom:6px;">💡 系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
-    (r.note ? '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">📝 備註（客人看得到）：' + faEscapeHtml(r.note) + '</div>' : '') +
+    (r.hint ? '<div style="font-size:12px; color:#8B6E5E; margin-bottom:6px;">系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
+    (r.note ? '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">備註（客人看得到）：' + faEscapeHtml(r.note) + '</div>' : '') +
     candHtml +
     '</div>';
 }
@@ -758,7 +758,7 @@ function renderFanClaimsList() {
   const area = document.getElementById('fanClaimsArea');
   const list = faClaimsVisibleList();
   if (!list.length) {
-    const empty = FAN_CLAIMS_FILTER === 'pending' && !FAN_CLAIMS_STATS.pending ? '目前沒有待核對的回報 🎉' : '沒有符合條件的回報';
+    const empty = FAN_CLAIMS_FILTER === 'pending' && !FAN_CLAIMS_STATS.pending ? '目前沒有待核對的回報' : '沒有符合條件的回報';
     area.innerHTML = '<div class="task-empty">' + empty + '</div>';
     return;
   }
@@ -788,7 +788,7 @@ async function faResolveClaimReport(id, action, orderId) {
   const extra = { id, action };
   if (action === 'match') {
     const c = (r.candidates || []).find(x => x.orderId === orderId);
-    const warn = c && !c.fullMatch ? '\n\n⚠ 這筆訂單和客人填的資料「不完全相符」，請確認真的是同一個人。' : '';
+    const warn = c && !c.fullMatch ? '\n\n注意：這筆訂單和客人填的資料「不完全相符」，請確認真的是同一個人。' : '';
     if (!confirm('把訂單 ' + r.orderNo + ' 加入會員 ' + r.member + ' 名下？（會同時入點）' + warn)) return;
     extra.orderId = orderId;
   } else if (action === 'create') {
@@ -948,7 +948,7 @@ function loadFanRewards(force) {
     if (data.tableReady === false) {
       FAN_REWARDS_READY = false;
       FAN_REWARDS_CFG = data;
-      banner.innerHTML = '<div style="background:#F5EFE9; border:1px solid transparent; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">⚠️ 第二期資料表尚未建立（待 db push）</div>';
+      banner.innerHTML = '<div style="background:#F5EFE9; border:1px solid transparent; color:#8B6E5E; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px;">第二期資料表尚未建立（待 db push）</div>';
       ['fanRuleListArea', 'fanVruleListArea', 'fanShopListArea'].forEach(id => {
         document.getElementById(id).innerHTML = '<div class="task-empty">資料表尚未建立</div>';
       });
@@ -1002,8 +1002,8 @@ function faFillRewardsSelects(data) {
   ).join('');
   document.getElementById('fanShopMaterial').innerHTML =
     '<option value="">（請選擇教材或遊戲）</option>' +
-    '<optgroup label="📚 教材">' + shopMaterialOptions + '</optgroup>' +
-    (shopHallOptions ? '<optgroup label="🎮 遊戲／教材館">' + shopHallOptions + '</optgroup>' : '');
+    '<optgroup label="教材">' + shopMaterialOptions + '</optgroup>' +
+    (shopHallOptions ? '<optgroup label="遊戲／教材館">' + shopHallOptions + '</optgroup>' : '');
   document.getElementById('fanGrantMaterial').innerHTML = '<option value="">（請選擇教材）</option>' + materialOptionsNoBlank;
 }
 
@@ -1289,7 +1289,7 @@ async function faLoadFanWallet() {
       return;
     }
     if (data.tableReady === false) {
-      area.innerHTML = '<div class="task-empty">⚠️ 第二期資料表尚未建立（待 db push）</div>';
+      area.innerHTML = '<div class="task-empty">第二期資料表尚未建立（待 db push）</div>';
       return;
     }
     renderFanWallet(data);
@@ -1437,7 +1437,7 @@ async function faLoadFanAttempts() {
       return;
     }
     if (data.tableReady === false) {
-      area.innerHTML = '<div class="task-empty">⚠️ 第二期資料表尚未建立（待 db push）</div>';
+      area.innerHTML = '<div class="task-empty">第二期資料表尚未建立（待 db push）</div>';
       return;
     }
     const attempts = Array.isArray(data.attempts) ? data.attempts : [];

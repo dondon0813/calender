@@ -6003,7 +6003,7 @@
   <div class="view" id="viewFanAdmin">
     <div class="rpt-header-wrap">
       <h2 class="view-title">會員管理</h2>
-      <button class="task-mini-btn" id="fanUnclaimedRefreshBtn">🔄 重新整理</button>
+      <button class="task-mini-btn" id="fanUnclaimedRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
     <div id="fanAdminBanner"></div>
 
@@ -6017,7 +6017,7 @@
     </div>
 
     <div class="pba-tab-panel" id="fanTabPanelUnclaimed">
-    <h3 style="margin:18px 0 8px; font-size:15px;">📥 未歸戶訂單</h3>
+    <h3 style="margin:18px 0 8px; font-size:15px;">未歸戶訂單</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
       <input type="text" id="fanUnclaimedSearch" class="ico-search" placeholder="搜尋姓名／email／訂單編號…" style="flex:1; min-width:200px; max-width:360px;">
     </div>
@@ -6026,7 +6026,7 @@
 
     <!-- 📮 認領回報（2026-09-20）：客人認領時系統對不到的訂單先留紀錄；匯入後自動比對，對不上的在這裡人工處理 -->
     <div class="pba-tab-panel" id="fanTabPanelClaims" style="display:none;">
-    <h3 style="margin:18px 0 4px; font-size:15px;">📮 認領回報</h3>
+    <h3 style="margin:18px 0 4px; font-size:15px;">認領回報</h3>
     <div style="font-size:12px; color:var(--c-text-light); margin-bottom:10px;">客人填的訂單資料系統還對不到時會先存在這裡。每天收單後會自動比對，四項全對的直接歸戶；這裡只需要處理對不上的。</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
       <div id="fanClaimsFilters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
@@ -6044,13 +6044,13 @@
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;">
       <input type="text" id="fanMemberSearchInput" placeholder="輸入編號／暱稱／email 即時過濾" style="flex:1; min-width:200px; max-width:360px;">
       <div id="fanMemberFilters" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-      <button class="task-mini-btn" id="fanMemberSearchBtn">🔄 重新整理</button>
+      <button class="task-mini-btn" id="fanMemberSearchBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
     <div id="fanMemberArea"><div class="task-empty">讀取中…</div></div>
     </div><!-- /fanTabPanelMember -->
 
     <div class="pba-tab-panel" id="fanTabPanelCust" style="display:none;">
-    <h3 style="margin:24px 0 8px; font-size:15px;">📊 顧客分析</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">顧客分析</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
       <input type="text" id="fanCustSearch" class="ico-search" placeholder="搜尋姓名／email…" style="flex:1; min-width:200px; max-width:360px;">
       <select id="fanCustSort" style="min-width:130px;">
@@ -6064,20 +6064,20 @@
     </div><!-- /fanTabPanelCust -->
 
     <div class="pba-tab-panel" id="fanTabPanelRewards" style="display:none;">
-    <h3 style="margin:18px 0 8px; font-size:15px;">🎁 點數與商城</h3>
+    <h3 style="margin:18px 0 8px; font-size:15px;">點數與商城</h3>
     <div id="fanRewardsBanner"></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
-      <button type="button" class="task-mini-btn" id="fanRewardsReloadBtn">🔄 重新載入設定</button>
+      <button type="button" class="task-mini-btn" id="fanRewardsReloadBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新載入設定</button>
       <button type="button" class="task-mini-btn" id="fanRewardsSyncBtn">⟳ 立即重算全部點數</button>
     </div>
     <div style="font-size:12px; color:var(--c-text-light); margin-bottom:16px;">重算＝依目前規則對全部已歸戶訂單收斂入點/扣回（每日排程也會自動跑）</div>
 
-    <h3 style="margin:24px 0 8px; font-size:15px;">📐 入點規則（哪個團的消費入哪種點數）</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">入點規則（哪個團的消費入哪種點數）</h3>
     <div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">建議用「品牌關鍵字」設定：團名含關鍵字的每一團（含過去的團）自動適用，不用每團重設；指定單一團的規則優先於品牌規則。</div>
     <div id="fanRuleListArea"><div class="task-empty">讀取中…</div></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
       <input type="hidden" id="fanRuleEditingId" value="">
-      <input type="text" id="fanRuleBrand" placeholder="🏷️ 品牌關鍵字（例如 mideer）" style="min-width:180px;">
+      <input type="text" id="fanRuleBrand" placeholder="品牌關鍵字（例如 mideer）" style="min-width:180px;">
       <span style="align-self:center; font-size:12px; color:var(--c-text-light);">或指定單一團→</span>
       <select id="fanRuleEvent" style="min-width:220px;"></select>
       <select id="fanRuleCurrency" style="min-width:120px;"></select>
@@ -6089,7 +6089,7 @@
       <button type="button" class="task-mini-btn" id="fanRuleResetBtn">清空表單</button>
     </div>
 
-    <h3 style="margin:24px 0 8px; font-size:15px;">🎟️ 兌換券商品規則（買指定商品送兌換券，該品項不入點）</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">兌換券商品規則（買指定商品送兌換券，該品項不入點）</h3>
     <div id="fanVruleListArea"><div class="task-empty">讀取中…</div></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
       <input type="hidden" id="fanVruleEditingId" value="">
@@ -6103,9 +6103,9 @@
       <button type="button" class="task-mini-btn" id="fanVruleSaveBtn">儲存</button>
       <button type="button" class="task-mini-btn" id="fanVruleResetBtn">清空表單</button>
     </div>
-    <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">⚠️ 綁定教材後，該教材檔案會轉為會員專屬（私有），繪本館前台不再提供免費下載</div>
+    <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">注意：綁定教材後，該教材檔案會轉為會員專屬（私有），繪本館前台不再提供免費下載</div>
 
-    <h3 style="margin:24px 0 8px; font-size:15px;">🛍️ 教材商城定價</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">教材商城定價</h3>
     <div id="fanShopListArea"><div class="task-empty">讀取中…</div></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
       <input type="hidden" id="fanShopEditingId" value="">
@@ -6117,9 +6117,9 @@
       <button type="button" class="task-mini-btn" id="fanShopSaveBtn">儲存</button>
       <button type="button" class="task-mini-btn" id="fanShopResetBtn">清空表單</button>
     </div>
-    <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">⚠️ 綁定教材後，該教材檔案會轉為會員專屬（私有），繪本館前台不再提供免費下載</div>
+    <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">注意：綁定教材後，該教材檔案會轉為會員專屬（私有），繪本館前台不再提供免費下載</div>
 
-    <h3 style="margin:24px 0 8px; font-size:15px;">💰 會員錢包工具</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">會員錢包工具</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
       <input type="text" id="fanWalletMemberNo" placeholder="會員編號，例 D26090001" style="min-width:200px; max-width:260px;">
       <button type="button" class="task-mini-btn" id="fanWalletLoadBtn">查詢</button>
@@ -6138,7 +6138,7 @@
       <button type="button" class="task-mini-btn" id="fanGrantBtn">送出</button>
     </div>
 
-    <h3 style="margin:24px 0 8px; font-size:15px;">🕵️ 認領嘗試紀錄</h3>
+    <h3 style="margin:24px 0 8px; font-size:15px;">認領嘗試紀錄</h3>
     <div style="margin-bottom:10px;">
       <button type="button" class="task-mini-btn" id="fanAttemptsLoadBtn">載入最近 200 筆</button>
     </div>
