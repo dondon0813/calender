@@ -5857,6 +5857,16 @@
     .lot-wl-memo{ color:var(--c-text-soft); font-size:12.5px; line-height:1.35; }
     .lot-wl-ops{ display:inline-flex; gap:4px; white-space:nowrap; }
     .lot-wl-sub{ display:flex; flex-wrap:wrap; gap:4px 18px; margin:6px 0 0 2px; font-size:12px; color:var(--c-text-soft); }
+    /* 收合摘要：一位得獎人一列（獎品｜姓名｜電話 地址｜狀態），點卡頭才展開完整編輯列 */
+    .lot-card-summary{ padding:0 18px 12px; display:flex; flex-direction:column; gap:4px; }
+    .lot-sum-row{ display:grid; grid-template-columns:minmax(110px,1fr) minmax(70px,.6fr) minmax(160px,2fr) auto; gap:4px 14px; align-items:baseline; font-size:13px; line-height:1.4; }
+    .lot-sum-prize{ font-weight:700; }
+    .lot-sum-who{ font-weight:700; color:var(--c-text); }
+    .lot-sum-info{ color:var(--c-text-soft); overflow-wrap:anywhere; }
+    .lot-sum-status{ font-size:11.5px; color:var(--c-text-soft); white-space:nowrap; }
+    .lot-sum-done{ color:var(--c-muted, var(--c-text-soft)); }
+    .lot-sum-done .lot-sum-who, .lot-sum-done .lot-sum-prize{ font-weight:600; color:var(--c-muted, var(--c-text-soft)); }
+    @media (max-width:700px){ .lot-sum-row{ grid-template-columns:1fr auto; } .lot-sum-row > .lot-sum-info{ grid-column:1 / -1; } }
     .lot-wl-sub > span > b{ font-weight:600; color:var(--c-muted, var(--c-text-soft)); margin-right:4px; }
     .lot-wl-empty{ padding:10px 6px; color:var(--c-muted, var(--c-text-soft)); font-size:12.5px; }
     .lot-wl-row-redrawn .lot-wl-main, .lot-wl-row-redrawn .lot-wl-sub{ color:var(--c-muted, #999); }
@@ -5866,7 +5876,8 @@
     .lot-ic-btn:hover{ background:#EDE4DB; color:var(--c-text); }
     .lot-ic-btn.danger{ color:var(--c-danger); }
     .lot-eye svg{ width:13px; height:13px; vertical-align:-2px; }
-    .lot-draw-block-foot .task-mini-btn svg, .lot-card-foot .task-mini-btn svg{ width:13px; height:13px; vertical-align:-2px; margin-right:2px; }
+    /* 抽獎區所有小按鈕裡的線條圖示（含待配對／未開團卡的「結案」、綁定列按鈕）統一尺寸，不然沒吃到規則的會撐成大圖 */
+    .lot-card .task-mini-btn svg, .lot-nolottery-row .task-mini-btn svg{ width:13px; height:13px; vertical-align:-2px; margin-right:2px; }
     @media (max-width:700px){
       .lot-wl-head{ display:none; }
       .lot-wl-main{ grid-template-columns:1fr auto; }
@@ -5883,6 +5894,7 @@
     .lot-chip.lot-chip-hint{ font-weight:500; }
     .lot-wl-sub .lot-sub-empty{ color:var(--c-muted, var(--c-text-soft)); }
     .lot-sheet-ref{ font-size:11.5px; color:var(--c-text-soft); background:#F5EFE9; border-radius:999px; padding:1px 8px; white-space:nowrap; }
+    .lot-sheet-ref svg{ width:12px; height:12px; vertical-align:-1px; }   /* 卡頭的試算表列 pill 不是 .lot-chip，SVG 要自己設尺寸（09-25 修） */
     .lot-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
     /* 固定欄寬：所有卡片共用同一組欄寬，讓「狀態」欄永遠在同一 x 位置（容器要有 overflow-x:auto） */
     .lot-table.lot-table-fixed{ table-layout:fixed; min-width:1410px; }
@@ -7379,7 +7391,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=17"></script>
+<script src="lottery.js?v=18"></script>
 <script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 
