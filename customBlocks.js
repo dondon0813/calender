@@ -24,6 +24,8 @@ function appendCustomBlocksAdmin(listEl, position) {
   items.forEach((b, idx) => {
     const wrap = document.createElement('div');
     wrap.className = 'cb-admin-wrap';
+    wrap.dataset.blockId = String(b.id);
+    wrap.dataset.position = position;
 
     const card = document.createElement('div');
     card.className = 'cb-card' + (CB_ANIM_CLASS[b.animation] ? ' ' + CB_ANIM_CLASS[b.animation] : '') + (b.enabled ? '' : ' cb-disabled');
@@ -44,6 +46,10 @@ function appendCustomBlocksAdmin(listEl, position) {
       subEl.textContent = b.subtitle;
       card.appendChild(subEl);
     }
+    // 拖曳排序：按住彩色卡片拖（滑鼠移超過 6px；觸控長按 300ms），同一個位置區（before／between／after）內互換
+    card.classList.add('cb-draggable');
+    card.title = '按住拖曳可調整順序';
+    card.addEventListener('pointerdown', (e) => cbDragPointerDown(e, wrap));
     wrap.appendChild(card);
 
     const bar = document.createElement('div');
@@ -63,21 +69,7 @@ function appendCustomBlocksAdmin(listEl, position) {
     toggleLabel.appendChild(toggleSwitch);
     bar.appendChild(toggleLabel);
 
-    const upBtn = document.createElement('button');
-    upBtn.className = 'task-mini-btn';
-    upBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 19V5\"/><path d=\"M6 11l6-6 6 6\"/></svg>"; // 線條圖示（09-25，取代 ↑ 文字符號）
-    upBtn.title = '往上移';
-    upBtn.disabled = idx === 0;
-    upBtn.addEventListener('click', (e) => { e.stopPropagation(); moveCustomBlock(b, 'up'); });
-    bar.appendChild(upBtn);
-
-    const downBtn = document.createElement('button');
-    downBtn.className = 'task-mini-btn';
-    downBtn.innerHTML = "<svg class=\"btn-ico\" style=\"margin:0\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14\"/><path d=\"M6 13l6 6 6-6\"/></svg>";
-    downBtn.title = '往下移';
-    downBtn.disabled = idx === items.length - 1;
-    downBtn.addEventListener('click', (e) => { e.stopPropagation(); moveCustomBlock(b, 'down'); });
-    bar.appendChild(downBtn);
+    // 上下移按鈕已移除（09-25 雪莉：改成直接拖曳區塊排序，見下方 cbDrag*）
 
     const editBtn = document.createElement('button');
     editBtn.className = 'task-mini-btn';
@@ -139,6 +131,78 @@ async function moveCustomBlock(block, direction) {
     await fetchMemos();
   } catch (err) {
     alert('排序更新失敗：' + err.message);
+  }
+}
+
+// ===== 拖曳排序（2026-09-25 雪莉：拿掉上下移按鈕，直接拖區塊）=====
+// 做法比照繪本館封面牆（books.js pbaDrag*）：滑鼠移超過 6px 才算拖、觸控長按 300ms（先滑動超過 10px＝在捲頁，放棄）。
+// 只能在同一個位置區（before／between／after）內排序；放開後整批打 block-sort 存檔，失敗就重畫回原順序。
+let cbDrag = null;
+function cbSiblings(wrap) {
+  return Array.from(wrap.parentElement.querySelectorAll('.cb-admin-wrap[data-position="' + wrap.dataset.position + '"]'));
+}
+function cbDragPointerDown(e, wrap) {
+  if (cbDrag) return;
+  if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+  if (cbSiblings(wrap).length < 2) return; // 只有一個區塊沒得排
+  cbDrag = { wrap, startX: e.clientX, startY: e.clientY, started: false, moved: false, timer: null, isTouch: e.pointerType !== 'mouse',
+    orderBefore: cbSiblings(wrap).map(w => w.dataset.blockId) };
+  if (cbDrag.isTouch) cbDrag.timer = setTimeout(() => { if (cbDrag && !cbDrag.started && !cbDrag.moved) cbStartDrag(); }, 300);
+  document.addEventListener('pointermove', cbDragMove);
+  document.addEventListener('pointerup', cbDragUp);
+  document.addEventListener('pointercancel', cbDragCancel);
+}
+function cbBlockScroll(e) { e.preventDefault(); }
+function cbStartDrag() {
+  cbDrag.started = true;
+  cbDrag.wrap.classList.add('dragging');
+  document.addEventListener('touchmove', cbBlockScroll, { passive: false });
+}
+function cbDragMove(e) {
+  if (!cbDrag) return;
+  const dist = Math.hypot(e.clientX - cbDrag.startX, e.clientY - cbDrag.startY);
+  if (!cbDrag.started) {
+    if (!cbDrag.isTouch && dist > 6) cbStartDrag();
+    else if (dist > 10) { cbDrag.moved = true; clearTimeout(cbDrag.timer); }
+    if (!cbDrag.started) return;
+  }
+  e.preventDefault();
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const target = under && under.closest ? under.closest('.cb-admin-wrap') : null;
+  if (!target || target === cbDrag.wrap || target.dataset.position !== cbDrag.wrap.dataset.position || target.parentElement !== cbDrag.wrap.parentElement) return;
+  const sibs = cbSiblings(cbDrag.wrap);
+  if (sibs.indexOf(cbDrag.wrap) < sibs.indexOf(target)) target.after(cbDrag.wrap);
+  else target.before(cbDrag.wrap);
+}
+function cbDragCleanup() {
+  clearTimeout(cbDrag && cbDrag.timer);
+  document.removeEventListener('pointermove', cbDragMove);
+  document.removeEventListener('pointerup', cbDragUp);
+  document.removeEventListener('pointercancel', cbDragCancel);
+  document.removeEventListener('touchmove', cbBlockScroll);
+  if (cbDrag && cbDrag.wrap) cbDrag.wrap.classList.remove('dragging');
+  cbDrag = null;
+}
+function cbDragCancel() {
+  const started = cbDrag && cbDrag.started;
+  cbDragCleanup();
+  if (started) fetchMemos();
+}
+async function cbDragUp() {
+  if (!cbDrag) return;
+  const { wrap, started, orderBefore } = cbDrag;
+  cbDragCleanup();
+  if (!started) return;
+  const ids = cbSiblings(wrap).map(w => w.dataset.blockId);
+  if (ids.join() === orderBefore.join()) return; // 拖了又放回原位
+  // 本地先同步 order（避免其他重畫把順序畫回去），再打後端；失敗重抓回真實順序
+  ids.forEach((id, i) => { const b = customBlocks.find(x => String(x.id) === id); if (b) b.order = i + 1; });
+  try {
+    const res = await postTask({ type: 'block-sort', ids });
+    if (!res || res.success === false) throw new Error((res && res.error) || '排序存檔失敗');
+  } catch (err) {
+    alert('排序更新失敗：' + err.message);
+    await fetchMemos();
   }
 }
 

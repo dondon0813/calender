@@ -3631,6 +3631,10 @@
   .cb-subtitle { font-size: 12.5px; opacity: 0.85; margin-top: 4px; }
   .cb-disabled { opacity: 0.45; }
   .cb-admin-wrap { margin-bottom: 14px; }
+  /* 拖曳排序（09-25）：卡片可按住拖；拖曳中半透明虛線框 */
+  .cb-admin-wrap .cb-draggable { cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .cb-admin-wrap.dragging { opacity: .45; }
+  .cb-admin-wrap.dragging .cb-card { outline: 2px dashed var(--c-primary); outline-offset: 2px; }
   .cb-admin-bar {
     display: flex;
     align-items: center;
@@ -7390,7 +7394,7 @@
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
-<script src="customBlocks.js?v=4"></script>
+<script src="customBlocks.js?v=5"></script>
 <script src="tools.js?v=18"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>
