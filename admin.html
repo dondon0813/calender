@@ -5101,9 +5101,9 @@
     <!-- ===== 抽獎（lottery.js；抽獎活動＋得獎人；改版後掛在帳務頁子分頁，綁帳務團／R號，見 dondon-platform docs/09-lottery-design.md §11）===== -->
     <div id="acctPaneLottery" style="display:none;">
       <div class="rpt-header-wrap">
-        <h3 style="margin:0; font-size:16px;">🎁 抽獎</h3>
+        <h3 style="margin:0; font-size:16px;">抽獎</h3>
         <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
-        <button class="task-mini-btn" id="lotRefreshBtn">🔄 重新整理</button>
+        <button class="task-mini-btn" id="lotRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
       </div>
       <div id="lotBanner"></div>
       <div id="lotTiles" class="lot-tiles"></div>
@@ -5182,7 +5182,7 @@
   <div class="view" id="viewBooks">
     <div class="rpt-header-wrap">
       <h2 class="view-title">繪本後台</h2>
-      <button class="task-mini-btn" id="booksRefreshBtn">🔄 重新整理</button>
+      <button class="task-mini-btn" id="booksRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
 
     <div class="pba-tabs">
@@ -5761,7 +5761,7 @@
     <div class="rpt-header-wrap">
       <h2 class="view-title">訂閱管理</h2>
       <button class="task-mini-btn" id="cardSubAddBtn">＋ 新增訂閱</button>
-      <button class="task-mini-btn" id="cardSubRefreshBtn">🔄 重新整理</button>
+      <button class="task-mini-btn" id="cardSubRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
     <div id="cardSubAlerts"></div>
     <div id="cardSubStats"></div>
@@ -5772,7 +5772,7 @@
   <div class="view" id="viewChangelog">
     <div class="rpt-header-wrap">
       <h2 class="view-title">更新日誌</h2>
-      <button class="task-mini-btn" id="changelogRefreshBtn">🔄 重新整理</button>
+      <button class="task-mini-btn" id="changelogRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
     <div id="changelogNotReady" style="display:none; background:#F4ECE3; border:1px solid #F0DBA0; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
       ⚠️ 更新日誌資料表還沒建立，要先執行一次 db push 才能儲存。
@@ -5797,7 +5797,7 @@
     .lot-tiles{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
     /* 摘要磚：寬度不夠就自動換行（原本固定 6 欄，窄視窗／分割畫面時「待回填資料」被切掉） */
     .lot-tiles-grid{ flex:1; min-width:0; width:100%; display:grid; grid-template-columns:repeat(auto-fit, minmax(108px, 1fr)); gap:10px; }
-    .lot-tile{ min-width:0; background:var(--c-bg-bottom); border:1px solid var(--c-border-light); border-radius:12px; padding:10px 12px; cursor:pointer; }
+    .lot-tile{ min-width:0; background:#F5EFE9; border:none; border-radius:14px; padding:10px 12px; cursor:pointer; }
     .lot-tile .lot-tile-n{ font-size:24px; font-weight:800; line-height:1; }
     .lot-tile .lot-tile-l{ font-size:12px; color:var(--c-text-soft); margin-top:2px; white-space:nowrap; }
     .lot-tile.await .lot-tile-n{ color:var(--c-cat-1); }
@@ -5806,7 +5806,7 @@
     .lot-tile.pending .lot-tile-n{ color:var(--c-danger); }
     .lot-tile.unopened .lot-tile-n{ color:var(--c-cat-2); }
     .lot-tile.unpaired .lot-tile-n{ color:var(--c-primary); }
-    .lot-tile.on{ outline:2px solid var(--c-primary); }
+    .lot-tile.on{ outline:2px solid var(--c-primary); outline-offset:-2px; }
     .lot-filters{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; }
     .lot-filters select, .lot-filters input[type="text"]{
       border:1px solid var(--c-border); background:#fff; border-radius:8px; padding:5px 10px; font-size:13px; font-family:inherit;
@@ -5829,17 +5829,18 @@
     .lot-tr-muted td{ color:var(--c-muted, var(--c-text-soft)); }
     .lot-tr-caret{ display:inline-block; width:14px; margin-right:4px; vertical-align:-1px; }
     .lot-tr-caret svg{ width:12px; height:12px; display:block; }
-    .lot-td-date{ white-space:nowrap; font-weight:800; }
-    .lot-td-title{ font-weight:800; min-width:160px; }
-    .lot-td-prize{ min-width:120px; }
-    .lot-td-winners{ min-width:90px; white-space:nowrap; }
-    .lot-td-contact{ color:var(--c-text-soft); min-width:200px; font-size:12.5px; }
+    /* 欄寬：width:1% ＝縮到內容寬（date／title／winners／progress／status），多餘寬度給獎品與電話地址（雪莉 09-25：得獎人後面空一大塊） */
+    .lot-td-date{ white-space:nowrap; font-weight:800; width:1%; }
+    .lot-td-title{ font-weight:800; white-space:nowrap; width:1%; }
+    .lot-td-prize{ min-width:140px; }
+    .lot-td-winners{ white-space:nowrap; width:1%; }
+    .lot-td-contact{ color:var(--c-text-soft); min-width:220px; font-size:12.5px; }
     .lot-brief-line{ line-height:1.6; white-space:nowrap; }
     .lot-brief-done{ color:var(--c-muted, var(--c-text-soft)); }
     .lot-brief-line.lot-more{ color:var(--c-muted, var(--c-text-soft)); font-size:12px; }
     .lot-detail-brand{ font-size:12.5px; color:var(--c-text-soft); }
-    .lot-td-num{ white-space:nowrap; text-align:right; }
-    .lot-td-status{ white-space:nowrap; }
+    .lot-td-num{ white-space:nowrap; text-align:right; width:1%; }
+    .lot-td-status{ white-space:nowrap; width:1%; }
     .lot-td-ops .task-mini-btn{ margin-left:6px; }
     .lot-pill{ display:inline-block; font-size:11.5px; font-weight:700; border-radius:999px; padding:2px 9px; white-space:nowrap; color:#fff; }
     .lot-pill-pending{ background:var(--c-cat-1); }
@@ -7431,7 +7432,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=20"></script>
+<script src="lottery.js?v=21"></script>
 <script src="admin.js?v=102"></script>
 <script src="memo.js?v=7"></script>
 
