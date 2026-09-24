@@ -90,9 +90,13 @@ let LOTTERY_HIDE_DONE = lotLoadHideDone();
 // 狀態機（§3）：代碼 -> 顯示名／CSS 修飾字
 const LOT_STATUS_LABEL = {
   pending: '待聯絡', awaiting_info: '待回填資料', info_ready: '待寄出',
-  handed_to_vendor: '廠商寄送中', done: '已完成', redrawn: '已重抽'
+  handed_to_vendor: '廠商寄送中', done: '已完成', redrawn: '已重抽', forfeited: '已放棄'
 };
-const LOT_STATUS_ORDER = ['pending', 'awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn'];
+const LOT_STATUS_ORDER = ['pending', 'awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn', 'forfeited'];
+// 「結束態」＝不算待處理、不算完成的狀態（已重抽／已放棄）：進度、待辦、隱藏已完成都把它們排除
+const LOT_CLOSED = ['redrawn', 'forfeited'];
+function lotIsClosed(w) { return LOT_CLOSED.indexOf(w.status) !== -1; }
+function lotIsSettled(w) { return w.status === 'done' || lotIsClosed(w); }
 const LOT_SHIP_BY_LABEL = { self: '團購主', vendor: '廠商', none: '團購主' };
 // 2026-09-23 獎品類型三選一（docs/09 §12）
 const LOT_PRIZE_TYPE_LABEL = { cash: '現金／免單', physical: '實體贈品', virtual: '虛擬贈品' };
@@ -120,12 +124,13 @@ const LOT_SECTION_LABEL = { groupbuy: '團購抽獎', non_groupbuy: '非團購',
 // 篩選 chips：待聯絡刻意不列（原本設計就只有這六顆）；待抽／待配對是分區虛擬狀態，一併放進 chip 方便直接篩。
 const LOT_FILTER_CHIPS = [
   { key: 'all', label: '全部' },
-  { key: 'pending_draw', label: '⏰ 待抽' },
+  { key: 'pending_draw', label: '待抽' },
   { key: 'awaiting_info', label: '待回填' },
   { key: 'info_ready', label: '待寄出' },
   { key: 'handed_to_vendor', label: '廠商寄送中' },
   { key: 'done', label: '已完成' },
   { key: 'redrawn', label: '已重抽' },
+  { key: 'forfeited', label: '已放棄' },
   { key: 'unpaired', label: '待配對' }
 ];
 // 待辦清單視圖不含已完成/已重抽/待抽/待配對（本來就篩掉了），chips 只留跟它相關的四顆
@@ -554,18 +559,18 @@ function lotWinnerHay(w) {
 }
 function lotWinnerStatusFilterOk(w) {
   const s = LOTTERY_FILTER.status;
-  if (['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn'].indexOf(s) === -1) return true;
+  if (['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn', 'forfeited'].indexOf(s) === -1) return true;
   return w.status === s;
 }
 
 // ===== 隱藏已完成：一場抽獎「已完成」＝至少 1 位得獎人，且全部得獎人狀態為 done／redrawn =====
 function lotDrawCompleted(d) {
   const winners = d.winners || [];
-  return winners.length > 0 && winners.every(w => w.status === 'done' || w.status === 'redrawn');
+  return winners.length > 0 && winners.every(lotIsSettled);
 }
 // 搜尋中或直接篩選 done／redrawn 狀態時，隱藏規則失效（不然會篩出空結果）
 function lotHideDoneBypassed() {
-  return !!lotSearchQuery() || LOTTERY_FILTER.status === 'done' || LOTTERY_FILTER.status === 'redrawn';
+  return !!lotSearchQuery() || LOTTERY_FILTER.status === 'done' || lotIsClosed({ status: LOTTERY_FILTER.status });
 }
 function lotHideDoneActive() {
   return LOTTERY_HIDE_DONE && !lotHideDoneBypassed();
@@ -586,7 +591,7 @@ function lotZoneGroupbuyItems() {
 function lotFilterGroupbuyItems(items, opts) {
   const q = lotSearchQuery();
   const applyHideDone = !opts || opts.hideDone !== false;
-  const winnerStatusActive = ['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn'].indexOf(LOTTERY_FILTER.status) !== -1;
+  const winnerStatusActive = ['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn', 'forfeited'].indexOf(LOTTERY_FILTER.status) !== -1;
   return items.filter(it => {
     if (it.type === 'nolottery' && !LOTTERY_SHOW_NO_LOTTERY) return false;
     // 「已標不抽」「待抽」兩種虛擬卡片永不因「已完成」被隱藏，只有 type='real' 且全部抽獎都已完成才隱藏
@@ -614,7 +619,7 @@ function lotFilterGroupbuyItems(items, opts) {
 function lotFilterSimpleZoneDraws(draws, opts) {
   const q = lotSearchQuery();
   const applyHideDone = !opts || opts.hideDone !== false;
-  const winnerStatusActive = ['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn'].indexOf(LOTTERY_FILTER.status) !== -1;
+  const winnerStatusActive = ['awaiting_info', 'info_ready', 'handed_to_vendor', 'done', 'redrawn', 'forfeited'].indexOf(LOTTERY_FILTER.status) !== -1;
   return draws.filter(d => {
     if (applyHideDone && lotHideDoneActive() && lotDrawCompleted(d)) return false;
     if (LOTTERY_FILTER.brand && d.brandId !== LOTTERY_FILTER.brand) return false;
@@ -708,7 +713,7 @@ function lotWinnersRows(draws) {
   const rows = [];
   (draws || []).forEach(d => {
     (d.winners || []).forEach(w => {
-      if (w.status === 'redrawn') return;
+      if (lotIsClosed(w)) return;
       const pt = lotWinnerType(w, d);
       const v = (x) => { const s = (x == null ? '' : String(x)).trim(); return /^[-－—]+$/.test(s) ? '' : s; }; // 試算表空值寫法「-」當空
       let contact = '';
@@ -741,7 +746,7 @@ function lotWinnersBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'who
 function lotPrizeBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'prize'); }
 function lotContactBrief(draws) { return lotBriefCol(lotWinnersRows(draws), 'contact'); }
 function lotProgressOf(draws) {
-  const all = (draws || []).flatMap(d => d.winners || []).filter(w => w.status !== 'redrawn');
+  const all = (draws || []).flatMap(d => d.winners || []).filter(w => !lotIsClosed(w));
   const done = all.filter(w => w.status === 'done').length;
   return { done, total: all.length, pending: all.length - done };
 }
@@ -913,7 +918,7 @@ function lotTeamCardHtml(team, draws) {
   const allWinners = draws.flatMap(d => d.winners || []);
   const total = allWinners.length;
   const doneCount = allWinners.filter(w => w.status === 'done').length;
-  const unfinished = allWinners.some(w => w.status !== 'done' && w.status !== 'redrawn');
+  const unfinished = allWinners.some(w => !lotIsSettled(w));
   const cardKey = 'team:' + team.acctId;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : false; // 預設收合（雪莉 09-25），收合時卡上列得獎人摘要
 
@@ -994,7 +999,7 @@ function lotDrawBlockHtml(draw, opts) {
 function lotSimpleDrawCardHtml(draw) {
   const total = (draw.winners || []).length;
   const doneCount = (draw.winners || []).filter(w => w.status === 'done').length;
-  const unfinished = (draw.winners || []).some(w => w.status !== 'done' && w.status !== 'redrawn');
+  const unfinished = (draw.winners || []).some(w => !lotIsSettled(w));
   const cardKey = 'draw:' + draw.id;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : false; // 預設收合（雪莉 09-25），收合時卡上列得獎人摘要
   const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
@@ -1079,7 +1084,7 @@ function lotUnpairedExtrasHtml(draw) {
 // 差別是多顯示行事曆團購資訊（開團日期／團名／未發布徽章）＋多一顆「解除行事曆綁定」。
 function lotUnopenedCardHtml(draw) {
   const total = (draw.winners || []).length;
-  const unfinished = (draw.winners || []).some(w => w.status !== 'done' && w.status !== 'redrawn');
+  const unfinished = (draw.winners || []).some(w => !lotIsSettled(w));
   const cardKey = 'draw:' + draw.id;
   const expanded = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, cardKey) ? LOTTERY_EXPANDED_OVERRIDE[cardKey] : false; // 預設收合（雪莉 09-25），收合時卡上列得獎人摘要
   const thumb = ''; // 品牌小圖拿掉（雪莉 09-24：讓頁面更亂）
@@ -1202,7 +1207,7 @@ function lotCardSummaryHtml(draws) {
   (draws || []).forEach(d => {
     const pt = d.prizeType || 'physical';
     (d.winners || []).forEach(w => {
-      if (w.status === 'redrawn') return;
+      if (lotIsClosed(w)) return;
       const who = w.name || w.winnerHandle || '';
       const info = [];
       if (pt === 'cash') {
@@ -1257,7 +1262,7 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
   // 得獎人類型跟活動不同（例：免單場裡的實體贈品）→ 獎品名後標小膠囊
   const typeTag = (drawPrizeType && prizeType !== drawPrizeType)
     ? ' <span class="lot-ptype lot-ptype-' + lotEscapeHtml(prizeType) + '">' + (LOT_PRIZE_TYPE_LABEL[prizeType] || '') + '</span>' : '';
-  const rowCls = w.status === 'redrawn' ? ' lot-wl-row-redrawn' : '';
+  const rowCls = lotIsClosed(w) ? ' lot-wl-row-redrawn' : ''; // 已重抽／已放棄同一種淡化＋刪除線
   const statusOptions = LOT_STATUS_ORDER.map(k => '<option value="' + k + '"' + (w.status === k ? ' selected' : '') + '>' + lotStatusLabel(k, prizeType) + '</option>').join('');
   const statusSel = '<select class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" data-role="status-sel" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (LOTTERY_CAN_EDIT ? '' : ' disabled') + '>' + statusOptions + '</select>';
   const empty = '<span class="lot-empty-cell">—</span>';
@@ -1268,8 +1273,8 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
   const shipActionLabel = prizeType === 'cash' ? '標記已匯款（今天）' : (prizeType === 'virtual' ? '標記已發送（今天）' : '標記已寄出（今天）');
   const actions = LOTTERY_CAN_EDIT
     ? '<button class="lot-ic-btn" title="編輯" aria-label="編輯" data-role="edit-winner" data-winner-id="' + lotEscapeHtml(w.id) + '" data-draw-id="' + lotEscapeHtml(drawId) + '">' + lotIcon('edit') + '</button>' +
-      (w.status !== 'done' && w.status !== 'redrawn' ? '<button class="lot-ic-btn" title="' + shipActionLabel + '" aria-label="' + shipActionLabel + '" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('check') + '</button>' : '') +
-      (w.status !== 'redrawn' ? '<button class="lot-ic-btn danger" title="重抽" aria-label="重抽" data-role="redraw-winner" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('redo') + '</button>' : '')
+      (!lotIsSettled(w) ? '<button class="lot-ic-btn" title="' + shipActionLabel + '" aria-label="' + shipActionLabel + '" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('check') + '</button>' : '') +
+      (!lotIsClosed(w) ? '<button class="lot-ic-btn danger" title="重抽" aria-label="重抽" data-role="redraw-winner" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('redo') + '</button>' : '')
     : '';
   const sub = (label, val) => '<span><b>' + label + '</b>' + val + '</span>';
 
@@ -1325,7 +1330,7 @@ function renderLotteryTodo() {
     if (LOTTERY_FILTER.brand && draw.brandId !== LOTTERY_FILTER.brand) return;
     const team = draw.acctId ? lotTeamByAcctId(draw.acctId) : null;
     (draw.winners || []).forEach(w => {
-      if (w.status === 'done' || w.status === 'redrawn') return;
+      if (lotIsSettled(w)) return;
       if (!lotWinnerStatusFilterOk(w)) return;
       const q = lotSearchQuery();
       if (q) {
@@ -1678,7 +1683,7 @@ function lotBadgeForAcctRow(legacyId, contFromLegacyId) {
     return null;
   }
   const winners = draws.flatMap(d => d.winners || []);
-  const pending = winners.filter(w => w.status !== 'done' && w.status !== 'redrawn');
+  const pending = winners.filter(w => !lotIsSettled(w));
   if (!pending.length) return { label: '已完成 ' + winners.length, cls: 'lot-acct-badge-done' };
   return { label: '待處理 ' + pending.length, cls: 'lot-acct-badge-pending' };
 }
