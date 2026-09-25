@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>員工旅遊記帳｜雪莉與朵栗</title>
+<link rel="apple-touch-icon" href="icons/site-apple-touch-v2.png">
+<link rel="icon" type="image/png" href="icons/site-192-v2.png">
+<style>
+  :root {
+    --bg: #FFFFFF; --surface: #F5EFE9; --surface-2: #F1E8E0; --line: #E6DCD2;
+    --text: #5A4A42; --soft: #7D6A5F; --muted: #A3948A; --placeholder: #B9ACA2;
+    --primary: #C99A9B; --primary-dark: #B07F83; --berry: #B5485A; --mint: #6F8466;
+    --cat-food: #D4A98A; --cat-transport: #8FA9C7; --cat-fun: #B3A3C9; --cat-shop: #C99A9B; --cat-stay: #9DBDB8; --cat-other: #D6BE8A;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 18px 16px 0; }
+  h1 { font-size: 1.3rem; margin: 0; color: var(--primary-dark); display: flex; align-items: center; gap: 8px; }
+  h1 svg { width: 22px; height: 22px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .iconbtn { background: none; border: none; padding: 6px; color: var(--muted); cursor: pointer; display: inline-flex; border-radius: 10px; }
+  .iconbtn:hover { color: var(--primary-dark); background: var(--surface); }
+  .iconbtn svg { width: 22px; height: 22px; }
+  .sync { font-size: .75rem; color: var(--muted); min-height: 1.1em; margin-bottom: 12px; }
+  .sync.err { color: var(--berry); }
+  .card { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: .95rem; margin: 0 0 10px; color: var(--soft); font-weight: 700; }
+  .empty { color: var(--muted); font-size: .88rem; text-align: center; padding: 18px 0; }
+  .hidden { display: none !important; }
+
+  /* 登入與表單 */
+  label { display: block; font-size: .82rem; font-weight: 700; color: var(--soft); margin: 10px 0 4px; }
+  input[type=text], input[type=password], input[type=number], input[type=date], select, textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px; background: #fff; color: var(--text); font-family: inherit; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--primary); color: #fff; border: none; border-radius: 999px; padding: 10px 24px; font-size: .95rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: var(--primary-dark); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--soft); }
+  .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+  .btn.danger { background: transparent; color: var(--berry); }
+  .btn.danger:hover { background: #F3E3E1; }
+  .err { color: var(--berry); font-size: .82rem; margin-top: 6px; min-height: 1em; }
+
+  /* 總覽 */
+  .total { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
+  .total .big { font-size: 1.7rem; font-weight: 800; color: var(--primary-dark); letter-spacing: .5px; }
+  .total .sub { font-size: .8rem; color: var(--muted); }
+  .cats-head { font-size: .78rem; font-weight: 700; color: var(--soft); margin-top: 14px; }
+  .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+  .cat { background: #fff; border-radius: 12px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .cat .ic { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; color: #fff; }
+  .cat .ic svg { width: 16px; height: 16px; }
+  .cat .nm { font-size: .72rem; color: var(--muted); }
+  .cat .amt { font-size: .85rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .payers { margin-top: 12px; font-size: .85rem; }
+  .payers .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .payers .row:last-child { border-bottom: none; }
+
+  /* 日期分頁 */
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 10px; scrollbar-width: thin; scrollbar-color: var(--primary) transparent; }
+  .tabs::-webkit-scrollbar { height: 4px; }
+  .tabs::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+  .tab { flex: none; background: var(--surface); border: none; border-radius: 999px; padding: 7px 14px; font-size: .85rem; color: var(--soft); cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .tab.on { background: var(--primary); color: #fff; font-weight: 700; }
+  .tab small { opacity: .8; font-size: .72rem; margin-left: 3px; }
+
+  /* 清單 */
+  .day { margin-bottom: 14px; }
+  .dayhead { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 6px; }
+  .dayhead .d { font-weight: 700; font-size: .95rem; }
+  .dayhead .d small { color: var(--muted); font-weight: 400; font-size: .78rem; margin-left: 6px; }
+  .dayhead .t { font-size: .85rem; color: var(--primary-dark); font-weight: 700; }
+  .item { display: flex; align-items: center; gap: 10px; background: var(--surface); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; }
+  .item:hover { background: var(--surface-2); }
+  .item .ic { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; color: #fff; }
+  .item .ic svg { width: 18px; height: 18px; }
+  .item .m { flex: 1; min-width: 0; }
+  .item .n { font-weight: 700; font-size: .93rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .s { font-size: .76rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .a { font-weight: 700; white-space: nowrap; text-align: right; }
+  .item .a small { display: block; font-weight: 400; font-size: .72rem; color: var(--muted); }
+
+  /* 浮動新增鈕 */
+  .fab { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); background: var(--primary); color: #fff; border: none; border-radius: 999px; padding: 13px 20px 13px 16px; font-size: 1rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(176,127,131,.35); cursor: pointer; font-family: inherit; z-index: 20; }
+  .fab svg { width: 20px; height: 20px; }
+
+  /* 視窗 */
+  .modal { position: fixed; inset: 0; background: rgba(90,74,66,.35); display: none; align-items: flex-end; justify-content: center; z-index: 50; }
+  .modal.open { display: flex; }
+  .sheet { background: #fff; width: 100%; max-width: 640px; border-radius: 18px 18px 0 0; padding: 18px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto; }
+  @media (min-width: 700px) { .modal { align-items: center; } .sheet { border-radius: 18px; } }
+  .sheet h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--primary-dark); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .catpick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .catpick button { border: 1.5px solid transparent; background: var(--surface); border-radius: 12px; padding: 8px 2px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: inherit; font-size: .74rem; color: var(--soft); }
+  .catpick button .ic { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
+  .catpick button .ic svg { width: 15px; height: 15px; }
+  .catpick button.on { border-color: var(--primary-dark); background: #fff; color: var(--text); font-weight: 700; }
+  .curpick { display: flex; gap: 0; }
+  .curpick button { flex: 1; border: 1.5px solid var(--line); background: #fff; padding: 9px 0; font-size: .95rem; cursor: pointer; font-family: inherit; color: var(--soft); }
+  .curpick button:first-child { border-radius: 10px 0 0 10px; }
+  .curpick button:last-child { border-radius: 0 10px 10px 0; border-left: none; }
+  .curpick button.on { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+  .actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 16px; }
+  .actions .r { display: flex; gap: 6px; }
+  .hint { font-size: .78rem; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 7l2-3h12l2 3"/><path d="M9 11h6"/></svg><span id="tripTitle">員工旅遊記帳</span></h1>
+    <button class="iconbtn" id="settingsBtn" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+  <div class="sync" id="sync"></div>
+
+  <div class="card hidden" id="loginCard">
+    <h2>請先登入（與後台同一組帳號）</h2>
+    <label for="loginName">姓名</label>
+    <input type="text" id="loginName" autocomplete="username">
+    <label for="loginPw">密碼</label>
+    <input type="password" id="loginPw" autocomplete="current-password">
+    <div class="err" id="loginErr"></div>
+    <button class="btn" id="loginBtn" style="margin-top:10px;">登入</button>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="card">
+      <div class="total">
+        <div class="big" id="totalTwd">NT$ 0</div>
+        <div class="sub" id="totalSub"></div>
+      </div>
+      <div class="cats-head">各分類小計（台幣估算）</div>
+      <div class="cats" id="catSummary"></div>
+      <div class="payers" id="payerSummary"></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<button class="fab hidden" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>記一筆</button>
+
+<div class="modal" id="itemModal">
+  <div class="sheet">
+    <h3 id="itemModalTitle">記一筆</h3>
+    <label>分類</label>
+    <div class="catpick" id="catPick"></div>
+    <div class="grid2">
+      <div><label for="fDate">日期</label><input type="date" id="fDate"></div>
+      <div><label for="fPayer">誰付的</label><input type="text" id="fPayer" list="payerList" placeholder="例：雪莉" maxlength="20"><datalist id="payerList"></datalist></div>
+    </div>
+    <label for="fName">品項</label>
+    <input type="text" id="fName" placeholder="例：一蘭拉麵、JR 車票、藥妝" maxlength="60">
+    <div class="grid2">
+      <div><label for="fAmount">金額</label><input type="number" id="fAmount" inputmode="decimal" min="0" step="1" placeholder="0"></div>
+      <div><label>幣別</label><div class="curpick"><button type="button" data-cur="JPY" class="on">¥ 日圓</button><button type="button" data-cur="TWD">NT$ 台幣</button></div></div>
+    </div>
+    <label for="fNote">備註（選填）</label>
+    <input type="text" id="fNote" placeholder="例：4 人份、公司報帳" maxlength="100">
+    <div class="err" id="itemErr"></div>
+    <div class="actions">
+      <button class="btn danger hidden" id="delBtn">刪除</button>
+      <div class="r"><button class="btn ghost" id="cancelBtn">取消</button><button class="btn" id="saveBtn">儲存</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="settingsModal">
+  <div class="sheet">
+    <h3>設定</h3>
+    <label for="sTitle">旅遊名稱</label>
+    <input type="text" id="sTitle" maxlength="30">
+    <div class="grid2">
+      <div><label for="sStart">出發日</label><input type="date" id="sStart"></div>
+      <div><label for="sEnd">回程日</label><input type="date" id="sEnd"></div>
+    </div>
+    <label for="sRate">匯率（1 日圓 ＝ 多少台幣）</label>
+    <input type="number" id="sRate" inputmode="decimal" min="0" step="0.001" placeholder="0.22">
+    <div class="hint">總金額用這個匯率把日圓換算成台幣估算；台幣記的項目直接相加。</div>
+    <div class="actions">
+      <button class="btn ghost" id="exportBtn">匯出 CSV</button>
+      <div class="r"><button class="btn ghost" id="sCancelBtn">取消</button><button class="btn" id="sSaveBtn">儲存</button></div>
+    </div>
+    <div class="hint" style="margin-top:14px;">登入者：<span id="whoami"></span>　<a href="#" id="logoutLink" style="color:var(--primary-dark);">登出</a></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   員工旅遊記帳（2026-09-26）
+   - 單獨一頁，不掛官網入口；資料存後端 key_values（namespace=appsetting）
+     一個 key 一趟旅遊，走既有 setting-get／setting-set（僅需登入、零後端改動）。
+   - 網址 ?trip=xxx 可切不同旅遊（預設 japan2026），key 前綴 trip_ledger_。
+   - 多人同時記：每次存檔先抓最新版再依 id 合併（同 id 取較新 at），刪除留墓碑 del:true，
+     所以 A 手機新增、B 手機刪除不會互相蓋掉。本機另留一份快取，斷線也看得到。
+   ============================================================ */
+const API = 'https://dondon-platform.vercel.app/api/legacy';
+const TRIP = (new URLSearchParams(location.search).get('trip') || 'japan2026').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'japan2026';
+const KEY = 'trip_ledger_' + TRIP;
+const LS_KEY = 'trip_ledger_cache_' + TRIP;
+
+const CATS = [
+  { id: 'food',      name: '食',   color: 'var(--cat-food)',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v7a3 3 0 0 0 6 0V3"/><path d="M8 3v18"/><path d="M17 3c-2 1-3 4-3 8h3v10"/></svg>' },
+  { id: 'transport', name: '行',   color: 'var(--cat-transport)', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 10h14"/><path d="M9 14h.01M15 14h.01"/><path d="M8 17l-2 4M16 17l2 4"/></svg>' },
+  { id: 'fun',       name: '樂',   color: 'var(--cat-fun)',       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 0 0-6V6H3z"/><path d="M13 6v12"/></svg>' },
+  { id: 'shop',      name: '購物', color: 'var(--cat-shop)',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
+  { id: 'stay',      name: '住',   color: 'var(--cat-stay)',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V8"/><path d="M3 14h18v4"/><path d="M7 11a2 2 0 1 1 0 .01"/><path d="M11 14v-3h7a3 3 0 0 1 3 3"/></svg>' },
+  { id: 'other',     name: '其他', color: 'var(--cat-other)',     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h.01M12 12h.01M18 12h.01"/></svg>' },
+];
+const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+
+let STATE = { v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [] };
+let SELECTED_DAY = 'all';
+let EDITING_ID = null;
+let FORM_CUR = 'JPY';
+let FORM_CAT = 'food';
+let SYNC = { busy: false, dirty: false, timer: null };
+
+/* ---------- 工具 ---------- */
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function getToken() { try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; } }
+function getUser() { try { return localStorage.getItem('admin_user') || ''; } catch (e) { return ''; } }
+function todayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function fmtDate(iso, withYear) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return iso || '未填日期';
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return (withYear ? m[1] + '/' : '') + (+m[2]) + '/' + (+m[3]) + '（' + WEEK[d.getDay()] + '）';
+}
+function fmtMoney(n, cur) {
+  const v = Math.round(Number(n) || 0);
+  return (cur === 'TWD' ? 'NT$ ' : '¥ ') + v.toLocaleString('en-US');
+}
+function toTwd(item) { return item.cur === 'TWD' ? Number(item.amount) || 0 : (Number(item.amount) || 0) * (Number(STATE.rate) || 0); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function liveItems() { return STATE.items.filter(i => !i.del); }
+function dayIndex(iso) {
+  if (!STATE.start || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return 0;
+  const a = new Date(STATE.start + 'T00:00:00'), b = new Date(iso + 'T00:00:00');
+  const n = Math.round((b - a) / 86400000) + 1;
+  return n >= 1 ? n : 0;
+}
+async function apiPost(type, payload) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ type, token: getToken() }, payload || {})) });
+  return res.json();
+}
+function setSync(msg, isErr) { const el = document.getElementById('sync'); el.textContent = msg || ''; el.className = 'sync' + (isErr ? ' err' : ''); }
+
+/* ---------- 資料合併 ---------- */
+function normalize(raw) {
+  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [] }, raw || {});
+  if (!Array.isArray(s.items)) s.items = [];
+  s.items = s.items.filter(i => i && i.id).map(i => ({
+    id: String(i.id), date: String(i.date || ''), cat: CAT_MAP[i.cat] ? i.cat : 'other',
+    name: String(i.name || '').slice(0, 60), amount: Number(i.amount) || 0, cur: i.cur === 'TWD' ? 'TWD' : 'JPY',
+    payer: String(i.payer || '').slice(0, 20), note: String(i.note || '').slice(0, 100),
+    by: String(i.by || '').slice(0, 20), at: Number(i.at) || 0, del: !!i.del,
+  }));
+  s.rate = Number(s.rate) || 0;
+  s.metaAt = Number(s.metaAt) || 0;
+  return s;
+}
+function merge(local, remote) {
+  const out = normalize(remote);
+  // 旅遊名稱／日期／匯率：誰改得晚就用誰的
+  if ((local.metaAt || 0) > (out.metaAt || 0)) {
+    out.title = local.title; out.start = local.start; out.end = local.end; out.rate = local.rate; out.metaAt = local.metaAt;
+  }
+  const byId = new Map(out.items.map(i => [i.id, i]));
+  for (const li of local.items) {
+    const ri = byId.get(li.id);
+    if (!ri || (li.at || 0) > (ri.at || 0)) byId.set(li.id, li);
+  }
+  const cutoff = Date.now() - 30 * 86400000; // 墓碑留 30 天，之後清掉
+  out.items = [...byId.values()].filter(i => !(i.del && i.at < cutoff));
+  return out;
+}
+// 比對兩份資料是否相同（items 依 id 排序，合併後順序不同不算差異）
+function fingerprint(s) {
+  const items = s.items.slice().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, items]);
+}
+function cacheSave() { try { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); } catch (e) {} }
+function cacheLoad() { try { const s = localStorage.getItem(LS_KEY); return s ? normalize(JSON.parse(s)) : null; } catch (e) { return null; } }
+
+/* ---------- 同步 ---------- */
+async function loadRemote() {
+  const res = await apiPost('setting-get', { key: KEY });
+  if (res && res.needLogin) return { needLogin: true };
+  if (!res || res.success !== true) throw new Error((res && res.error) || '讀取失敗');
+  let remote = null;
+  if (res.value) { try { remote = JSON.parse(res.value); } catch (e) { remote = null; } }
+  return { remote };
+}
+function scheduleSync() {
+  SYNC.dirty = true;
+  cacheSave();
+  render();
+  clearTimeout(SYNC.timer);
+  SYNC.timer = setTimeout(runSync, 400);
+}
+async function runSync() {
+  if (SYNC.busy) { SYNC.dirty = true; return; }
+  SYNC.busy = true; SYNC.dirty = false;
+  setSync('同步中…');
+  try {
+    const got = await loadRemote();
+    if (got.needLogin) { showLogin(); return; }
+    STATE = merge(STATE, got.remote);
+    const res = await apiPost('setting-set', { key: KEY, value: JSON.stringify(STATE) });
+    if (!res || res.success !== true) throw new Error((res && res.error) || '寫入失敗');
+    cacheSave(); render();
+    const d = new Date();
+    setSync('已同步 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'));
+  } catch (err) {
+    setSync('同步失敗（已先存在這支手機，稍後會再試）：' + err.message, true);
+    SYNC.dirty = true;
+    setTimeout(() => { if (SYNC.dirty && !SYNC.busy) runSync(); }, 15000);
+  } finally {
+    SYNC.busy = false;
+    if (SYNC.dirty) { clearTimeout(SYNC.timer); SYNC.timer = setTimeout(runSync, 400); }
+  }
+}
+async function boot() {
+  const cached = cacheLoad();
+  if (cached) { STATE = cached; render(); }
+  if (!getToken()) { showLogin(); return; }
+  setSync('載入中…');
+  try {
+    const got = await loadRemote();
+    if (got.needLogin) { showLogin(); return; }
+    STATE = cached ? merge(cached, got.remote) : normalize(got.remote);
+    cacheSave();
+    showApp();
+    setSync(got.remote ? '已同步' : '第一筆還沒記，按右下角開始');
+    // 本機快取有雲端沒有的東西（上次同步失敗）→ 補推上去
+    if (cached && fingerprint(normalize(got.remote)) !== fingerprint(STATE)) scheduleSync();
+  } catch (err) {
+    if (cached) { showApp(); setSync('讀不到雲端資料，先顯示這支手機的快取：' + err.message, true); }
+    else setSync('載入失敗：' + err.message, true);
+  }
+}
+function showLogin() {
+  document.getElementById('loginCard').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('addBtn').classList.add('hidden');
+  setSync('');
+}
+function showApp() {
+  document.getElementById('loginCard').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('addBtn').classList.remove('hidden');
+  render();
+}
+
+/* ---------- 登入 ---------- */
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const name = document.getElementById('loginName').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!name || !pw) { errEl.textContent = '請輸入姓名和密碼'; return; }
+  const btn = document.getElementById('loginBtn'); btn.disabled = true;
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'login', name, password: pw }) }).then(r => r.json());
+    if (!res || !res.success) { errEl.textContent = (res && res.error) || '登入失敗'; return; }
+    try {
+      localStorage.setItem('admin_token', res.token);
+      localStorage.setItem('admin_user', res.name || name);
+      localStorage.setItem('admin_unlocked', '1');
+    } catch (e) {}
+    document.getElementById('loginPw').value = '';
+    boot();
+  } catch (err) { errEl.textContent = '連線失敗：' + err.message; }
+  finally { btn.disabled = false; }
+});
+document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
+document.getElementById('logoutLink').addEventListener('click', e => {
+  e.preventDefault();
+  try { localStorage.removeItem('admin_token'); localStorage.removeItem('admin_unlocked'); } catch (err) {}
+  closeModal('settingsModal');
+  showLogin();
+});
+
+/* ---------- 畫面 ---------- */
+function render() {
+  document.getElementById('tripTitle').textContent = STATE.title || '員工旅遊記帳';
+  document.title = (STATE.title || '員工旅遊記帳') + '｜雪莉與朵栗';
+  const items = liveItems();
+
+  // 總覽
+  let jpy = 0, twd = 0, est = 0;
+  const catTot = {}, payerTot = {};
+  for (const it of items) {
+    if (it.cur === 'TWD') twd += it.amount; else jpy += it.amount;
+    const v = toTwd(it); est += v;
+    catTot[it.cat] = (catTot[it.cat] || 0) + v;
+    const p = it.payer || '（沒填誰付）';
+    payerTot[p] = (payerTot[p] || 0) + v;
+  }
+  document.getElementById('totalTwd').textContent = 'NT$ ' + Math.round(est).toLocaleString('en-US');
+  document.getElementById('totalSub').textContent = items.length ? ('日圓 ¥ ' + Math.round(jpy).toLocaleString('en-US') + (twd ? '　＋ 台幣 NT$ ' + Math.round(twd).toLocaleString('en-US') : '') + '　共 ' + items.length + ' 筆') : '還沒有任何紀錄';
+  document.getElementById('catSummary').innerHTML = CATS.map(c =>
+    '<div class="cat"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span><div style="min-width:0"><div class="nm">' + c.name + '</div><div class="amt">' + Math.round(catTot[c.id] || 0).toLocaleString('en-US') + '</div></div></div>'
+  ).join('');
+  const payers = Object.entries(payerTot).sort((a, b) => b[1] - a[1]);
+  document.getElementById('payerSummary').innerHTML = payers.length > 0
+    ? '<div style="font-weight:700;color:var(--soft);margin-bottom:4px;">各人代墊（台幣估算）</div>' + payers.map(([p, v]) => '<div class="row"><span>' + esc(p) + '</span><span>NT$ ' + Math.round(v).toLocaleString('en-US') + '</span></div>').join('')
+    : '';
+  document.getElementById('payerList').innerHTML = [...new Set(items.map(i => i.payer).filter(Boolean))].map(p => '<option value="' + esc(p) + '">').join('');
+
+  // 日期分頁：出發～回程每一天＋有紀錄的日期
+  const days = new Set(items.map(i => i.date).filter(Boolean));
+  if (/^\d{4}-\d{2}-\d{2}$/.test(STATE.start)) {
+    const endIso = /^\d{4}-\d{2}-\d{2}$/.test(STATE.end) && STATE.end >= STATE.start ? STATE.end : STATE.start;
+    const d = new Date(STATE.start + 'T00:00:00');
+    for (let i = 0; i < 60; i++) {
+      const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      days.add(iso);
+      if (iso >= endIso) break;
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  const dayList = [...days].sort();
+  if (SELECTED_DAY !== 'all' && !days.has(SELECTED_DAY)) SELECTED_DAY = 'all';
+  const dayTot = {};
+  for (const it of items) dayTot[it.date] = (dayTot[it.date] || 0) + toTwd(it);
+  document.getElementById('tabs').innerHTML = '<button class="tab' + (SELECTED_DAY === 'all' ? ' on' : '') + '" data-day="all">全部</button>' +
+    dayList.map(iso => { const n = dayIndex(iso); return '<button class="tab' + (SELECTED_DAY === iso ? ' on' : '') + '" data-day="' + esc(iso) + '">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso) + '</small></button>'; }).join('');
+  document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => { SELECTED_DAY = b.dataset.day; render(); }));
+
+  // 清單
+  const shown = SELECTED_DAY === 'all' ? dayList : [SELECTED_DAY];
+  const undated = items.filter(i => !i.date);
+  let html = '';
+  for (const iso of shown) {
+    const its = items.filter(i => i.date === iso).sort((a, b) => (a.at || 0) - (b.at || 0));
+    if (!its.length && SELECTED_DAY === 'all') continue;
+    const n = dayIndex(iso);
+    html += '<div class="day"><div class="dayhead"><span class="d">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso, true) + '</small></span><span class="t">NT$ ' + Math.round(dayTot[iso] || 0).toLocaleString('en-US') + '</span></div>' +
+      (its.length ? its.map(itemHtml).join('') : '<div class="empty">這天還沒有紀錄</div>') + '</div>';
+  }
+  if (SELECTED_DAY === 'all' && undated.length) {
+    html += '<div class="day"><div class="dayhead"><span class="d">未填日期</span></div>' + undated.map(itemHtml).join('') + '</div>';
+  }
+  if (!html) html = '<div class="empty">' + (SELECTED_DAY === 'all' ? '還沒有紀錄，按右下角「記一筆」開始' : '這天還沒有紀錄') + '</div>';
+  document.getElementById('list').innerHTML = html;
+  document.querySelectorAll('#list .item').forEach(el => el.addEventListener('click', () => openItem(el.dataset.id)));
+}
+function itemHtml(it) {
+  const c = CAT_MAP[it.cat] || CAT_MAP.other;
+  const sub = [it.payer ? it.payer + ' 付' : '', it.note].filter(Boolean).join('｜');
+  const est = it.cur === 'JPY' && STATE.rate ? '<small>≈ NT$ ' + Math.round(toTwd(it)).toLocaleString('en-US') + '</small>' : '';
+  return '<div class="item" data-id="' + esc(it.id) + '"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' +
+    '<div class="m"><div class="n">' + esc(it.name || c.name) + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>' +
+    '<div class="a">' + fmtMoney(it.amount, it.cur) + est + '</div></div>';
+}
+
+/* ---------- 記一筆／編輯 ---------- */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); }));
+
+function renderCatPick() {
+  document.getElementById('catPick').innerHTML = CATS.map(c =>
+    '<button type="button" data-cat="' + c.id + '" class="' + (FORM_CAT === c.id ? 'on' : '') + '"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' + c.name + '</button>').join('');
+  document.querySelectorAll('#catPick button').forEach(b => b.addEventListener('click', () => { FORM_CAT = b.dataset.cat; renderCatPick(); }));
+}
+function setCur(cur) {
+  FORM_CUR = cur;
+  document.querySelectorAll('.curpick button').forEach(b => b.classList.toggle('on', b.dataset.cur === cur));
+}
+document.querySelectorAll('.curpick button').forEach(b => b.addEventListener('click', () => setCur(b.dataset.cur)));
+
+function openItem(id) {
+  const it = id ? STATE.items.find(i => i.id === id && !i.del) : null;
+  EDITING_ID = it ? it.id : null;
+  FORM_CAT = it ? it.cat : 'food';
+  renderCatPick();
+  setCur(it ? it.cur : 'JPY');
+  document.getElementById('itemModalTitle').textContent = it ? '編輯這筆' : '記一筆';
+  document.getElementById('fDate').value = it ? it.date : (SELECTED_DAY !== 'all' ? SELECTED_DAY : todayStr());
+  document.getElementById('fPayer').value = it ? it.payer : getUser();
+  document.getElementById('fName').value = it ? it.name : '';
+  document.getElementById('fAmount').value = it ? it.amount : '';
+  document.getElementById('fNote').value = it ? it.note : '';
+  document.getElementById('itemErr').textContent = '';
+  document.getElementById('delBtn').classList.toggle('hidden', !it);
+  openModal('itemModal');
+  setTimeout(() => document.getElementById(it ? 'fAmount' : 'fName').focus(), 50);
+}
+document.getElementById('addBtn').addEventListener('click', () => openItem(null));
+document.getElementById('cancelBtn').addEventListener('click', () => closeModal('itemModal'));
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const name = document.getElementById('fName').value.trim();
+  const amount = Number(document.getElementById('fAmount').value);
+  const date = document.getElementById('fDate').value;
+  const errEl = document.getElementById('itemErr');
+  if (!name) { errEl.textContent = '請填品項'; return; }
+  if (!(amount >= 0) || !isFinite(amount)) { errEl.textContent = '金額請填數字'; return; }
+  const now = Date.now();
+  const rec = {
+    id: EDITING_ID || uid(), date, cat: FORM_CAT, name, amount, cur: FORM_CUR,
+    payer: document.getElementById('fPayer').value.trim(), note: document.getElementById('fNote').value.trim(),
+    by: getUser(), at: now, del: false,
+  };
+  const idx = STATE.items.findIndex(i => i.id === rec.id);
+  if (idx >= 0) STATE.items[idx] = rec; else STATE.items.push(rec);
+  if (SELECTED_DAY !== 'all' && date && date !== SELECTED_DAY) SELECTED_DAY = date;
+  closeModal('itemModal');
+  scheduleSync();
+});
+document.getElementById('delBtn').addEventListener('click', () => {
+  if (!EDITING_ID || !confirm('確定刪除這一筆？')) return;
+  const idx = STATE.items.findIndex(i => i.id === EDITING_ID);
+  if (idx >= 0) STATE.items[idx] = Object.assign({}, STATE.items[idx], { del: true, at: Date.now() });
+  closeModal('itemModal');
+  scheduleSync();
+});
+
+/* ---------- 設定 ---------- */
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('sTitle').value = STATE.title || '';
+  document.getElementById('sStart').value = STATE.start || '';
+  document.getElementById('sEnd').value = STATE.end || '';
+  document.getElementById('sRate').value = STATE.rate || '';
+  document.getElementById('whoami').textContent = getUser() || '（未登入）';
+  openModal('settingsModal');
+});
+document.getElementById('sCancelBtn').addEventListener('click', () => closeModal('settingsModal'));
+document.getElementById('sSaveBtn').addEventListener('click', () => {
+  STATE.title = document.getElementById('sTitle').value.trim() || '員工旅遊記帳';
+  STATE.start = document.getElementById('sStart').value;
+  STATE.end = document.getElementById('sEnd').value;
+  const r = Number(document.getElementById('sRate').value);
+  STATE.rate = r > 0 && isFinite(r) ? r : 0;
+  STATE.metaAt = Date.now();
+  closeModal('settingsModal');
+  scheduleSync();
+});
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const rows = [['日期', '分類', '品項', '金額', '幣別', '台幣估算', '誰付的', '備註', '記錄者']];
+  for (const it of liveItems().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.at || 0) - (b.at || 0))) {
+    rows.push([it.date, CAT_MAP[it.cat].name, it.name, it.amount, it.cur, Math.round(toTwd(it)), it.payer, it.note, it.by]);
+  }
+  const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = '﻿' + rows.map(r => r.map(cell).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = (STATE.title || '員工旅遊記帳') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+// 回到這個分頁時重新抓一次（別人記的會出現）
+document.addEventListener('visibilitychange', () => { if (!document.hidden && getToken() && !document.getElementById('app').classList.contains('hidden')) runSync(); });
+
+boot();
+</script>
+</body>
+</html>
