@@ -1728,6 +1728,8 @@ const PB_SET_HEADING_BY_BRAND = {
 // 「不知道怎麼選？」小測驗總開關（2026-09-23 雪莉：書量還不夠多，先暫時關閉入口按鈕，
 // 書上齊後改 true 即可，功能本身都已經做好留著）。2026-09-25 雪莉：可以上了 → 改 true。
 const PB_QUIZ_ENABLED = true;
+// 小測驗專屬品牌：入口只掛在這個品牌的頂圖下，推薦結果也只列這個品牌的書（2026-09-25 雪莉開放入口時抓到結果混進禾流的書）
+const PB_QUIZ_BRAND = 'KIDsREAD點讀筆';
 // 套組標題前的星星圖示（2026-09-22 改線條刻的 SVG，不用 emoji；固定字串無使用者資料，可直接 innerHTML）
 function pbStarIcon() {
   const span = document.createElement('span');
@@ -1784,7 +1786,7 @@ function renderFeatured() {
       // 因為題目（是否已有點讀筆）是點讀筆專屬的，其他品牌的頂圖問這個沒意義。
       // 2026-09-23 雪莉：繪本數量還不夠多，先暫時隱藏這顆按鈕（PB_QUIZ_ENABLED），她確定要開再改 true；
       // 功能本身（表單/推薦邏輯）都留著，開關只控制入口按鈕要不要顯示。
-      if (PB_QUIZ_ENABLED && headingBrand === 'KIDsREAD點讀筆') {
+      if (PB_QUIZ_ENABLED && headingBrand === PB_QUIZ_BRAND) {
         const quizBtn = document.createElement('button');
         quizBtn.type = 'button';
         quizBtn.className = 'pb-quiz-entry';
@@ -1986,7 +1988,7 @@ function closeQuizResultModal() {
 function computeQuizMatches(answers) {
   // 多位小孩：任一位小孩符合的年齡分類都算，取聯集（家裡有 1 歲跟 3 歲的小孩，兩邊的書都要列出來）
   const ageTags = new Set(answers.children.map(c => ageToCategoryTag(c.years, c.months)));
-  const list = ALL_BOOKS.filter(b => (b.kind || 'book') === 'book' && (b.categories || []).some(c => ageTags.has(c)));
+  const list = ALL_BOOKS.filter(b => (b.kind || 'book') === 'book' && b.brand_name === PB_QUIZ_BRAND && (b.categories || []).some(c => ageTags.has(c)));
   return list
     .map(b => {
       let score = 0;
