@@ -149,7 +149,6 @@
   .lightbox .top button { background: rgba(255,255,255,.15); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .lightbox .top button svg { width: 18px; height: 18px; }
 </style>
-<script src="modalGuard.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
@@ -342,7 +341,8 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 function liveItems() { return STATE.items.filter(i => !i.del); }
 function livePhotos() { return STATE.photos.filter(p => !p.del); }
 function photoUrl(path) { return STORAGE_BASE + path; }
-function thumbUrl(path) { return RENDER_BASE + path + '?width=480&quality=70'; }
+// resize=contain 必加：預設 cover 只給寬度時實測回 480x1200 的變形圖
+function thumbUrl(path) { return RENDER_BASE + path + '?width=480&resize=contain&quality=70'; }
 function thumbImg(path, alt) {
   return '<img src="' + esc(thumbUrl(path)) + '" alt="' + esc(alt || '') + '" loading="lazy" onerror="this.onerror=null;this.src=\'' + esc(photoUrl(path)) + '\'">';
 }
