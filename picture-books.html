@@ -23,23 +23,20 @@
   }
   .pb-featured-heading img { display: block; margin: 0 auto; width: min(58%, 220px); }
   /* 「不知道怎麼選？」小測驗入口（2026-09-23 雪莉指定，只掛在 KIDsREAD 頂圖底下） */
-  /* 2026-09-26 雪莉：虛線框太不明顯 → 改實色主色膠囊＋淡影 */
+  /* 2026-09-26 雪莉自製按鈕圖（images/quiz-entry.webp，透明底、圖內已有膠囊與陰影）；按鈕本身不畫任何底色框線 */
   .pb-quiz-entry {
     display: block;
+    width: min(100%, 420px);
     margin: 12px auto 0;
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: .02em;
-    color: #fff;
-    background: var(--c-primary);
+    padding: 0;
+    background: none;
     border: none;
-    border-radius: var(--r-pill);
-    padding: 11px 24px;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .10);
+    transition: transform .15s ease;
   }
-  .pb-quiz-entry:hover { background: var(--c-primary-dark); }
+  .pb-quiz-entry img { display: block; width: 100%; height: auto; aspect-ratio: 2024 / 487; }
+  .pb-quiz-entry:hover { transform: translateY(-2px); }
+  .pb-quiz-entry:active { transform: scale(.98); }
   /* 小測驗表單／推薦結果彈窗共用樣式 */
   .pb-quiz-q { margin-bottom: 16px; }
   .pb-quiz-q:last-of-type { margin-bottom: 0; }
@@ -1861,7 +1858,13 @@ function renderFeatured() {
         const quizBtn = document.createElement('button');
         quizBtn.type = 'button';
         quizBtn.className = 'pb-quiz-entry';
-        quizBtn.textContent = '不知道怎麼選？點我看專屬推薦';
+        // 2026-09-26 雪莉自製按鈕圖（交件匣「繪本推薦按鈕」→ images/quiz-entry.webp，貓咪＋「訂製我的專屬推薦」）
+        quizBtn.setAttribute('aria-label', '訂製我的專屬推薦');
+        const quizImg = document.createElement('img');
+        quizImg.src = 'images/quiz-entry.webp';
+        quizImg.alt = '訂製我的專屬推薦';
+        quizImg.width = 2024; quizImg.height = 487; // 圖檔比例，先占位避免版面跳動（不 lazy：在主畫面區、零高度時 lazy 不會觸發）
+        quizBtn.appendChild(quizImg);
         quizBtn.addEventListener('click', openQuizModal);
         heading.appendChild(quizBtn);
       }
