@@ -112,6 +112,39 @@
   .actions .r { display: flex; gap: 6px; }
   .hint { font-size: .78rem; color: var(--muted); line-height: 1.6; margin-top: 6px; }
 
+  /* 分攤 */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips:empty { display: none; }
+  .chip { border: 1.5px solid transparent; background: var(--surface); color: var(--soft); border-radius: 999px; padding: 7px 14px; font-size: .88rem; cursor: pointer; font-family: inherit; }
+  .chip.on { background: var(--primary); color: #fff; font-weight: 700; }
+  .chip.co { background: var(--surface-2); }
+  .chip.co.on { background: var(--brown); }
+  .inrow { display: flex; gap: 8px; align-items: center; }
+  .inrow input { flex: 1; }
+  .inrow .btn { padding: 9px 14px; font-size: .85rem; flex: none; background: var(--surface); }
+  .hint-inline { font-weight: 400; color: var(--muted); font-size: .78rem; margin-left: 6px; }
+  .hint-inline.bad { color: var(--berry); font-weight: 700; }
+  .modepick { display: flex; background: var(--surface); border-radius: 999px; padding: 3px; margin-bottom: 8px; }
+  .modepick button { flex: 1; border: none; background: transparent; border-radius: 999px; padding: 8px 4px; font-size: .85rem; color: var(--soft); cursor: pointer; font-family: inherit; }
+  .modepick button.on { background: #fff; color: var(--primary-dark); font-weight: 700; box-shadow: 0 2px 6px rgba(176,127,131,.15); }
+  .splitcustom { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  .splitcustom .row { display: flex; align-items: center; gap: 6px; }
+  .splitcustom .row span { flex: none; width: 3.2em; font-size: .85rem; font-weight: 700; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .splitcustom .row input { min-width: 0; padding: 8px 10px; }
+  .chk { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: .9rem; cursor: pointer; }
+  .chk input { width: 18px; height: 18px; accent-color: var(--primary-dark); }
+  .settle { margin-top: 14px; }
+  .settle h4 { margin: 0 0 6px; font-size: .85rem; color: var(--soft); }
+  .settle table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .settle th { text-align: right; font-weight: 400; color: var(--muted); font-size: .74rem; padding: 2px 0 4px; }
+  .settle th:first-child, .settle td:first-child { text-align: left; }
+  .settle td { text-align: right; padding: 5px 0; border-top: 1px solid var(--line); }
+  .settle td.pos { color: var(--mint); font-weight: 700; }
+  .settle td.neg { color: var(--berry); font-weight: 700; }
+  .settle .tr { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 10px; padding: 8px 12px; margin-top: 6px; font-size: .88rem; }
+  .settle .tr b { color: var(--primary-dark); }
+  .settle .tr svg { width: 16px; height: 16px; vertical-align: -3px; margin: 0 4px; color: var(--muted); }
+
   /* 上方切換：排行程｜記帳 */
   .seg { display: flex; background: var(--surface); border-radius: 999px; padding: 4px; margin-bottom: 14px; }
   .seg button { flex: 1; border: none; background: transparent; border-radius: 999px; padding: 10px 8px; font-size: .95rem; font-weight: 700; color: var(--soft); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -216,6 +249,7 @@
       <div class="cats-head">各分類小計（台幣估算）</div>
       <div class="cats" id="catSummary"></div>
       <div class="payers" id="payerSummary"></div>
+      <div class="settle" id="settleBox"></div>
     </div>
 
     <div class="tabs" id="tabs"></div>
@@ -236,16 +270,28 @@
     <h3 id="itemModalTitle">記一筆</h3>
     <label>分類</label>
     <div class="catpick" id="catPick"></div>
-    <div class="grid2">
-      <div><label for="fDate">日期</label><input type="date" id="fDate"></div>
-      <div><label for="fPayer">誰付的</label><input type="text" id="fPayer" list="payerList" placeholder="例：雪莉" maxlength="20"><datalist id="payerList"></datalist></div>
-    </div>
+    <label for="fDate">日期</label>
+    <input type="date" id="fDate">
     <label for="fName">品項</label>
     <input type="text" id="fName" placeholder="例：一蘭拉麵、JR 車票、藥妝" maxlength="60">
     <div class="grid2">
       <div><label for="fAmount">金額</label><input type="number" id="fAmount" inputmode="decimal" min="0" step="1" placeholder="0"></div>
       <div><label>幣別</label><div class="curpick"><button type="button" data-cur="JPY" class="on">¥ 日圓</button><button type="button" data-cur="TWD">NT$ 台幣</button></div></div>
     </div>
+    <label>誰付的</label>
+    <div class="chips" id="payerPick"></div>
+    <input type="text" id="fPayer" placeholder="先到右上角設定填成員，或在這裡打名字" maxlength="20" class="hidden">
+    <label for="fCompany">公司負擔（選填，全部由公司出就按「全額」）</label>
+    <div class="inrow"><input type="number" id="fCompany" inputmode="decimal" min="0" step="1" placeholder="0"><button type="button" class="btn ghost" id="fCompanyAll">全額</button></div>
+    <label>分攤 <span class="hint-inline" id="splitRemain"></span></label>
+    <div class="modepick" id="splitMode">
+      <button type="button" data-mode="even" class="on">大家均分</button>
+      <button type="button" data-mode="custom">自訂金額</button>
+      <button type="button" data-mode="none">不分攤</button>
+    </div>
+    <div class="chips" id="splitAmong"></div>
+    <div class="splitcustom hidden" id="splitCustom"></div>
+    <div class="hint hidden" id="splitNoneHint">不分攤＝扣掉公司負擔後，剩下的算付錢的人自己的（例如自己買的伴手禮）。</div>
     <label for="fNote">備註（選填）</label>
     <input type="text" id="fNote" placeholder="例：4 人份、公司報帳" maxlength="100">
     <label>收據／照片（選填）</label>
@@ -330,9 +376,13 @@
       <div><label for="sStart">出發日</label><input type="date" id="sStart"></div>
       <div><label for="sEnd">回程日</label><input type="date" id="sEnd"></div>
     </div>
-    <label for="sRate">匯率（1 日圓 ＝ 多少台幣）</label>
+    <label for="sMembers">成員（一行一個名字，記帳時點選用）</label>
+    <textarea id="sMembers" rows="3" placeholder="雪莉&#10;典典&#10;曾曾"></textarea>
+    <label class="chk"><input type="checkbox" id="sAutoRate"> 自動抓每日匯率（日圓→台幣）</label>
+    <div class="hint" id="rateInfo"></div>
+    <label for="sRate">備用匯率（1 日圓 ＝ 多少台幣）</label>
     <input type="number" id="sRate" inputmode="decimal" min="0" step="0.001" placeholder="0.22">
-    <div class="hint">總金額用這個匯率把日圓換算成台幣估算；台幣記的項目直接相加。</div>
+    <div class="hint">開自動時，每天第一次有人打開這頁會抓當天的參考匯率，那天的日圓花費就用那天的匯率換算；抓不到就用備用匯率。參考匯率是市場中間價，跟銀行實際刷卡／換錢的匯率會差一點點。</div>
     <div class="actions">
       <button class="btn ghost" id="exportBtn">匯出 CSV</button>
       <div class="r"><button class="btn ghost" id="sCancelBtn">取消</button><button class="btn" id="sSaveBtn">儲存</button></div>
@@ -423,7 +473,92 @@ function fmtMoney(n, cur) {
   const v = Math.round(Number(n) || 0);
   return (cur === 'TWD' ? 'NT$ ' : '¥ ') + v.toLocaleString('en-US');
 }
-function toTwd(item) { return item.cur === 'TWD' ? Number(item.amount) || 0 : (Number(item.amount) || 0) * (Number(STATE.rate) || 0); }
+// 某一天用的匯率：那天抓到的 → 最近一個抓到的日子 → 備用匯率
+function rateFor(date) {
+  const rates = STATE.rates || {};
+  if (date && rates[date]) return rates[date];
+  const keys = Object.keys(rates).sort();
+  let best = '';
+  for (const k of keys) { if (!date || k <= date) best = k; }
+  if (!best && keys.length) best = keys[0];
+  return best ? rates[best] : (Number(STATE.rate) || 0);
+}
+function jpyToTwd(amount, date) { return (Number(amount) || 0) * rateFor(date); }
+function toTwd(item) { return item.cur === 'TWD' ? Number(item.amount) || 0 : jpyToTwd(item.amount, item.date); }
+function amtToTwd(amount, item) { return item.cur === 'TWD' ? Number(amount) || 0 : jpyToTwd(amount, item.date); }
+const COMPANY = '公司';
+function members() { return (STATE.members || []).filter(Boolean); }
+// 每人應分攤（原幣別）：先扣公司負擔，剩餘依 split 分
+function itemShares(it) {
+  const total = Number(it.amount) || 0;
+  const company = Math.min(Math.max(Number(it.company) || 0, 0), total);
+  const rest = total - company;
+  const shares = {};
+  if (company > 0) shares[COMPANY] = company;
+  const sp = it.split || { mode: 'even', among: [] };
+  if (rest > 0) {
+    if (sp.mode === 'custom') {
+      for (const [n, v] of Object.entries(sp.amounts || {})) if (v > 0) shares[n] = (shares[n] || 0) + v;
+    } else if (sp.mode === 'none') {
+      const who = it.payer || '（沒填誰付）';
+      shares[who] = (shares[who] || 0) + rest;
+    } else {
+      const among = (sp.among && sp.among.length ? sp.among : members()).filter(n => n !== COMPANY);
+      if (among.length) for (const n of among) shares[n] = (shares[n] || 0) + rest / among.length;
+      else { const who = it.payer || '（沒填誰付）'; shares[who] = (shares[who] || 0) + rest; }
+    }
+  }
+  return shares;
+}
+function splitLabel(it) {
+  const sp = it.split || { mode: 'even', among: [] };
+  const parts = [];
+  if (Number(it.company) > 0) parts.push('公司 ' + fmtMoney(it.company, it.cur).replace(/^(NT\$|¥) /, '$1'));
+  const rest = (Number(it.amount) || 0) - Math.min(Number(it.company) || 0, Number(it.amount) || 0);
+  if (rest > 0) {
+    if (sp.mode === 'custom') parts.push(Object.entries(sp.amounts || {}).filter(([, v]) => v > 0).map(([n, v]) => n + ' ' + Math.round(v).toLocaleString('en-US')).join('・'));
+    else if (sp.mode === 'none') parts.push('不分攤');
+    else { const among = (sp.among && sp.among.length ? sp.among : members()); parts.push('均分 ' + among.length + ' 人'); }
+  }
+  return parts.join('｜');
+}
+// 結算：每個人（含公司）付了多少、應分攤多少、差額；再算最少筆數的「誰給誰」
+function computeSettlement(items) {
+  const paid = {}, share = {};
+  for (const it of items) {
+    const p = it.payer || '（沒填誰付）';
+    paid[p] = (paid[p] || 0) + toTwd(it);
+    for (const [n, v] of Object.entries(itemShares(it))) share[n] = (share[n] || 0) + amtToTwd(v, it);
+  }
+  const names = [...new Set([...members(), ...Object.keys(paid), ...Object.keys(share)])];
+  const rows = names.map(n => ({ name: n, paid: paid[n] || 0, share: share[n] || 0, net: (paid[n] || 0) - (share[n] || 0) }));
+  const debt = rows.filter(r => r.net < -0.5).map(r => ({ name: r.name, v: -r.net })).sort((a, b) => b.v - a.v);
+  const cred = rows.filter(r => r.net > 0.5).map(r => ({ name: r.name, v: r.net })).sort((a, b) => b.v - a.v);
+  const transfers = [];
+  let i = 0, j = 0;
+  while (i < debt.length && j < cred.length) {
+    const v = Math.min(debt[i].v, cred[j].v);
+    transfers.push({ from: debt[i].name, to: cred[j].name, v });
+    debt[i].v -= v; cred[j].v -= v;
+    if (debt[i].v < 0.5) i++;
+    if (cred[j].v < 0.5) j++;
+  }
+  return { rows, transfers };
+}
+// 每日匯率：每天第一次開頁抓一次（open.er-api.com 免金鑰、允許跨網域），存 STATE.rates[今天]
+async function fetchDailyRate() {
+  if (!STATE.autoRate) return;
+  const today = todayStr();
+  if (STATE.rates && STATE.rates[today]) return;
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/JPY', { cache: 'no-store' });
+    const j = await r.json();
+    const twd = j && j.rates && Number(j.rates.TWD);
+    if (!(twd > 0 && twd < 1)) throw new Error('bad rate');
+    STATE.rates = Object.assign({}, STATE.rates, { [today]: Math.round(twd * 10000) / 10000 });
+    scheduleSync();
+  } catch (e) { /* 抓不到就用備用匯率，不吵使用者 */ }
+}
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function liveItems() { return STATE.items.filter(i => !i.del); }
 function livePhotos() { return STATE.photos.filter(p => !p.del); }
@@ -447,12 +582,29 @@ function setSync(msg, isErr) { const el = document.getElementById('sync'); el.te
 
 /* ---------- 資料合併 ---------- */
 const PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+// 分攤設定 {mode:'even'|'custom'|'none', among:[名字], amounts:{名字:金額}}；舊資料沒這欄＝全員均分
+function cleanSplit(raw) {
+  const sp = raw && typeof raw === 'object' ? raw : {};
+  const mode = sp.mode === 'custom' || sp.mode === 'none' ? sp.mode : 'even';
+  const among = (Array.isArray(sp.among) ? sp.among : []).map(n => String(n || '').trim().slice(0, 20)).filter(Boolean).slice(0, 30);
+  const amounts = {};
+  for (const [k, v] of Object.entries(sp.amounts && typeof sp.amounts === 'object' ? sp.amounts : {})) {
+    const n = String(k).trim().slice(0, 20); const a = Number(v);
+    if (n && a > 0) amounts[n] = a;
+  }
+  return { mode, among, amounts };
+}
 function cleanPaths(arr) {
   return (Array.isArray(arr) ? arr : []).map(p => String(p || '')).filter(p => PATH_RE.test(p)).slice(0, MAX_ITEM_PHOTOS);
 }
 function normalize(raw) {
-  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [], plan: [] }, raw || {});
+  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [], plan: [], members: [], rates: {}, autoRate: true }, raw || {});
   if (!Array.isArray(s.items)) s.items = [];
+  s.members = (Array.isArray(s.members) ? s.members : []).map(m => String(m || '').trim().slice(0, 20)).filter(m => m && m !== COMPANY).filter((m, i, a) => a.indexOf(m) === i).slice(0, 30);
+  s.autoRate = s.autoRate !== false;
+  const rates = {};
+  for (const [k, v] of Object.entries(s.rates && typeof s.rates === 'object' ? s.rates : {})) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Number(v) > 0) rates[k] = Number(v);
+  s.rates = rates;
   if (!Array.isArray(s.photos)) s.photos = [];
   if (!Array.isArray(s.plan)) s.plan = [];
   // 行程：{id, date, time 'HH:MM' 或空, cat, title, place, url, note, by, at, del}
@@ -466,6 +618,8 @@ function normalize(raw) {
     id: String(i.id), date: String(i.date || ''), cat: CAT_MAP[i.cat] ? i.cat : 'other',
     name: String(i.name || '').slice(0, 60), amount: Number(i.amount) || 0, cur: i.cur === 'TWD' ? 'TWD' : 'JPY',
     payer: String(i.payer || '').slice(0, 20), note: String(i.note || '').slice(0, 100),
+    company: Math.max(0, Number(i.company) || 0),
+    split: cleanSplit(i.split),
     photos: cleanPaths(i.photos),
     by: String(i.by || '').slice(0, 20), at: Number(i.at) || 0, del: !!i.del,
   }));
@@ -494,7 +648,10 @@ function merge(local, remote) {
   // 旅遊名稱／日期／匯率：誰改得晚就用誰的
   if ((local.metaAt || 0) > (out.metaAt || 0)) {
     out.title = local.title; out.start = local.start; out.end = local.end; out.rate = local.rate; out.metaAt = local.metaAt;
+    out.members = local.members; out.autoRate = local.autoRate;
   }
+  // 每日匯率：兩邊聯集，同一天雲端那份優先（先抓到的為準，大家算出來一致）
+  out.rates = Object.assign({}, local.rates || {}, out.rates || {});
   out.items = mergeList(local.items, out.items);
   out.photos = mergeList(local.photos || [], out.photos);
   out.plan = mergeList(local.plan || [], out.plan);
@@ -503,7 +660,7 @@ function merge(local, remote) {
 // 比對兩份資料是否相同（清單依 id 排序，合併後順序不同不算差異）
 function fingerprint(s) {
   const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, s.items.slice().sort(byId), (s.photos || []).slice().sort(byId), (s.plan || []).slice().sort(byId)]);
+  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, s.members, s.autoRate, s.rates, s.items.slice().sort(byId), (s.photos || []).slice().sort(byId), (s.plan || []).slice().sort(byId)]);
 }
 // 只收 http(s) 網址，其他一律清空（防 javascript: 之類）
 function safeUrl(u) {
@@ -567,6 +724,7 @@ async function boot() {
     setSync(got.remote ? '已同步' : '第一筆還沒記，按右下角開始');
     // 本機快取有雲端沒有的東西（上次同步失敗）→ 補推上去
     if (cached && fingerprint(normalize(got.remote)) !== fingerprint(STATE)) scheduleSync();
+    fetchDailyRate();
   } catch (err) {
     if (cached) { showApp(); setSync('讀不到雲端資料，先顯示這支手機的快取：' + err.message, true); }
     else setSync('載入失敗：' + err.message, true);
@@ -843,11 +1001,17 @@ function render() {
   document.getElementById('catSummary').innerHTML = CATS.map(c =>
     '<div class="cat"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span><div style="min-width:0"><div class="nm">' + c.name + '</div><div class="amt">' + Math.round(catTot[c.id] || 0).toLocaleString('en-US') + '</div></div></div>'
   ).join('');
-  const payers = Object.entries(payerTot).sort((a, b) => b[1] - a[1]);
-  document.getElementById('payerSummary').innerHTML = payers.length > 0
-    ? '<div style="font-weight:700;color:var(--soft);margin-bottom:4px;">各人代墊（台幣估算）</div>' + payers.map(([p, v]) => '<div class="row"><span>' + esc(p) + '</span><span>NT$ ' + Math.round(v).toLocaleString('en-US') + '</span></div>').join('')
+  document.getElementById('payerSummary').innerHTML = '';
+  const fmtN = v => Math.round(v).toLocaleString('en-US');
+  const st = computeSettlement(items);
+  const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  document.getElementById('settleBox').innerHTML = items.length && st.rows.length
+    ? '<h4>結算（台幣估算）</h4><table><tr><th>成員</th><th>代墊</th><th>應分攤</th><th>差額</th></tr>' +
+      st.rows.map(r => '<tr><td>' + esc(r.name === COMPANY ? '公司（報帳）' : r.name) + '</td><td>' + fmtN(r.paid) + '</td><td>' + fmtN(r.share) + '</td><td class="' + (r.net > 0.5 ? 'pos' : r.net < -0.5 ? 'neg' : '') + '">' + (r.net > 0.5 ? '+' : '') + fmtN(r.net) + '</td></tr>').join('') + '</table>' +
+      (st.transfers.length
+        ? '<h4 style="margin-top:10px">誰給誰</h4>' + st.transfers.map(t => '<div class="tr"><span>' + esc(t.from === COMPANY ? '公司（報帳）' : t.from) + ARROW + esc(t.to === COMPANY ? '公司' : t.to) + '</span><b>NT$ ' + fmtN(t.v) + '</b></div>').join('')
+        : '<div class="hint">目前沒有人需要付給誰。</div>')
     : '';
-  document.getElementById('payerList').innerHTML = [...new Set(items.map(i => i.payer).filter(Boolean))].map(p => '<option value="' + esc(p) + '">').join('');
 
   // 日期分頁：出發～回程每一天＋有紀錄的日期
   const days = new Set(items.map(i => i.date).filter(Boolean));
@@ -1030,7 +1194,7 @@ document.getElementById('copyPlanBtn').addEventListener('click', async () => {
 
 function itemHtml(it) {
   const c = CAT_MAP[it.cat] || CAT_MAP.other;
-  const sub = [it.payer ? it.payer + ' 付' : '', it.note].filter(Boolean).map(esc).concat(it.photos.length ? [CAM_ICON + it.photos.length] : []).join('｜');
+  const sub = [it.payer ? it.payer + ' 付' : '', splitLabel(it), it.note].filter(Boolean).map(esc).concat(it.photos.length ? [CAM_ICON + it.photos.length] : []).join('｜');
   const est = it.cur === 'JPY' && STATE.rate ? '<small>≈ NT$ ' + Math.round(toTwd(it)).toLocaleString('en-US') + '</small>' : '';
   return '<div class="item" data-id="' + esc(it.id) + '"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' +
     '<div class="m"><div class="n">' + esc(it.name || c.name) + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>' +
@@ -1058,6 +1222,84 @@ function setCur(cur) {
 }
 document.querySelectorAll('.curpick button').forEach(b => b.addEventListener('click', () => setCur(b.dataset.cur)));
 
+/* ---------- 表單：誰付的／公司負擔／分攤 ---------- */
+let FORM_PAYER = '';
+let FORM_SPLIT_MODE = 'even';
+let FORM_AMONG = [];        // 均分：參加的人
+let FORM_CUSTOM = {};       // 自訂：名字→金額
+function formTotal() { return Number(document.getElementById('fAmount').value) || 0; }
+function formCompany() { return Math.min(Math.max(Number(document.getElementById('fCompany').value) || 0, 0), formTotal()); }
+function renderPayerPick() {
+  const ms = members();
+  const el = document.getElementById('payerPick');
+  const txt = document.getElementById('fPayer');
+  if (!ms.length) { el.innerHTML = ''; txt.classList.remove('hidden'); txt.value = FORM_PAYER; return; }
+  txt.classList.add('hidden');
+  const names = ms.slice();
+  if (FORM_PAYER && !names.includes(FORM_PAYER) && FORM_PAYER !== COMPANY) names.push(FORM_PAYER); // 舊資料的名字不在成員表也要能顯示
+  el.innerHTML = names.map(n => '<button type="button" class="chip' + (FORM_PAYER === n ? ' on' : '') + '" data-n="' + esc(n) + '">' + esc(n) + '</button>').join('') +
+    '<button type="button" class="chip co' + (FORM_PAYER === COMPANY ? ' on' : '') + '" data-n="' + COMPANY + '">' + COMPANY + '</button>';
+  el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { FORM_PAYER = b.dataset.n; renderPayerPick(); }));
+}
+function renderSplitUI() {
+  const ms = members();
+  const rest = formTotal() - formCompany();
+  const cur = FORM_CUR === 'TWD' ? 'NT$' : '¥';
+  document.querySelectorAll('#splitMode button').forEach(b => b.classList.toggle('on', b.dataset.mode === FORM_SPLIT_MODE));
+  const among = document.getElementById('splitAmong');
+  const custom = document.getElementById('splitCustom');
+  const noneHint = document.getElementById('splitNoneHint');
+  const remain = document.getElementById('splitRemain');
+  among.classList.toggle('hidden', FORM_SPLIT_MODE !== 'even');
+  custom.classList.toggle('hidden', FORM_SPLIT_MODE !== 'custom');
+  noneHint.classList.toggle('hidden', FORM_SPLIT_MODE !== 'none');
+  remain.className = 'hint-inline';
+  if (!ms.length) {
+    among.innerHTML = ''; custom.innerHTML = '';
+    remain.textContent = FORM_SPLIT_MODE === 'none' ? '' : '（先到設定填成員才能分攤）';
+    return;
+  }
+  if (FORM_SPLIT_MODE === 'even') {
+    const n = FORM_AMONG.length;
+    remain.textContent = n ? '剩餘 ' + cur + ' ' + Math.round(rest).toLocaleString('en-US') + ' ÷ ' + n + ' 人 ≈ ' + cur + ' ' + Math.round(rest / n).toLocaleString('en-US') : '（請點選參加的人）';
+    if (!n) remain.classList.add('bad');
+    among.innerHTML = ms.map(m => '<button type="button" class="chip' + (FORM_AMONG.includes(m) ? ' on' : '') + '" data-n="' + esc(m) + '">' + esc(m) + '</button>').join('');
+    among.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      const n = b.dataset.n;
+      FORM_AMONG = FORM_AMONG.includes(n) ? FORM_AMONG.filter(x => x !== n) : FORM_AMONG.concat(n);
+      renderSplitUI();
+    }));
+  } else if (FORM_SPLIT_MODE === 'custom') {
+    const sum = ms.reduce((s, m) => s + (Number(FORM_CUSTOM[m]) || 0), 0);
+    const diff = Math.round((rest - sum) * 100) / 100;
+    remain.textContent = diff === 0 ? '剛好分完 ' + cur + ' ' + Math.round(rest).toLocaleString('en-US') : (diff > 0 ? '還差 ' : '多了 ') + cur + ' ' + Math.abs(diff).toLocaleString('en-US');
+    if (diff !== 0) remain.classList.add('bad');
+    custom.innerHTML = ms.map(m => '<div class="row"><span title="' + esc(m) + '">' + esc(m) + '</span><input type="number" inputmode="decimal" min="0" step="1" data-n="' + esc(m) + '" value="' + (FORM_CUSTOM[m] || '') + '" placeholder="0"></div>').join('') +
+      '<div class="row"><button type="button" class="btn ghost" id="fillLastBtn" style="padding:6px 10px;font-size:.8rem;">把差額補到最後一個人</button></div>';
+    custom.querySelectorAll('input[data-n]').forEach(inp => inp.addEventListener('input', () => {
+      FORM_CUSTOM[inp.dataset.n] = Number(inp.value) || 0;
+      // 只更新提示字，不重畫輸入框（重畫會讓手機鍵盤收起來）
+      const s2 = ms.reduce((s, m) => s + (Number(FORM_CUSTOM[m]) || 0), 0);
+      const d2 = Math.round(((formTotal() - formCompany()) - s2) * 100) / 100;
+      remain.className = 'hint-inline' + (d2 !== 0 ? ' bad' : '');
+      remain.textContent = d2 === 0 ? '剛好分完' : (d2 > 0 ? '還差 ' : '多了 ') + cur + ' ' + Math.abs(d2).toLocaleString('en-US');
+    }));
+    const fill = document.getElementById('fillLastBtn');
+    if (fill) fill.addEventListener('click', () => {
+      const last = ms[ms.length - 1];
+      const others = ms.slice(0, -1).reduce((s, m) => s + (Number(FORM_CUSTOM[m]) || 0), 0);
+      FORM_CUSTOM[last] = Math.max(0, Math.round(((formTotal() - formCompany()) - others) * 100) / 100);
+      renderSplitUI();
+    });
+  } else {
+    remain.textContent = '';
+  }
+}
+document.querySelectorAll('#splitMode button').forEach(b => b.addEventListener('click', () => { FORM_SPLIT_MODE = b.dataset.mode; renderSplitUI(); }));
+document.getElementById('fAmount').addEventListener('input', renderSplitUI);
+document.getElementById('fCompany').addEventListener('input', renderSplitUI);
+document.getElementById('fCompanyAll').addEventListener('click', () => { document.getElementById('fCompany').value = formTotal() || ''; renderSplitUI(); });
+
 function openItem(id) {
   const it = id ? STATE.items.find(i => i.id === id && !i.del) : null;
   EDITING_ID = it ? it.id : null;
@@ -1066,9 +1308,17 @@ function openItem(id) {
   setCur(it ? it.cur : 'JPY');
   document.getElementById('itemModalTitle').textContent = it ? '編輯這筆' : '記一筆';
   document.getElementById('fDate').value = it ? it.date : (SELECTED_DAY !== 'all' ? SELECTED_DAY : todayStr());
-  document.getElementById('fPayer').value = it ? it.payer : getUser();
+  const ms = members();
+  FORM_PAYER = it ? it.payer : (ms.includes(getUser()) ? getUser() : (ms[0] || getUser()));
+  renderPayerPick();
   document.getElementById('fName').value = it ? it.name : '';
   document.getElementById('fAmount').value = it ? it.amount : '';
+  document.getElementById('fCompany').value = it && it.company > 0 ? it.company : '';
+  const sp = it ? it.split : { mode: 'even', among: [], amounts: {} };
+  FORM_SPLIT_MODE = sp.mode;
+  FORM_AMONG = sp.mode === 'even' ? (sp.among.length ? sp.among.filter(n => ms.includes(n)) : ms.slice()) : ms.slice();
+  FORM_CUSTOM = Object.assign({}, sp.amounts || {});
+  renderSplitUI();
   document.getElementById('fNote').value = it ? it.note : '';
   FORM_PHOTOS = it ? it.photos.slice() : [];
   FORM_PHOTOS_ORIG = FORM_PHOTOS.slice();
@@ -1094,12 +1344,31 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   if (!name) { errEl.textContent = '請填品項'; return; }
   if (!(amount >= 0) || !isFinite(amount)) { errEl.textContent = '金額請填數字'; return; }
   if (uploadsPending('item')) { errEl.textContent = '照片還在上傳，請稍等'; return; }
+  // 誰付的／公司負擔／分攤
+  const ms = members();
+  const payer = ms.length ? FORM_PAYER : document.getElementById('fPayer').value.trim();
+  if (!payer) { errEl.textContent = '請選誰付的'; return; }
+  const company = Math.min(Math.max(Number(document.getElementById('fCompany').value) || 0, 0), amount);
+  const rest = amount - company;
+  const split = { mode: FORM_SPLIT_MODE, among: [], amounts: {} };
+  if (rest > 0 && ms.length) {
+    if (split.mode === 'even') {
+      if (!FORM_AMONG.length) { errEl.textContent = '均分至少要選一個人'; return; }
+      split.among = FORM_AMONG.slice();
+    } else if (split.mode === 'custom') {
+      let sum = 0;
+      for (const m of ms) { const v = Number(FORM_CUSTOM[m]) || 0; if (v > 0) { split.amounts[m] = v; sum += v; } }
+      if (Math.abs(sum - rest) > 0.5) { errEl.textContent = '自訂金額加起來要等於扣掉公司負擔後的 ' + Math.round(rest).toLocaleString('en-US'); return; }
+    }
+  } else if (rest > 0 && !ms.length && split.mode !== 'none') {
+    split.mode = 'none'; // 沒設成員就沒得分，先算付錢的人自己的
+  }
   const photos = FORM_PHOTOS.filter(p => typeof p === 'string');
   FORM_PHOTOS_ORIG.filter(p => !photos.includes(p)).forEach(deletePhotoFile); // 編輯時被拿掉的
   const now = Date.now();
   const rec = {
     id: EDITING_ID || uid(), date, cat: FORM_CAT, name, amount, cur: FORM_CUR,
-    payer: document.getElementById('fPayer').value.trim(), note: document.getElementById('fNote').value.trim(),
+    payer, company, split, note: document.getElementById('fNote').value.trim(),
     photos, by: getUser(), at: now, del: false,
   };
   const idx = STATE.items.findIndex(i => i.id === rec.id);
@@ -1127,6 +1396,12 @@ document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('sStart').value = STATE.start || '';
   document.getElementById('sEnd').value = STATE.end || '';
   document.getElementById('sRate').value = STATE.rate || '';
+  document.getElementById('sMembers').value = members().join('\n');
+  document.getElementById('sAutoRate').checked = !!STATE.autoRate;
+  const rk = Object.keys(STATE.rates || {}).sort();
+  document.getElementById('rateInfo').textContent = rk.length
+    ? '已抓到 ' + rk.length + ' 天：最新 ' + fmtDate(rk[rk.length - 1]) + ' 1 日圓 ＝ ' + STATE.rates[rk[rk.length - 1]] + ' 台幣'
+    : '還沒抓到任何一天的匯率';
   document.getElementById('whoami').textContent = getUser() || '（未登入）';
   openModal('settingsModal');
 });
@@ -1137,14 +1412,18 @@ document.getElementById('sSaveBtn').addEventListener('click', () => {
   STATE.end = document.getElementById('sEnd').value;
   const r = Number(document.getElementById('sRate').value);
   STATE.rate = r > 0 && isFinite(r) ? r : 0;
+  STATE.members = document.getElementById('sMembers').value.split(/\r?\n/).map(s => s.trim().slice(0, 20)).filter(s => s && s !== COMPANY).filter((s, i, a) => a.indexOf(s) === i).slice(0, 30);
+  STATE.autoRate = document.getElementById('sAutoRate').checked;
   STATE.metaAt = Date.now();
+  if (STATE.autoRate) setTimeout(fetchDailyRate, 600);
   closeModal('settingsModal');
   scheduleSync();
 });
 document.getElementById('exportBtn').addEventListener('click', () => {
-  const rows = [['日期', '分類', '品項', '金額', '幣別', '台幣估算', '誰付的', '備註', '記錄者', '照片']];
+  const rows = [['日期', '分類', '品項', '金額', '幣別', '匯率', '台幣估算', '誰付的', '公司負擔', '分攤', '備註', '記錄者', '照片']];
   for (const it of liveItems().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.at || 0) - (b.at || 0))) {
-    rows.push([it.date, CAT_MAP[it.cat].name, it.name, it.amount, it.cur, Math.round(toTwd(it)), it.payer, it.note, it.by, it.photos.map(photoUrl).join(' ')]);
+    const shares = Object.entries(itemShares(it)).map(([n, v]) => n + ' ' + Math.round(v)).join('；');
+    rows.push([it.date, CAT_MAP[it.cat].name, it.name, it.amount, it.cur, it.cur === 'JPY' ? rateFor(it.date) : '', Math.round(toTwd(it)), it.payer, it.company || '', shares, it.note, it.by, it.photos.map(photoUrl).join(' ')]);
   }
   const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const csv = '﻿' + rows.map(r => r.map(cell).join(',')).join('\r\n');
