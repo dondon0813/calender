@@ -58,10 +58,18 @@ async function clApiPost(type, extra) {
   return data;
 }
 
-function clSetStatus(text, isError) {
+// 狀態列圖示（2026-09-26 emoji 改線條 SVG；固定字串可 innerHTML，文字仍走 textNode）
+const CL_ICONS = {
+  check: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  pencil: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg>',
+  trash: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l.8 12.5h9.4L17.5 7"/><path d="M10 11v6M14 11v6"/></svg>',
+};
+function clSetStatus(text, isError, icon) {
   const el = document.getElementById('changelogStatus');
   if (!el) return;
-  el.textContent = text || '';
+  el.textContent = '';
+  if (icon && CL_ICONS[icon]) { const span = document.createElement('span'); span.innerHTML = CL_ICONS[icon]; el.appendChild(span.firstChild); el.appendChild(document.createTextNode(' ')); }
+  el.appendChild(document.createTextNode(text || ''));
   el.style.color = isError ? 'var(--c-danger, #B5485A)' : '';
 }
 
@@ -114,8 +122,8 @@ function renderChangelogList() {
       <div style="background:#fff; border:1px solid #E6DCD2; border-radius:12px; padding:10px 14px; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <strong style="flex:1; min-width:140px;">${clEscapeHtml(clDateLabel(day.date))}</strong>
-          <button class="task-mini-btn" data-cl-edit="${clEscapeHtml(day.date)}">✏️ 編輯</button>
-          <button class="task-mini-btn danger" data-cl-delete="${clEscapeHtml(day.date)}">🗑 刪除這天</button>
+          <button class="task-mini-btn" data-cl-edit="${clEscapeHtml(day.date)}">${CL_ICONS.pencil} 編輯</button>
+          <button class="task-mini-btn danger" data-cl-delete="${clEscapeHtml(day.date)}">${CL_ICONS.trash} 刪除這天</button>
         </div>
         <ul style="margin:6px 0 0; padding-left:20px;">${items}</ul>
       </div>`;
@@ -131,7 +139,7 @@ async function clSaveDay(date, linesText) {
     if (!data.success) { clSetStatus(data.error || '儲存失敗', true); return false; }
     CHANGELOG_DIRTY = false;
     await loadChangelogView(true);
-    clSetStatus(data.lines && data.lines.length ? `✅ 已儲存 ${data.lines.length} 條` : '✅ 已刪除這天的日誌');
+    clSetStatus(data.lines && data.lines.length ? `已儲存 ${data.lines.length} 條` : '已刪除這天的日誌', false, 'check');
     return true;
   } catch (err) {
     clSetStatus(err.message || '儲存失敗', true);
@@ -194,8 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (removed.length) {
       const list = removed.map(l => `・${l}`).join('\n');
       const head = newLines.length
-        ? `⚠️ ${clDateLabel(date)} 已經有內容，儲存後下面 ${removed.length} 條會被移除：`
-        : `⚠️ 文字框是空的，儲存會刪除 ${clDateLabel(date)} 的全部 ${removed.length} 條：`;
+        ? `注意：${clDateLabel(date)} 已經有內容，儲存後下面 ${removed.length} 條會被移除：`
+        : `注意：文字框是空的，儲存會刪除 ${clDateLabel(date)} 的全部 ${removed.length} 條：`;
       if (!confirm(`${head}\n\n${list}\n\n刪掉就救不回來。確定要儲存嗎？\n（想保留舊的，請按取消，把舊內容一起打進文字框再存）`)) {
         clSetStatus('已取消儲存，資料沒有變動');
         return;

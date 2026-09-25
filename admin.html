@@ -3964,6 +3964,9 @@
   .rpt-custom { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; color: var(--c-text-soft); }
   .rpt-custom[hidden] { display: none; }
   .rpt-custom input[type="date"] { font-family: var(--font-body); font-size: 13px; font-weight: 700; border: 1px solid var(--c-border); border-radius: 10px; padding: 6px 10px; background: var(--c-surface); color: var(--c-text); }
+  /* 更新日誌的日期框沿用報表分頁同款（2026-09-26 雪莉：瀏覽器預設樣式突兀） */
+  #changelogDate { font-family: var(--font-body); font-size: 13px; font-weight: 700; border: 1px solid var(--c-border); border-radius: 10px; padding: 6px 10px; background: var(--c-input-bg, #fff); color: var(--c-text); outline: none; }
+  #changelogDate:focus { border-color: var(--c-primary); }
   .rpt-chips { max-width: 900px; margin: 0 auto 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .rpt-chips-label { font-size: 12px; font-weight: 800; color: var(--c-muted); }
   .rpt-chip { font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; border: none; border-radius: var(--r-pill); padding: 4px 10px; background: var(--c-pink-bg); color: var(--c-pink-deep); }
@@ -5780,7 +5783,7 @@
       <button class="task-mini-btn" id="changelogRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
     <div id="changelogNotReady" style="display:none; background:#F4ECE3; border:1px solid #F0DBA0; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
-      ⚠️ 更新日誌資料表還沒建立，要先執行一次 db push 才能儲存。
+      <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.3h.01" stroke-width="2.6"/></svg> 更新日誌資料表還沒建立，要先執行一次 db push 才能儲存。
     </div>
     <div style="background:#fff; border:1px solid #E6DCD2; border-radius:12px; padding:12px 14px; margin-bottom:16px;">
       <div style="font-size:13px; color:#7D6A5F; margin-bottom:8px;">官網「育兒小幫手」首頁會顯示最新 5 條（新的日期在上面）。一行打一條，儲存會整批覆蓋那一天。</div>
@@ -5790,7 +5793,7 @@
         <button class="task-mini-btn" id="changelogTodayBtn" type="button">今天</button>
       </div>
       <textarea id="changelogLines" rows="5" placeholder="一行一條，例如：&#10;食譜頁新增收藏功能 ❤️&#10;上架燕麥南瓜粉蒸牛食譜" style="width:100%; box-sizing:border-box;"></textarea>
-      <button class="task-submit-btn" id="changelogSaveBtn" type="button">💾 儲存這一天</button>
+      <button class="task-submit-btn" id="changelogSaveBtn" type="button"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5h11l3.5 3.5v13.5H5z"/><path d="M8 3.5v5h7v-5"/><rect x="8" y="13" width="8" height="7.5" rx="1"/></svg> 儲存這一天</button>
       <div class="form-status" id="changelogStatus"></div>
     </div>
     <div id="changelogListArea"><div class="task-empty">讀取中…</div></div>
@@ -7407,7 +7410,7 @@
 <!-- subscriptions.js 必須排在 admin.js 之前：開機還原分頁若停在 cardSub，會同步呼叫 loadCardSubView()，順序錯了整頁變磚 -->
 <script src="subscriptions.js?v=6"></script>
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
-<script src="changelog.js?v=4"></script>
+<script src="changelog.js?v=5"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=16"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
