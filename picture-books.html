@@ -89,6 +89,9 @@
     margin-bottom: 14px;
     line-height: 1.6;
   }
+  /* 線條圖示（取代 emoji，2026-09-26）：跟著文字大小與顏色 */
+  .pb-line-icon { display: inline-block; vertical-align: -0.15em; flex: none; }
+  .pb-gift-thumb-wrap.placeholder .pb-line-icon { color: var(--c-muted); }
   .pb-quiz-result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; }
   .pb-quiz-sec-title { font-size: 14px; font-weight: 800; color: var(--c-text); margin: 18px 0 10px; }
   .pb-quiz-sec-title:first-child { margin-top: 0; }
@@ -1094,9 +1097,9 @@
     <div class="pb-promo-title" id="pbPromoTitle"></div>
     <div class="pb-promo-sub" id="pbPromoSub"></div>
     <div id="pbPromoGiftWrap" style="display:none;"></div>
-    <div class="pb-promo-sec-title">🎁 優惠活動</div>
+    <div class="pb-promo-sec-title"><svg class="pb-line-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4.5" rx="1"/><path d="M12 8v13M5 12.5V21h14v-8.5"/><path d="M12 8c-1.2-3.2-5.2-3.4-5.2-1.2S10 8 12 8zm0 0c1.2-3.2 5.2-3.4 5.2-1.2S14 8 12 8z"/></svg> 優惠活動</div>
     <ul class="pb-promo-list" id="pbPromoList"></ul>
-    <div class="pb-promo-empty" id="pbPromoEmpty" style="display:none;">優惠活動籌備中，開團前公布 ✨</div>
+    <div class="pb-promo-empty" id="pbPromoEmpty" style="display:none;">優惠活動籌備中，開團前公布</div>
   </div>
 </div>
 
@@ -1744,6 +1747,31 @@ function pbStarIcon() {
   const span = document.createElement('span');
   span.innerHTML = '<svg class="pb-featured-star" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6-4.5-4.2 6.1-.8z"/></svg>';
   return span.firstChild;
+}
+// 開團區／優惠視窗用的線條圖示（2026-09-26 雪莉：繪本館團購框的禮物與 emoji 全改線條 SVG；藕粉奶茶色系規則）
+// 固定字串無使用者資料可直接 innerHTML；使用者文字一律走 pbIconText 的 textNode。
+const PB_LINE_ICONS = {
+  gift: '<rect x="3" y="8" width="18" height="4.5" rx="1"/><path d="M12 8v13M5 12.5V21h14v-8.5"/><path d="M12 8c-1.2-3.2-5.2-3.4-5.2-1.2S10 8 12 8zm0 0c1.2-3.2 5.2-3.4 5.2-1.2S14 8 12 8z"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  flame: '<path d="M12 21a6 6 0 0 0 6-6c0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-2 2-3 5-3 8a6 6 0 0 0 6 6z"/>',
+  bulb: '<path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-4 10.5c.7.6 1 1.5 1 2.5h6c0-1 .3-1.9 1-2.5A6 6 0 0 0 12 3z"/>',
+  heart: '<path d="M12 20.5s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/>',
+  refresh: '<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/>',
+};
+function pbLineIconHtml(name, size) {
+  const px = size || 14;
+  return '<svg class="pb-line-icon" width="' + px + '" height="' + px + '" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (PB_LINE_ICONS[name] || '') + '</svg>';
+}
+function pbLineIcon(name, size) {
+  const span = document.createElement('span');
+  span.innerHTML = pbLineIconHtml(name, size);
+  return span.firstChild;
+}
+// 清空 el，放「圖示＋空白＋文字」；文字走 textNode（可含使用者資料）
+function pbIconText(el, name, text, size) {
+  el.textContent = '';
+  el.appendChild(pbLineIcon(name, size));
+  el.appendChild(document.createTextNode(' ' + text));
 }
 // 團購時間前的時鐘圖示（2026-09-22 改線條刻的 SVG，不用 emoji；固定字串無使用者資料，可直接 innerHTML）
 function pbClockIcon() {
@@ -2571,7 +2599,7 @@ function buildDiscountBlock(code, desc, brandLabel) {
 
   const remind = document.createElement('div');
   remind.className = 'pb-discount-remind';
-  remind.textContent = '💡 記得輸入折扣碼才能享有折扣';
+  pbIconText(remind, 'bulb', '記得輸入折扣碼才能享有折扣');
   box.appendChild(remind);
 
   return box;
@@ -2639,7 +2667,7 @@ function renderTopPurchase() {
       openPromos.forEach(p => {
         const line = document.createElement('div');
         line.className = 'pb-top-active-promo-line';
-        line.textContent = `🎁 ${p.text}`;
+        pbIconText(line, 'gift', p.text);
         promoWrap.appendChild(line);
       });
       box.appendChild(promoWrap);
@@ -2691,8 +2719,8 @@ function renderTopPurchase() {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'pb-top-btn' + (next ? '' : ' pb-top-btn-soft');
-  if (next) btn.textContent = `📅 下一團 ${fmtMD(next[1])} 開團`;
-  else btn.textContent = '🎁 團購優惠';
+  if (next) pbIconText(btn, 'calendar', `下一團 ${fmtMD(next[1])} 開團`);
+  else pbIconText(btn, 'gift', '團購優惠');
   btn.addEventListener('click', openPromoModal);
   wrap.appendChild(btn);
   wrap.style.display = 'flex';
@@ -2709,7 +2737,7 @@ function renderTopCountdownButton(wrap, entries, earliestDate) {
 
   const line1 = document.createElement('div');
   line1.className = 'pb-top-btn-line1';
-  line1.textContent = `🔥 ${brandNames.join('・')} ${fmtMD(earliestDate)} 開團`;
+  pbIconText(line1, 'flame', `${brandNames.join('・')} ${fmtMD(earliestDate)} 開團`);
   btn.appendChild(line1);
 
   const line2 = document.createElement('div');
@@ -2746,7 +2774,7 @@ function renderTopCountdownButton(wrap, entries, earliestDate) {
         topCountdownReloadTriggered = true;
         location.reload();
       } else {
-        if (lineEl) lineEl.textContent = '🎉 開團囉！點我更新頁面';
+        if (lineEl) pbIconText(lineEl, 'refresh', '開團囉！點我更新頁面');
         btn.onclick = () => location.reload();
       }
       return;
@@ -2802,7 +2830,7 @@ function buildGiftSection(gifts) {
 
   const note = document.createElement('div');
   note.className = 'pb-gift-note';
-  note.textContent = '💝 滿額禮可累積，全部達標一次帶走！';
+  pbIconText(note, 'heart', '滿額禮可累積，全部達標一次帶走！');
   wrap.appendChild(note);
 
   const row = document.createElement('div');
@@ -2828,7 +2856,7 @@ function buildGiftItem(g) {
     thumbWrap.appendChild(img);
   } else {
     thumbWrap.classList.add('placeholder');
-    thumbWrap.textContent = '🎁';
+    thumbWrap.appendChild(pbLineIcon('gift', 28));
   }
   item.appendChild(thumbWrap);
 
@@ -2876,7 +2904,7 @@ function openPromoModal() {
   if (info.entries.length) {
     const [brand, d] = info.entries[0];
     const days = daysUntil(d);
-    titleEl.textContent = info.soon ? '🔥 即將開團！' : '📅 下一團開團時間';
+    if (info.soon) pbIconText(titleEl, 'flame', '即將開團！'); else pbIconText(titleEl, 'calendar', '下一團開團時間');
     let sub = `${fmtMD(d)} 開團`;
     if (days === 0) sub = '今天開團！';
     else if (days > 0 && days <= 7) sub += `（還有 ${days} 天）`;
@@ -2884,7 +2912,7 @@ function openPromoModal() {
     else if (brand) sub = `${brand}：${sub}`;
     subEl.textContent = sub;
   } else {
-    titleEl.textContent = '📅 下一團開團時間';
+    pbIconText(titleEl, 'calendar', '下一團開團時間');
     subEl.textContent = '開團時間待公布，敬請期待';
   }
 
@@ -2949,7 +2977,7 @@ function renderPurchaseSection(book) {
     const next = document.createElement('div');
     next.className = 'pb-next-date';
     const d = new Date(p.nextDate + 'T00:00:00');
-    next.textContent = isNaN(d) ? `下次開團 ${p.nextDate}` : `📅 下次開團 ${d.getMonth() + 1}/${d.getDate()}`;
+    pbIconText(next, 'calendar', isNaN(d) ? `下次開團 ${p.nextDate}` : `下次開團 ${d.getMonth() + 1}/${d.getDate()}`);
     wrap.appendChild(next);
     if (shopeeUrl) {
       const actions = document.createElement('div');
@@ -3154,7 +3182,7 @@ function renderGiftResources(book) {
       + `<div class="pb-gift-res-sub">${sub}</div></div>`
       + `<span class="pb-gift-res-go">前往教材館 ›</span></a>`;
   }).join('');
-  wrap.innerHTML = `<div class="pb-gift-res-label">🎁 跟團贈品延伸教材</div>${cards}`;
+  wrap.innerHTML = `<div class="pb-gift-res-label">${pbLineIconHtml('gift')} 跟團贈品延伸教材</div>${cards}`;
   wrap.style.display = '';
 }
 
