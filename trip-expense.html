@@ -111,7 +111,45 @@
   .actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 16px; }
   .actions .r { display: flex; gap: 6px; }
   .hint { font-size: .78rem; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+
+  /* 相片 */
+  .fabs { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; gap: 8px; z-index: 20; }
+  .fabs .fab { position: static; }
+  .fab.cam { padding: 13px 16px; background: #fff; color: var(--primary-dark); box-shadow: 0 6px 18px rgba(176,127,131,.25); }
+  .pbtns { display: flex; gap: 8px; margin-top: 6px; }
+  .pbtns .btn { flex: 1; padding: 10px 8px; font-size: .88rem; background: var(--surface); color: var(--soft); }
+  .pbtns .btn svg { width: 18px; height: 18px; }
+  .photostrip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .photostrip:empty { display: none; }
+  .pthumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface); cursor: pointer; }
+  .pthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pthumb .x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(90,74,66,.7); color: #fff; border: none; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .pthumb .x svg { width: 12px; height: 12px; }
+  .pthumb.up::after { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,.55); }
+  .pthumb .spin { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: .72rem; color: var(--primary-dark); font-weight: 700; z-index: 1; }
+  .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 10px; }
+  .pgrid .pthumb { border-radius: 12px; }
+  .pgrid .cap { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, rgba(90,74,66,.6)); color: #fff; font-size: .68rem; padding: 14px 6px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .phead { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--soft); font-weight: 700; padding: 4px 4px 6px; }
+  .phead svg { width: 16px; height: 16px; }
+  .item .s svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 2px; }
+  .lightbox { position: fixed; inset: 0; background: rgba(40,30,28,.94); z-index: 60; display: none; flex-direction: column; }
+  .lightbox.open { display: flex; }
+  .lightbox .stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; position: relative; }
+  .lightbox .stage img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .lightbox .nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.15); border: none; color: #fff; width: 40px; height: 56px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .lightbox .nav svg { width: 22px; height: 22px; }
+  .lightbox .nav.prev { left: 6px; } .lightbox .nav.next { right: 6px; }
+  .lightbox .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); color: #fff; }
+  .lightbox .bar .info { flex: 1; min-width: 0; font-size: .85rem; }
+  .lightbox .bar .info small { display: block; opacity: .7; font-size: .74rem; }
+  .lightbox .bar button { background: rgba(255,255,255,.15); border: none; color: #fff; border-radius: 999px; padding: 8px 14px; font-size: .85rem; cursor: pointer; font-family: inherit; }
+  .lightbox .bar button.del { color: #F5C4CC; }
+  .lightbox .top { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 12px; z-index: 2; }
+  .lightbox .top button { background: rgba(255,255,255,.15); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .lightbox .top button svg { width: 18px; height: 18px; }
 </style>
+<script src="modalGuard.js?v=1"></script>
 </head>
 <body>
 <div class="wrap">
@@ -147,7 +185,12 @@
   </div>
 </div>
 
-<button class="fab hidden" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>記一筆</button>
+<div class="fabs hidden" id="fabs">
+  <button class="fab cam" id="photoBtn" title="拍照或上傳照片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照</button>
+  <button class="fab" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>記一筆</button>
+</div>
+<input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="pickInput" accept="image/*" multiple style="display:none">
 
 <div class="modal" id="itemModal">
   <div class="sheet">
@@ -166,11 +209,51 @@
     </div>
     <label for="fNote">備註（選填）</label>
     <input type="text" id="fNote" placeholder="例：4 人份、公司報帳" maxlength="100">
+    <label>收據／照片（選填）</label>
+    <div class="pbtns">
+      <button type="button" class="btn" data-src="cam" data-target="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照</button>
+      <button type="button" class="btn" data-src="pick" data-target="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>選擇圖片</button>
+    </div>
+    <div class="photostrip" id="fPhotos"></div>
     <div class="err" id="itemErr"></div>
     <div class="actions">
       <button class="btn danger hidden" id="delBtn">刪除</button>
       <div class="r"><button class="btn ghost" id="cancelBtn">取消</button><button class="btn" id="saveBtn">儲存</button></div>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="photoModal">
+  <div class="sheet">
+    <h3>隨手拍</h3>
+    <div class="hint" style="margin-top:0">拍下的照片會放在那一天的相片區，跟記帳分開，不用填金額。</div>
+    <div class="pbtns" style="margin-top:12px">
+      <button type="button" class="btn" data-src="cam" data-target="photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>開相機拍照</button>
+      <button type="button" class="btn" data-src="pick" data-target="photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>選擇圖片（可多張）</button>
+    </div>
+    <div class="photostrip" id="pmPhotos"></div>
+    <div class="grid2">
+      <div><label for="pmDate">日期</label><input type="date" id="pmDate"></div>
+      <div><label for="pmCaption">說明（選填）</label><input type="text" id="pmCaption" placeholder="例：淺草寺、飯店早餐" maxlength="60"></div>
+    </div>
+    <div class="err" id="pmErr"></div>
+    <div class="actions">
+      <span></span>
+      <div class="r"><button class="btn ghost" id="pmCancelBtn">取消</button><button class="btn" id="pmSaveBtn">儲存</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <div class="top"><button type="button" id="lbClose" aria-label="關閉"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="stage">
+    <button type="button" class="nav prev" id="lbPrev" aria-label="上一張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <img id="lbImg" alt="">
+    <button type="button" class="nav next" id="lbNext" aria-label="下一張"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+  <div class="bar">
+    <div class="info"><span id="lbCaption"></span><small id="lbMeta"></small></div>
+    <button type="button" class="del" id="lbDel">刪除</button>
   </div>
 </div>
 
@@ -207,6 +290,15 @@ const API = 'https://dondon-platform.vercel.app/api/legacy';
 const TRIP = (new URLSearchParams(location.search).get('trip') || 'japan2026').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'japan2026';
 const KEY = 'trip_ledger_' + TRIP;
 const LS_KEY = 'trip_ledger_cache_' + TRIP;
+// 照片：瀏覽器先縮圖（長邊 1600px、WebP），POST trip-photo-upload-url 拿簽名網址直傳
+// Supabase 公開 bucket images 的 trip/<trip>/ 資料夾；記帳 JSON 只存路徑（省 200KB 上限空間）。
+// 縮圖列用 Storage 影像轉換（render/image，Pro 方案功能）省流量，載不到就退回原圖。
+const STORAGE_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/object/public/images/';
+const RENDER_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/render/image/public/images/';
+const PHOTO_MAX_EDGE = 1600;
+const MAX_ITEM_PHOTOS = 12;
+const CAM_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 const CATS = [
   { id: 'food',      name: '食',   color: 'var(--cat-food)',      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v7a3 3 0 0 0 6 0V3"/><path d="M8 3v18"/><path d="M17 3c-2 1-3 4-3 8h3v10"/></svg>' },
@@ -219,11 +311,15 @@ const CATS = [
 const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
-let STATE = { v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [] };
+let STATE = { v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [] };
 let SELECTED_DAY = 'all';
 let EDITING_ID = null;
 let FORM_CUR = 'JPY';
 let FORM_CAT = 'food';
+let FORM_PHOTOS = [];      // 記一筆表單裡的照片路徑（含上傳中的暫存物件 {tmp:true,...}）
+let FORM_PHOTOS_ORIG = []; // 開表單時原本的照片，存檔時比對出被拿掉的→刪 storage
+let PM_PHOTOS = [];        // 隨手拍視窗裡已上傳、還沒存成紀錄的路徑
+let PHOTO_TARGET = 'item'; // 檔案選擇器目前服務哪個視窗：item／photo
 let SYNC = { busy: false, dirty: false, timer: null };
 
 /* ---------- 工具 ---------- */
@@ -244,6 +340,12 @@ function fmtMoney(n, cur) {
 function toTwd(item) { return item.cur === 'TWD' ? Number(item.amount) || 0 : (Number(item.amount) || 0) * (Number(STATE.rate) || 0); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function liveItems() { return STATE.items.filter(i => !i.del); }
+function livePhotos() { return STATE.photos.filter(p => !p.del); }
+function photoUrl(path) { return STORAGE_BASE + path; }
+function thumbUrl(path) { return RENDER_BASE + path + '?width=480&quality=70'; }
+function thumbImg(path, alt) {
+  return '<img src="' + esc(thumbUrl(path)) + '" alt="' + esc(alt || '') + '" loading="lazy" onerror="this.onerror=null;this.src=\'' + esc(photoUrl(path)) + '\'">';
+}
 function dayIndex(iso) {
   if (!STATE.start || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return 0;
   const a = new Date(STATE.start + 'T00:00:00'), b = new Date(iso + 'T00:00:00');
@@ -257,18 +359,40 @@ async function apiPost(type, payload) {
 function setSync(msg, isErr) { const el = document.getElementById('sync'); el.textContent = msg || ''; el.className = 'sync' + (isErr ? ' err' : ''); }
 
 /* ---------- 資料合併 ---------- */
+const PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+function cleanPaths(arr) {
+  return (Array.isArray(arr) ? arr : []).map(p => String(p || '')).filter(p => PATH_RE.test(p)).slice(0, MAX_ITEM_PHOTOS);
+}
 function normalize(raw) {
-  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [] }, raw || {});
+  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [] }, raw || {});
   if (!Array.isArray(s.items)) s.items = [];
+  if (!Array.isArray(s.photos)) s.photos = [];
   s.items = s.items.filter(i => i && i.id).map(i => ({
     id: String(i.id), date: String(i.date || ''), cat: CAT_MAP[i.cat] ? i.cat : 'other',
     name: String(i.name || '').slice(0, 60), amount: Number(i.amount) || 0, cur: i.cur === 'TWD' ? 'TWD' : 'JPY',
     payer: String(i.payer || '').slice(0, 20), note: String(i.note || '').slice(0, 100),
+    photos: cleanPaths(i.photos),
     by: String(i.by || '').slice(0, 20), at: Number(i.at) || 0, del: !!i.del,
+  }));
+  // 隨手拍：一張一筆 {id, date, path, caption, by, at, del}
+  s.photos = s.photos.filter(p => p && p.id && (p.del || PATH_RE.test(String(p.path || '')))).map(p => ({
+    id: String(p.id), date: String(p.date || ''), path: String(p.path || ''),
+    caption: String(p.caption || '').slice(0, 60),
+    by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
   }));
   s.rate = Number(s.rate) || 0;
   s.metaAt = Number(s.metaAt) || 0;
   return s;
+}
+// 依 id 合併兩份清單：同 id 取 at 較大者、只在一邊的都保留、墓碑留 30 天
+function mergeList(localList, remoteList) {
+  const byId = new Map(remoteList.map(i => [i.id, i]));
+  for (const li of localList) {
+    const ri = byId.get(li.id);
+    if (!ri || (li.at || 0) > (ri.at || 0)) byId.set(li.id, li);
+  }
+  const cutoff = Date.now() - 30 * 86400000;
+  return [...byId.values()].filter(i => !(i.del && i.at < cutoff));
 }
 function merge(local, remote) {
   const out = normalize(remote);
@@ -276,19 +400,14 @@ function merge(local, remote) {
   if ((local.metaAt || 0) > (out.metaAt || 0)) {
     out.title = local.title; out.start = local.start; out.end = local.end; out.rate = local.rate; out.metaAt = local.metaAt;
   }
-  const byId = new Map(out.items.map(i => [i.id, i]));
-  for (const li of local.items) {
-    const ri = byId.get(li.id);
-    if (!ri || (li.at || 0) > (ri.at || 0)) byId.set(li.id, li);
-  }
-  const cutoff = Date.now() - 30 * 86400000; // 墓碑留 30 天，之後清掉
-  out.items = [...byId.values()].filter(i => !(i.del && i.at < cutoff));
+  out.items = mergeList(local.items, out.items);
+  out.photos = mergeList(local.photos || [], out.photos);
   return out;
 }
-// 比對兩份資料是否相同（items 依 id 排序，合併後順序不同不算差異）
+// 比對兩份資料是否相同（清單依 id 排序，合併後順序不同不算差異）
 function fingerprint(s) {
-  const items = s.items.slice().sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, items]);
+  const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, s.items.slice().sort(byId), (s.photos || []).slice().sort(byId)]);
 }
 function cacheSave() { try { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); } catch (e) {} }
 function cacheLoad() { try { const s = localStorage.getItem(LS_KEY); return s ? normalize(JSON.parse(s)) : null; } catch (e) { return null; } }
@@ -353,14 +472,212 @@ async function boot() {
 function showLogin() {
   document.getElementById('loginCard').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
-  document.getElementById('addBtn').classList.add('hidden');
+  document.getElementById('fabs').classList.add('hidden');
   setSync('');
 }
 function showApp() {
   document.getElementById('loginCard').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  document.getElementById('addBtn').classList.remove('hidden');
+  document.getElementById('fabs').classList.remove('hidden');
   render();
+}
+
+/* ---------- 照片：縮圖＋上傳 ---------- */
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('這個檔案不是可讀的圖片')); };
+    img.src = url;
+  });
+}
+// 瀏覽器端縮到長邊 1600px；能出 WebP 就 WebP，不行（舊 Safari）退 JPEG。
+// <img> 解碼會自動套 EXIF 方向，所以直式照片不會躺著。
+async function compressImage(file) {
+  const img = await loadImage(file);
+  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  const toBlob = type => new Promise(res => canvas.toBlob(res, type, 0.82));
+  let blob = await toBlob('image/webp');
+  let ext = 'webp';
+  if (!blob || blob.type !== 'image/webp') { blob = await toBlob('image/jpeg'); ext = 'jpg'; }
+  if (!blob) throw new Error('圖片處理失敗');
+  return { blob, ext };
+}
+async function uploadPhoto(file) {
+  const { blob, ext } = await compressImage(file);
+  const init = await apiPost('trip-photo-upload-url', { trip: TRIP, ext, size: blob.size });
+  if (init && init.needLogin) { showLogin(); throw new Error('請重新登入'); }
+  if (!init || init.success !== true) throw new Error((init && init.error) || '取得上傳網址失敗');
+  const put = await fetch(init.signedUrl, { method: 'PUT', headers: { 'Content-Type': blob.type }, body: blob });
+  if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
+  return init.path;
+}
+function deletePhotoFile(path) {
+  // 盡力刪，失敗不影響記帳（留在 storage 的孤兒檔無害）
+  if (!path || !PATH_RE.test(path)) return;
+  apiPost('trip-photo-delete', { path }).catch(() => {});
+}
+// 縮圖列：list 元素 = 路徑字串（已上傳）或 {tmp:true, id, preview, status}（上傳中／失敗）
+function renderStrip(elId, list, onRemove) {
+  const el = document.getElementById(elId);
+  el.innerHTML = list.map((p, idx) => {
+    if (typeof p === 'string') {
+      return '<div class="pthumb" data-idx="' + idx + '" data-path="' + esc(p) + '">' + thumbImg(p) + '<button type="button" class="x" data-rm="' + idx + '" aria-label="移除">' + X_ICON + '</button></div>';
+    }
+    return '<div class="pthumb up" data-idx="' + idx + '"><img src="' + esc(p.preview) + '" alt=""><div class="spin">' + (p.status === 'error' ? '失敗' : '上傳中') + '</div>' +
+      (p.status === 'error' ? '<button type="button" class="x" data-rm="' + idx + '" aria-label="移除">' + X_ICON + '</button>' : '') + '</div>';
+  }).join('');
+  el.querySelectorAll('button[data-rm]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); onRemove(Number(b.dataset.rm)); }));
+  el.querySelectorAll('.pthumb[data-path]').forEach(t => t.addEventListener('click', () => {
+    const paths = list.filter(x => typeof x === 'string');
+    openLightbox(paths.map(path => ({ path, caption: '', meta: '', kind: 'preview' })), paths.indexOf(t.dataset.path));
+  }));
+}
+function stripList(target) { return target === 'photo' ? PM_PHOTOS : FORM_PHOTOS; }
+function redrawStrip(target) {
+  if (target === 'photo') renderStrip('pmPhotos', PM_PHOTOS, idx => { const p = PM_PHOTOS.splice(idx, 1)[0]; if (typeof p === 'string') deletePhotoFile(p); redrawStrip('photo'); });
+  else renderStrip('fPhotos', FORM_PHOTOS, idx => { const p = FORM_PHOTOS.splice(idx, 1)[0]; if (typeof p === 'string' && !FORM_PHOTOS_ORIG.includes(p)) deletePhotoFile(p); redrawStrip('item'); });
+}
+function uploadsPending(target) { return stripList(target).some(p => typeof p !== 'string' && p.status !== 'error'); }
+async function handleFiles(files, target) {
+  const list = stripList(target);
+  const room = MAX_ITEM_PHOTOS - list.length;
+  const picked = [...files].filter(f => f && f.type && f.type.startsWith('image/')).slice(0, Math.max(0, room));
+  if (files.length && !picked.length) { alert(room <= 0 ? '一次最多 ' + MAX_ITEM_PHOTOS + ' 張' : '請選圖片檔'); return; }
+  for (const f of picked) {
+    const tmp = { tmp: true, id: uid(), preview: URL.createObjectURL(f), status: 'up' };
+    list.push(tmp);
+    redrawStrip(target);
+    uploadPhoto(f).then(path => {
+      const i = list.indexOf(tmp);
+      if (i >= 0) list[i] = path;
+      URL.revokeObjectURL(tmp.preview);
+      redrawStrip(target);
+    }).catch(err => {
+      tmp.status = 'error';
+      redrawStrip(target);
+      const errEl = document.getElementById(target === 'photo' ? 'pmErr' : 'itemErr');
+      errEl.textContent = '有照片上傳失敗：' + err.message;
+    });
+  }
+}
+document.querySelectorAll('.pbtns button[data-src]').forEach(b => b.addEventListener('click', () => {
+  PHOTO_TARGET = b.dataset.target;
+  const input = document.getElementById(b.dataset.src === 'cam' ? 'camInput' : 'pickInput');
+  input.value = '';
+  input.click();
+}));
+document.getElementById('camInput').addEventListener('change', e => handleFiles(e.target.files, PHOTO_TARGET));
+document.getElementById('pickInput').addEventListener('change', e => handleFiles(e.target.files, PHOTO_TARGET));
+
+/* ---------- 隨手拍視窗 ---------- */
+document.getElementById('photoBtn').addEventListener('click', () => {
+  PM_PHOTOS = [];
+  redrawStrip('photo');
+  document.getElementById('pmDate').value = (SELECTED_DAY !== 'all' && SELECTED_DAY !== 'photos') ? SELECTED_DAY : todayStr();
+  document.getElementById('pmCaption').value = '';
+  document.getElementById('pmErr').textContent = '';
+  openModal('photoModal');
+});
+function cancelPhotoModal() {
+  // 已上傳但沒存成紀錄的檔案一併刪掉
+  PM_PHOTOS.filter(p => typeof p === 'string').forEach(deletePhotoFile);
+  PM_PHOTOS = [];
+  closeModal('photoModal');
+}
+document.getElementById('pmCancelBtn').addEventListener('click', cancelPhotoModal);
+document.getElementById('pmSaveBtn').addEventListener('click', () => {
+  const errEl = document.getElementById('pmErr');
+  if (uploadsPending('photo')) { errEl.textContent = '照片還在上傳，請稍等'; return; }
+  const paths = PM_PHOTOS.filter(p => typeof p === 'string');
+  if (!paths.length) { errEl.textContent = '請先拍照或選擇圖片'; return; }
+  const date = document.getElementById('pmDate').value;
+  const caption = document.getElementById('pmCaption').value.trim();
+  const now = Date.now();
+  paths.forEach((path, i) => STATE.photos.push({ id: uid(), date, path, caption, by: getUser(), at: now + i, del: false }));
+  PM_PHOTOS = [];
+  if (SELECTED_DAY !== 'all' && SELECTED_DAY !== 'photos' && date && date !== SELECTED_DAY) SELECTED_DAY = date;
+  closeModal('photoModal');
+  scheduleSync();
+});
+
+/* ---------- 看大圖 ---------- */
+let LB = { list: [], idx: 0 };
+function openLightbox(list, idx) {
+  if (!list.length) return;
+  LB = { list, idx: Math.max(0, Math.min(idx, list.length - 1)) };
+  document.getElementById('lightbox').classList.add('open');
+  renderLightbox();
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.getElementById('lbImg').src = ''; }
+function renderLightbox() {
+  const cur = LB.list[LB.idx];
+  if (!cur) { closeLightbox(); return; }
+  document.getElementById('lbImg').src = photoUrl(cur.path);
+  document.getElementById('lbCaption').textContent = cur.caption || '';
+  document.getElementById('lbMeta').textContent = cur.meta + (LB.list.length > 1 ? '　' + (LB.idx + 1) + ' / ' + LB.list.length : '');
+  document.getElementById('lbPrev').style.visibility = LB.idx > 0 ? 'visible' : 'hidden';
+  document.getElementById('lbNext').style.visibility = LB.idx < LB.list.length - 1 ? 'visible' : 'hidden';
+  document.getElementById('lbDel').style.display = cur.kind === 'preview' ? 'none' : '';
+}
+document.getElementById('lbClose').addEventListener('click', closeLightbox);
+document.getElementById('lbPrev').addEventListener('click', () => { if (LB.idx > 0) { LB.idx--; renderLightbox(); } });
+document.getElementById('lbNext').addEventListener('click', () => { if (LB.idx < LB.list.length - 1) { LB.idx++; renderLightbox(); } });
+document.getElementById('lightbox').addEventListener('click', e => { if (e.target.classList.contains('stage')) closeLightbox(); });
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') document.getElementById('lbPrev').click();
+  if (e.key === 'ArrowRight') document.getElementById('lbNext').click();
+});
+(function swipe() {
+  let x0 = null;
+  const st = document.querySelector('#lightbox .stage');
+  st.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  st.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (dx < -40) document.getElementById('lbNext').click();
+    else if (dx > 40) document.getElementById('lbPrev').click();
+  }, { passive: true });
+})();
+document.getElementById('lbDel').addEventListener('click', () => {
+  const cur = LB.list[LB.idx];
+  if (!cur || !confirm('確定刪除這張照片？')) return;
+  if (cur.kind === 'photo') {
+    const idx = STATE.photos.findIndex(p => p.id === cur.id);
+    if (idx >= 0) STATE.photos[idx] = Object.assign({}, STATE.photos[idx], { del: true, at: Date.now() });
+  } else if (cur.kind === 'item') {
+    const it = STATE.items.find(i => i.id === cur.id);
+    if (it) { it.photos = it.photos.filter(p => p !== cur.path); it.at = Date.now(); }
+  }
+  deletePhotoFile(cur.path);
+  LB.list.splice(LB.idx, 1);
+  if (LB.idx >= LB.list.length) LB.idx = LB.list.length - 1;
+  if (LB.list.length) renderLightbox(); else closeLightbox();
+  scheduleSync();
+});
+// 一天的相片區：隨手拍＋該天記帳附的收據照片，點開可左右滑
+function dayPhotoList(iso) {
+  const out = livePhotos().filter(p => p.date === iso).sort((a, b) => (a.at || 0) - (b.at || 0))
+    .map(p => ({ path: p.path, caption: p.caption, meta: fmtDate(p.date) + (p.by ? '　' + p.by + ' 拍' : ''), kind: 'photo', id: p.id }));
+  for (const it of liveItems().filter(i => i.date === iso)) {
+    for (const path of it.photos) out.push({ path, caption: it.name + '　' + fmtMoney(it.amount, it.cur), meta: fmtDate(it.date) + '　收據／照片', kind: 'item', id: it.id });
+  }
+  return out;
+}
+function photoGridHtml(iso) {
+  const list = dayPhotoList(iso);
+  if (!list.length) return '';
+  return '<div class="phead">' + CAM_ICON + '相片 ' + list.length + ' 張</div><div class="pgrid" data-day="' + esc(iso) + '">' +
+    list.map((p, i) => '<div class="pthumb" data-lb="' + i + '">' + thumbImg(p.path, p.caption) + (p.caption ? '<div class="cap">' + esc(p.caption) + '</div>' : '') + '</div>').join('') + '</div>';
 }
 
 /* ---------- 登入 ---------- */
@@ -431,45 +748,64 @@ function render() {
       d.setDate(d.getDate() + 1);
     }
   }
+  const photos = livePhotos();
+  for (const p of photos) if (p.date) days.add(p.date);
   const dayList = [...days].sort();
-  if (SELECTED_DAY !== 'all' && !days.has(SELECTED_DAY)) SELECTED_DAY = 'all';
+  if (SELECTED_DAY !== 'all' && SELECTED_DAY !== 'photos' && !days.has(SELECTED_DAY)) SELECTED_DAY = 'all';
   const dayTot = {};
   for (const it of items) dayTot[it.date] = (dayTot[it.date] || 0) + toTwd(it);
+  const photoCount = photos.length + items.reduce((n, i) => n + i.photos.length, 0);
   document.getElementById('tabs').innerHTML = '<button class="tab' + (SELECTED_DAY === 'all' ? ' on' : '') + '" data-day="all">全部</button>' +
-    dayList.map(iso => { const n = dayIndex(iso); return '<button class="tab' + (SELECTED_DAY === iso ? ' on' : '') + '" data-day="' + esc(iso) + '">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso) + '</small></button>'; }).join('');
+    dayList.map(iso => { const n = dayIndex(iso); return '<button class="tab' + (SELECTED_DAY === iso ? ' on' : '') + '" data-day="' + esc(iso) + '">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso) + '</small></button>'; }).join('') +
+    (photoCount ? '<button class="tab' + (SELECTED_DAY === 'photos' ? ' on' : '') + '" data-day="photos">相簿<small>' + photoCount + '</small></button>' : '');
   document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => { SELECTED_DAY = b.dataset.day; render(); }));
 
   // 清單
-  const shown = SELECTED_DAY === 'all' ? dayList : [SELECTED_DAY];
+  const photoDays = new Set(photos.map(p => p.date).concat(items.filter(i => i.photos.length).map(i => i.date)));
+  const shown = SELECTED_DAY === 'all' ? dayList : SELECTED_DAY === 'photos' ? dayList.filter(iso => photoDays.has(iso)) : [SELECTED_DAY];
   const undated = items.filter(i => !i.date);
   let html = '';
   for (const iso of shown) {
     const its = items.filter(i => i.date === iso).sort((a, b) => (a.at || 0) - (b.at || 0));
-    if (!its.length && SELECTED_DAY === 'all') continue;
+    if (!its.length && !photoDays.has(iso) && SELECTED_DAY === 'all') continue;
     const n = dayIndex(iso);
-    html += '<div class="day"><div class="dayhead"><span class="d">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso, true) + '</small></span><span class="t">NT$ ' + Math.round(dayTot[iso] || 0).toLocaleString('en-US') + '</span></div>' +
-      (its.length ? its.map(itemHtml).join('') : '<div class="empty">這天還沒有紀錄</div>') + '</div>';
+    const grid = photoGridHtml(iso);
+    html += '<div class="day"><div class="dayhead"><span class="d">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso, true) + '</small></span>' +
+      (SELECTED_DAY === 'photos' ? '' : '<span class="t">NT$ ' + Math.round(dayTot[iso] || 0).toLocaleString('en-US') + '</span>') + '</div>' +
+      (SELECTED_DAY === 'photos' ? grid : (its.length ? its.map(itemHtml).join('') : '<div class="empty">這天還沒有記帳</div>') + grid) + '</div>';
   }
   if (SELECTED_DAY === 'all' && undated.length) {
     html += '<div class="day"><div class="dayhead"><span class="d">未填日期</span></div>' + undated.map(itemHtml).join('') + '</div>';
   }
-  if (!html) html = '<div class="empty">' + (SELECTED_DAY === 'all' ? '還沒有紀錄，按右下角「記一筆」開始' : '這天還沒有紀錄') + '</div>';
+  if (SELECTED_DAY !== 'photos' && photos.some(p => !p.date)) {
+    html += '<div class="day"><div class="dayhead"><span class="d">未填日期的相片</span></div>' + photoGridHtml('') + '</div>';
+  }
+  if (!html) html = '<div class="empty">' + (SELECTED_DAY === 'all' ? '還沒有紀錄，按右下角「記一筆」或「拍照」開始' : SELECTED_DAY === 'photos' ? '還沒有相片' : '這天還沒有紀錄') + '</div>';
   document.getElementById('list').innerHTML = html;
   document.querySelectorAll('#list .item').forEach(el => el.addEventListener('click', () => openItem(el.dataset.id)));
+  document.querySelectorAll('#list .pgrid').forEach(g => {
+    const list = dayPhotoList(g.dataset.day);
+    g.querySelectorAll('.pthumb[data-lb]').forEach(t => t.addEventListener('click', () => openLightbox(list, Number(t.dataset.lb))));
+  });
 }
 function itemHtml(it) {
   const c = CAT_MAP[it.cat] || CAT_MAP.other;
-  const sub = [it.payer ? it.payer + ' 付' : '', it.note].filter(Boolean).join('｜');
+  const sub = [it.payer ? it.payer + ' 付' : '', it.note].filter(Boolean).map(esc).concat(it.photos.length ? [CAM_ICON + it.photos.length] : []).join('｜');
   const est = it.cur === 'JPY' && STATE.rate ? '<small>≈ NT$ ' + Math.round(toTwd(it)).toLocaleString('en-US') + '</small>' : '';
   return '<div class="item" data-id="' + esc(it.id) + '"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' +
-    '<div class="m"><div class="n">' + esc(it.name || c.name) + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>' +
+    '<div class="m"><div class="n">' + esc(it.name || c.name) + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>' +
     '<div class="a">' + fmtMoney(it.amount, it.cur) + est + '</div></div>';
 }
 
 /* ---------- 記一筆／編輯 ---------- */
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); }));
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
+  if (e.target !== m) return;
+  if (m.id === 'itemModal') cancelItemModal();
+  else if (m.id === 'photoModal') cancelPhotoModal();
+  else closeModal(m.id);
+}));
 
 function renderCatPick() {
   document.getElementById('catPick').innerHTML = CATS.map(c =>
@@ -494,13 +830,22 @@ function openItem(id) {
   document.getElementById('fName').value = it ? it.name : '';
   document.getElementById('fAmount').value = it ? it.amount : '';
   document.getElementById('fNote').value = it ? it.note : '';
+  FORM_PHOTOS = it ? it.photos.slice() : [];
+  FORM_PHOTOS_ORIG = FORM_PHOTOS.slice();
+  redrawStrip('item');
   document.getElementById('itemErr').textContent = '';
   document.getElementById('delBtn').classList.toggle('hidden', !it);
   openModal('itemModal');
   setTimeout(() => document.getElementById(it ? 'fAmount' : 'fName').focus(), 50);
 }
+function cancelItemModal() {
+  // 這次新上傳、但沒存的照片刪掉
+  FORM_PHOTOS.filter(p => typeof p === 'string' && !FORM_PHOTOS_ORIG.includes(p)).forEach(deletePhotoFile);
+  FORM_PHOTOS = [];
+  closeModal('itemModal');
+}
 document.getElementById('addBtn').addEventListener('click', () => openItem(null));
-document.getElementById('cancelBtn').addEventListener('click', () => closeModal('itemModal'));
+document.getElementById('cancelBtn').addEventListener('click', cancelItemModal);
 document.getElementById('saveBtn').addEventListener('click', () => {
   const name = document.getElementById('fName').value.trim();
   const amount = Number(document.getElementById('fAmount').value);
@@ -508,22 +853,30 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   const errEl = document.getElementById('itemErr');
   if (!name) { errEl.textContent = '請填品項'; return; }
   if (!(amount >= 0) || !isFinite(amount)) { errEl.textContent = '金額請填數字'; return; }
+  if (uploadsPending('item')) { errEl.textContent = '照片還在上傳，請稍等'; return; }
+  const photos = FORM_PHOTOS.filter(p => typeof p === 'string');
+  FORM_PHOTOS_ORIG.filter(p => !photos.includes(p)).forEach(deletePhotoFile); // 編輯時被拿掉的
   const now = Date.now();
   const rec = {
     id: EDITING_ID || uid(), date, cat: FORM_CAT, name, amount, cur: FORM_CUR,
     payer: document.getElementById('fPayer').value.trim(), note: document.getElementById('fNote').value.trim(),
-    by: getUser(), at: now, del: false,
+    photos, by: getUser(), at: now, del: false,
   };
   const idx = STATE.items.findIndex(i => i.id === rec.id);
   if (idx >= 0) STATE.items[idx] = rec; else STATE.items.push(rec);
-  if (SELECTED_DAY !== 'all' && date && date !== SELECTED_DAY) SELECTED_DAY = date;
+  if (SELECTED_DAY !== 'all' && SELECTED_DAY !== 'photos' && date && date !== SELECTED_DAY) SELECTED_DAY = date;
+  FORM_PHOTOS = [];
   closeModal('itemModal');
   scheduleSync();
 });
 document.getElementById('delBtn').addEventListener('click', () => {
   if (!EDITING_ID || !confirm('確定刪除這一筆？')) return;
   const idx = STATE.items.findIndex(i => i.id === EDITING_ID);
-  if (idx >= 0) STATE.items[idx] = Object.assign({}, STATE.items[idx], { del: true, at: Date.now() });
+  if (idx >= 0) {
+    STATE.items[idx].photos.forEach(deletePhotoFile);
+    STATE.items[idx] = Object.assign({}, STATE.items[idx], { photos: [], del: true, at: Date.now() });
+  }
+  FORM_PHOTOS = [];
   closeModal('itemModal');
   scheduleSync();
 });
@@ -549,9 +902,9 @@ document.getElementById('sSaveBtn').addEventListener('click', () => {
   scheduleSync();
 });
 document.getElementById('exportBtn').addEventListener('click', () => {
-  const rows = [['日期', '分類', '品項', '金額', '幣別', '台幣估算', '誰付的', '備註', '記錄者']];
+  const rows = [['日期', '分類', '品項', '金額', '幣別', '台幣估算', '誰付的', '備註', '記錄者', '照片']];
   for (const it of liveItems().slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.at || 0) - (b.at || 0))) {
-    rows.push([it.date, CAT_MAP[it.cat].name, it.name, it.amount, it.cur, Math.round(toTwd(it)), it.payer, it.note, it.by]);
+    rows.push([it.date, CAT_MAP[it.cat].name, it.name, it.amount, it.cur, Math.round(toTwd(it)), it.payer, it.note, it.by, it.photos.map(photoUrl).join(' ')]);
   }
   const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const csv = '﻿' + rows.map(r => r.map(cell).join(',')).join('\r\n');
