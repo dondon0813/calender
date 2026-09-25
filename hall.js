@@ -273,10 +273,10 @@ function hallRenderEditor() {
       '</div>' +
 
       label('名稱 *') +
-      '<input id="hfTitle" style="' + inputStyle + '" value="' + hallEscape(e.title) + '" placeholder="例如：數字迷宮小遊戲">' +
+      '<input type="text" id="hfTitle" style="' + inputStyle + '" value="' + hallEscape(e.title) + '" placeholder="例如：數字迷宮小遊戲">' +
 
       label('slug（網址代稱，小寫英數與 -，留空由後端自動產生）') +
-      '<input id="hfSlug" style="' + inputStyle + '" value="' + hallEscape(e.slug) + '" placeholder="例如：number-maze">' +
+      '<input type="text" id="hfSlug" style="' + inputStyle + '" value="' + hallEscape(e.slug) + '" placeholder="例如：number-maze">' +
 
       '<div style="display:flex; gap:10px;"><div style="flex:1;">' +
         label('類型') +
@@ -312,7 +312,7 @@ function hallRenderEditor() {
         '<div id="hfCoverPreview" style="width:96px; height:96px; border-radius:8px; background:#F5EFE9; flex:none; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--c-text-light);">' +
           (e.coverUrl ? '<img src="' + hallEscape(e.coverUrl) + '" style="width:100%; height:100%; object-fit:cover;">' : '尚未設定') + '</div>' +
         '<div style="flex:1; display:flex; flex-direction:column; gap:6px;">' +
-          '<input id="hfCoverUrl" style="' + inputStyle + '" value="' + hallEscape(e.coverUrl) + '" placeholder="圖片網址，或用下面按鈕上傳" oninput="hallCoverUrlInput(this.value)">' +
+          '<input type="url" id="hfCoverUrl" style="' + inputStyle + '" value="' + hallEscape(e.coverUrl) + '" placeholder="圖片網址，或用下面按鈕上傳" oninput="hallCoverUrlInput(this.value)">' +
           '<button type="button" class="task-mini-btn" onclick="hallPickImage(function(url){ hallSyncFormToEdit(); HALL_EDIT.coverUrl = url; hallRenderEditor(); })">📤 上傳封面</button>' +
         '</div>' +
       '</div>' +
@@ -344,10 +344,10 @@ function hallRenderEditor() {
       '<select id="hfEvent" style="' + inputStyle + '">' + evOptions.join('') + '</select>' +
 
       label('備用購買連結（可空）') +
-      '<input id="hfBuyUrl" style="' + inputStyle + '" value="' + hallEscape(e.buyUrl) + '" placeholder="https://…">' +
+      '<input type="url" id="hfBuyUrl" style="' + inputStyle + '" value="' + hallEscape(e.buyUrl) + '" placeholder="https://…">' +
 
       label('試玩版網址（可空）') +
-      '<input id="hfTrialUrl" style="' + inputStyle + '" value="' + hallEscape(e.trialUrl) + '" placeholder="https://…">' +
+      '<input type="url" id="hfTrialUrl" style="' + inputStyle + '" value="' + hallEscape(e.trialUrl) + '" placeholder="https://…">' +
 
       label('完整版檔案') +
       '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' +
@@ -358,7 +358,7 @@ function hallRenderEditor() {
       '</div>' +
       '<div id="hfFileNameWrap" style="display:' + (e.kind === 'file' ? '' : 'none') + ';">' +
         label('檔名（顯示用，上傳完整版檔案後自動帶入，可手動修改）') +
-        '<input id="hfFileName" style="' + inputStyle + '" value="' + hallEscape(e.fileName) + '">' +
+        '<input type="text" id="hfFileName" style="' + inputStyle + '" value="' + hallEscape(e.fileName) + '">' +
       '</div>' +
 
       '<div style="display:flex; gap:8px; margin-top:16px;">' +
