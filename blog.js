@@ -102,7 +102,7 @@ function blogRenderList() {
       ? '<img src="' + blogEscape(p.coverUrl) + '" alt="" style="width:64px; height:44px; object-fit:cover; border-radius:8px; flex:none; background:#E6DCD2;">'
       : '<div style="width:64px; height:44px; border-radius:8px; flex:none; background:#F5EFE9; display:flex; align-items:center; justify-content:center; font-size:18px;">📝</div>';
     html +=
-      '<div style="display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer;" onclick="blogOpenEdit(' + i + ')">' +
+      '<div style="display:flex; gap:10px; align-items:center; background:var(--c-surface); border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer;" onclick="blogOpenEdit(' + i + ')">' +
         cover +
         '<div style="flex:1; min-width:0;">' +
           '<div style="font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + pin + blogEscape(p.title) + '</div>' +
@@ -165,7 +165,7 @@ function blogRenderEditor() {
   const label = t => '<div style="font-size:12px; font-weight:700; color:var(--c-text-light); margin:12px 0 4px;">' + t + '</div>';
   const inputStyle = 'width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--c-border); border-radius:8px; font-size:14px; font-family:inherit;';
   editArea.innerHTML =
-    '<div style="background:#fff; border:1px solid var(--c-border); border-radius:14px; padding:16px 16px 20px; max-width:680px;">' +
+    '<div style="background:var(--c-surface); border:1px solid var(--c-border); border-radius:14px; padding:16px 16px 20px; max-width:680px;">' +
       '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">' +
         '<button class="task-mini-btn" onclick="blogCloseEdit()">← 返回列表</button>' +
         '<div style="flex:1;"></div>' +

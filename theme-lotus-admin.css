@@ -88,13 +88,20 @@ body{background:#FFFFFF!important}
 /* 輸入框／下拉／文字框一律留一條淡細線（docs/11 第四批取捨：後台密集表單需辨識）。
    09-23 雪莉抓到：品牌廠商搜尋欄（白底＋var(--c-border) 透明框）直接放在白頁面上整個看不見；
    同樣寫法的還有抽獎篩選列搜尋框、待配對綁定下拉等，這裡一次補齊，只動 border-color 不動 border:none 的元素（狀態膠囊 select）。 */
-input[type="text"],input[type="search"],input[type="date"],input[type="number"],input[type="email"],input[type="url"],select,textarea{border-color:#E6DCD2!important}
+/* 09-26 統一規則（雪莉：備忘錄搜尋列被吃掉，整站掃過一次）：
+   「輸入框本身」與「包住輸入框的容器」（搜尋列外框、規則列外框、教材庫選取框）、以及搜尋列旁的圖示按鈕與分段切換器，
+   一律白底＋淡奶茶線 #E6DCD2、聚焦藕粉 #C99A9B。補上 password 與沒寫 type 的裸 input（js 模板常漏寫）。 */
+input[type="text"],input[type="search"],input[type="date"],input[type="number"],input[type="email"],input[type="url"],input[type="password"],input[type="tel"],input:not([type]),select,textarea{border-color:#E6DCD2!important}
+.mtree-search-wrap,.mtree-icon-btn,.lot-seg,#materialLibraryPicker,.hall-rule-row,.agent-switch-btn{border-color:#E6DCD2!important}
+.mtree-search-wrap:focus-within{border-color:#C99A9B!important}
+#materialLibraryPicker{background:#fff}
+.agent-switch-btn.active{border-color:var(--c-primary-dark)!important}
 /* 小按鈕（.task-mini-btn）同輸入框例外：白底放在白頁面上會整顆消失只剩文字（雪莉 09-25 行事曆工具列），保留一圈淡線 */
 .task-mini-btn,.icon-btn{border-color:#E6DCD2!important}
 .task-mini-btn.danger{border-color:#D9A3A8!important}
 .task-mini-btn.working{border-color:#C4936F!important}
 .task-mini-btn.restore{border-color:var(--c-cat-2)!important}
-input[type="text"]:focus,input[type="search"]:focus,input[type="date"]:focus,input[type="number"]:focus,input[type="email"]:focus,input[type="url"]:focus,select:focus,textarea:focus{border-color:#C99A9B!important}
+input[type="text"]:focus,input[type="search"]:focus,input[type="date"]:focus,input[type="number"]:focus,input[type="email"]:focus,input[type="url"]:focus,input[type="password"]:focus,input[type="tel"]:focus,input:not([type]):focus,select:focus,textarea:focus{border-color:#C99A9B!important}
 
 /* 工作首頁按鈕／便利小工具圖示：不要外框、不要陰影（雪莉 09-20：按鈕周圍灰灰的一層）。框線本身已在 admin.html 改透明，這裡補拿掉暖棕陰影 */
 .home-card{border-color:transparent!important;box-shadow:none!important}

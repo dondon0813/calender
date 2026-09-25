@@ -141,3 +141,6 @@ body:has(.box) .section-title{background:#F1E8E0!important}
 .pb-top-active .pb-gift-badge{background:#C99A9B!important}
 .pb-top-active .pb-code-hint{background:#C99A9B!important}
 .pb-top-active .pb-discount{border-color:#E5CFCD!important}
+
+/* 09-26 折扣碼框統一（首頁／開學清單／繪本館原本白底＋透明框，在白色視窗裡整個看不見）：比照食譜頁 .rcp-code＝奶茶底＋藕粉虛線 */
+.gc-code,.dc-code,.pb-code{background:var(--c-orange-bg,#F5EFE9)!important;border:1px dashed var(--c-primary,#C99A9B)!important}

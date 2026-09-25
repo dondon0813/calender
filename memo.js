@@ -123,7 +123,7 @@ function buildPnoteFolderOptions(selectedFolderId) {
     folders.filter(f => (f.parentFolderId || '') === parentId).forEach(f => {
       const indent = '　'.repeat(depth); // 全形空白縮排，中文對齊比較好看
       options.push(
-        `<option value="${escapeHtml(f.id)}"${f.id === selectedFolderId ? ' selected' : ''}>${indent}📁 ${escapeHtml(f.name)}</option>`
+        `<option value="${escapeHtml(f.id)}"${f.id === selectedFolderId ? ' selected' : ''}>${indent}${escapeHtml(f.name)}</option>`
       );
       walk(f.id, depth + 1);
     });
@@ -171,10 +171,10 @@ function renderTreeLevel(parentId) {
       <div class="mtree-node">
         <div class="mtree-folder-row" data-folder="${escapeHtml(f.id)}">
           <span class="mtree-arrow">${open ? '▼' : '▶'}</span>
-          <span class="mtree-folder-icon">📁</span>
+          <span class="mtree-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
           <span class="mtree-folder-name">${escapeHtml(f.name)}</span>
           <span class="mtree-folder-count">${count}</span>
-          <button class="mtree-folder-add" data-folder="${escapeHtml(f.id)}" title="在這個資料夾新增備忘錄">📝+</button>
+          <button class="mtree-folder-add" data-folder="${escapeHtml(f.id)}" title="在這個資料夾新增備忘錄" aria-label="在這個資料夾新增備忘錄"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5"/><path d="M13 3v5h5"/><path d="M13 3l5 5v3"/><path d="M18 15v6M15 18h6"/></svg></button>
           <button class="mtree-folder-del" data-folder="${escapeHtml(f.id)}" title="刪除這個資料夾">✕</button>
         </div>
         ${open ? `<div class="mtree-children">${renderTreeLevel(f.id)}</div>` : ''}
@@ -184,7 +184,7 @@ function renderTreeLevel(parentId) {
     const active = n.id === pnoteSelectedNoteId;
     html += `
       <div class="mtree-note-row${active ? ' active' : ''}" data-note="${escapeHtml(n.id)}">
-        <span class="mtree-note-icon">📝</span>
+        <span class="mtree-note-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 12h6M9 16h4"/></svg></span>
         <span class="mtree-note-title">${escapeHtml(pnoteTitleOf(n.text))}</span>
       </div>`;
   });
@@ -205,7 +205,7 @@ function renderSearchResults() {
     const active = n.id === pnoteSelectedNoteId;
     return `
       <div class="mtree-note-row${active ? ' active' : ''}" data-note="${escapeHtml(n.id)}">
-        <span class="mtree-note-icon">📝</span>
+        <span class="mtree-note-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 12h6M9 16h4"/></svg></span>
         <span class="mtree-note-title">${escapeHtml(pnoteTitleOf(n.text))}</span>
         <span class="mtree-search-path">${escapeHtml(pnoteFolderPath(n.folderId))}</span>
       </div>`;
@@ -262,7 +262,7 @@ document.getElementById('mtreeBackBtn').addEventListener('click', () => {
 function renderEditor() {
   const body = document.getElementById('mtreeEditorBody');
   if (!pnoteSelectedNoteId) {
-    body.innerHTML = '<div class="task-empty">請選擇一則備忘錄，或點上方「📝＋」新增一則</div>';
+    body.innerHTML = '<div class="task-empty">請選擇一則備忘錄，或點上方「新增備忘錄」鈕新增一則</div>';
     return;
   }
   const note = pnoteNotes().find(n => n.id === pnoteSelectedNoteId);
@@ -359,7 +359,7 @@ async function quickAddNoteToFolder(folderId) {
   }
 }
 
-// 上方工具列的「📝＋」：新增到最上層（未分類），之後可以用編輯器裡的下拉選單搬到想要的資料夾
+// 上方工具列的「新增備忘錄」鈕：新增到最上層（未分類），之後可以用編輯器裡的下拉選單搬到想要的資料夾
 document.getElementById('pnoteAddNoteBtn').addEventListener('click', () => quickAddNoteToFolder(''));
 
 // ---------- 資料夾操作 ----------

@@ -143,7 +143,7 @@ function hallRenderList() {
     const ruleCount = (r.rules || []).length;
     const grantCount = (r.grants || []).length;
     const pageUrl = HALL_MATERIALS_PAGE_BASE + encodeURIComponent(r.slug || '');
-    return '<div style="display:flex; gap:10px; align-items:center; background:#fff; border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px;">' +
+    return '<div style="display:flex; gap:10px; align-items:center; background:var(--c-surface); border:1px solid var(--c-border); border-radius:12px; padding:10px 12px; margin-bottom:8px;">' +
       cover +
       '<div style="flex:1; min-width:0; cursor:pointer;" onclick="hallOpenEdit(' + i + ')">' +
         '<div style="font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + hallEscape(r.title) + '</div>' +
@@ -265,7 +265,7 @@ function hallRenderEditor() {
     : '尚未上傳';
 
   editArea.innerHTML =
-    '<div style="background:#fff; border:1px solid var(--c-border); border-radius:14px; padding:16px 16px 20px; max-width:680px;">' +
+    '<div style="background:var(--c-surface); border:1px solid var(--c-border); border-radius:14px; padding:16px 16px 20px; max-width:680px;">' +
       '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">' +
         '<button type="button" class="task-mini-btn" onclick="hallCloseEdit()">← 返回教材館</button>' +
         '<div style="flex:1;"></div>' +
@@ -399,8 +399,8 @@ function hallRenderEditor() {
       (e.id
         ? '<div id="hfGrants"></div>' +
           '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">' +
-            '<input id="hfGrantMemberNo" style="flex:1; min-width:120px; padding:7px 9px; border:1px solid var(--c-border); border-radius:8px;" placeholder="會員編號，如 D26090001">' +
-            '<input id="hfGrantNote" style="flex:1; min-width:120px; padding:7px 9px; border:1px solid var(--c-border); border-radius:8px;" placeholder="備註（可空）">' +
+            '<input type="text" id="hfGrantMemberNo" style="flex:1; min-width:120px; padding:7px 9px; border:1px solid var(--c-border); border-radius:8px;" placeholder="會員編號，如 D26090001">' +
+            '<input type="text" id="hfGrantNote" style="flex:1; min-width:120px; padding:7px 9px; border:1px solid var(--c-border); border-radius:8px;" placeholder="備註（可空）">' +
             '<button type="button" class="task-mini-btn" onclick="hallAddGrant()">✅ 開通</button>' +
           '</div>' +
           '<div class="form-status" id="hfGrantsStatus"></div>'
@@ -464,12 +464,12 @@ function hallRenderRules() {
         '<option value="' + hallEscape(c.legacyId) + '"' + (c.legacyId === r.eventLegacyId ? ' selected' : '') + '>' + hallEscape(c.title) + '</option>'
       ))
       .concat(['<option value="__custom__"' + (isCustom ? ' selected' : '') + '>自訂輸入…</option>']);
-    return '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; border:1px dashed var(--c-border); border-radius:8px; padding:8px; margin-bottom:6px;">' +
+    return '<div class="hall-rule-row" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; border:1px dashed var(--c-border); border-radius:8px; padding:8px; margin-bottom:6px;">' +
       '<select style="flex:1; min-width:140px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" onchange="hallRuleEventChange(' + i + ', this.value)">' + options.join('') + '</select>' +
       (isCustom
-        ? '<input style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.rules[' + i + '].eventLegacyId=this.value">'
+        ? '<input type="text" style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.rules[' + i + '].eventLegacyId=this.value">'
         : '') +
-      '<input style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（留空＝該團任一已付款訂單即解鎖）" oninput="HALL_EDIT.rules[' + i + '].productMatch=this.value">' +
+      '<input type="text" style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（留空＝該團任一已付款訂單即解鎖）" oninput="HALL_EDIT.rules[' + i + '].productMatch=this.value">' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.rules[' + i + '].active=this.checked"> 啟用</label>' +
       '<button type="button" class="task-mini-btn" onclick="hallRemoveRule(' + i + ')">✕</button>' +
     '</div>';
@@ -540,12 +540,12 @@ function hallRenderCodeRules() {
         '<option value="' + hallEscape(c.legacyId) + '"' + (c.legacyId === r.eventLegacyId ? ' selected' : '') + '>' + hallEscape(c.title) + '</option>'
       ))
       .concat(['<option value="__custom__"' + (isCustom ? ' selected' : '') + '>自訂輸入…</option>']);
-    return '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; border:1px dashed var(--c-border); border-radius:8px; padding:8px; margin-bottom:6px;">' +
+    return '<div class="hall-rule-row" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; border:1px dashed var(--c-border); border-radius:8px; padding:8px; margin-bottom:6px;">' +
       '<select style="flex:1; min-width:140px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" onchange="hallCodeRuleEventChange(' + i + ', this.value)">' + options.join('') + '</select>' +
       (isCustom
-        ? '<input style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.codeRules[' + i + '].eventLegacyId=this.value">'
+        ? '<input type="text" style="flex:1; min-width:100px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.eventLegacyId) + '" placeholder="團購 legacyId" oninput="HALL_EDIT.codeRules[' + i + '].eventLegacyId=this.value">'
         : '') +
-      '<input style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（必填）" oninput="HALL_EDIT.codeRules[' + i + '].productMatch=this.value">' +
+      '<input type="text" style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（必填）" oninput="HALL_EDIT.codeRules[' + i + '].productMatch=this.value">' +
       '<input type="number" min="0" style="width:96px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.excludeAmount == null ? '' : r.excludeAmount) + '" placeholder="單品價格" title="這個商品單買的價格（元）。填了：客人買大組合時，入點只扣這個單品價×件數，其他品項照常入點；留空＝命中品項整行都不入點" oninput="HALL_EDIT.codeRules[' + i + '].excludeAmount=this.value">' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;" title="勾選＝每組發1張碼（買1組送1張，適合下單者已由解鎖規則涵蓋的團）；不勾＝買n組發n−1張"><input type="checkbox"' + (r.includeFirst ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].includeFirst=this.checked"> 含第1組</label>' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].active=this.checked"> 啟用</label>' +

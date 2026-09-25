@@ -1767,6 +1767,10 @@
     padding: 0;
   }
   .mtree-icon-btn:hover { background: var(--c-bg-bottom); }
+  .mtree-icon-btn svg { width: 22px; height: 22px; color: var(--c-pink-deep); }
+  .mtree-folder-icon svg { width: 16px; height: 16px; color: var(--c-gold-text); display: block; }
+  .mtree-note-icon svg { width: 14px; height: 14px; color: var(--c-muted); display: block; }
+  .mtree-folder-add svg { width: 15px; height: 15px; display: block; }
 
   /* 左右分欄（桌面：列表＋編輯器並排；手機：靠 class 切換全螢幕） */
   .mtree-wrap {
@@ -4339,7 +4343,7 @@
   #pbaToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #pbaToast.error { background: var(--c-danger); }
 </style>
-<link rel="stylesheet" href="theme-lotus-admin.css?v=10">
+<link rel="stylesheet" href="theme-lotus-admin.css?v=11">
 <script src="modalGuard.js?v=1"></script>
 </head>
 <body>
@@ -4556,8 +4560,8 @@
         <span class="mtree-search-icon"><svg class="ico-inline-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
         <input type="text" id="pnoteSearchInput" placeholder="搜尋備忘錄內容…">
       </div>
-      <button class="mtree-icon-btn" id="pnoteAddNoteBtn" title="新增備忘錄">📝➕</button>
-      <button class="mtree-icon-btn" id="pnoteAddFolderBtn" title="新增資料夾">📁➕</button>
+      <button class="mtree-icon-btn" id="pnoteAddNoteBtn" title="新增備忘錄" aria-label="新增備忘錄"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5"/><path d="M13 3v5h5"/><path d="M13 3l5 5v3"/><path d="M9 12h5M9 16h3"/><path d="M18 15v6M15 18h6"/></svg></button>
+      <button class="mtree-icon-btn" id="pnoteAddFolderBtn" title="新增資料夾" aria-label="新增資料夾"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v3"/><path d="M3 7v11a2 2 0 0 0 2 2h7"/><path d="M18 15v6M15 18h6"/></svg></button>
     </div>
 
     <div class="mtree-wrap" id="mtreeWrap">
@@ -6870,7 +6874,7 @@
 <div class="modal-backdrop" id="pnoteFolderModal" onclick="if(event.target===this) closePnoteFolderModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closePnoteFolderModal()">✕</button>
-    <h3>📁 新增資料夾</h3>
+    <h3>新增資料夾</h3>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <label for="pnoteFolderNameInput">資料夾名稱</label>
       <input type="text" id="pnoteFolderNameInput" placeholder="輸入資料夾名稱…">
@@ -7416,11 +7420,11 @@
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
-<script src="blog.js?v=2"></script>
+<script src="blog.js?v=3"></script>
 <!-- hall.js（教材館）：本次任務刻意不掛進 admin.js 的 VIEW_ID_MAP/switchView（範圍鎖定
      只改 admin.html＋新增 hall.js），因此嚴格說載入順序不受「開機還原分頁」規則影響；
      仍比照同批模組放在 admin.js 之前，維持慣例＋方便未來要收進正式分頁時比對。 -->
-<script src="hall.js?v=10"></script>
+<script src="hall.js?v=11"></script>
 <!-- 去背小圖選擇器（行事曆活動編輯用；樣式就近放這裡） -->
 <style>
   .ev-thumb-row { display: flex; align-items: center; gap: 8px; }
@@ -7460,7 +7464,7 @@
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=25"></script>
 <script src="admin.js?v=103"></script>
-<script src="memo.js?v=7"></script>
+<script src="memo.js?v=8"></script>
 
 </body>
 </html>
