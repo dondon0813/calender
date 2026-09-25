@@ -112,6 +112,32 @@
   .actions .r { display: flex; gap: 6px; }
   .hint { font-size: .78rem; color: var(--muted); line-height: 1.6; margin-top: 6px; }
 
+  /* 上方切換：排行程｜記帳 */
+  .seg { display: flex; background: var(--surface); border-radius: 999px; padding: 4px; margin-bottom: 14px; }
+  .seg button { flex: 1; border: none; background: transparent; border-radius: 999px; padding: 10px 8px; font-size: .95rem; font-weight: 700; color: var(--soft); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .seg button svg { width: 18px; height: 18px; }
+  .seg button.on { background: #fff; color: var(--primary-dark); box-shadow: 0 2px 8px rgba(176,127,131,.15); }
+  #planRange { font-size: 1.25rem; }
+  .planbtns { margin-top: 10px; display: flex; gap: 8px; }
+  .planbtns .btn { padding: 8px 14px; font-size: .85rem; background: #fff; }
+  .planbtns .btn svg { width: 16px; height: 16px; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  /* 行程列 */
+  .pl { display: flex; gap: 10px; background: var(--surface); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; align-items: flex-start; }
+  .pl:hover { background: var(--surface-2); }
+  .pl .tm { flex: none; width: 46px; font-size: .82rem; font-weight: 700; color: var(--primary-dark); padding-top: 2px; }
+  .pl .tm.none { color: var(--placeholder); font-weight: 400; }
+  .pl .ic { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; color: #fff; }
+  .pl .ic svg { width: 16px; height: 16px; }
+  .pl .m { flex: 1; min-width: 0; }
+  .pl .n { font-weight: 700; font-size: .95rem; }
+  .pl .s { font-size: .8rem; color: var(--soft); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+  .pl .s a { color: var(--primary-dark); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; }
+  .pl .s a svg { width: 13px; height: 13px; }
+  .pl .who { font-size: .72rem; color: var(--placeholder); margin-top: 3px; }
+  .dayhead .cnt { font-size: .8rem; color: var(--muted); }
+
   /* 相片 */
   .fabs { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; gap: 8px; z-index: 20; }
   .fabs .fab { position: static; }
@@ -169,7 +195,20 @@
   </div>
 
   <div id="app" class="hidden">
-    <div class="card">
+    <div class="seg" id="viewSeg">
+      <button type="button" data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>排行程</button>
+      <button type="button" data-view="ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 7l2-3h12l2 3"/><path d="M9 11h6"/></svg>記帳</button>
+    </div>
+
+    <div class="card" id="planSummary">
+      <div class="total">
+        <div class="big" id="planRange">尚未設定日期</div>
+        <div class="sub" id="planSub"></div>
+      </div>
+      <div class="planbtns"><button type="button" class="btn ghost" id="copyPlanBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>複製行程文字</button></div>
+    </div>
+
+    <div class="card" id="ledgerSummary">
       <div class="total">
         <div class="big" id="totalTwd">NT$ 0</div>
         <div class="sub" id="totalSub"></div>
@@ -185,6 +224,7 @@
 </div>
 
 <div class="fabs hidden" id="fabs">
+  <button class="fab" id="planAddBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>加行程</button>
   <button class="fab cam" id="photoBtn" title="拍照或上傳照片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照</button>
   <button class="fab" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>記一筆</button>
 </div>
@@ -256,6 +296,31 @@
   </div>
 </div>
 
+<div class="modal" id="planModal">
+  <div class="sheet">
+    <h3 id="planModalTitle">加行程</h3>
+    <label>類型</label>
+    <div class="catpick" id="planCatPick"></div>
+    <div class="grid2">
+      <div><label for="pDate">日期</label><input type="date" id="pDate"></div>
+      <div><label for="pTime">時間（選填）</label><input type="time" id="pTime"></div>
+    </div>
+    <label for="pTitle">行程</label>
+    <input type="text" id="pTitle" placeholder="例：淺草寺、搭 JR 到新宿、晚餐 燒肉" maxlength="60">
+    <label for="pPlace">地點（選填）</label>
+    <input type="text" id="pPlace" placeholder="例：東京都台東区浅草2-3-1" maxlength="100">
+    <label for="pUrl">網址（選填：Google 地圖、訂位、官網）</label>
+    <input type="url" id="pUrl" placeholder="https://" maxlength="500" inputmode="url">
+    <label for="pNote">備註（選填）</label>
+    <textarea id="pNote" rows="2" placeholder="例：09:00 開門、記得帶護照" maxlength="300"></textarea>
+    <div class="err" id="planErr"></div>
+    <div class="actions">
+      <button class="btn danger hidden" id="planDelBtn">刪除</button>
+      <div class="r"><button class="btn ghost" id="planCancelBtn">取消</button><button class="btn" id="planSaveBtn">儲存</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="settingsModal">
   <div class="sheet">
     <h3>設定</h3>
@@ -309,9 +374,31 @@ const CATS = [
 ];
 const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+// 行程類型（圖示沿用記帳分類，景點另畫地標）
+const PIN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>';
+const LINK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+const PCATS = [
+  { id: 'transport', name: '交通', color: 'var(--cat-transport)', icon: CAT_MAP.transport.icon },
+  { id: 'sight',     name: '景點', color: 'var(--cat-fun)',       icon: PIN_ICON },
+  { id: 'food',      name: '美食', color: 'var(--cat-food)',      icon: CAT_MAP.food.icon },
+  { id: 'stay',      name: '住宿', color: 'var(--cat-stay)',      icon: CAT_MAP.stay.icon },
+  { id: 'shop',      name: '購物', color: 'var(--cat-shop)',      icon: CAT_MAP.shop.icon },
+  { id: 'other',     name: '其他', color: 'var(--cat-other)',     icon: CAT_MAP.other.icon },
+];
+const PCAT_MAP = Object.fromEntries(PCATS.map(c => [c.id, c]));
 
-let STATE = { v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [] };
+let STATE = { v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [], plan: [] };
 let SELECTED_DAY = 'all';
+// 上方兩區：plan（排行程）／ledger（記帳）。網址 ?view= 優先，其次上次選的，預設排行程
+const LS_VIEW = 'trip_view_' + TRIP;
+let VIEW = (() => {
+  const q = new URLSearchParams(location.search).get('view');
+  if (q === 'plan' || q === 'ledger') return q;
+  try { const v = localStorage.getItem(LS_VIEW); if (v === 'plan' || v === 'ledger') return v; } catch (e) {}
+  return 'plan';
+})();
+let PLAN_EDITING_ID = null;
+let PLAN_CAT = 'sight';
 let EDITING_ID = null;
 let FORM_CUR = 'JPY';
 let FORM_CAT = 'food';
@@ -364,9 +451,17 @@ function cleanPaths(arr) {
   return (Array.isArray(arr) ? arr : []).map(p => String(p || '')).filter(p => PATH_RE.test(p)).slice(0, MAX_ITEM_PHOTOS);
 }
 function normalize(raw) {
-  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [] }, raw || {});
+  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [], plan: [] }, raw || {});
   if (!Array.isArray(s.items)) s.items = [];
   if (!Array.isArray(s.photos)) s.photos = [];
+  if (!Array.isArray(s.plan)) s.plan = [];
+  // 行程：{id, date, time 'HH:MM' 或空, cat, title, place, url, note, by, at, del}
+  s.plan = s.plan.filter(p => p && p.id).map(p => ({
+    id: String(p.id), date: String(p.date || ''), time: /^\d{2}:\d{2}$/.test(String(p.time || '')) ? String(p.time) : '',
+    cat: PCAT_MAP[p.cat] ? p.cat : 'other', title: String(p.title || '').slice(0, 60),
+    place: String(p.place || '').slice(0, 100), url: safeUrl(String(p.url || '')), note: String(p.note || '').slice(0, 300),
+    by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
+  }));
   s.items = s.items.filter(i => i && i.id).map(i => ({
     id: String(i.id), date: String(i.date || ''), cat: CAT_MAP[i.cat] ? i.cat : 'other',
     name: String(i.name || '').slice(0, 60), amount: Number(i.amount) || 0, cur: i.cur === 'TWD' ? 'TWD' : 'JPY',
@@ -402,13 +497,21 @@ function merge(local, remote) {
   }
   out.items = mergeList(local.items, out.items);
   out.photos = mergeList(local.photos || [], out.photos);
+  out.plan = mergeList(local.plan || [], out.plan);
   return out;
 }
 // 比對兩份資料是否相同（清單依 id 排序，合併後順序不同不算差異）
 function fingerprint(s) {
   const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, s.items.slice().sort(byId), (s.photos || []).slice().sort(byId)]);
+  return JSON.stringify([s.title, s.start, s.end, s.rate, s.metaAt, s.items.slice().sort(byId), (s.photos || []).slice().sort(byId), (s.plan || []).slice().sort(byId)]);
 }
+// 只收 http(s) 網址，其他一律清空（防 javascript: 之類）
+function safeUrl(u) {
+  u = u.trim().slice(0, 500);
+  return /^https?:\/\/[^\s]+$/i.test(u) ? u : '';
+}
+function livePlan() { return STATE.plan.filter(p => !p.del); }
+function mapsUrl(place) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); }
 function cacheSave() { try { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); } catch (e) {} }
 function cacheLoad() { try { const s = localStorage.getItem(LS_KEY); return s ? normalize(JSON.parse(s)) : null; } catch (e) { return null; } }
 
@@ -715,6 +818,16 @@ function render() {
   document.title = (STATE.title || '員工旅遊記帳') + '｜雪莉與朵栗';
   const items = liveItems();
 
+  // 上方兩區切換：排行程／記帳（總覽卡、浮動鈕、分頁列內容都跟著換）
+  const isPlan = VIEW === 'plan';
+  document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
+  document.getElementById('planSummary').classList.toggle('hidden', !isPlan);
+  document.getElementById('ledgerSummary').classList.toggle('hidden', isPlan);
+  document.getElementById('planAddBtn').classList.toggle('hidden', !isPlan);
+  document.getElementById('photoBtn').classList.toggle('hidden', isPlan);
+  document.getElementById('addBtn').classList.toggle('hidden', isPlan);
+  if (isPlan && SELECTED_DAY === 'photos') SELECTED_DAY = 'all';
+
   // 總覽
   let jpy = 0, twd = 0, est = 0;
   const catTot = {}, payerTot = {};
@@ -750,8 +863,11 @@ function render() {
   }
   const photos = livePhotos();
   for (const p of photos) if (p.date) days.add(p.date);
+  const plan = livePlan();
+  for (const p of plan) if (p.date) days.add(p.date);
   const dayList = [...days].sort();
   if (SELECTED_DAY !== 'all' && SELECTED_DAY !== 'photos' && !days.has(SELECTED_DAY)) SELECTED_DAY = 'all';
+  if (isPlan) { renderPlan(plan, dayList); return; }
   const dayTot = {};
   for (const it of items) dayTot[it.date] = (dayTot[it.date] || 0) + toTwd(it);
   const photoCount = photos.length + items.reduce((n, i) => n + i.photos.length, 0);
@@ -788,6 +904,130 @@ function render() {
     g.querySelectorAll('.pthumb[data-lb]').forEach(t => t.addEventListener('click', () => openLightbox(list, Number(t.dataset.lb))));
   });
 }
+/* ---------- 排行程 ---------- */
+function planSort(a, b) {
+  // 有時間的依時間、沒時間的排在該天最後（依建立順序）
+  if (a.time && b.time && a.time !== b.time) return a.time < b.time ? -1 : 1;
+  if (a.time && !b.time) return -1;
+  if (!a.time && b.time) return 1;
+  return (a.at || 0) - (b.at || 0);
+}
+function planItemHtml(p) {
+  const c = PCAT_MAP[p.cat] || PCAT_MAP.other;
+  const links = [];
+  if (p.place) links.push('<a href="' + esc(mapsUrl(p.place)) + '" target="_blank" rel="noopener">' + PIN_ICON + esc(p.place) + '</a>');
+  if (p.url) links.push('<a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + LINK_ICON + '開啟連結</a>');
+  return '<div class="pl" data-id="' + esc(p.id) + '">' +
+    '<span class="tm' + (p.time ? '' : ' none') + '">' + (p.time || '—') + '</span>' +
+    '<span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' +
+    '<div class="m"><div class="n">' + esc(p.title || c.name) + '</div>' +
+    (links.length || p.note ? '<div class="s">' + links.join('') + (p.note ? (links.length ? '<br>' : '') + esc(p.note) : '') + '</div>' : '') +
+    (p.by ? '<div class="who">' + esc(p.by) + ' 排的</div>' : '') + '</div></div>';
+}
+function renderPlan(plan, dayList) {
+  // 總覽：日期範圍＋天數＋行程數
+  const hasRange = /^\d{4}-\d{2}-\d{2}$/.test(STATE.start);
+  const endIso = /^\d{4}-\d{2}-\d{2}$/.test(STATE.end) && STATE.end >= STATE.start ? STATE.end : STATE.start;
+  const nDays = hasRange ? dayIndex(endIso) : 0;
+  document.getElementById('planRange').textContent = hasRange ? fmtDate(STATE.start) + (endIso !== STATE.start ? '～' + fmtDate(endIso) : '') : '尚未設定日期';
+  document.getElementById('planSub').textContent = (hasRange ? nDays + ' 天　' : '請到右上角設定出發／回程日　') + '共 ' + plan.length + ' 個行程';
+
+  // 分頁：全部＋每一天（排行程時出發～回程每天都列，空的也列，方便安排）
+  document.getElementById('tabs').innerHTML = '<button class="tab' + (SELECTED_DAY === 'all' ? ' on' : '') + '" data-day="all">全部</button>' +
+    dayList.map(iso => { const n = dayIndex(iso); return '<button class="tab' + (SELECTED_DAY === iso ? ' on' : '') + '" data-day="' + esc(iso) + '">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso) + '</small></button>'; }).join('');
+  document.querySelectorAll('#tabs .tab').forEach(b => b.addEventListener('click', () => { SELECTED_DAY = b.dataset.day; render(); }));
+
+  const shown = SELECTED_DAY === 'all' ? dayList : [SELECTED_DAY];
+  let html = '';
+  for (const iso of shown) {
+    const ps = plan.filter(p => p.date === iso).sort(planSort);
+    const n = dayIndex(iso);
+    html += '<div class="day"><div class="dayhead"><span class="d">' + (n ? 'Day ' + n : '') + '<small>' + fmtDate(iso, true) + '</small></span><span class="cnt">' + (ps.length ? ps.length + ' 個行程' : '') + '</span></div>' +
+      (ps.length ? ps.map(planItemHtml).join('') : '<div class="empty">這天還沒安排</div>') + '</div>';
+  }
+  const undated = plan.filter(p => !p.date).sort(planSort);
+  if (SELECTED_DAY === 'all' && undated.length) {
+    html += '<div class="day"><div class="dayhead"><span class="d">未填日期</span></div>' + undated.map(planItemHtml).join('') + '</div>';
+  }
+  if (!html) html = '<div class="empty">先到右上角設定出發／回程日，或按右下角「加行程」</div>';
+  document.getElementById('list').innerHTML = html;
+  document.querySelectorAll('#list .pl').forEach(el => el.addEventListener('click', e => { if (e.target.closest('a')) return; openPlan(el.dataset.id); }));
+}
+function renderPlanCatPick() {
+  document.getElementById('planCatPick').innerHTML = PCATS.map(c =>
+    '<button type="button" data-cat="' + c.id + '" class="' + (PLAN_CAT === c.id ? 'on' : '') + '"><span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' + c.name + '</button>').join('');
+  document.querySelectorAll('#planCatPick button').forEach(b => b.addEventListener('click', () => { PLAN_CAT = b.dataset.cat; renderPlanCatPick(); }));
+}
+function openPlan(id) {
+  const p = id ? STATE.plan.find(x => x.id === id && !x.del) : null;
+  PLAN_EDITING_ID = p ? p.id : null;
+  PLAN_CAT = p ? p.cat : 'sight';
+  renderPlanCatPick();
+  document.getElementById('planModalTitle').textContent = p ? '編輯行程' : '加行程';
+  document.getElementById('pDate').value = p ? p.date : (SELECTED_DAY !== 'all' && SELECTED_DAY !== 'photos' ? SELECTED_DAY : (STATE.start || todayStr()));
+  document.getElementById('pTime').value = p ? p.time : '';
+  document.getElementById('pTitle').value = p ? p.title : '';
+  document.getElementById('pPlace').value = p ? p.place : '';
+  document.getElementById('pUrl').value = p ? p.url : '';
+  document.getElementById('pNote').value = p ? p.note : '';
+  document.getElementById('planErr').textContent = '';
+  document.getElementById('planDelBtn').classList.toggle('hidden', !p);
+  openModal('planModal');
+  setTimeout(() => document.getElementById('pTitle').focus(), 50);
+}
+document.getElementById('planAddBtn').addEventListener('click', () => openPlan(null));
+document.getElementById('planCancelBtn').addEventListener('click', () => closeModal('planModal'));
+document.getElementById('planSaveBtn').addEventListener('click', () => {
+  const title = document.getElementById('pTitle').value.trim();
+  const errEl = document.getElementById('planErr');
+  if (!title) { errEl.textContent = '請填行程'; return; }
+  const urlRaw = document.getElementById('pUrl').value.trim();
+  const url = safeUrl(urlRaw);
+  if (urlRaw && !url) { errEl.textContent = '網址要以 http:// 或 https:// 開頭'; return; }
+  const date = document.getElementById('pDate').value;
+  const rec = {
+    id: PLAN_EDITING_ID || uid(), date, time: document.getElementById('pTime').value || '', cat: PLAN_CAT, title,
+    place: document.getElementById('pPlace').value.trim(), url, note: document.getElementById('pNote').value.trim(),
+    by: getUser(), at: Date.now(), del: false,
+  };
+  const idx = STATE.plan.findIndex(x => x.id === rec.id);
+  if (idx >= 0) STATE.plan[idx] = rec; else STATE.plan.push(rec);
+  if (SELECTED_DAY !== 'all' && date && date !== SELECTED_DAY) SELECTED_DAY = date;
+  closeModal('planModal');
+  scheduleSync();
+});
+document.getElementById('planDelBtn').addEventListener('click', () => {
+  if (!PLAN_EDITING_ID || !confirm('確定刪除這個行程？')) return;
+  const idx = STATE.plan.findIndex(x => x.id === PLAN_EDITING_ID);
+  if (idx >= 0) STATE.plan[idx] = Object.assign({}, STATE.plan[idx], { del: true, at: Date.now() });
+  closeModal('planModal');
+  scheduleSync();
+});
+document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => {
+  VIEW = b.dataset.view;
+  try { localStorage.setItem(LS_VIEW, VIEW); } catch (e) {}
+  render();
+}));
+// 複製行程文字（目前分頁那天，或全部）＝貼 LINE 群用
+document.getElementById('copyPlanBtn').addEventListener('click', async () => {
+  const plan = livePlan();
+  const days = [...new Set(plan.map(p => p.date))].sort().filter(iso => SELECTED_DAY === 'all' || iso === SELECTED_DAY);
+  if (!days.length) { alert('還沒有行程可以複製'); return; }
+  const lines = [STATE.title || '員工旅遊', ''];
+  for (const iso of days) {
+    const n = dayIndex(iso);
+    lines.push((n ? 'Day ' + n + '　' : '') + fmtDate(iso, true));
+    for (const p of plan.filter(x => x.date === iso).sort(planSort)) {
+      lines.push((p.time ? p.time + '　' : '　　　　') + p.title + (p.place ? '（' + p.place + '）' : ''));
+      if (p.note) lines.push('　　　　' + p.note.replace(/\n/g, '\n　　　　'));
+    }
+    lines.push('');
+  }
+  const text = lines.join('\n').trim();
+  try { await navigator.clipboard.writeText(text); alert('已複製，可以貼到 LINE 群組'); }
+  catch (e) { prompt('請手動複製：', text); }
+});
+
 function itemHtml(it) {
   const c = CAT_MAP[it.cat] || CAT_MAP.other;
   const sub = [it.payer ? it.payer + ' 付' : '', it.note].filter(Boolean).map(esc).concat(it.photos.length ? [CAM_ICON + it.photos.length] : []).join('｜');
