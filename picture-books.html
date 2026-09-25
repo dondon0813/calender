@@ -23,41 +23,48 @@
   }
   .pb-featured-heading img { display: block; margin: 0 auto; width: min(58%, 220px); }
   /* 「不知道怎麼選？」小測驗入口（2026-09-23 雪莉指定，只掛在 KIDsREAD 頂圖底下） */
+  /* 2026-09-26 雪莉：虛線框太不明顯 → 改實色主色膠囊＋淡影 */
   .pb-quiz-entry {
     display: block;
-    margin: 8px auto 0;
+    margin: 12px auto 0;
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 14px;
     font-weight: 800;
-    color: var(--c-primary);
-    background: none;
-    border: 1px dashed var(--c-primary);
+    letter-spacing: .02em;
+    color: #fff;
+    background: var(--c-primary);
+    border: none;
     border-radius: var(--r-pill);
-    padding: 6px 16px;
+    padding: 11px 24px;
     cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .10);
   }
-  .pb-quiz-entry:hover { background: var(--c-pink-bg, #FFE7ED); }
+  .pb-quiz-entry:hover { background: var(--c-primary-dark); }
   /* 小測驗表單／推薦結果彈窗共用樣式 */
   .pb-quiz-q { margin-bottom: 16px; }
   .pb-quiz-q:last-of-type { margin-bottom: 0; }
   .pb-quiz-q-title { font-size: 13px; font-weight: 800; color: var(--c-text); margin-bottom: 8px; }
   .pb-quiz-q-hint { font-size: 11px; font-weight: 400; color: var(--c-muted); margin-left: 4px; }
-  .pb-quiz-options { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* 2026-09-26 雪莉：標題置中但選項靠左看起來歪一邊 → 選項與年齡列一律置中 */
+  .pb-quiz-options { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   /* 小孩年齡：可新增多位小孩，每位一列「幾歲 幾個月」（2026-09-23 雪莉更正） */
-  .pb-quiz-child-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .pb-quiz-child-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 8px; }
+  /* 下拉框線用 --c-line：藕粉奶茶色系把 --c-border 設透明，白底下拉放在白視窗上會整個消失（2026-09-26 雪莉抓到） */
   .pb-quiz-child-row select {
     font-family: var(--font-body);
     font-size: 13.5px;
+    font-weight: 700;
     color: var(--c-text);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--c-line, #E6DCD2);
     border-radius: var(--r-sm);
-    padding: 7px 10px;
+    padding: 8px 12px;
     background: var(--c-input-bg);
     outline: none;
+    min-width: 92px;
   }
+  .pb-quiz-child-row select:focus { border-color: var(--c-primary); }
   .pb-quiz-child-label { font-size: 12.5px; color: var(--c-muted); }
   .pb-quiz-child-remove {
-    margin-left: auto;
     background: none;
     border: none;
     color: var(--c-muted);
@@ -1101,7 +1108,7 @@
   <div class="modal-box pb-modal-box pb-promo-box">
     <button class="rc-close-btn" onclick="closeQuizModal()">✕</button>
     <div class="pb-promo-title">不知道怎麼選？</div>
-    <div class="pb-promo-sub" style="margin-bottom:16px;">簡單回答幾題，幫你挑出最適合的點讀繪本</div>
+    <div class="pb-promo-sub" style="margin-bottom:16px;">回答幾題，幫你挑最適合的點讀繪本</div>
 
     <div class="pb-quiz-q">
       <div class="pb-quiz-q-title">小孩年齡</div>
