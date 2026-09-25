@@ -53,6 +53,7 @@
   .total .sub { font-size: .8rem; color: var(--muted); }
   .cats-head { font-size: .78rem; font-weight: 700; color: var(--soft); margin-top: 14px; }
   .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+  @media (max-width: 480px) { .cats { grid-template-columns: repeat(2, 1fr); } } /* 手機三欄放不下六位數金額 */
   .cat { background: #fff; border-radius: 12px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; min-width: 0; }
   .cat .ic { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; color: #fff; }
   .cat .ic svg { width: 16px; height: 16px; }
