@@ -98,6 +98,7 @@
     padding: 13px 0;
     font-size: 15px;
   }
+  .ns-btn-ico { width: 18px; height: 18px; vertical-align: -4px; margin-right: 6px; }
 
   /* ===== 產生結果預覽 ===== */
   .ns-preview-wrap {
@@ -241,12 +242,12 @@
 
   <div class="page-title-wrap">
     <a class="page-brand-logo" href="recipes.html" title="回首頁" aria-label="回首頁"><picture><source srcset="images/brand-logo.webp" type="image/webp"><img src="images/brand-logo.png" alt="Sheridondon 雪莉與朵栗" width="720" height="230"></picture></a>
-    <div class="page-title">🏷️ 姓名貼產生器</div>
+    <div class="page-title">姓名貼產生器</div>
   </div>
 
   <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="sticker"></div>
 
-  <div class="ns-subtitle">🌟 選款式、輸入姓名，馬上產生專屬姓名貼 🌟</div>
+  <div class="ns-subtitle">選款式、輸入姓名，馬上產生專屬姓名貼</div>
 
   <div class="ns-section-title" style="text-align:center;">Step 1・選擇款式</div>
   <div class="ns-style-select" id="nsStyleSelect">
@@ -276,7 +277,7 @@
   <input type="text" id="nsNameInput" class="ns-name-input" maxlength="12" placeholder="例如：林咚咚" style="margin-bottom:10px;">
   <input type="text" id="nsEnglishNameInput" class="ns-name-input" maxlength="20" placeholder="英文姓名，如不需要可留白">
 
-  <button type="button" class="action-btn ns-generate-btn" id="nsGenerateBtn">🖼️ 產生姓名貼圖片</button>
+  <button type="button" class="action-btn ns-generate-btn" id="nsGenerateBtn"><svg class="ns-btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>產生姓名貼圖片</button>
 
   <div class="ns-preview-wrap" id="nsPreviewWrap">
     <div class="ns-section-title" style="text-align:center;">完成囉！</div>
@@ -955,7 +956,7 @@ async function generateNameStickerImage() {
   } catch (err) {
     console.error(err);
     if (err && err.message === 'WATCHDOG_TIMEOUT') {
-      alert('圖片產生逾時了，可能是網路不穩或裝置暫時卡住，請再試一次；如果一直發生，麻煩截圖回報給我們 🙏');
+      alert('圖片產生逾時了，可能是網路不穩或裝置暫時卡住，請再試一次；如果一直發生，麻煩截圖回報給我們');
     } else {
       alert('圖片產生失敗，請再試一次');
     }
