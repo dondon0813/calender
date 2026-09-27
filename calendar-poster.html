@@ -650,14 +650,14 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 /* 去背小圖顯示原則（雪莉 2026-09-06 定）：一律以「高度」統一——每張同高、
    寬度照比例自動，寬就讓它寬（不設上限），橫式圖（雨衣）不會被正方形框壓小 */
 .remg-thumb {
-  height: 3.1em;
+  height: var(--p-rem-thumb, 3.1em);
   display: flex; align-items: center; justify-content: center;
 }
 .remg-thumb img { height: 100%; width: auto; display: block; }
 .remg-thumb-fallback { font-family: var(--font-display); font-weight: 900; font-size: 1.5em; color: #fff; }
 .remg-name {
   font-weight: 800;
-  font-size: var(--p-rem-name-fs, 0.62em); line-height: 1.25;
+  font-size: calc(var(--p-rem-base, 44px) * var(--p-rem-name-fs, 0.62) * var(--p-rem-text-scale, 1)); line-height: 1.25;
   color: #fff;
   max-width: 100%;
   word-break: keep-all; overflow-wrap: break-word;
@@ -672,7 +672,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   background: rgba(255, 255, 255, 0.93);
   color: var(--p-chip-text);
   font-weight: 700;
-  font-size: var(--p-rem-note-fs, 0.48em); line-height: 1.45;
+  font-size: calc(var(--p-rem-base, 44px) * var(--p-rem-note-fs, 0.48) * var(--p-rem-text-scale, 1)); line-height: 1.45;
   border-radius: 0;
   padding: 0.25em 0.7em;
   margin-top: 0.3em;
@@ -751,8 +751,10 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
       <div class="row rem-icon-only"><label>底色</label><input type="color" id="cRemBg"></div>
       <div class="row rem-icon-only"><label>左右間距</label><input type="range" id="rRemGapX" min="0" max="200" step="2"><input type="number" class="val" id="vRemGapX"></div>
       <div class="row rem-icon-only"><label>名稱寬度</label><input type="range" id="rRemItemW" min="120" max="500" step="5"><input type="number" class="val" id="vRemItemW"></div>
-      <div class="row rem-icon-only"><label>團名字級</label><input type="range" id="rRemNameFs" min="0.4" max="0.9" step="0.02"><input type="number" class="val" id="vRemNameFs"></div>
-      <div class="row rem-icon-only"><label>介紹字級</label><input type="range" id="rRemNoteFs" min="0.3" max="0.8" step="0.02"><input type="number" class="val" id="vRemNoteFs"></div>
+      <div class="row rem-icon-only"><label>團名字級</label><input type="range" id="rRemNameFs" min="0.4" max="1.3" step="0.02"><input type="number" class="val" id="vRemNameFs"></div>
+      <div class="row rem-icon-only"><label>介紹字級</label><input type="range" id="rRemNoteFs" min="0.3" max="1.2" step="0.02"><input type="number" class="val" id="vRemNoteFs"></div>
+      <div class="row rem-icon-only"><label>小圖大小</label><input type="range" id="rRemThumb" min="1.5" max="5" step="0.1"><input type="number" class="val" id="vRemThumb"></div>
+      <p class="hint rem-icon-only">團太多塞不下時，系統會先縮小圖、標題和間距，<b>最後才縮文字</b>；想讓文字更大，把「小圖大小」調小或「每排幾個」選多一點就能騰出空間。</p>
       <div class="row rem-icon-only"><label>每排幾個</label>
         <div class="seg" id="segRemCols">
           <button data-v="0" class="on">自動</button>
@@ -1068,6 +1070,7 @@ const DEFAULTS = {
   remItemW: 260,                 // 圖案式：每團文字框寬度（px），名稱超過這個寬度才換行
   remNameFs: 0.62,               // 圖案式：團名字級（em，基準＝整體字級）——2026-09-27 雪莉嫌字糊，預設從 0.58 調大
   remNoteFs: 0.48,               // 圖案式：簡短介紹字級（em）——預設從 0.42 調大
+  remThumb: 3.1,                 // 圖案式：小圖高度（em）——想要文字更大就把圖縮小騰空間
   remCols: 0,                    // 圖案式：每排固定幾個；0＝自動（放不下才換排）
   remgToday: '今日結單',         // 圖案式上區標題（今天結單的團）
   remgOpen: '現正開團中'         // 圖案式下區標題（其餘開團中的團）
@@ -1471,8 +1474,12 @@ function renderPoster() {
   poster.style.setProperty('--p-rem-bg', S.remBg || '#F2707E');
   poster.style.setProperty('--p-rem-gapx', (typeof S.remGapX === 'number' ? S.remGapX : 24) + 'px');
   poster.style.setProperty('--p-rem-itemw', (typeof S.remItemW === 'number' ? S.remItemW : 260) + 'px');
-  poster.style.setProperty('--p-rem-name-fs', (typeof S.remNameFs === 'number' ? S.remNameFs : 0.62) + 'em');
-  poster.style.setProperty('--p-rem-note-fs', (typeof S.remNoteFs === 'number' ? S.remNoteFs : 0.48) + 'em');
+  // 團名／介紹字級以「整體字級」為基準的固定 px，不跟 .remg-wrap 的自動縮小一起縮
+  // （2026-09-27 雪莉：字級拉到最大還是小＝以前塞不下時整組縮，滑桿再大也被吃掉）
+  poster.style.setProperty('--p-rem-base', Math.round(44 * (S.fs || 1)) + 'px');
+  poster.style.setProperty('--p-rem-name-fs', String(typeof S.remNameFs === 'number' ? S.remNameFs : 0.62));
+  poster.style.setProperty('--p-rem-note-fs', String(typeof S.remNoteFs === 'number' ? S.remNoteFs : 0.48));
+  poster.style.setProperty('--p-rem-thumb', (typeof S.remThumb === 'number' ? S.remThumb : 3.1) + 'em');
 
   poster.innerHTML = '';
 
@@ -1571,6 +1578,22 @@ function autoFit() {
   // 團太多塞不下就整組一起縮，比例不會亂掉。
   // justify-content:center 的容器溢出時上緣被裁掉、scrollHeight 量不準，
   // 所以改量「第一個到最後一個子元素的實際範圍」（預覽縮放兩邊同樣被縮，不影響比較）。
+  // 圖案式「每排幾個」固定排數：一排放不進 1080 寬（例：4×260＋3 個間距＝1112）就把該排每格等比縮窄，
+  // 不然右邊會被裁掉（2026-09-27 量測抓到；名稱寬度滑桿仍是上限）
+  document.querySelectorAll('#poster .remg-grid.remg-fixed').forEach(grid => {
+    const avail = grid.clientWidth;
+    if (!avail) return;
+    const gap = parseFloat(getComputedStyle(grid).getPropertyValue('--p-rem-gapx')) || 0;
+    grid.querySelectorAll('.remg-row').forEach(row => {
+      const n = row.children.length;
+      if (!n) return;
+      const fit = Math.floor((avail - gap * (n - 1)) / n);
+      Array.from(row.children).forEach(item => {
+        const cur = parseFloat(item.style.width) || (typeof S.remItemW === 'number' ? S.remItemW : 260);
+        if (fit < cur) item.style.width = Math.max(80, fit) + 'px';
+      });
+    });
+  });
   document.querySelectorAll('#poster .rem-wrap, #poster .remg-wrap').forEach(remWrap => {
     if (!remWrap.children.length) return;
     const overflows = () => {
@@ -1584,6 +1607,15 @@ function autoFit() {
     while (guard++ < 60 && fs > 14 && overflows()) {
       fs -= 1;
       remWrap.style.fontSize = fs + 'px';
+    }
+    // 圖案式的團名／介紹是固定 px（不跟 em 縮），小圖標題縮到底還塞不下才最後縮文字（下限 5 折）
+    if (remWrap.classList.contains('remg-wrap')) {
+      let ts = 1, g2 = 0;
+      remWrap.style.setProperty('--p-rem-text-scale', '1');
+      while (g2++ < 40 && ts > 0.5 && overflows()) {
+        ts = Math.round((ts - 0.04) * 100) / 100;
+        remWrap.style.setProperty('--p-rem-text-scale', String(ts));
+      }
     }
   });
 }
@@ -3064,7 +3096,7 @@ function syncControls() {
    'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH',
    'rTextShift|textShift|vTextShift', 'rFs|fs|vFs',
    'rRemGapX|remGapX|vRemGapX', 'rRemItemW|remItemW|vRemItemW',
-   'rRemNameFs|remNameFs|vRemNameFs', 'rRemNoteFs|remNoteFs|vRemNoteFs'].forEach(spec => {
+   'rRemNameFs|remNameFs|vRemNameFs', 'rRemNoteFs|remNoteFs|vRemNoteFs', 'rRemThumb|remThumb|vRemThumb'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -3138,6 +3170,7 @@ function init() {
   bindRange('rRemItemW', 'remItemW', 'vRemItemW');
   bindRange('rRemNameFs', 'remNameFs', 'vRemNameFs');
   bindRange('rRemNoteFs', 'remNoteFs', 'vRemNoteFs');
+  bindRange('rRemThumb', 'remThumb', 'vRemThumb');
   bindSeg('segRemCols', v => { S.remCols = parseInt(v, 10) || 0; });
   bindText('tRemgToday', 'remgToday');
   bindText('tRemgOpen', 'remgOpen');
@@ -3301,7 +3334,7 @@ function init() {
     if (!S.modes) S.modes = {};
     S.modes[S.mode] = Object.assign({}, src);
     if (S.mode === 'reminder') {
-      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remCols', 'remgToday', 'remgOpen']
+      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remThumb', 'remCols', 'remgToday', 'remgOpen']
         .forEach(k => { S[k] = base[k]; });
     }
     saveSettings(); syncControls(); renderAll();
