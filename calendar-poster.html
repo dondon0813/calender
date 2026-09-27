@@ -542,7 +542,8 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
   overflow: hidden;
 }
 .rem-title {
-  font-family: var(--font-display); font-weight: 800;
+  /* 標題統一粗線體 Tsuhsianti（雪莉 2026-09-27），單一字重不加粗 */
+  font-family: 'Tsuhsianti', var(--font-display); font-weight: normal;
   font-size: 1.7em; line-height: 1.15;
   color: var(--p-title-color);
 }
@@ -707,10 +708,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 body.rem-drag .remg-item, body.rem-drag .remg-title { cursor: move; touch-action: none; outline: 2px dashed rgba(255,255,255,0.55); outline-offset: 4px; border-radius: 6px; }
 body.rem-drag .remg-item.dragging, body.rem-drag .remg-title.dragging { outline-color: #fff; outline-style: solid; }
 body.rem-drag .remg-note { pointer-events: none; }
-/* 明體（IG Literature 風）：兩種樣式的標題／團名／介紹／結單日都換成思源宋體＋EB Garamond（雪莉 2026-09-27） */
-.poster.rem-serif .remg-title, .poster.rem-serif .rem-title {
-  font-family: 'Noto Serif TC', 'EB Garamond', serif; font-weight: 700; letter-spacing: 0.04em;
-}
+/* 明體（IG Literature 風）：只換「內文」＝團名／介紹／副標／結單日；標題一律維持粗線體（雪莉 2026-09-27 定） */
 .poster.rem-serif .remg-name, .poster.rem-serif .remg-note, .poster.rem-serif .rem-sub,
 .poster.rem-serif .rem-card .rem-name, .poster.rem-serif .rem-note, .poster.rem-serif .rem-end {
   font-family: 'Noto Serif TC', 'EB Garamond', serif;
@@ -769,7 +767,7 @@ body.rem-drag .remg-note { pointer-events: none; }
       </div>
       <div class="row"><label>字體</label>
         <div class="seg" id="segRemFont">
-          <button data-v="default" class="on">預設（粗線體）</button>
+          <button data-v="default" class="on">預設（圓體）</button>
           <button data-v="serif">明體</button>
         </div>
       </div>
