@@ -10,6 +10,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>行事曆圖產生器｜雪莉與朵栗</title>
 <link rel="stylesheet" href="shared.css">
+<!-- 明體（IG「Literature」風）：思源宋體＋EB Garamond，只在結單提醒選「明體」時用到（子集按需載入，沒選不會下載字檔） -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=EB+Garamond:wght@700&display=swap">
 <style>
 /* 關掉手機瀏覽器的「文字自動放大」（font boosting）：圖是固定 1080px 再縮放預覽，
    手機會自作聰明把縮小後的字放大，同一句在手機就多斷一行、換行位置跟電腦不同
@@ -598,6 +600,13 @@ body.pane-image.mode-reminder .rem-hide { display: none !important; }
   white-space: nowrap;
 }
 .rem-end.hot { color: var(--p-badge-bg); }
+/* 列表式右側說明：介於團名與結單日之間，靠右、字小一級 */
+.rem-note {
+  flex: 0 1 36%; min-width: 0;
+  font-size: 0.48em; line-height: 1.3; font-weight: 600;
+  color: var(--p-chip-text); text-align: right;
+  overflow-wrap: break-word;
+}
 .rem-empty { font-size: 0.75em; color: var(--p-date-color); }
 
 /* ---------- 結單提醒：圖案式 ----------
@@ -694,6 +703,18 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 .remg-note.editing::before, .remg-note:focus::before { content: none; }
 .poster.exporting .remg-note-empty { display: none; }
 .remg-empty { font-size: 0.75em; font-weight: 800; color: #fff; }
+/* 拖曳模式（只在編輯畫面，出圖的 iframe 沒有 body.rem-drag 不會帶進去） */
+body.rem-drag .remg-item, body.rem-drag .remg-title { cursor: move; touch-action: none; outline: 2px dashed rgba(255,255,255,0.55); outline-offset: 4px; border-radius: 6px; }
+body.rem-drag .remg-item.dragging, body.rem-drag .remg-title.dragging { outline-color: #fff; outline-style: solid; }
+body.rem-drag .remg-note { pointer-events: none; }
+/* 明體（IG Literature 風）：兩種樣式的標題／團名／介紹／結單日都換成思源宋體＋EB Garamond（雪莉 2026-09-27） */
+.poster.rem-serif .remg-title, .poster.rem-serif .rem-title {
+  font-family: 'Noto Serif TC', 'EB Garamond', serif; font-weight: 700; letter-spacing: 0.04em;
+}
+.poster.rem-serif .remg-name, .poster.rem-serif .remg-note, .poster.rem-serif .rem-sub,
+.poster.rem-serif .rem-card .rem-name, .poster.rem-serif .rem-note, .poster.rem-serif .rem-end {
+  font-family: 'Noto Serif TC', 'EB Garamond', serif;
+}
 
 /* 面板：各團簡短介紹輸入列（含每團自己的格寬欄） */
 .remnote-item { margin-bottom: 8px; }
@@ -746,6 +767,18 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
           <button data-v="icon">圖案式</button>
         </div>
       </div>
+      <div class="row"><label>字體</label>
+        <div class="seg" id="segRemFont">
+          <button data-v="default" class="on">預設（粗線體）</button>
+          <button data-v="serif">明體</button>
+        </div>
+      </div>
+      <div class="row rem-list-only"><label>右側說明</label>
+        <div class="seg" id="segRemListNote">
+          <button data-v="on" class="on">顯示</button>
+          <button data-v="off">不顯示</button>
+        </div>
+      </div>
       <div class="row rem-list-only"><label>標題</label><input type="text" id="tRemTitle"></div>
       <div class="row rem-list-only"><label>副標</label><input type="text" id="tRemSub"></div>
       <div class="row rem-icon-only"><label>底色</label><input type="color" id="cRemBg"></div>
@@ -764,6 +797,14 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
           <button data-v="5">5</button>
         </div>
       </div>
+      <div class="row rem-icon-only"><label>拖曳模式</label>
+        <div class="seg" id="segRemDrag">
+          <button data-v="off" class="on">關</button>
+          <button data-v="on">開</button>
+        </div>
+        <button type="button" class="btn" id="btnRemResetPos" style="margin-left:8px; padding:6px 12px; font-size:13px;">重置位置</button>
+      </div>
+      <p class="hint rem-icon-only">拖曳模式開著時，圖上每一組（小圖＋團名＋介紹）和「今日結單／現正開團中」兩個標題都可以直接用手指或滑鼠拖到想要的位置；位置會記住、下載的圖跟預覽一樣。拖曳中暫時不能點介紹編輯，關掉再改。</p>
       <div class="row rem-icon-only"><label>標題（上）</label><input type="text" id="tRemgToday"></div>
       <div class="row rem-icon-only"><label>標題（下）</label><input type="text" id="tRemgOpen"></div>
       <div class="rem-icon-only">
@@ -1071,6 +1112,9 @@ const DEFAULTS = {
   remNameFs: 0.62,               // 圖案式：團名字級（em，基準＝整體字級）——2026-09-27 雪莉嫌字糊，預設從 0.58 調大
   remNoteFs: 0.48,               // 圖案式：簡短介紹字級（em）——預設從 0.42 調大
   remThumb: 3.1,                 // 圖案式：小圖高度（em）——想要文字更大就把圖縮小騰空間
+  remFont: 'default',            // 結單提醒字體：'default'＝粗線體標題＋圓體｜'serif'＝明體（IG Literature 風，思源宋體＋EB Garamond）
+  remListNote: 'on',             // 列表式：每列右側顯示簡短介紹
+  remgTitleOff: {},              // 圖案式拖曳模式：兩區標題的位移 {today:[dx,dy], open:[dx,dy]}
   remCols: 0,                    // 圖案式：每排固定幾個；0＝自動（放不下才換排）
   remgToday: '今日結單',         // 圖案式上區標題（今天結單的團）
   remgOpen: '現正開團中'         // 圖案式下區標題（其餘開團中的團）
@@ -1471,6 +1515,7 @@ function renderPoster() {
   poster.classList.toggle('has-bg', !!ASSETS.bg);
   // 結單提醒圖案式：整張一個實色底、不畫奶油色面板
   poster.classList.toggle('rem-solid', S.mode === 'reminder' && S.remStyle === 'icon');
+  poster.classList.toggle('rem-serif', S.mode === 'reminder' && S.remFont === 'serif');
   poster.style.setProperty('--p-rem-bg', S.remBg || '#F2707E');
   poster.style.setProperty('--p-rem-gapx', (typeof S.remGapX === 'number' ? S.remGapX : 24) + 'px');
   poster.style.setProperty('--p-rem-itemw', (typeof S.remItemW === 'number' ? S.remItemW : 260) + 'px');
@@ -2059,12 +2104,16 @@ function buildReminderIcons() {
     return tb;
   };
 
-  const buildSection = (title, arr) => {
+  const offOf = (dx, dy) => (dx || dy) ? 'translate(' + (dx || 0) + 'px, ' + (dy || 0) + 'px)' : '';
+  const buildSection = (title, arr, key) => {
     if (!arr.length) return;
     if (String(title || '').trim()) {
       const h = document.createElement('div');
       h.className = 'remg-title';
       h.textContent = title.trim();
+      h.dataset.dragTitle = key;   // 拖曳模式：標題位移存 S.remgTitleOff[key]
+      const to = (S.remgTitleOff || {})[key];
+      if (to) h.style.transform = offOf(to[0], to[1]);
       wrap.appendChild(h);
     }
     const grid = document.createElement('div');
@@ -2076,6 +2125,10 @@ function buildReminderIcons() {
       // 這一團有自己的格寬就用它（面板「格寬」欄），沒有＝走「名稱寬度」滑桿
       const ownW = group.map(e => (EV_OVERRIDES[e.id] || {}).remW).find(v => v > 0);
       if (ownW) item.style.width = ownW + 'px';
+      // 拖曳模式：這一組的位移存在第一個團的覆寫（remDx/remDy），出圖時 transform 一起被複製
+      item.dataset.dragKey = group[0].id;
+      const ovd = EV_OVERRIDES[group[0].id] || {};
+      if (ovd.remDx || ovd.remDy) item.style.transform = offOf(ovd.remDx, ovd.remDy);
       const thumbs = document.createElement('div');
       thumbs.className = 'remg-thumbs';
       group.forEach(ev => thumbs.appendChild(buildThumbEl(ev)));   // 同框的團一個品牌一顆
@@ -2119,8 +2172,8 @@ function buildReminderIcons() {
     wrap.appendChild(grid);
   };
 
-  buildSection(S.remgToday, todayGroups);
-  buildSection(S.remgOpen, openGroups);
+  buildSection(S.remgToday, todayGroups, 'today');
+  buildSection(S.remgOpen, openGroups, 'open');
 
   if (!groups.length) {
     const empty = document.createElement('div');
@@ -2225,6 +2278,18 @@ function buildReminderList() {
       if (sameDay(endDay, today)) { end.textContent = '今晚結單'; end.classList.add('hot'); }
       else if (sameDay(endDay, tomorrow)) { end.textContent = '明天結單'; end.classList.add('hot'); }
       else end.textContent = `${fmtMD(endDay)} 結單`;
+      // 右側簡短介紹（雪莉 2026-09-27）：跟圖案式同一個介紹庫，「｜」＝換行；面板可關
+      if (S.remListNote !== 'off') {
+        const noteTxt = group.map(ev => noteOf(ev)).find(Boolean);
+        if (noteTxt) {
+          const n = document.createElement('div');
+          n.className = 'rem-note';
+          String(noteTxt).split('｜').map(x => x.trim()).filter(Boolean).forEach(line => {
+            const d = document.createElement('div'); d.textContent = line; n.appendChild(d);
+          });
+          card.appendChild(n);
+        }
+      }
       card.appendChild(end);
 
       list.appendChild(card);
@@ -2684,6 +2749,51 @@ function bindCapText(id, key) {
   el.value = S[key];
   el.addEventListener('input', () => { S[key] = el.value; saveSettings(); renderCaption(); });
 }
+/* ---------- 結單提醒圖案式：拖曳模式（雪莉 2026-09-27） ----------
+   開著時圖上每一組（.remg-item）與兩區標題（.remg-title）可直接拖；位移用 transform:translate 存
+   （組＝EV_OVERRIDES[第一個團 id].remDx/remDy、標題＝S.remgTitleOff[key]），不改版面流程，
+   自動縮小不受影響；出圖時 clone 連 inline transform 一起帶走＝所見即所得。
+   預覽有 CSS 縮放，滑鼠位移要除以縮放比才是海報座標。 */
+let REM_DRAG = false;
+function initRemDrag() {
+  const poster = document.getElementById('poster');
+  let drag = null;
+  poster.addEventListener('pointerdown', e => {
+    if (!REM_DRAG || S.mode !== 'reminder' || S.remStyle !== 'icon') return;
+    const el = e.target.closest('[data-drag-key], [data-drag-title]');
+    if (!el || !poster.contains(el)) return;
+    e.preventDefault();
+    const scale = poster.getBoundingClientRect().width / 1080 || 1;
+    const m = /translate((-?[d.]+)px,s*(-?[d.]+)px)/.exec(el.style.transform || '');
+    drag = { el, scale, x0: e.clientX, y0: e.clientY, dx: m ? parseFloat(m[1]) : 0, dy: m ? parseFloat(m[2]) : 0, ndx: 0, ndy: 0 };
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+    el.classList.add('dragging');
+  });
+  poster.addEventListener('pointermove', e => {
+    if (!drag) return;
+    drag.ndx = Math.round(drag.dx + (e.clientX - drag.x0) / drag.scale);
+    drag.ndy = Math.round(drag.dy + (e.clientY - drag.y0) / drag.scale);
+    drag.el.style.transform = (drag.ndx || drag.ndy) ? 'translate(' + drag.ndx + 'px, ' + drag.ndy + 'px)' : '';
+  });
+  const finish = () => {
+    if (!drag) return;
+    const { el, ndx, ndy } = drag;
+    el.classList.remove('dragging');
+    if (el.dataset.dragKey) {
+      const rec = ovOf(el.dataset.dragKey);
+      if (ndx || ndy) { rec.remDx = ndx; rec.remDy = ndy; } else { delete rec.remDx; delete rec.remDy; }
+      saveEvents();
+    } else if (el.dataset.dragTitle) {
+      if (!S.remgTitleOff || typeof S.remgTitleOff !== 'object') S.remgTitleOff = {};
+      if (ndx || ndy) S.remgTitleOff[el.dataset.dragTitle] = [ndx, ndy]; else delete S.remgTitleOff[el.dataset.dragTitle];
+      saveSettings();
+    }
+    drag = null;
+  };
+  poster.addEventListener('pointerup', finish);
+  poster.addEventListener('pointercancel', finish);
+}
+
 function bindSeg(id, apply) {
   const box = document.getElementById(id);
   box.addEventListener('click', e => {
@@ -2901,9 +3011,16 @@ async function captureInIsolatedFrame(sourceEl, options) {
     const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(r => {
       img.addEventListener('load', r); img.addEventListener('error', r);
     })));
+    // 字體：主頁面已載入的每一套字（粗線體 8.6MB、明體…）都在 iframe 裡明確 load 一次再出圖。
+    // 原本只等 doc.fonts.ready 最多 3 秒——手機第一次用時粗線體還沒進來就出圖，標題退回一般字體
+    // （2026-09-27 雪莉：今日結單／現正開團中的字跑掉）。上限拉到 15 秒，逾時才將就出圖。
+    const fontLoads = [];
+    try {
+      document.fonts.forEach(f => { if (f.status === 'loaded') fontLoads.push(doc.fonts.load(f.weight + ' ' + (f.style || 'normal') + ' 20px "' + f.family.replace(/["']/g, '') + '"').catch(() => null)); });
+    } catch (e) {}
     await Promise.race([
-      Promise.all([fontsReady, imgsReady]),
-      new Promise(r => setTimeout(r, 3000))
+      Promise.all([fontsReady, imgsReady, ...fontLoads]),
+      new Promise(r => setTimeout(r, 15000))
     ]);
 
     return await html2canvas(clone, options);
@@ -3082,6 +3199,8 @@ function syncControls() {
   document.body.classList.toggle('remstyle-icon', S.remStyle === 'icon');
   segSet('segRemStyle', S.remStyle || 'list');
   segSet('segRemCols', parseInt(S.remCols, 10) || 0);
+  segSet('segRemFont', S.remFont || 'default');
+  segSet('segRemListNote', S.remListNote || 'on');
   segSet('segMode', S.mode);
   segSet('segCapMode', S.capMode || 'full');
   segSet('segSize', S.size);
@@ -3172,6 +3291,16 @@ function init() {
   bindRange('rRemNoteFs', 'remNoteFs', 'vRemNoteFs');
   bindRange('rRemThumb', 'remThumb', 'vRemThumb');
   bindSeg('segRemCols', v => { S.remCols = parseInt(v, 10) || 0; });
+  bindSeg('segRemFont', v => { S.remFont = v; });
+  bindSeg('segRemDrag', v => { REM_DRAG = (v === 'on'); document.body.classList.toggle('rem-drag', REM_DRAG); });
+  document.getElementById('btnRemResetPos').addEventListener('click', () => {
+    if (!confirm('把圖上所有組別和標題的位置都恢復成自動排列？')) return;
+    Object.values(EV_OVERRIDES).forEach(rec => { if (rec) { delete rec.remDx; delete rec.remDy; } });
+    S.remgTitleOff = {};
+    saveEvents(); saveSettings(); renderPoster();
+  });
+  initRemDrag();
+  bindSeg('segRemListNote', v => { S.remListNote = v; });
   bindText('tRemgToday', 'remgToday');
   bindText('tRemgOpen', 'remgOpen');
 
@@ -3334,7 +3463,7 @@ function init() {
     if (!S.modes) S.modes = {};
     S.modes[S.mode] = Object.assign({}, src);
     if (S.mode === 'reminder') {
-      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remThumb', 'remCols', 'remgToday', 'remgOpen']
+      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remThumb', 'remFont', 'remListNote', 'remgTitleOff', 'remCols', 'remgToday', 'remgOpen']
         .forEach(k => { S[k] = base[k]; });
     }
     saveSettings(); syncControls(); renderAll();
