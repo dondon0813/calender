@@ -708,9 +708,8 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
 body.rem-drag .remg-item, body.rem-drag .remg-title { cursor: move; touch-action: none; outline: 2px dashed rgba(255,255,255,0.55); outline-offset: 4px; border-radius: 6px; }
 body.rem-drag .remg-item.dragging, body.rem-drag .remg-title.dragging { outline-color: #fff; outline-style: solid; }
 body.rem-drag .remg-note { pointer-events: none; }
-/* 明體（IG Literature 風）：只換「內文」＝團名／介紹／副標／結單日；標題一律維持粗線體（雪莉 2026-09-27 定） */
-.poster.rem-serif .remg-name, .poster.rem-serif .remg-note, .poster.rem-serif .rem-sub,
-.poster.rem-serif .rem-card .rem-name, .poster.rem-serif .rem-note, .poster.rem-serif .rem-end {
+/* 明體（IG Literature 風）：只換「說明文字」（圖案式介紹框、列表式右側說明）；標題與商品名稱都不動（雪莉 2026-09-27 定） */
+.poster.rem-serif .remg-note, .poster.rem-serif .rem-note {
   font-family: 'Noto Serif TC', 'EB Garamond', serif;
 }
 
@@ -765,7 +764,7 @@ body.rem-drag .remg-note { pointer-events: none; }
           <button data-v="icon">圖案式</button>
         </div>
       </div>
-      <div class="row"><label>字體</label>
+      <div class="row"><label>說明字體</label>
         <div class="seg" id="segRemFont">
           <button data-v="default" class="on">預設（圓體）</button>
           <button data-v="serif">明體</button>
