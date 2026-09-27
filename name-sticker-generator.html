@@ -872,7 +872,7 @@ async function captureInIsolatedFrame(sourceEl, options) {
 
 async function generateNameStickerImage() {
   const btn = document.getElementById('nsGenerateBtn');
-  const originalBtnText = btn.textContent;
+  const originalBtnHtml = btn.innerHTML; // 含線條圖示，產生完要原樣放回（textContent 會把 SVG 弄掉）
 
   try {
     if (!nsSelectedStyle) {
@@ -962,7 +962,7 @@ async function generateNameStickerImage() {
     }
   } finally {
     btn.disabled = false;
-    btn.textContent = originalBtnText;
+    btn.innerHTML = originalBtnHtml;
   }
 }
 
