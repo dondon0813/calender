@@ -15,6 +15,35 @@ let isViewOnlyMode = false; // 主管理員「以員工身分檢視」的唯讀�
 // 一次性密碼登入者強制改密碼流程中：true 時 closeSettingsModal 要擋掉關閉（✕／backdrop 都不行）
 let forcePasswordChange = false;
 
+// 行事曆頁面線條圖示（雪莉 09-30 需求：emoji 全改線條 SVG，同 changelog.js CL_ICONS 的做法／style）。
+const CAL_ICONS = {
+  pin: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 7-4 2-2 4-2-4-4-2z"/><path d="M12 15v6"/></svg>',
+  cursor: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l13 7.5-6 1.5-1.5 6z"/></svg>',
+  snowflake: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/></svg>',
+  clock: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  eye: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+  book: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5c2-1 5-1 8 0v13c-3-1-6-1-8 0z"/><path d="M20 5.5c-2-1-5-1-8 0v13c3-1 6-1 8 0z"/></svg>',
+  utensils: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v7a2 2 0 0 0 4 0V3M9 10v11M17 3c-1.5 1.5-1.5 5 0 6.5V21"/></svg>',
+  cart: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 12.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>',
+  check: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  bell: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10.5a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 14.5 6 10.5z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>',
+  plus: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+  copy: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  pencil: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l3 3"/></svg>',
+};
+// 圖示＋文字（動態文字走 textNode，不進 innerHTML，同 changelog.js clSetStatus 的安全寫法）
+function calIconText(el, iconKey, text) {
+  el.textContent = '';
+  if (iconKey && CAL_ICONS[iconKey]) {
+    const span = document.createElement('span');
+    span.innerHTML = CAL_ICONS[iconKey];
+    span.style.cssText = 'display:inline-flex; vertical-align:-3px;';
+    el.appendChild(span);
+    el.appendChild(document.createTextNode(' '));
+  }
+  el.appendChild(document.createTextNode(text || ''));
+}
+
 let memoMap = {}; // { key: 備忘錄內容 }
 let urlMap = {}; // { key: 後台網址 }
 let currentModalEv = null;
@@ -637,7 +666,7 @@ function renderAllMode() {
       } else if (item.ev.isGroupBuy === false) {
         const badge = document.createElement('span');
         badge.className = 'badge';
-        badge.textContent = '📌';
+        calIconText(badge, 'pin', '');
         bar.appendChild(badge);
       }
 
@@ -664,7 +693,7 @@ function renderAllMode() {
         const clickBadge = document.createElement('span');
         clickBadge.className = 'ev-click-badge';
         clickBadge.title = '全部顯示頁面點擊次數';
-        clickBadge.textContent = `🖱️${allBarClicks}`;
+        calIconText(clickBadge, 'cursor', String(allBarClicks));
         bar.appendChild(clickBadge);
       }
 
@@ -757,7 +786,7 @@ function renderSingleDayMode(mode) {
             if (calendarEditMode) openEventEditModal(ev);
             else openAdminModal(ev);
           });
-          bar.title = `${plainTitle(ev.title)} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）` + (unpublished ? '　🔔 尚未確認顯示於前台' : '');
+          bar.title = `${plainTitle(ev.title)} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})（點擊查看內部資訊）` + (unpublished ? '　尚未確認顯示於前台' : '');
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
@@ -992,7 +1021,7 @@ function renderGroupStatusList(targetId) {
       if (frozen) {
         const frozenBadge = document.createElement('span');
         frozenBadge.className = 'gs-frozen-badge';
-        frozenBadge.textContent = '❄冷藏冷凍團';
+        calIconText(frozenBadge, 'snowflake', '冷藏冷凍團');
         badges.appendChild(frozenBadge);
       }
       if (isToday) {
@@ -1054,9 +1083,9 @@ function renderGroupStatusList(targetId) {
     arr.forEach(ev => listEl.appendChild(buildCard(ev)));
   };
 
-  buildSection('‼️結團倒數‼️', closingItems);
+  buildSection('結團倒數', closingItems);
   appendCustomBlocksAdmin(listEl, 'between');
-  buildSection('🌼現正團購中🌼', activeItems);
+  buildSection('現正團購中', activeItems);
 
   if (!closingItems.length && !activeItems.length) {
     const empty = document.createElement('div');
@@ -1072,7 +1101,7 @@ function renderGroupStatusList(targetId) {
   if (endedItems.length) {
     const h = document.createElement('div');
     h.className = 'gs-section-title gs-title-ended';
-    h.textContent = '🕰結團查詢（最近' + endedItems.length + '個）';
+    calIconText(h, 'clock', '結團查詢（最近' + endedItems.length + '個）');
     listEl.appendChild(h);
     endedItems.forEach(ev => listEl.appendChild(buildCard(ev, true)));
   }
@@ -1086,17 +1115,17 @@ function renderAdminStatsBox(key) {
   if (!box) return;
   const st = statsMap[key] || { views: 0, clicks: 0 };
   let html =
-    `<span class="admin-stats-item">👀 瀏覽 <b>${st.views || 0}</b> 次</span>` +
-    `<span class="admin-stats-item">🖱️ 點擊 <b>${st.clicks || 0}</b> 次</span>`;
+    `<span class="admin-stats-item">${CAL_ICONS.eye} 瀏覽 <b>${st.views || 0}</b> 次</span>` +
+    `<span class="admin-stats-item">${CAL_ICONS.cursor} 點擊 <b>${st.clicks || 0}</b> 次</span>`;
 
   const introClicks = (statsMap[key + '_intro'] || {}).clicks || 0;
   const recipeClicks = (statsMap[key + '_recipe'] || {}).clicks || 0;
   const orderClicks = (statsMap[key + '_order'] || {}).clicks || 0;
   if (introClicks || recipeClicks || orderClicks) {
     html +=
-      `<span class="admin-stats-item">📖 介紹 <b>${introClicks}</b> 次</span>` +
-      `<span class="admin-stats-item">🍽 食譜 <b>${recipeClicks}</b> 次</span>` +
-      `<span class="admin-stats-item">🛒 下單 <b>${orderClicks}</b> 次</span>`;
+      `<span class="admin-stats-item">${CAL_ICONS.book} 介紹 <b>${introClicks}</b> 次</span>` +
+      `<span class="admin-stats-item">${CAL_ICONS.utensils} 食譜 <b>${recipeClicks}</b> 次</span>` +
+      `<span class="admin-stats-item">${CAL_ICONS.cart} 下單 <b>${orderClicks}</b> 次</span>`;
   }
   box.innerHTML = html;
 }
@@ -1116,7 +1145,7 @@ function openAdminModal(ev) {
   document.getElementById('adminModalTitle').textContent = plainTitle(ev.title);
   document.getElementById('adminModalMeta').textContent =
     `開團 ${fmtSingleDate(ev.start)}　結單 ${fmtSingleDate(ev.displayEnd)}` +
-    (isFrozenEvent(ev) ? '　❄冷凍團' : '');
+    (isFrozenEvent(ev) ? '　冷凍團' : '');
 
   renderAdminPublishBox(ev);
   renderAdminStatsBox(key);
@@ -1178,7 +1207,7 @@ function renderAdminPublishBox(ev) {
   const sw = document.getElementById('adminPublishSwitch');
   const published = ev.published !== false; // 沒有這個欄位（舊資料）＝視為已發布
   box.classList.toggle('is-published', published);
-  text.textContent = published ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
+  calIconText(text, published ? 'check' : 'bell', published ? '已顯示於前台' : '尚未顯示於前台');
   sw.classList.toggle('on', published);
 
   // 【修改】非編輯模式直接整個區塊都不出現，只有開啟「行事曆編輯模式」才會顯示
@@ -1194,7 +1223,7 @@ document.getElementById('adminPublishSwitch').addEventListener('click', async ()
 
   // 樂觀更新：先改畫面，失敗再還原
   sw.classList.toggle('on', newVal);
-  document.getElementById('adminPublishText').textContent = newVal ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
+  calIconText(document.getElementById('adminPublishText'), newVal ? 'check' : 'bell', newVal ? '已顯示於前台' : '尚未顯示於前台');
   document.getElementById('adminPublishBox').classList.toggle('is-published', newVal);
 
   try {
@@ -1203,7 +1232,7 @@ document.getElementById('adminPublishSwitch').addEventListener('click', async ()
     render();
   } catch (err) {
     sw.classList.toggle('on', prevVal);
-    document.getElementById('adminPublishText').textContent = prevVal ? '✅ 已顯示於前台' : '🔔 尚未顯示於前台';
+    calIconText(document.getElementById('adminPublishText'), prevVal ? 'check' : 'bell', prevVal ? '已顯示於前台' : '尚未顯示於前台');
     document.getElementById('adminPublishBox').classList.toggle('is-published', prevVal);
     alert('更新失敗：' + err.message);
   }
@@ -1914,7 +1943,7 @@ function renderEvLinkedEventCurrent() {
   wrap.style.color = target ? '#5C9147' : '#c0392b';
   txt.textContent = target
     ? `目前綁定：${fmtSingleDate(target.start)} ${plainTitle(target.title)}（業績要去這團填）`
-    : `⚠ 目前綁定的團找不到了（可能被刪除），請重新搜尋選一次或取消綁定`;
+    : `目前綁定的團找不到了（可能被刪除），請重新搜尋選一次或取消綁定`;
 }
 
 function renderEvLinkedEventSuggestions() {
@@ -2006,7 +2035,7 @@ function openEventEditModal(ev, prefillDate, duplicateMode) {
   }
   const isNew = !ev || !!duplicateMode;
   eventEditCtx = { isNew, ev: duplicateMode ? null : ev };
-  document.getElementById('eventEditTitle').textContent = duplicateMode ? '📋 複製活動（尚未存檔）' : (isNew ? '➕ 新增活動' : '✏️ 編輯活動');
+  calIconText(document.getElementById('eventEditTitle'), duplicateMode ? 'copy' : (isNew ? 'plus' : 'pencil'), duplicateMode ? '複製活動（尚未存檔）' : (isNew ? '新增活動' : '編輯活動'));
   document.getElementById('evDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
   document.getElementById('evDuplicateBtn').style.display = isNew ? 'none' : 'inline-block';
   setFormStatus('evEditStatus', '', '');
@@ -2235,7 +2264,7 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const thumbUrl = evThumbCurrent;
   const customerService = document.getElementById('evCustomerServiceInput').value.trim();
   if (!customerServiceReady && customerService) {
-    if (!confirm('💬 客服欄位還沒開通（資料庫待更新），這次填的客服不會被存起來，其他設定照常儲存。要繼續嗎？')) return;
+    if (!confirm('客服欄位還沒開通（資料庫待更新），這次填的客服不會被存起來，其他設定照常儲存。要繼續嗎？')) return;
   }
 
   const payload = {
@@ -2247,7 +2276,7 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   // 開團前檢查清單：沒勾完先確認一次（提醒不強制擋）；清單沒顯示就不帶欄位、不動已存狀態
   const ck = (typeof bvCollectEvChecklist_ === 'function') ? bvCollectEvChecklist_() : null;
   if (ck && ck.unchecked > 0) {
-    if (!confirm('📋 開團前檢查清單還有 ' + ck.unchecked + ' 項沒打勾，確定要儲存嗎？')) return;
+    if (!confirm('開團前檢查清單還有 ' + ck.unchecked + ' 項沒打勾，確定要儲存嗎？')) return;
   }
   if (ck) payload.checklistState = ck.state;
 
