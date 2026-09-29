@@ -355,12 +355,26 @@ function renderBrandOptions() {
   const sel = document.getElementById('fBrand');
   sel.innerHTML = '<option value="">無</option>';
   // 白名單只限「繪本」（書團兩家）；玩具品牌很多（mideer/Classic World…）、商品（如點讀筆）也不受限，全部列出
-  (PACKAGE_DATA.brands || []).filter(b => CURRENT_FORM_KIND !== 'book' || BOOK_BRAND_WHITELIST.includes(b.name)).forEach(b => {
+  const list = (PACKAGE_DATA.brands || []).filter(b => CURRENT_FORM_KIND !== 'book' || BOOK_BRAND_WHITELIST.includes(b.name));
+  // 清單常有 200+ 個品牌很難挑，把「現正開團中」的品牌（isOpen，2026-09-29 雪莉需求）獨立分組排最前面，
+  // 其餘照原順序放第二組；isOpen 欄位後端沒回傳（舊快取）時 openList 會是空的，退回單一平鋪列表
+  const openList = list.filter(b => b.isOpen);
+  const restList = list.filter(b => !b.isOpen);
+  const appendTo = (parent, arr) => arr.forEach(b => {
     const opt = document.createElement('option');
     opt.value = b.id;
     opt.textContent = b.name;
-    sel.appendChild(opt);
+    parent.appendChild(opt);
   });
+  if (!openList.length) { appendTo(sel, restList); return; }
+  const og1 = document.createElement('optgroup');
+  og1.label = '🔥 現正開團中';
+  appendTo(og1, openList);
+  sel.appendChild(og1);
+  const og2 = document.createElement('optgroup');
+  og2.label = '其他品牌';
+  appendTo(og2, restList);
+  sel.appendChild(og2);
 }
 
 // 編輯的書若掛著名單外的品牌，補一個選項，避免回填變空白、存檔時把品牌洗掉
