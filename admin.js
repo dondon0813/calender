@@ -1940,16 +1940,19 @@ function ymdStr(d) {
 }
 
 // ev 為 null＝新增活動；prefillDate 是從「當日活動面板」的＋新增活動點進來時，預先帶入的日期
-function openEventEditModal(ev, prefillDate) {
+// duplicateMode：從既有活動「📋 複製」進來——欄位照 ev 帶入，但當成新增（isNew=true），
+// 存檔會走 event-add 產生新活動，不會動到原本那筆；跟真的新增一樣，複製鈕/刪除鈕/公關品面板都要藏起來
+function openEventEditModal(ev, prefillDate, duplicateMode) {
   // 沒有行事曆編輯權限＝只能看，不開編輯視窗（後端也會擋 event-add/update/delete）
   if (!hasEditPerm('calendarEdit')) {
     alert('你沒有行事曆的編輯權限，如果需要請跟雪莉申請開通。');
     return;
   }
-  const isNew = !ev;
-  eventEditCtx = { isNew, ev };
-  document.getElementById('eventEditTitle').textContent = isNew ? '➕ 新增活動' : '✏️ 編輯活動';
+  const isNew = !ev || !!duplicateMode;
+  eventEditCtx = { isNew, ev: duplicateMode ? null : ev };
+  document.getElementById('eventEditTitle').textContent = duplicateMode ? '📋 複製活動（尚未存檔）' : (isNew ? '➕ 新增活動' : '✏️ 編輯活動');
   document.getElementById('evDeleteBtn').style.display = isNew ? 'none' : 'inline-block';
+  document.getElementById('evDuplicateBtn').style.display = isNew ? 'none' : 'inline-block';
   setFormStatus('evEditStatus', '', '');
 
   const hasCustomColor = !!(ev && ev.color);
@@ -2226,6 +2229,12 @@ document.getElementById('evDeleteBtn').addEventListener('click', async () => {
     setFormStatus('evEditStatus', '刪除失敗：' + err.message, 'error');
   }
   btn.disabled = false;
+});
+
+// 複製活動（雪莉 09-29 需求）：開一個「新增」表單，欄位全部照目前這筆帶入，方便複製一團一樣的改日期/內容
+document.getElementById('evDuplicateBtn').addEventListener('click', () => {
+  if (!eventEditCtx || eventEditCtx.isNew || !eventEditCtx.ev) return;
+  openEventEditModal(eventEditCtx.ev, null, true);
 });
 
 async function saveMemo() {

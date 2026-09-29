@@ -7014,6 +7014,7 @@
 
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="evSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn" id="evDuplicateBtn" style="display:none; padding:0 18px;">📋 複製</button>
         <button class="task-mini-btn danger" id="evDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
       </div>
       <!-- 公關品狀態（可收折）。新增活動（還沒存檔）時整塊隱藏——公關品狀態要有活動 id 才存得了 -->
@@ -7478,7 +7479,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=26"></script>
-<script src="admin.js?v=103"></script>
+<script src="admin.js?v=104"></script>
 <script src="memo.js?v=8"></script>
 
 </body>
