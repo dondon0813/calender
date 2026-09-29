@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\\Users\\ASUS\\Documents\\Claude\\dondon-calendar\\.codex\\hooks\\guard-big-read.ps1'"
+          }
+        ]
+      }
+    ]
+  }
+}

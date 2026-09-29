@@ -30,6 +30,9 @@ let materialFormEditingId = null; // 目前教材表單是編輯哪個教材（n
 let materialFormEditingBookIds = null; // 編輯中教材的掛載書單（教材庫；null＝新增或舊資料沒帶）
 let mtplPendingFile = null; // 教材模板：這次表單新選的原始「圖檔」（File，合成來源）
 let mtplPendingCleanPath = ''; // 教材模板：已直傳 materials-private 的乾淨原檔路徑
+let mtplLayersTouchedByUser = false; // 這次開表單後有沒有手動改過圖層勾選（有改過就不再幫她預設勾）
+let mtplBatchFiles = []; // 批次上傳（2026-09-30）：[{file, title}]，一次選多張各自建立一份教材
+let mtplBatchSaving = false; // 批次儲存進行中：鎖住清單的標題／移除操作，避免 index 錯位漏傳（fresh-context 驗收抓到）
 let setFormEditingId = null; // 目前套組表單是編輯哪個套組（null＝新增）
 let HALL_RESOURCE_CHOICES = []; // 教材館全部資源 [{id,title,kind,isPublished,bookIds}]（後台包 hallResourceChoices）
 let HALL_LINK_READY = true; // false＝資料庫欄位尚未建立（後台包 hallLinkReady）
@@ -1517,6 +1520,20 @@ function openMaterialForm(material, opts) {
   document.getElementById('mFileInput').value = '';
   document.getElementById('mThumbRemoveBg').value = 'none';
   pbiClearPending('mThumbPending');
+  // 批次上傳（一次選多張）只有新增獨立教材才有意義；編輯既有教材時整段隱藏＋清空
+  const batchWrap = document.getElementById('mBatchModeWrap');
+  if (batchWrap) batchWrap.style.display = material ? 'none' : '';
+  document.getElementById('mBatchMode').checked = false;
+  document.getElementById('mBatchMode').disabled = false;
+  document.getElementById('mFileInput').disabled = false;
+  document.getElementById('mThumbFieldWrap').style.display = '';
+  document.getElementById('mTitleFieldWrap').style.display = '';
+  ['mTplPreviewBtn', 'mTplDownloadBtn'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
+  mtplBatchSaving = false;
+  mtplBatchReset();
   mtplResetFormState(material);
 }
 
@@ -1532,6 +1549,7 @@ function closeMaterialForm() {
   pbiClearPending('mThumbPending');
   mtplPendingFile = null;
   mtplPendingCleanPath = '';
+  mtplBatchReset();
 }
 
 function setMaterialThumbPreview(url) {
@@ -1561,7 +1579,37 @@ document.getElementById('mThumbFile').addEventListener('change', (e) => {
   });
 });
 
+document.getElementById('mBatchMode').addEventListener('change', (e) => {
+  const on = e.target.checked;
+  const thumbWrap = document.getElementById('mThumbFieldWrap');
+  if (thumbWrap) thumbWrap.style.display = on ? 'none' : '';
+  // 批次模式的標題是每一列各自輸入（見 mBatchFileList），共用的「標題」欄位不會被讀到，藏起來避免誤填
+  const titleWrap = document.getElementById('mTitleFieldWrap');
+  if (titleWrap) titleWrap.style.display = on ? 'none' : '';
+  // 批次模式沒有單一原檔，「重新整理預覽」／「下載測試檔」是對單一份教材才有意義，先藏起來避免點了誤以為壞掉
+  ['mTplPreviewBtn', 'mTplDownloadBtn'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? 'none' : '';
+  });
+  document.getElementById('mTplPreviewWrap').style.display = 'none';
+  if (!on) mtplBatchReset();
+  mtplRenderBatchList();
+});
+
 document.getElementById('mFileInput').addEventListener('change', async (e) => {
+  if (document.getElementById('mBatchMode').checked) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // 清掉選取，才能重複再選（例如分批補選）
+    let skipped = 0;
+    files.forEach((file) => {
+      if (file.size > MAX_MATERIAL_BYTES) { skipped++; return; }
+      mtplBatchFiles.push({ file, title: mtplTitleFromFilename(file.name) });
+    });
+    if (skipped) showToast(`${skipped} 個檔案超過 50MB 上限，已略過`, true);
+    mtplRenderBatchList();
+    if (mtplBatchFiles.some((f) => /^image\/(png|jpeg|webp)$/.test(f.file.type))) mtplMaybeDefaultLayers();
+    return;
+  }
   const file = e.target.files && e.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('mFileUploadStatus');
@@ -1604,6 +1652,11 @@ document.getElementById('mFileInput').addEventListener('change', async (e) => {
 });
 
 document.getElementById('saveMaterialBtn').addEventListener('click', async () => {
+  if (document.getElementById('mBatchMode').checked) {
+    if (!mtplBatchFiles.length) { showToast('請先選擇要批次上傳的檔案', true); return; }
+    await saveBatchMaterials();
+    return;
+  }
   const title = document.getElementById('mTitle').value.trim();
   if (!title) { showToast('請輸入教材標題', true); return; }
   // 掛載清單以表單的綁定 UI 為準（2026-09-13）：獨立教材＝空陣列；
@@ -1638,6 +1691,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
     payload.layer_watermark = layers.watermark;
     payload.layer_qr = layers.qr;
     payload.watermark_pos = document.getElementById('mWmPos').value;
+    payload.watermark_vpos = mtplWmVPosValue();
     payload.watermark_logo = mtplWmLogoValue(document.getElementById('mWmLogo').value);
     payload.promo_color = mtplPromoColorValue();
     payload.promo_pos = mtplPromoPosValue();
@@ -1656,7 +1710,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async () =>
           title,
           desc: document.getElementById('mDescription').value.trim()
         }, layers, payload.frame_id, null, payload.watermark_pos, payload.watermark_logo,
-        { color: payload.promo_color, pos: payload.promo_pos, qrPos: payload.qr_pos, longEdgeMm: mtplLongEdgeMm(payload.spec_id) });
+        { color: payload.promo_color, pos: payload.promo_pos, qrPos: payload.qr_pos, longEdgeMm: mtplLongEdgeMm(payload.spec_id), wmVPos: payload.watermark_vpos });
         Object.assign(payload, composed, { composed_at: true });
         st.textContent = '合成完成 ✓';
       } catch (err) {
@@ -2917,6 +2971,11 @@ function mtplQrPosValue() {
   return v === 'tl' || v === 'bl' || v === 'br' ? v : 'tr';
 }
 
+// 浮水印垂直位置表單值（top/bottom，2026-09-30 新增），不認得一律下緣
+function mtplWmVPosValue() {
+  return document.getElementById('mWmVPos').value === 'top' ? 'top' : 'bottom';
+}
+
 // 規格長邊公釐數（團購資訊字級換算 pt 用）；沒選規格或規格沒填尺寸＝A4 長邊 297mm
 function mtplLongEdgeMm(specId) {
   const spec = specId ? mtplSpecById(specId) : null;
@@ -2938,6 +2997,7 @@ function mtplPromoPosValue() {
 function mtplResetFormState(material) {
   mtplPendingFile = null;
   mtplPendingCleanPath = '';
+  mtplLayersTouchedByUser = false;
   mtplResetSourceCache();
   clearTimeout(mtplPreviewTimer);
   mtplPreviewSeq++; // 上一份教材還在畫的預覽作廢
@@ -2951,6 +3011,7 @@ function mtplResetFormState(material) {
   document.getElementById('mLayerWatermark').checked = material ? !!material.layerWatermark : false;
   document.getElementById('mLayerQr').checked = material ? !!material.layerQr : false;
   document.getElementById('mWmPos').value = material && (material.watermarkPos === 'left' || material.watermarkPos === 'center') ? material.watermarkPos : 'right';
+  document.getElementById('mWmVPos').value = material && material.watermarkVPos === 'top' ? 'top' : 'bottom';
   document.getElementById('mWmLogo').value = mtplWmLogoValue(material && material.watermarkLogo);
   document.getElementById('mPromoColor').value = material && /^#[0-9A-Fa-f]{6}$/.test(material.promoColor || '') ? material.promoColor : '#FF8FA3';
   document.getElementById('mPromoPos').value = material && (material.promoPos === 'left' || material.promoPos === 'right') ? material.promoPos : 'center';
@@ -2958,6 +3019,9 @@ function mtplResetFormState(material) {
   const libForReady = (PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || [];
   document.getElementById('mPromoStyleNote').style.display =
     libForReady.length && libForReady[0].promoStyleReady === false ? '' : 'none';
+  // 浮水印上/下欄位（migration 20260930100000）尚未 db push：選了會被保險絲去掉存成下緣，提示一下
+  document.getElementById('mWmVPosNote').style.display =
+    libForReady.length && libForReady[0].watermarkVPosReady === false ? '' : 'none';
   document.getElementById('mQrPos').value = material && ['tl', 'bl', 'br'].includes(material.qrPos) ? material.qrPos : 'tr';
   document.getElementById('mQrPosNote').style.display =
     libForReady.length && libForReady[0].qrPosReady === false ? '' : 'none';
@@ -2969,6 +3033,168 @@ function mtplResetFormState(material) {
   // 舊教材沒有乾淨原檔＝不能合成，提示重新上傳（新增中或已有 clean 都不顯示）
   document.getElementById('mTplNoClean').style.display = material && !material.cleanPath ? '' : 'none';
   mtplSchedulePreview(0); // 既有教材有勾圖層＋有原檔 → 開表單就直接顯示預覽
+}
+
+// ===== 批次上傳（2026-09-30，雪莉需求：一次選多張各自建立一份教材）=====
+
+function mtplTitleFromFilename(name) {
+  return String(name || '').replace(/\.[^./\\]+$/, '').trim() || '未命名教材';
+}
+
+function mtplBatchReset() {
+  mtplBatchFiles = [];
+  const statusEl = document.getElementById('mBatchStatus');
+  if (statusEl) statusEl.textContent = '';
+  mtplRenderBatchList();
+}
+
+function mtplRenderBatchList() {
+  const wrap = document.getElementById('mBatchFileList');
+  if (!wrap) return;
+  if (!mtplBatchFiles.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = '';
+  wrap.innerHTML = '';
+  // 儲存進行中：鎖住標題／移除，避免存檔跑到一半她順手刪掉還沒處理的那筆，index 錯位漏傳
+  const locked = mtplBatchSaving;
+  mtplBatchFiles.forEach((entry, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--c-border-light, #eee);';
+    const num = document.createElement('div');
+    num.style.cssText = 'flex:none; width:20px; text-align:center; font-size:12px; color:var(--c-muted);';
+    num.textContent = String(idx + 1);
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.value = entry.title;
+    titleInput.disabled = locked;
+    titleInput.style.cssText = 'flex:1; min-width:0;';
+    titleInput.addEventListener('input', () => { entry.title = titleInput.value; });
+    const size = document.createElement('div');
+    size.style.cssText = 'flex:none; font-size:11px; color:var(--c-muted); white-space:nowrap;';
+    size.textContent = formatBytes(entry.file.size);
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'pba-mini-btn';
+    rm.textContent = '✕';
+    rm.disabled = locked;
+    rm.addEventListener('click', () => { mtplBatchFiles.splice(idx, 1); mtplRenderBatchList(); });
+    row.appendChild(num);
+    row.appendChild(titleInput);
+    row.appendChild(size);
+    row.appendChild(rm);
+    wrap.appendChild(row);
+  });
+}
+
+// 批次逐一上傳＋（有勾圖層時）逐一合成＋逐一 material-upsert；失敗的留在清單裡方便修正後重試
+async function saveBatchMaterials() {
+  const bookIds = mtlbFinalBindIds();
+  const baseTags = mtlbTagsFromInput();
+  const isVisible = document.getElementById('mVisible').checked;
+  const brandId = document.getElementById('mBrandSelect').value || '';
+  const description = document.getElementById('mDescription').value;
+  const printSize = document.getElementById('mPrintSize').value.trim();
+  const availableFrom = document.getElementById('mAvailableFrom').value || '';
+  const useTpl = !!(PACKAGE_DATA && PACKAGE_DATA.mtplReady);
+  const layers = useTpl ? mtplLayersState() : null;
+  const specId = useTpl ? (document.getElementById('mSpecSelect').value || '') : '';
+  const frameId = useTpl ? (document.getElementById('mFrameSelect').value || '') : '';
+  if (useTpl && layers.frame && !frameId) { showToast('勾了「套框」但還沒選框', true); return; }
+  const watermarkPos = document.getElementById('mWmPos').value;
+  const watermarkVPos = mtplWmVPosValue();
+  const watermarkLogo = mtplWmLogoValue(document.getElementById('mWmLogo').value);
+  const promoColor = mtplPromoColorValue();
+  const promoPos = mtplPromoPosValue();
+  const qrPos = mtplQrPosValue();
+  const bookId = mtlbFirstBoundId();
+
+  const saveBtn = document.getElementById('saveMaterialBtn');
+  saveBtn.disabled = true;
+  document.getElementById('mFileInput').disabled = true;
+  document.getElementById('mBatchMode').disabled = true;
+  mtplBatchSaving = true;
+  mtplRenderBatchList(); // 鎖住清單裡每一列的標題輸入／移除鈕，存檔跑到一半不會被改到 index
+  const statusEl = document.getElementById('mBatchStatus');
+  const total = mtplBatchFiles.length;
+  const failed = [];
+  let okCount = 0;
+
+  for (let i = 0; i < mtplBatchFiles.length; i++) {
+    if (!currentToken) { failed.push(...mtplBatchFiles.slice(i)); break; } // 逾時登出：其餘留著原封不動，不繼續打
+    const entry = mtplBatchFiles[i];
+    const title = (entry.title || '').trim() || mtplTitleFromFilename(entry.file.name);
+    statusEl.textContent = `上傳中 ${i + 1}/${total}：${title}`;
+    try {
+      if (entry.file.size > MAX_MATERIAL_BYTES) throw new Error('檔案超過 50MB 上限');
+      const urlRes = await apiPost('material-upload-url', { book_id: bookId, file_name: entry.file.name });
+      if (!urlRes || urlRes.success !== true) throw new Error((urlRes && urlRes.error) || '取得上傳網址失敗');
+      const putRes = await fetch(urlRes.signedUrl, { method: 'PUT', headers: { 'Content-Type': entry.file.type || 'application/octet-stream' }, body: entry.file });
+      if (!putRes.ok) throw new Error('檔案上傳失敗（' + putRes.status + '）');
+
+      const payload = {
+        book_ids: bookIds, tags: baseTags, is_visible: isVisible, brand_id: brandId,
+        title, description, print_size: printSize, available_from: availableFrom,
+        thumb_url: '', file_url: urlRes.publicUrl, file_name: entry.file.name, file_size: entry.file.size, sort: i
+      };
+
+      if (useTpl) {
+        payload.spec_id = specId;
+        payload.frame_id = frameId;
+        payload.layer_frame = layers.frame;
+        payload.layer_promo = layers.promo;
+        payload.layer_watermark = layers.watermark;
+        payload.layer_qr = layers.qr;
+        payload.layer_caption = layers.caption;
+        payload.watermark_pos = watermarkPos;
+        payload.watermark_vpos = watermarkVPos;
+        payload.watermark_logo = watermarkLogo;
+        payload.promo_color = promoColor;
+        payload.promo_pos = promoPos;
+        payload.qr_pos = qrPos;
+        if (mtplAnyLayer(layers) && /^image\/(png|jpeg|webp)$/.test(entry.file.type)) {
+          statusEl.textContent = `合成中 ${i + 1}/${total}：${title}`;
+          const cleanRes = await apiPost('material-clean-upload-url', { book_id: bookId, file_name: entry.file.name });
+          if (cleanRes && cleanRes.success === true) {
+            const cleanPut = await fetch(cleanRes.signedUrl, { method: 'PUT', headers: { 'Content-Type': entry.file.type }, body: entry.file });
+            if (cleanPut.ok) payload.clean_path = cleanRes.path;
+          }
+          const composed = await mtplComposeAndUpload(
+            bookIds, { title, desc: description.trim() }, layers, frameId,
+            () => createImageBitmap(entry.file), watermarkPos, watermarkLogo,
+            { color: promoColor, pos: promoPos, qrPos, longEdgeMm: mtplLongEdgeMm(specId), wmVPos: watermarkVPos }
+          );
+          Object.assign(payload, composed, { composed_at: true });
+        }
+      }
+
+      const res = await apiPost('material-upsert', payload);
+      if (!res || res.success !== true) throw new Error((res && res.error) || '未知錯誤');
+      okCount++;
+    } catch (err) {
+      failed.push(entry);
+      statusEl.textContent = `第 ${i + 1} 筆「${title}」失敗：` + (err && err.message ? err.message : '未知錯誤');
+    }
+  }
+
+  mtplBatchFiles = failed; // 只留失敗（含來不及處理）的，方便她修正後直接再按一次儲存
+  mtplBatchSaving = false;
+  mtplRenderBatchList();
+  saveBtn.disabled = false;
+  document.getElementById('mFileInput').disabled = false;
+  document.getElementById('mBatchMode').disabled = false;
+
+  if (failed.length) {
+    showToast(`${okCount} 筆已建立，${failed.length} 筆失敗或未處理，清單裡留著可以修正後重試`, true);
+  } else {
+    statusEl.textContent = '';
+    showToast(`已建立 ${okCount} 筆教材`);
+    if (materialFormStandalone) {
+      await mtplReloadPackage();
+      renderMatLibPanel();
+    } else {
+      await refreshCurrentBookAfterMaterialChange();
+    }
+    closeMaterialForm();
+  }
 }
 
 // mFileInput 上傳成功後呼叫：圖檔另傳乾淨原檔到私有 bucket（合成來源）
@@ -2986,6 +3212,7 @@ async function mtplAfterFilePicked(file) {
     mtplResetSourceCache();
     document.getElementById('mTplNoClean').style.display = 'none';
     st.textContent = '乾淨原檔已保存 ✓ 可勾選圖層合成';
+    mtplMaybeDefaultLayers(); // 新增教材、還沒手動改過勾選＝比照近期慣例先幫她勾浮水印＋QR
     mtplSchedulePreview(0); // 換了原圖：已勾圖層就立刻重畫
   } catch (err) {
     st.textContent = '乾淨原檔上傳失敗：' + (err && err.message ? err.message : '未知錯誤') + '（仍可不套模板直接儲存）';
@@ -3094,8 +3321,10 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
   }
 
   // QR CODE 圖層（獨立勾選）：尺寸＝長邊 5%；位置四角可選（2026-09-13 雪莉：tl/tr/bl/br，預設右上）。
-  // 下方兩角＝貼在標題說明文字上方；記下範圍讓底部的團購資訊/浮水印水平重疊時往上讓
+  // 下方兩角＝貼在標題說明文字上方；記下範圍讓底部的團購資訊/浮水印水平重疊時往上讓。
+  // 上方兩角同理記下範圍，給 2026-09-30 新增的「浮水印貼上緣」用來避開重疊。
   let qrBox = null;
+  let qrBoxTop = null;
   if (o.layers.qr && o.qrImg) {
     const pad = Math.round(base * 0.014);
     const qrW = Math.max(60, Math.round(base * 0.05));
@@ -3105,32 +3334,43 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const qy = qp === 'tl' || qp === 'tr' ? pad : H - captionH - pad - qrH;
     ctx.drawImage(o.qrImg, qx, qy, qrW, qrH);
     if (qp === 'bl' || qp === 'br') qrBox = { x0: qx - pad, x1: qx + qrW + pad, top: qy };
+    if (qp === 'tl' || qp === 'tr') qrBoxTop = { x0: qx - pad, x1: qx + qrW + pad, bottom: qy + qrH };
   }
   // 底部元素的「地板」y：水平範圍 [x0,x1] 跟下方 QR 重疊就抬到 QR 上緣
   const clearQr = (floorY, x0, x1) =>
     qrBox && x1 > qrBox.x0 && x0 < qrBox.x1 && floorY > qrBox.top ? qrBox.top : floorY;
+  // 頂部元素的「天花板」y：水平範圍跟上方 QR 重疊就壓到 QR 下緣
+  const clearQrTop = (ceilY, x0, x1) =>
+    qrBoxTop && x1 > qrBoxTop.x0 && x0 < qrBoxTop.x1 && ceilY < qrBoxTop.bottom ? qrBoxTop.bottom : ceilY;
 
   // 底部由下往上疊：標題說明文字 → 團購資訊文字 → 浮水印（各自選左/中/右，垂直錯開不會互蓋）
   let bottomY = H - captionH;
 
-  // 浮水印幾何（先算好）：2026-09-21 雪莉——浮水印要固定貼在圖底，不能被團購資訊往上擠；
-  // 水平重疊時改由團購資訊讓位（往上抬到浮水印上方）。有標題說明文字時 LOGO 直接貼圖最底（可蓋在說明文字上）
+  // 浮水印幾何（先算好）：水平位置左/中/右，垂直位置上緣/下緣（2026-09-30 新增，預設下緣＝原本行為不變）。
+  // 下緣：2026-09-21 雪莉——固定貼在圖底，不能被團購資訊往上擠，水平重疊時改由團購資訊讓位；
+  // 有標題說明文字時 LOGO 直接貼圖最底（可蓋在說明文字上）。上緣不受標題說明／團購資訊影響（那兩個永遠貼底）。
   let wm = null;
   if (o.layers.watermark && (o.watermarkText || o.logoImg)) {
     const size = Math.round(base * 0.022);
     const pad = Math.round(base * 0.014);
     const pos = o.watermarkPos === 'left' || o.watermarkPos === 'center' ? o.watermarkPos : 'right';
+    const vpos = o.watermarkVPos === 'top' ? 'top' : 'bottom';
     const logoH = o.logoImg ? Math.round(base * 0.0297) : 0; // 2026-09-21 縮小到 90%（原 0.033）
     const logoW = o.logoImg ? Math.round(logoH * (o.logoImg.width / o.logoImg.height)) : 0;
     ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
     const textW = o.watermarkText ? ctx.measureText(o.watermarkText).width : 0;
     const w = Math.max(logoW, textW);
     const x0 = pos === 'left' ? pad : pos === 'center' ? (W - w) / 2 : W - pad - w;
-    // 有 LOGO 時底部留白縮小（2026-09-21 雪莉：LOGO 再往下一些）
-    const bottomPad = o.logoImg ? Math.round(base * 0.009) : pad;
-    const floor = captionH > 0 ? H : clearQr(H, x0, x0 + w);
-    const blockH = bottomPad + logoH + (o.watermarkText ? (o.logoImg ? Math.round(size * 0.5) : 0) + size : 0);
-    wm = { size, pad, pos, logoH, logoW, x0, x1: x0 + w, bottomPad, floor, blockH };
+    // 有 LOGO 時貼邊留白縮小（2026-09-21 雪莉：LOGO 再往下一些；上緣同理再往上一些）
+    const edgePad = o.logoImg ? Math.round(base * 0.009) : pad;
+    const blockH = edgePad + logoH + (o.watermarkText ? (o.logoImg ? Math.round(size * 0.5) : 0) + size : 0);
+    if (vpos === 'top') {
+      const ceiling = clearQrTop(0, x0, x0 + w);
+      wm = { size, pad, pos, vpos, logoH, logoW, x0, x1: x0 + w, edgePad, ceiling, blockH };
+    } else {
+      const floor = captionH > 0 ? H : clearQr(H, x0, x0 + w);
+      wm = { size, pad, pos, vpos, logoH, logoW, x0, x1: x0 + w, edgePad, floor, blockH };
+    }
   }
 
   // 團購資訊：開團版限定。2026-09-13 雪莉改：不要底色、放圖下方、顏色與位置每份教材自選
@@ -3149,35 +3389,58 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
     const promoW = ctx.measureText(promoLine).width;
     const promoX0 = pos === 'left' ? pad : pos === 'center' ? W / 2 - promoW / 2 : W - pad - promoW;
     bottomY = clearQr(bottomY, promoX0, promoX0 + promoW);
-    // 沒有標題說明文字時，浮水印貼底；團購資訊與浮水印水平重疊就抬到浮水印上方
-    if (captionH === 0 && wm && promoX0 + promoW > wm.x0 && promoX0 < wm.x1) bottomY = Math.min(bottomY, wm.floor - wm.blockH);
+    // 沒有標題說明文字時，浮水印貼底；團購資訊與浮水印水平重疊就抬到浮水印上方（浮水印在上緣時不受影響，兩者不會相遇）
+    if (captionH === 0 && wm && wm.vpos !== 'top' && promoX0 + promoW > wm.x0 && promoX0 < wm.x1) bottomY = Math.min(bottomY, wm.floor - wm.blockH);
     ctx.fillText(promoLine, tx, bottomY - pad);
     ctx.textAlign = 'left';
     bottomY -= pad + size;
   }
 
-  // 浮水印圖層（文字/手寫字 LOGO）：固定貼圖底（幾何見上方 wm），團購資訊遇水平重疊會自己往上讓；水平位置可選左/中/右
+  // 浮水印圖層（文字/手寫字 LOGO）：幾何見上方 wm；下緣＝固定貼圖底、團購資訊遇水平重疊會自己往上讓；
+  // 上緣＝固定貼圖頂，遇上方 QR 水平重疊往下讓；水平位置皆可選左/中/右。
   if (wm) {
-    const { size, pad, pos, logoH, logoW } = wm;
-    let y = wm.floor - wm.bottomPad;
-    if (o.logoImg) {
-      const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
-      // 不加光暈（2026-09-13 雪莉：外光暈怪）——貓咪 LOGO 自帶粗外框，底色深淺改由「LOGO 版本」咖啡字/白字自選
-      ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH);
-      y -= logoH + Math.round(size * 0.5);
-    }
-    if (o.watermarkText) {
-      ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
-      ctx.textBaseline = 'alphabetic';
-      ctx.textAlign = pos === 'left' ? 'left' : pos === 'center' ? 'center' : 'right';
-      const tx = pos === 'left' ? pad : pos === 'center' ? Math.round(W / 2) : W - pad;
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText(o.watermarkText, tx, y);
-      ctx.restore();
-      ctx.textAlign = 'left';
+    const { size, pad, pos, logoH, logoW, vpos } = wm;
+    if (vpos === 'top') {
+      let y = wm.ceiling + wm.edgePad; // 由上往下疊：LOGO 先貼齊上緣，文字接在下面
+      if (o.logoImg) {
+        const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
+        ctx.drawImage(o.logoImg, x, y, logoW, logoH);
+        y += logoH + Math.round(size * 0.5);
+      }
+      if (o.watermarkText) {
+        ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = pos === 'left' ? 'left' : pos === 'center' ? 'center' : 'right';
+        const tx = pos === 'left' ? pad : pos === 'center' ? Math.round(W / 2) : W - pad;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.55)';
+        ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(o.watermarkText, tx, y);
+        ctx.restore();
+        ctx.textAlign = 'left';
+      }
+    } else {
+      let y = wm.floor - wm.edgePad;
+      if (o.logoImg) {
+        const x = pos === 'left' ? pad : pos === 'center' ? Math.round((W - logoW) / 2) : W - pad - logoW;
+        // 不加光暈（2026-09-13 雪莉：外光暈怪）——貓咪 LOGO 自帶粗外框，底色深淺改由「LOGO 版本」咖啡字/白字自選
+        ctx.drawImage(o.logoImg, x, y - logoH, logoW, logoH);
+        y -= logoH + Math.round(size * 0.5);
+      }
+      if (o.watermarkText) {
+        ctx.font = '700 ' + size + 'px ' + MTPL_FONT;
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = pos === 'left' ? 'left' : pos === 'center' ? 'center' : 'right';
+        const tx = pos === 'left' ? pad : pos === 'center' ? Math.round(W / 2) : W - pad;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.55)';
+        ctx.shadowBlur = Math.max(2, Math.round(size * 0.25));
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(o.watermarkText, tx, y);
+        ctx.restore();
+        ctx.textAlign = 'left';
+      }
     }
   }
 
@@ -3212,8 +3475,8 @@ function mtplWmLogoValue(v) {
   return v === 'light' || v === 'blue' ? v : 'dark';
 }
 
-// promoStyle＝{color, pos, qrPos, longEdgeMm}：團購資訊文字顏色與底部位置（缺省＝粉色置中）＋QR 四角位置（缺省＝右上）
-// ＋規格長邊公釐（團購資訊字級 10pt 換算，缺省＝A4 297）
+// promoStyle＝{color, pos, qrPos, longEdgeMm, wmVPos}：團購資訊文字顏色與底部位置（缺省＝粉色置中）＋QR 四角位置（缺省＝右上）
+// ＋規格長邊公釐（團購資訊字級 10pt 換算，缺省＝A4 297）＋浮水印垂直位置（缺省＝下緣，2026-09-30 新增）
 async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource, watermarkPos, watermarkLogo, promoStyle) {
   const src = await (getSource || mtplGetFormSourceBitmap)();
   const frameImg = layers.frame && frameId ? await mtplFrameBitmap(frameId) : null;
@@ -3222,6 +3485,7 @@ async function mtplComposeAndUpload(bookIds, caption, layers, frameId, getSource
   const logoImg = layers.watermark && logoUrl ? await mtplAssetBitmap(logoUrl).catch(() => null) : null;
   const qrImg = layers.qr && s.qrUrl ? await mtplAssetBitmap(s.qrUrl).catch(() => null) : null;
   const o = { frameImg, logoImg, qrImg, layers, caption, watermarkPos, watermarkLogo,
+    watermarkVPos: (promoStyle && promoStyle.wmVPos) === 'top' ? 'top' : 'bottom',
     promoColor: (promoStyle && promoStyle.color) || '#FF8FA3', promoPos: (promoStyle && promoStyle.pos) || 'center',
     qrPos: (promoStyle && promoStyle.qrPos) || 'tr', longEdgeMm: (promoStyle && promoStyle.longEdgeMm) || 297, watermarkText: s.watermarkText || '', promoText: s.promoText || '' };
   const pathBookId = bookIds[0] || ''; // 獨立教材＝空字串，後端走 composed/library/ 路徑
@@ -3252,6 +3516,20 @@ document.getElementById('mSpecSelect').addEventListener('change', () => {
 });
 document.getElementById('mLayerFrame').addEventListener('change', mtplSyncFrameSelectVisibility);
 document.getElementById('mLayerWatermark').addEventListener('change', mtplSyncFrameSelectVisibility);
+// 有手動改過任一圖層勾選＝不要再幫她預設勾（mtplMaybeDefaultLayers 只在「從沒手動改過」時出手）
+['mLayerFrame', 'mLayerPromo', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption'].forEach((id) => {
+  document.getElementById(id).addEventListener('change', () => { mtplLayersTouchedByUser = true; });
+});
+
+// 新增教材（非編輯）＋還沒手動動過圖層勾選 → 選了圖片後比照近期教材慣例，先幫她勾「浮水印＋QR」
+// （2026-09-30 雪莉反映常常忘記套版型；套框/標題與說明/團購資訊仍要她自己選，這兩個不是每份教材都適用）
+function mtplMaybeDefaultLayers() {
+  if (materialFormEditingId || mtplLayersTouchedByUser) return;
+  if (!mtplReady()) return;
+  document.getElementById('mLayerWatermark').checked = true;
+  document.getElementById('mLayerQr').checked = true;
+  mtplSyncFrameSelectVisibility();
+}
 
 // 即時預覽（2026-09-13 雪莉需求：不用每次按產生）：圖層勾選/框/浮水印位置與版本/標題說明一改就自動重畫。
 // 素材圖與原檔有快取（只有第一次下載），重畫只是本機 canvas；seq 丟掉「畫到一半選項又改了」的舊結果。
@@ -3293,6 +3571,7 @@ async function mtplFormComposeInputs() {
         desc: document.getElementById('mDescription').value.trim()
       },
       watermarkPos: document.getElementById('mWmPos').value,
+      watermarkVPos: mtplWmVPosValue(),
       watermarkLogo: wmLogo,
       promoColor: mtplPromoColorValue(),
       promoPos: mtplPromoPosValue(),
@@ -3391,7 +3670,7 @@ document.getElementById('mTplDownloadBtn').addEventListener('click', mtplDownloa
 // 放在 mSpecSelect/mLayerFrame 既有 listener 之後註冊＝框下拉同步完才重畫
 document.getElementById('mLayerPromo').addEventListener('change', mtplSyncFrameSelectVisibility);
 document.getElementById('mLayerQr').addEventListener('change', mtplSyncFrameSelectVisibility);
-['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmLogo', 'mPromoPos', 'mQrPos']
+['mLayerFrame', 'mLayerWatermark', 'mLayerQr', 'mLayerCaption', 'mLayerPromo', 'mFrameSelect', 'mSpecSelect', 'mWmPos', 'mWmVPos', 'mWmLogo', 'mPromoPos', 'mQrPos']
   .forEach(id => document.getElementById(id).addEventListener('change', () => mtplSchedulePreview()));
 // 顏色選擇器拖動中是 input 事件，放開才是 change：兩個都接，拖著就能看到顏色變化
 document.getElementById('mPromoColor').addEventListener('input', () => mtplSchedulePreview(150));
@@ -3646,7 +3925,7 @@ document.getElementById('tplRecomposeAllBtn').addEventListener('click', async ()
         () => mtplCleanBitmapById(m.id),
         m.watermarkPos || 'right',
         mtplWmLogoValue(m.watermarkLogo),
-        { color: m.promoColor || '#FF8FA3', pos: m.promoPos || 'center', qrPos: m.qrPos || 'tr', longEdgeMm: mtplLongEdgeMm(m.specId) }
+        { color: m.promoColor || '#FF8FA3', pos: m.promoPos || 'center', qrPos: m.qrPos || 'tr', longEdgeMm: mtplLongEdgeMm(m.specId), wmVPos: m.watermarkVPos === 'top' ? 'top' : 'bottom' }
       );
       const res = await apiPost('material-upsert', Object.assign({ id: m.id }, composed, { composed_at: true }));
       if (!res || res.success !== true) throw new Error((res && res.error) || '存檔失敗');
