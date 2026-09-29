@@ -501,7 +501,7 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 .list-row .range {
   flex: 0 0 auto;
-  text-align: center;    /* 欄寬照最長的日期算，短日期置中，左右各分一半空白比較不會忽寬忽窄 */
+  text-align: left;      /* 欄寬照最長的日期算；短日期靠左對齊，每一列日期起點對齊（雪莉 09-29 指定） */
   white-space: nowrap;   /* 日期絕對不能折行（欄寬是量出來的，差 1px 就會斷成兩行） */
   font-family: var(--font-display); font-weight: 800;
   color: var(--p-month-color);
@@ -1424,6 +1424,10 @@ function nameLines(s) {
   return String(s || '').split(NAME_SEP).map(t => t.trim()).filter(Boolean);
 }
 function plainName(s) { return nameLines(s).join(' '); }
+// 開團列表模式專用（雪莉 09-29 指定）：「｜」斷行點接回同一行時不要留空格（例：KIDsREAD｜點讀筆 → KIDsREAD點讀筆）。
+// 只給開團列表的畫面渲染用，貼文文案／結單提醒／比對用的 plainName 維持原本接空格，不要動。
+function plainNameTight(s) { return nameLines(s).join(''); }
+function groupNamesTight(group, mode) { return group.map(ev => plainNameTight(displayName(ev, mode))); }
 
 /* 藍底＝冷凍／冷藏團。判斷規則跟前台 index.html 的 isFrozenEvent() 同一套：
    G 欄「分類」有填就看它含不含「冷凍」，沒填才用品牌名比對。
@@ -1957,11 +1961,11 @@ function buildList() {
 
     const name = document.createElement('div');
     name.className = 'name';
-    // 列表模式一列就是一行字：團名裡的「｜」接回空白，同框的團用「＋」串起來。
+    // 列表模式一列就是一行字：團名裡的「｜」接回同一行不留空格，同框的團用「＋」串起來。
     // （行事曆模式才需要斷行，那邊格子窄；這裡是橫的一長列，斷行反而醜。）
     const line = document.createElement('span');
     line.className = 'name-line';
-    line.textContent = groupNames(group, 'list').join('＋');
+    line.textContent = groupNamesTight(group, 'list').join('＋');
     name.appendChild(line);
     r.appendChild(name);
 
