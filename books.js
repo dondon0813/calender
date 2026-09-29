@@ -3773,16 +3773,32 @@ function mtlbTagsFromInput() {
   return document.getElementById('mTags').value.split(/[,，\s]+/).map(t => t.trim()).filter(Boolean);
 }
 
-// 團購品牌下拉（migration 20260913000005）：全部品牌，品項未建檔時先綁品牌用
+// 綁定類型（book/toy）目前實際有品項在用的品牌 id 集合；type 是 'none' 或沒選就回 null＝不限制
+function mtlbBrandIdsForType(type) {
+  if (!type || type === 'none') return null;
+  const ids = new Set();
+  ((PACKAGE_DATA && PACKAGE_DATA.books) || []).forEach(b => {
+    if (b.brand_id && pbKindFamily(b.kind) === type) ids.add(b.brand_id);
+  });
+  return ids;
+}
+
+// 團購品牌下拉（migration 20260913000005）：品項未建檔時先綁品牌用。
+// 雪莉 09-29：選「綁繪本」只該列有繪本的品牌（例：禾流、KIDsREAD），選「綁玩具」只該列有玩具的品牌，
+// 不然 200+ 個品牌全列出來根本找不到——依目前 #mBindType 選的類型過濾，「不指定」時才不限制。
 function mtlbFillBrandSelect(selectedId) {
   const sel = document.getElementById('mBrandSelect');
   sel.innerHTML = '<option value="">（不指定）</option>';
-  ((PACKAGE_DATA && PACKAGE_DATA.brands) || []).forEach(b => {
-    const opt = document.createElement('option');
-    opt.value = b.id;
-    opt.textContent = b.name;
-    sel.appendChild(opt);
-  });
+  const type = document.getElementById('mBindType') ? document.getElementById('mBindType').value : '';
+  const allowIds = mtlbBrandIdsForType(type);
+  ((PACKAGE_DATA && PACKAGE_DATA.brands) || [])
+    .filter(b => !allowIds || allowIds.has(b.id) || b.id === selectedId) // 目前已選的品牌就算篩不到也保留，避免編輯舊資料時選項憑空消失
+    .forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.name;
+      sel.appendChild(opt);
+    });
   sel.value = selectedId || '';
 }
 
@@ -3794,6 +3810,8 @@ function mtlbBrandName(brandId) {
 document.getElementById('mBindType').addEventListener('change', () => {
   mtlbFillBindItems(document.getElementById('mBindType').value, mtlbSelectedBindIds());
   mtlbSyncBindVisibility();
+  // 切換綁定類型（book/toy/none）當下，團購品牌下拉要跟著重新過濾，並盡量保留原本選的品牌
+  mtlbFillBrandSelect(document.getElementById('mBrandSelect').value);
 });
 
 // ----- 教材館「📄 教材庫」子分頁 -----
