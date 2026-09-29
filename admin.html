@@ -6984,6 +6984,10 @@
         <label for="evUrlInput">團購網址（可不填）</label>
         <input type="text" id="evUrlInput" placeholder="貼上團購頁面網址…">
 
+        <label for="evLinkedEventInput">合併品牌團：帳務跟著哪一團（可不填。填另一團的活動編號，兩團記帳只算那一團，這團不會出現在對帳待回填清單）</label>
+        <input type="text" id="evLinkedEventInput" placeholder="例如：111（另一團的活動編號）" inputmode="numeric">
+        <div id="evLinkedEventHint" style="display:none; margin-top:-6px; margin-bottom:12px; font-size:12px; color:#8a7a70;"></div>
+
         <label for="evCategoryInput">分類標記（可不填，例如：冷凍）</label>
         <input type="text" id="evCategoryInput" placeholder="例如：冷凍">
 
@@ -7479,7 +7483,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=26"></script>
-<script src="admin.js?v=104"></script>
+<script src="admin.js?v=105"></script>
 <script src="memo.js?v=8"></script>
 
 </body>

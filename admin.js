@@ -412,7 +412,8 @@ async function loadData() {
       const endTimeRaw = c[14] ? String(c[14].v || '').trim() : '';
       const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
       const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
-      const iconIg = c[17] ? String(c[17].v || '').trim() : '';
+      // 合併品牌團（雪莉 09-29 需求）：原本 R=IG 欄早已廢棄沒人讀，改放「這團帳務跟著哪個活動編號走」
+      const linkedEventId = c[17] ? String(c[17].v || '').trim() : '';
       const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
       const iconFb = c[19] ? String(c[19].v || '').trim() : '';
       const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
@@ -433,7 +434,7 @@ async function loadData() {
       events.push({
         id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird,
         color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published,
-        iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc
+        linkedEventId, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc
       });
     });
 
@@ -1900,6 +1901,21 @@ function updateEvExtendHint() {
 document.getElementById('evExtendInput').addEventListener('input', updateEvExtendHint);
 document.getElementById('evEndDateInput').addEventListener('change', updateEvExtendHint);
 
+// 合併品牌團（雪莉 09-29 需求）：即時顯示打的活動編號解析成哪一團，避免打錯號碼綁錯團
+function updateEvLinkedEventHint() {
+  const hint = document.getElementById('evLinkedEventHint');
+  const raw = document.getElementById('evLinkedEventInput').value.trim();
+  if (raw === '') { hint.style.display = 'none'; hint.textContent = ''; return; }
+  hint.style.display = 'block';
+  const selfId = eventEditCtx && eventEditCtx.ev ? String(eventEditCtx.ev.id) : null;
+  if (selfId && raw === selfId) { hint.textContent = '⚠ 不能填自己的編號'; hint.style.color = '#c0392b'; return; }
+  const target = allEvents.find(e => String(e.id) === raw);
+  if (!target) { hint.textContent = '⚠ 找不到這個活動編號'; hint.style.color = '#c0392b'; return; }
+  hint.style.color = '#8a7a70';
+  hint.textContent = `→ 綁定到：${fmtSingleDate(target.start)} ${plainTitle(target.title)}（這團存檔後不會出現在對帳待回填清單，業績要去「${plainTitle(target.title)}」那筆填）`;
+}
+document.getElementById('evLinkedEventInput').addEventListener('input', updateEvLinkedEventHint);
+
 function setEvSwitch(id, on) {
   document.getElementById(id).classList.toggle('on', on);
 }
@@ -1963,6 +1979,11 @@ function openEventEditModal(ev, prefillDate, duplicateMode) {
   setEvSwitch('evAutoColorSwitch', !hasCustomColor);
   document.getElementById('evColorRow').style.display = hasCustomColor ? '' : 'none';
   document.getElementById('evUrlInput').value = ev ? (ev.url || '') : '';
+  // 合併品牌團：複製活動時，若原本那筆本身沒有指定對象，就直接帶原本那筆的編號進來
+  // （複製 A 產生 B，最直覺的用法就是 B 的帳務要跟著 A），已經有指定對象的話沿用原值，不要疊加
+  document.getElementById('evLinkedEventInput').value =
+    (ev && ev.linkedEventId) ? ev.linkedEventId : (duplicateMode && ev ? String(ev.id) : '');
+  updateEvLinkedEventHint();
   document.getElementById('evCategoryInput').value = ev ? (ev.category || '') : '';
   document.getElementById('evTagInput').value = ev ? (ev.tag || '') : '';
   // 延長欄可以是天數或日期，兩種都要能回填（回填不到就等於編輯時被清空）
@@ -2165,6 +2186,11 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const endTime = allDay ? '' : getEvTimeValue('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput');
   const discountCode = document.getElementById('evDiscountCodeInput').value.trim();
   const discountDesc = document.getElementById('evDiscountDescInput').value.trim();
+  const linkedEventId = document.getElementById('evLinkedEventInput').value.trim();
+  if (linkedEventId && !allEvents.find(e => String(e.id) === linkedEventId)) {
+    setFormStatus('evEditStatus', '合併品牌團填的活動編號找不到，請確認數字對不對', 'error');
+    return;
+  }
   const thumbUrl = evThumbCurrent;
   const customerService = document.getElementById('evCustomerServiceInput').value.trim();
   if (!customerServiceReady && customerService) {
@@ -2174,7 +2200,7 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const payload = {
     title, start: startDateStr, end: endDateStr, color,
     allDay, isGroupBuy, published, url, category, tag, extend, earlyBird, startTime, endTime,
-    thumbUrl, discountCode, discountDesc, customerService
+    thumbUrl, discountCode, discountDesc, customerService, linkedEventId
   };
 
   // 開團前檢查清單：沒勾完先確認一次（提醒不強制擋）；清單沒顯示就不帶欄位、不動已存狀態
