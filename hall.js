@@ -190,13 +190,15 @@ function hallOpenEdit(i) {
         bookIds: Array.isArray(r.bookIds) ? r.bookIds.slice() : [],
         rules: JSON.parse(JSON.stringify(r.rules || [])),
         grants: JSON.parse(JSON.stringify(r.grants || [])),
-        codeRules: JSON.parse(JSON.stringify(r.codeRules || []))
+        codeRules: JSON.parse(JSON.stringify(r.codeRules || [])),
+        codeRulesEffectiveFromSupported: hallCodeRulesSupportEffectiveFrom(r.codeRules)
       }
     : {
         // 新增預設類型跟著目前子分頁（教材分頁＝file）
         id: null, slug: '', title: '', kind: HALL_KIND_TAB || 'game', isFree: false, intro: '', description: '',
         screenshots: [], coverUrl: '', eventId: '', eventTitle: '', brandId: '', buyUrl: '', privatePath: '',
-        fileName: '', trialUrl: '', isPublished: false, sort: 0, watermarkMember: false, bookIds: [], rules: [], grants: [], codeRules: []
+        fileName: '', trialUrl: '', isPublished: false, sort: 0, watermarkMember: false, bookIds: [], rules: [], grants: [], codeRules: [],
+        codeRulesEffectiveFromSupported: true
       };
   hallRenderEditor();
 }
@@ -380,7 +382,7 @@ function hallRenderEditor() {
 
       '<hr style="margin:22px 0; border:none; border-top:1px solid var(--c-border);">' +
       '<h4 style="margin:0 0 8px; font-size:14px;">🎟️ 兌換碼規則</h4>' +
-      '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:8px;">單筆訂單購買 n 組（n≥2）自動發 n−1 張可贈送兌換碼，買家在會員中心複製給朋友輸碼解鎖；每日收單自動產碼。</div>' +
+      '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:8px;">單筆訂單購買 n 組（n≥2）自動發 n−1 張可贈送兌換碼，買家在會員中心複製給朋友輸碼解鎖；每日收單自動產碼。生效日之前的舊訂單不會補發兌換碼，客人可用單品價格當優惠價兌換。</div>' +
       (e.id
         ? '<div id="hfCodeRules"></div>' +
           '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">' +
@@ -524,6 +526,17 @@ async function hallSaveRules() {
 
 // ===== 兌換碼規則 =====
 // 跟「解鎖規則」共用同一套下拉／自訂輸入寫法，差別是 productMatch 必填（後端會丟棄空的）。
+// 判斷後端是否已支援 effectiveFrom（生效日）欄位：規則清單裡任一條帶有這個 key 就算支援；沒有任何規則時視為已支援。
+function hallCodeRulesSupportEffectiveFrom(list) {
+  if (!Array.isArray(list) || !list.length) return true;
+  return list.some(function (r) { return r && Object.prototype.hasOwnProperty.call(r, 'effectiveFrom'); });
+}
+function hallTodayDateStr() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
 function hallRenderCodeRules() {
   const box = document.getElementById('hfCodeRules');
   if (!box || !HALL_EDIT) return;
@@ -547,6 +560,7 @@ function hallRenderCodeRules() {
         : '') +
       '<input type="text" style="flex:1; min-width:120px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.productMatch) + '" placeholder="品名關鍵字（必填）" oninput="HALL_EDIT.codeRules[' + i + '].productMatch=this.value">' +
       '<input type="number" min="0" style="width:96px; padding:6px; border:1px solid var(--c-border); border-radius:6px;" value="' + hallEscape(r.excludeAmount == null ? '' : r.excludeAmount) + '" placeholder="單品價格" title="這個商品單買的價格（元）。填了：客人買大組合時，入點只扣這個單品價×件數，其他品項照常入點；留空＝命中品項整行都不入點" oninput="HALL_EDIT.codeRules[' + i + '].excludeAmount=this.value">' +
+      '<input type="date" style="width:140px; padding:6px; border:1px solid #E6DCD2; border-radius:6px;" value="' + hallEscape(r.effectiveFrom || '') + '" title="教材上架日。這天之後下單的訂單照常送兌換碼；這天之前的舊訂單不補發、不扣點，客人可用單品價格當優惠價兌換。留空＝所有訂單都發碼（舊做法）" oninput="HALL_EDIT.codeRules[' + i + '].effectiveFrom=this.value">' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;" title="勾選＝每組發1張碼（買1組送1張，適合下單者已由解鎖規則涵蓋的團）；不勾＝買n組發n−1張"><input type="checkbox"' + (r.includeFirst ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].includeFirst=this.checked"> 含第1組</label>' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].active=this.checked"> 啟用</label>' +
       '<button type="button" class="task-mini-btn" onclick="hallRemoveCodeRule(' + i + ')">✕</button>' +
@@ -566,7 +580,7 @@ function hallCodeRuleEventChange(i, val) {
 }
 function hallAddCodeRuleRow() {
   if (!HALL_EDIT) return;
-  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true, includeFirst: false, excludeAmount: null });
+  HALL_EDIT.codeRules.push({ eventLegacyId: '', productMatch: '', active: true, includeFirst: false, excludeAmount: null, effectiveFrom: hallTodayDateStr() });
   hallRenderCodeRules();
 }
 function hallRemoveCodeRule(i) {
@@ -576,20 +590,35 @@ function hallRemoveCodeRule(i) {
 }
 async function hallSaveCodeRules() {
   if (!HALL_EDIT || !HALL_EDIT.id) return;
+  const hasEffectiveFromNoAmount = (HALL_EDIT.codeRules || []).some(r =>
+    r && r.effectiveFrom && (r.excludeAmount === '' || r.excludeAmount == null)
+  );
+  if (hasEffectiveFromNoAmount) {
+    if (!confirm('有填生效日但沒填單品價格，舊訂單的客人將看不到優惠價。確定要儲存嗎？')) return;
+  }
   const statusEl = document.getElementById('hfCodeRulesStatus');
   statusEl.textContent = '儲存中…';
   statusEl.className = 'form-status';
-  const rules = (HALL_EDIT.codeRules || []).map(r => ({
-    eventLegacyId: (r.eventLegacyId || '').trim(),
-    productMatch: (r.productMatch || '').trim(),
-    active: r.active !== false,
-    includeFirst: r.includeFirst === true,
-    excludeAmount: r.excludeAmount === '' || r.excludeAmount == null ? null : Number(r.excludeAmount)
-  }));
+  const supportsEffectiveFrom = HALL_EDIT.codeRulesEffectiveFromSupported !== false;
+  const rules = (HALL_EDIT.codeRules || []).map(r => {
+    const rule = {
+      eventLegacyId: (r.eventLegacyId || '').trim(),
+      productMatch: (r.productMatch || '').trim(),
+      active: r.active !== false,
+      includeFirst: r.includeFirst === true,
+      excludeAmount: r.excludeAmount === '' || r.excludeAmount == null ? null : Number(r.excludeAmount)
+    };
+    // 後端尚未支援 effectiveFrom（既有規則都沒有這個 key）時不送出，避免舊後端／欄位未建立時存檔失敗
+    if (supportsEffectiveFrom) {
+      rule.effectiveFrom = r.effectiveFrom ? r.effectiveFrom : null;
+    }
+    return rule;
+  });
   try {
     const res = await hallApiPost('fan-admin-hall-code-rule-set', { resourceId: HALL_EDIT.id, rules });
     if (!res || !res.success) throw new Error((res && res.error) || '儲存失敗');
     HALL_EDIT.codeRules = res.codeRules || [];
+    HALL_EDIT.codeRulesEffectiveFromSupported = hallCodeRulesSupportEffectiveFrom(HALL_EDIT.codeRules);
     const idx = HALL_LIST.findIndex(x => x.id === HALL_EDIT.id);
     if (idx >= 0) HALL_LIST[idx].codeRules = HALL_EDIT.codeRules;
     statusEl.textContent = '已儲存';
