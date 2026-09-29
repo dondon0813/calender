@@ -5815,6 +5815,7 @@
     .lot-tile.await .lot-tile-n{ color:var(--c-cat-1); }
     .lot-tile.ready .lot-tile-n{ color:var(--c-cat-4); }
     .lot-tile.vendor .lot-tile-n{ color:var(--c-cat-3); }
+    .lot-tile.announce .lot-tile-n{ color:var(--c-gold-text); }
     .lot-tile.pending .lot-tile-n{ color:var(--c-danger); }
     .lot-tile.unopened .lot-tile-n{ color:var(--c-cat-2); }
     .lot-tile.unpaired .lot-tile-n{ color:var(--c-primary); }
@@ -5982,6 +5983,7 @@
     .lot-status-sel.lot-s-awaiting_info{ background-color:var(--c-cat-1); color:#fff; }
     .lot-status-sel.lot-s-info_ready{ background-color:var(--c-cat-4); color:#fff; }
     .lot-status-sel.lot-s-handed_to_vendor{ background-color:var(--c-cat-3); color:#fff; }
+    .lot-status-sel.lot-s-awaiting_announce{ background-color:var(--c-gold-text); color:#fff; }   /* 已完成（待公告）：金色，介於廠商寄送中與已完成之間 */
     .lot-status-sel.lot-s-done{ background-color:var(--c-cat-2); color:#fff; }
     .lot-status-sel.lot-s-redrawn{ background-color:var(--c-cat-5); color:#fff; opacity:.65; }
     .lot-status-sel.lot-s-forfeited{ background-color:#B9ACA2; color:#fff; opacity:.8; }   /* 已放棄：灰，同重抽淡化 */
@@ -7403,7 +7405,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=18"></script>
+<script src="tools.js?v=19"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
@@ -7462,7 +7464,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=25"></script>
+<script src="lottery.js?v=26"></script>
 <script src="admin.js?v=103"></script>
 <script src="memo.js?v=8"></script>
 
