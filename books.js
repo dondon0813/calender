@@ -3709,15 +3709,27 @@ function mtlbFillBindItems(type, selectedIds) {
   const sel = document.getElementById('mBindItems');
   sel.innerHTML = '';
   if (type === 'none') return;
-  ((PACKAGE_DATA && PACKAGE_DATA.books) || [])
-    .filter(b => pbKindFamily(b.kind) === type) // 商品跟書同一族，「綁繪本」也要列出
-    .forEach(b => {
-      const opt = document.createElement('option');
-      opt.value = b.id;
-      opt.textContent = (b.isDiscontinued ? '（已下架）' : b.is_published === false ? '（草稿）' : '') + (b.title || '未命名');
-      opt.selected = (selectedIds || []).indexOf(b.id) !== -1;
-      sel.appendChild(opt);
-    });
+  const list = ((PACKAGE_DATA && PACKAGE_DATA.books) || []).filter(b => pbKindFamily(b.kind) === type); // 商品跟書同一族，「綁繪本」也要列出
+  const makeOpt = (b) => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = (b.isDiscontinued ? '（已下架）' : b.is_published === false ? '（草稿）' : '') + (b.title || '未命名');
+    opt.selected = (selectedIds || []).indexOf(b.id) !== -1;
+    return opt;
+  };
+  // 每本書/玩具都有自己的 purchase 狀態（跟前台「立即購買」同一套算法）；清單常有幾百筆，
+  // 把「品牌現正開團中」的排到最前面獨立一組，不然要找到現在這團對應的項目很難挑（雪莉 09-29 需求）
+  const openList = list.filter(b => b.purchase && b.purchase.status === 'open');
+  const restList = list.filter(b => !(b.purchase && b.purchase.status === 'open'));
+  if (!openList.length) { list.forEach(b => sel.appendChild(makeOpt(b))); return; }
+  const og1 = document.createElement('optgroup');
+  og1.label = '🔥 現正開團中';
+  openList.forEach(b => og1.appendChild(makeOpt(b)));
+  sel.appendChild(og1);
+  const og2 = document.createElement('optgroup');
+  og2.label = '其他';
+  restList.forEach(b => og2.appendChild(makeOpt(b)));
+  sel.appendChild(og2);
 }
 
 function mtlbSyncBindVisibility() {
