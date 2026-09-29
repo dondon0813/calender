@@ -1901,20 +1901,60 @@ function updateEvExtendHint() {
 document.getElementById('evExtendInput').addEventListener('input', updateEvExtendHint);
 document.getElementById('evEndDateInput').addEventListener('change', updateEvExtendHint);
 
-// 合併品牌團（雪莉 09-29 需求）：即時顯示打的活動編號解析成哪一團，避免打錯號碼綁錯團
-function updateEvLinkedEventHint() {
-  const hint = document.getElementById('evLinkedEventHint');
-  const raw = document.getElementById('evLinkedEventInput').value.trim();
-  if (raw === '') { hint.style.display = 'none'; hint.textContent = ''; return; }
-  hint.style.display = 'block';
-  const selfId = eventEditCtx && eventEditCtx.ev ? String(eventEditCtx.ev.id) : null;
-  if (selfId && raw === selfId) { hint.textContent = '⚠ 不能填自己的編號'; hint.style.color = '#c0392b'; return; }
-  const target = allEvents.find(e => String(e.id) === raw);
-  if (!target) { hint.textContent = '⚠ 找不到這個活動編號'; hint.style.color = '#c0392b'; return; }
-  hint.style.color = '#8a7a70';
-  hint.textContent = `→ 綁定到：${fmtSingleDate(target.start)} ${plainTitle(target.title)}（這團存檔後不會出現在對帳待回填清單，業績要去「${plainTitle(target.title)}」那筆填）`;
+// 合併品牌團（雪莉 09-29 需求；09-30 改成搜尋選團——她根本不知道活動編號，直接叫她填編號沒用）。
+// evLinkedEventValue＝目前選定的對象活動編號（字串），跟輸入框顯示的搜尋字串是分開的兩件事。
+let evLinkedEventValue = '';
+
+function renderEvLinkedEventCurrent() {
+  const wrap = document.getElementById('evLinkedEventCurrent');
+  const txt = document.getElementById('evLinkedEventCurrentText');
+  if (!evLinkedEventValue) { wrap.style.display = 'none'; return; }
+  const target = allEvents.find(e => String(e.id) === evLinkedEventValue);
+  wrap.style.display = 'flex';
+  wrap.style.color = target ? '#5C9147' : '#c0392b';
+  txt.textContent = target
+    ? `目前綁定：${fmtSingleDate(target.start)} ${plainTitle(target.title)}（業績要去這團填）`
+    : `⚠ 目前綁定的團找不到了（可能被刪除），請重新搜尋選一次或取消綁定`;
 }
-document.getElementById('evLinkedEventInput').addEventListener('input', updateEvLinkedEventHint);
+
+function renderEvLinkedEventSuggestions() {
+  const box = document.getElementById('evLinkedEventSuggestions');
+  const kw = document.getElementById('evLinkedEventInput').value.trim();
+  if (!kw) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const selfId = eventEditCtx && eventEditCtx.ev ? String(eventEditCtx.ev.id) : null;
+  const kwLower = kw.toLowerCase();
+  const matches = allEvents
+    .filter(e => String(e.id) !== selfId && plainTitle(e.title).toLowerCase().includes(kwLower))
+    .sort((a, b) => Math.abs(a.start - (eventEditCtx && eventEditCtx.ev ? eventEditCtx.ev.start : a.start)) - Math.abs(b.start - (eventEditCtx && eventEditCtx.ev ? eventEditCtx.ev.start : b.start)))
+    .slice(0, 8);
+  if (!matches.length) {
+    box.style.display = 'block';
+    box.innerHTML = '<div style="padding:10px 12px; font-size:13px; color:#a3948a;">找不到符合的團</div>';
+    return;
+  }
+  box.style.display = 'block';
+  box.innerHTML = matches.map(e =>
+    `<div class="ev-linked-suggestion" data-id="${escHtml(String(e.id))}" style="padding:8px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--c-border-light);">${escHtml(fmtSingleDate(e.start))}　${escHtml(plainTitle(e.title))}</div>`
+  ).join('');
+  box.querySelectorAll('.ev-linked-suggestion').forEach(row => {
+    row.addEventListener('click', () => {
+      evLinkedEventValue = row.dataset.id;
+      document.getElementById('evLinkedEventInput').value = '';
+      box.style.display = 'none';
+      box.innerHTML = '';
+      renderEvLinkedEventCurrent();
+    });
+  });
+}
+document.getElementById('evLinkedEventInput').addEventListener('input', renderEvLinkedEventSuggestions);
+document.getElementById('evLinkedEventInput').addEventListener('blur', () => {
+  // 延遲隱藏：不然點建議列表時 blur 先觸發，click 事件根本來不及跑
+  setTimeout(() => { document.getElementById('evLinkedEventSuggestions').style.display = 'none'; }, 200);
+});
+document.getElementById('evLinkedEventClearBtn').addEventListener('click', () => {
+  evLinkedEventValue = '';
+  renderEvLinkedEventCurrent();
+});
 
 function setEvSwitch(id, on) {
   document.getElementById(id).classList.toggle('on', on);
@@ -1981,9 +2021,10 @@ function openEventEditModal(ev, prefillDate, duplicateMode) {
   document.getElementById('evUrlInput').value = ev ? (ev.url || '') : '';
   // 合併品牌團：複製活動時，若原本那筆本身沒有指定對象，就直接帶原本那筆的編號進來
   // （複製 A 產生 B，最直覺的用法就是 B 的帳務要跟著 A），已經有指定對象的話沿用原值，不要疊加
-  document.getElementById('evLinkedEventInput').value =
-    (ev && ev.linkedEventId) ? ev.linkedEventId : (duplicateMode && ev ? String(ev.id) : '');
-  updateEvLinkedEventHint();
+  evLinkedEventValue = (ev && ev.linkedEventId) ? ev.linkedEventId : (duplicateMode && ev ? String(ev.id) : '');
+  document.getElementById('evLinkedEventInput').value = '';
+  document.getElementById('evLinkedEventSuggestions').style.display = 'none';
+  renderEvLinkedEventCurrent();
   document.getElementById('evCategoryInput').value = ev ? (ev.category || '') : '';
   document.getElementById('evTagInput').value = ev ? (ev.tag || '') : '';
   // 延長欄可以是天數或日期，兩種都要能回填（回填不到就等於編輯時被清空）
@@ -2186,9 +2227,9 @@ document.getElementById('evSaveBtn').addEventListener('click', async () => {
   const endTime = allDay ? '' : getEvTimeValue('evEndAmPmInput', 'evEndHourInput', 'evEndMinuteInput');
   const discountCode = document.getElementById('evDiscountCodeInput').value.trim();
   const discountDesc = document.getElementById('evDiscountDescInput').value.trim();
-  const linkedEventId = document.getElementById('evLinkedEventInput').value.trim();
+  const linkedEventId = evLinkedEventValue;
   if (linkedEventId && !allEvents.find(e => String(e.id) === linkedEventId)) {
-    setFormStatus('evEditStatus', '合併品牌團填的活動編號找不到，請確認數字對不對', 'error');
+    setFormStatus('evEditStatus', '合併品牌團選的那一團找不到了，麻煩重新搜尋選一次', 'error');
     return;
   }
   const thumbUrl = evThumbCurrent;
