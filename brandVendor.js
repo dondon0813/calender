@@ -90,9 +90,13 @@ function renderBrandVendorView() {
   const kw = bvSearchText_();
   const vSec = document.getElementById('bvVendorSection');
   const bSec = document.getElementById('bvBrandSection');
-  // 沒輸入關鍵字＝維持原本兩區都看得到；一旦搜尋就只留下被搜尋的那一區
-  if (vSec) vSec.style.display = (!kw || bvSearchScope === 'vendor') ? '' : 'none';
-  if (bSec) bSec.style.display = (!kw || bvSearchScope === 'brand') ? '' : 'none';
+  const cSec = document.getElementById('bvCommissionSection');
+  const isCommission = bvSearchScope === 'commission';
+  // 沒輸入關鍵字＝維持原本兩區都看得到；一旦搜尋就只留下被搜尋的那一區；分潤確認是獨立第三分頁，跟搜尋無關
+  if (vSec) vSec.style.display = !isCommission && (!kw || bvSearchScope === 'vendor') ? '' : 'none';
+  if (bSec) bSec.style.display = !isCommission && (!kw || bvSearchScope === 'brand') ? '' : 'none';
+  if (cSec) cSec.style.display = isCommission ? '' : 'none';
+  if (isCommission) { loadBrandCommissionReview(); return; }
   renderVendorDbList();
   renderBrandDbList();
 }
@@ -188,6 +192,87 @@ function renderBrandDbList() {
   });
 }
 
+// ===== 分潤確認清單（雪莉 09-29：一次派工讓曾曾逐一確認所有品牌分潤%，未對帳/即將結團優先）=====
+let bvCommissionItems = null; // 快取，避免每次切分頁都重打 API；重新整理按鈕會清掉重抓
+const BV_COMMISSION_TIER_LABEL = { 1: '① 帳務還在走對帳流程', 2: '② 即將結團（14 天內）', 3: '③ 開團中', 4: '④ 其他品牌' };
+
+async function loadBrandCommissionReview(force) {
+  const el = document.getElementById('bvCommissionList');
+  const banner = document.getElementById('bvCommissionBanner');
+  if (!el) return;
+  if (!force && bvCommissionItems) { renderBrandCommissionList(bvCommissionItems); return; }
+  el.innerHTML = '<div class="task-empty">載入中…</div>';
+  try {
+    const res = await postTask({ type: 'brand-commission-review' });
+    if (res.ready === false) {
+      if (banner) { banner.style.display = ''; banner.textContent = '⚠ 分潤生效日期／確認紀錄功能待雪莉執行 db push 後才能使用（migration 20260929130000）'; }
+      el.innerHTML = '';
+      return;
+    }
+    if (banner) banner.style.display = 'none';
+    bvCommissionItems = res.items || [];
+    renderBrandCommissionList(bvCommissionItems);
+  } catch (err) {
+    el.innerHTML = '<div class="task-empty">載入失敗：' + escHtml(err.message || String(err)) + '</div>';
+  }
+}
+
+function renderBrandCommissionList(items) {
+  const el = document.getElementById('bvCommissionList');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!items.length) { el.innerHTML = '<div class="task-empty">沒有品牌資料</div>'; return; }
+  let lastTier = null;
+  items.forEach(b => {
+    if (b.tier !== lastTier) {
+      lastTier = b.tier;
+      const head = document.createElement('div');
+      head.style.cssText = 'text-align:center; margin:16px 0 8px; font-size:12.5px; color:var(--c-text-soft); font-weight:600;';
+      head.textContent = BV_COMMISSION_TIER_LABEL[b.tier] || '';
+      el.appendChild(head);
+    }
+    const row = document.createElement('div');
+    row.className = 'cal-edit-day-panel';
+    row.style.cssText = 'max-width:640px; margin:0 auto 8px; padding:10px 14px;';
+    const teamsTxt = (b.teams || []).map(t => (t.date || '') + ' ' + (t.title || '')).join('　｜　');
+    const confirmedTxt = b.commissionConfirmedAt ? `上次確認：${escHtml(b.commissionConfirmedAt)}${b.commissionConfirmedBy ? '（' + escHtml(b.commissionConfirmedBy) + '）' : ''}` : '尚未確認過';
+    row.innerHTML =
+      `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">` +
+        `<b>${escHtml(b.name)}</b>` +
+        `<span style="font-size:11px; color:var(--c-text-soft);">${confirmedTxt}</span>` +
+      `</div>` +
+      (teamsTxt ? `<div style="font-size:11.5px; color:var(--c-text-soft); margin-top:2px;">${escHtml(teamsTxt)}</div>` : '') +
+      `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">` +
+        `<label style="display:flex; align-items:center; gap:4px; font-size:12.5px;">分潤 <input type="number" class="bv-cr-rate" min="0" max="100" step="0.1" value="${b.commissionRate === '' ? '' : escHtml(b.commissionRate)}" style="width:70px;">%</label>` +
+        `<label style="display:flex; align-items:center; gap:4px; font-size:12.5px;">生效日 <input type="date" class="bv-cr-date" value="${escHtml(b.commissionRateEffectiveDate || '')}"></label>` +
+        `<button type="button" class="task-mini-btn bv-cr-confirm" style="font-size:12px; padding:6px 12px;">✅ 確認</button>` +
+        `<span class="bv-cr-msg" style="font-size:11.5px;"></span>` +
+      `</div>` +
+      (b.commissionNote ? `<div style="font-size:11.5px; color:var(--c-text-soft); margin-top:4px;">說明：${escHtml(b.commissionNote)}</div>` : '');
+    const rateInput = row.querySelector('.bv-cr-rate');
+    const dateInput = row.querySelector('.bv-cr-date');
+    const msgEl = row.querySelector('.bv-cr-msg');
+    row.querySelector('.bv-cr-confirm').addEventListener('click', async (ev) => {
+      const btn = ev.currentTarget;
+      btn.disabled = true;
+      msgEl.textContent = '';
+      try {
+        const res = await postTask({
+          type: 'brand-commission-confirm', id: b.id,
+          commissionRate: rateInput.value.trim(), commissionRateEffectiveDate: dateInput.value.trim(),
+        });
+        if (res && res.success) { msgEl.textContent = '已確認'; msgEl.style.color = '#5a9a5a'; bvCommissionItems = null; }
+      } catch (err) {
+        msgEl.textContent = '失敗：' + (err.message || String(err));
+        msgEl.style.color = '#c0392b';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    el.appendChild(row);
+  });
+}
+
 // 品牌廠商頁的編輯模式開關：關閉時點列表只看資料，開啟才會跳出編輯視窗
 let brandVendorEditMode = false;
 document.getElementById('bvEditToggleWrap').addEventListener('click', () => {
@@ -203,10 +288,13 @@ document.querySelectorAll('.bv-scope-btn').forEach(btn => {
     bvSearchScope = btn.dataset.scope;
     document.querySelectorAll('.bv-scope-btn').forEach(b => b.classList.toggle('on', b === btn));
     const input = document.getElementById('bvSearchInput');
+    const isCommission = bvSearchScope === 'commission';
     if (input) {
-      input.placeholder = bvSearchScope === 'vendor' ? '搜尋廠商…' : '搜尋品牌…';
-      input.focus();
+      input.style.display = isCommission ? 'none' : '';
+      if (!isCommission) { input.placeholder = bvSearchScope === 'vendor' ? '搜尋廠商…' : '搜尋品牌…'; input.focus(); }
     }
+    const clearBtn = document.getElementById('bvSearchClearBtn');
+    if (clearBtn) clearBtn.style.display = isCommission ? 'none' : '';
     renderBrandVendorView();
   });
 });
@@ -324,6 +412,9 @@ function openBrandEditModal(brand) {
   document.getElementById('brandIgInput').value = brand ? brand.igContact : '';
   document.getElementById('brandCommissionRateInput').value = brand && brand.commissionRate !== '' && brand.commissionRate !== undefined ? brand.commissionRate : '';
   document.getElementById('brandCommissionNoteInput').value = brand ? (brand.commissionNote || '') : '';
+  document.getElementById('brandCommissionEffectiveDateInput').value = brand ? (brand.commissionRateEffectiveDate || '') : '';
+  document.getElementById('brandCommissionConfirmedHint').textContent = brand && brand.commissionConfirmedAt
+    ? `上次確認：${brand.commissionConfirmedAt}${brand.commissionConfirmedBy ? '（' + brand.commissionConfirmedBy + '）' : ''}` : '';
   document.getElementById('brandLongTermInput').checked = brand ? !!brand.longTerm : false;
   document.getElementById('brandEndedInput').checked = brand ? !!brand.ended : false;
   document.getElementById('brandEndReasonInput').value = brand ? (brand.endReason || '') : '';
@@ -355,6 +446,7 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     // 分潤% 留空就送空字串（等於「還沒談定」），後端不會硬塞 0
     commissionRate: document.getElementById('brandCommissionRateInput').value.trim(),
     commissionNote: document.getElementById('brandCommissionNoteInput').value.trim(),
+    commissionRateEffectiveDate: document.getElementById('brandCommissionEffectiveDateInput').value.trim(),
     longTerm: document.getElementById('brandLongTermInput').checked,
     ended: document.getElementById('brandEndedInput').checked,
     endReason: document.getElementById('brandEndReasonInput').value.trim(),
