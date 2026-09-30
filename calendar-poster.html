@@ -456,7 +456,10 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 }
 /* 徽章與團名的距離：行事曆模式是上下、列表模式是左右，都吃同一個設定。
    chip 本身有 gap:4，所以這裡扣掉 4，讓滑桿上的數字就是實際距離 */
-.chip .chip-badge { margin-top: calc(var(--p-badge-gap) - 4px); }
+/* 行距調到 1 以下時，團名的行框比字本身矮、字會溢出行框下緣，徽章會貼到字上（雪莉 2026-09-30）。
+   把行框少掉的下半截補回來：(1 − 行距) × 0.5 個團名字高；徽章字級是團名的 0.66 倍，
+   換算成徽章自己的 em＝× 0.76。行距 ≥ 1 時補 0，原本的版面不變。 */
+.chip .chip-badge { margin-top: calc(var(--p-badge-gap) - 4px + max(0em, (1 - var(--p-line-h)) * 0.76em)); }
 .list-row .row-badge {
   flex: 0 0 auto;
   margin-left: var(--p-badge-gap);
