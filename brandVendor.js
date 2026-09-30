@@ -959,7 +959,7 @@ let postGenCtx_ = null; // { brands, ev }：多品牌時記住候選清單，供
 function openPostGenModalWith_(text, title) {
   postGenCtx_ = null;
   const h = document.getElementById('postGenTitle');
-  if (h) h.textContent = title || '📝 貼文文案';
+  if (h) h.textContent = title || '貼文文案';
   document.getElementById('postGenBrandSelect').style.display = 'none';
   document.getElementById('postGenOutput').value = text;
   setFormStatus('postGenStatus', '', '');
@@ -975,7 +975,7 @@ function openPostGenModalForBrands_(brands, ev) {
   }
   postGenCtx_ = { brands, ev };
   const h = document.getElementById('postGenTitle');
-  if (h) h.textContent = '📝 貼文文案';
+  if (h) h.textContent = '貼文文案';
   select.innerHTML = brands.map((b, i) => '<option value="' + i + '">' + escHtml(b.name) + '</option>').join('');
   select.selectedIndex = 0;
   select.style.display = 'block';
@@ -1016,7 +1016,7 @@ function syncPostGenBtnForEvent_(ev) {
 document.getElementById('evLinkGenBtn').addEventListener('click', () => {
   const ev = currentModalEv;
   if (!ev || !String(ev.url || '').trim()) return;
-  openPostGenModalWith_(bvBuildLinkCopy_(ev), '🔗 連結文案');
+  openPostGenModalWith_(bvBuildLinkCopy_(ev), '連結文案');
 });
 
 document.getElementById('evPostGenBtn').addEventListener('click', () => {

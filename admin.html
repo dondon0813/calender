@@ -6407,7 +6407,7 @@
     <div class="admin-stats-box" id="adminStatsBox"></div>
 
     <div class="publish-status-box" id="adminPublishBox">
-      <span id="adminPublishText">🔔 尚未顯示於前台</span>
+      <span id="adminPublishText"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> 尚未顯示於前台</span>
       <label class="pr-toggle show" id="adminPublishToggleWrap" style="margin:0;">
         <span class="pr-toggle-text">顯示於前台</span>
         <span class="pr-switch" id="adminPublishSwitch"><span class="pr-knob"></span></span>
@@ -6415,7 +6415,7 @@
     </div>
 
     <div class="early-bird-box" id="adminEarlyBirdBox" style="display:none;">
-      <div class="early-bird-label">🎁 早鳥禮參考</div>
+      <div class="early-bird-label"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C9 3 12 8 12 8s3-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>早鳥禮參考</div>
       <ul id="adminEarlyBirdList"></ul>
     </div>
 
@@ -6433,7 +6433,7 @@
     </div>
 
     <div class="memo-section">
-      <label for="memoText">📝 客人問題備忘錄</label>
+      <label for="memoText"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>客人問題備忘錄</label>
       <textarea id="memoText" rows="4" placeholder="記錄客人問題或回覆內容，員工之間會共用這則備忘錄…"></textarea>
       <div class="memo-actions">
         <button id="saveMemoBtn" class="save-btn">儲存</button>
@@ -6443,9 +6443,9 @@
     </div>
 
     <!-- 產生貼文文案：比對到的品牌有存模板才顯示（brandVendor.js 的 syncPostGenBtnForEvent_） -->
-    <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:12px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
+    <button class="task-mini-btn" id="evPostGenBtn" style="display:none; margin-top:12px; width:100%; padding:9px 0;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>產生貼文文案</button>
     <!-- 產生連結文案：固定三行（團名開團中／開團日期／下單連結），有下單網址的團都顯示（brandVendor.js） -->
-    <button class="task-mini-btn" id="evLinkGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">🔗 產生連結文案</button>
+    <button class="task-mini-btn" id="evLinkGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>產生連結文案</button>
   </div>
 </div>
 
@@ -7390,7 +7390,7 @@
 
     <button class="task-submit-btn" id="brandDetailEditBtn" style="margin-top:16px;">✏️ 編輯這個品牌</button>
     <!-- 有存貼文文案模板、且有進行中/即將開的團才顯示（brandVendor.js 依 postTemplate + upcoming 判斷） -->
-    <button class="task-mini-btn" id="brandDetailPostGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;">📝 產生貼文文案</button>
+    <button class="task-mini-btn" id="brandDetailPostGenBtn" style="display:none; margin-top:8px; width:100%; padding:9px 0;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>產生貼文文案</button>
   </div>
 </div>
 
@@ -7423,11 +7423,11 @@
 <div class="modal-backdrop" id="postGenModal" onclick="if(event.target===this) closePostGenModal()">
   <div class="modal-box">
     <button class="modal-close" onclick="closePostGenModal()">✕</button>
-    <h3 id="postGenTitle">📝 貼文文案</h3>
+    <h3 id="postGenTitle">貼文文案</h3>
     <div class="task-form" style="margin:0; padding:0; background:none;">
       <select id="postGenBrandSelect" style="display:none; width:100%; box-sizing:border-box; margin-top:12px; padding:9px 12px; border: 1px solid #E6DCD2; border-radius:12px; font-family:inherit; font-size:13px; color:#5A4A42;"></select>
       <textarea id="postGenOutput" rows="16" style="width:100%; box-sizing:border-box; margin-top:12px; padding:10px 12px; border: 1px solid #E6DCD2; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5A4A42; resize:vertical;"></textarea>
-      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;">📄 複製文案</button>
+      <button class="task-mini-btn" id="postGenCopyBtn" style="margin-top:10px; width:100%; padding:9px 0;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>複製文案</button>
       <div class="form-status" id="postGenStatus"></div>
     </div>
   </div>
@@ -7436,7 +7436,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=25"></script>
+<script src="brandVendor.js?v=26"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
