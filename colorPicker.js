@@ -127,7 +127,7 @@
   /* ---------- 狀態 ---------- */
   let target = null, original = '', st = { h: 0, s: 0, v: 0 };
   let backdrop = null, panel = null, els = {};
-  let dragMode = null, pending = false;
+  let dragMode = null, pending = false, openedAt = 0;
   const SIZE = 220, R_OUT = 110, RING = 20, GAP = 7, R_IN = R_OUT - RING - GAP;
 
   function readRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').filter(c => parseHex(c)); } catch (e) { return []; } }
@@ -159,7 +159,8 @@
   function build() {
     backdrop = document.createElement('div');
     backdrop.className = 'cpk-backdrop';
-    backdrop.addEventListener('click', close);
+    // 開面板那一下放開手指後瀏覽器還會補一個 click，會落在剛出現的背景上——剛開 400ms 內不當成「點外面關閉」
+    backdrop.addEventListener('click', () => { if (Date.now() - openedAt > 400) close(); });
 
     panel = document.createElement('div');
     panel.className = 'cpk-panel';
@@ -385,6 +386,7 @@
     if (!panel) build();
     if (target) close();
     target = input;
+    openedAt = Date.now();
     original = (parseHex(input.value) ? rgbToHex.apply(null, parseHex(input.value)) : '#000000');
     const n = rgbToHsv.apply(null, parseHex(original));
     st = { h: n.h, s: n.s, v: n.v };
@@ -417,11 +419,45 @@
   function isOurs(el) {
     return el && el.tagName === 'INPUT' && el.type === 'color' && !el.disabled && !el.hasAttribute('data-native-color');
   }
+  /* iPhone 在手指碰到色塊的當下就開系統選色視窗，等 click 再 preventDefault 已經太晚
+     （2026-09-30 雪莉：先跳舊的、按叉叉才出現新的）。所以色塊本身不接觸控（pointer-events:none），
+     改在 document 用「按下＋放開在同一點附近」判斷手指落在哪個色塊上，再開自製面板。 */
+  const blockStyle = document.createElement('style');
+  blockStyle.textContent = 'input[type="color"]:not([data-native-color]):not(:disabled){pointer-events:none;}';
+  (document.head || document.documentElement).appendChild(blockStyle);
+
+  function colorInputAt(x, y) {
+    const list = document.querySelectorAll('input[type="color"]:not([data-native-color]):not(:disabled)');
+    for (let i = 0; i < list.length; i++) {
+      const r = list[i].getBoundingClientRect();
+      if (r.width && r.height && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return list[i];
+    }
+    return null;
+  }
+  let downAt = null;
+  document.addEventListener('pointerdown', e => {
+    if (panel && panel.contains(e.target)) { downAt = null; return; }
+    const el = colorInputAt(e.clientX, e.clientY);
+    downAt = el ? { el, x: e.clientX, y: e.clientY } : null;
+  }, true);
+  document.addEventListener('pointerup', e => {
+    const d = downAt;
+    downAt = null;
+    if (!d) return;
+    // 手指有滑動（在捲頁）就不開
+    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;
+    if (colorInputAt(e.clientX, e.clientY) !== d.el) return;
+    e.preventDefault();
+    open(d.el);
+  }, true);
+  document.addEventListener('pointercancel', () => { downAt = null; }, true);
+
+  // 點到 <label for> 之類間接觸發色塊的 click：一樣擋掉系統視窗、改開自製面板
   document.addEventListener('click', e => {
     const el = e.target;
     if (!isOurs(el)) return;
-    e.preventDefault();          // 擋掉系統內建的選色視窗
-    open(el);
+    e.preventDefault();
+    if (!target) open(el);
   }, true);
   document.addEventListener('keydown', e => {
     if ((e.key === 'Enter' || e.key === ' ') && isOurs(e.target)) { e.preventDefault(); open(e.target); }
