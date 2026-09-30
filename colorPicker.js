@@ -58,9 +58,9 @@
 
   /* ---------- 樣式 ---------- */
   const css = `
-.cpk-backdrop { position: fixed; inset: 0; z-index: 9998; background: transparent; }
+.cpk-backdrop { position: fixed; inset: 0; z-index: 100000; background: transparent; }
 .cpk-panel {
-  position: fixed; z-index: 9999; box-sizing: border-box;
+  position: fixed; z-index: 100001; box-sizing: border-box;
   width: 300px; padding: 14px 16px 16px;
   background: #fff; color: #5a4636;
   border-radius: 18px; box-shadow: 0 10px 36px rgba(90,60,40,.22), 0 0 0 1px rgba(90,60,40,.06);
@@ -140,13 +140,19 @@
   }
 
   function labelFor(input) {
-    if (input.id) {
+    let text = input.getAttribute('aria-label') || '';
+    if (!text && input.id) {
       const l = document.querySelector('label[for="' + input.id + '"]');
-      if (l) return l.textContent.trim();
+      if (l) text = l.textContent;
     }
-    let p = input.previousElementSibling;
-    while (p && p.tagName !== 'LABEL') p = p.previousElementSibling;
-    return p ? p.textContent.trim() : '選擇顏色';
+    if (!text) {
+      let p = input.previousElementSibling;
+      while (p && p.tagName !== 'LABEL') p = p.previousElementSibling;
+      if (p) text = p.textContent;
+    }
+    // 面板標題只要短名稱：去掉 emoji 與括號裡的說明（後台標籤常帶長說明）
+    text = text.replace(/[（(].*$/, '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️]/gu, '').trim();
+    return text || '選擇顏色';
   }
 
   /* ---------- 建面板 ---------- */
