@@ -1673,10 +1673,11 @@ function autoFit() {
 /* 月份標題圖：images/calendar/title-MM.webp（去背 webp，12 個月 × 標準／壓扁兩款）。
    壓扁的長條版在「列表模式 且 本月 24 團（含）以上」時用——格子多，標題要壓扁才留得下空間
    （2026-09-30 雪莉定：24 團就要壓扁，原本 >24 漏掉剛好 24 團）。其餘一律標準版，兩款都置中。
+   9:16 限動尺寸高度夠，不管幾團一律用標準版（同日雪莉定）。
    圖的下緣刻意切平：貼齊行事曆框上緣，看起來像藏在框後面。 */
 function titleImgSrc() {
   const mm = String(currentMonth + 1).padStart(2, '0');
-  const slim = (S.mode === 'list' && visibleGroups('list').length >= 24);
+  const slim = (S.mode === 'list' && S.size !== '9:16' && visibleGroups('list').length >= 24);
   // ?v= 換標題圖時改日期，避免瀏覽器快取到舊圖
   return `images/calendar/title-${mm}${slim ? '-slim' : ''}.webp?v=20260930d`;
 }
