@@ -1667,13 +1667,13 @@ function autoFit() {
 }
 
 /* 月份標題圖：images/calendar/title-MM.webp（去背 webp，12 個月 × 標準／壓扁兩款）。
-   壓扁的長條版只在「列表模式 且 本月超過 24 團」時用——那種月份格子多，
-   標題要壓扁才留得下空間。其餘一律標準版，兩款都置中。 */
+   開團列表模式一律用壓扁的長條版（2026-09-30 雪莉定），月曆模式用標準版，兩款都置中。
+   圖的下緣刻意切平：貼齊行事曆框上緣，看起來像藏在框後面。 */
 function titleImgSrc() {
   const mm = String(currentMonth + 1).padStart(2, '0');
-  const slim = (S.mode === 'list' && visibleGroups('list').length > 24);
+  const slim = (S.mode === 'list');
   // ?v= 換標題圖時改日期，避免瀏覽器快取到舊圖
-  return `images/calendar/title-${mm}${slim ? '-slim' : ''}.webp?v=20260930b`;
+  return `images/calendar/title-${mm}${slim ? '-slim' : ''}.webp?v=20260930c`;
 }
 
 function buildHead() {
