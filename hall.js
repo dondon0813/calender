@@ -555,6 +555,30 @@ function hallRenderCodeRules() {
     return;
   }
   const knownLegacyIds = HALL_EVENT_CHOICES.map(c => c.legacyId);
+  // 同商品共綁提醒（2026-10-02 雪莉定：一個商品送多份教材＝單品價格分攤，加總應＝書價）：
+  // 其他資源的有效規則中，productMatch(trim)與 eventLegacyId 相同者
+  const hallOtherRules = [];
+  (HALL_LIST || []).forEach(res => {
+    if (!res || res.id === HALL_EDIT.id) return;
+    (res.codeRules || []).forEach(o => {
+      if (o && o.active !== false) hallOtherRules.push({ title: res.title || res.slug || '', pm: String(o.productMatch || '').trim(), ev: String(o.eventLegacyId || ''), amt: o.excludeAmount });
+    });
+  });
+  const hallBindHint = (r) => {
+    const pm = String(r.productMatch || '').trim();
+    if (!pm || r.active === false) return '';
+    const ev = String(r.eventLegacyId || '');
+    const same = hallOtherRules.filter(o => o.pm === pm && o.ev === ev);
+    if (!same.length) return '';
+    const all = same.concat([{ title: HALL_EDIT.title || '（本教材）', amt: r.excludeAmount }]);
+    let sum = 0, missing = false;
+    all.forEach(o => {
+      const n = (o.amt === '' || o.amt == null) ? NaN : Number(o.amt);
+      if (isNaN(n)) missing = true; else sum += n;
+    });
+    const names = all.map(o => o.title).join('、');
+    return '<div style="flex-basis:100%; font-size:12px; color:var(--c-text-light);" title="' + hallEscape(names) + '">此商品共綁 ' + all.length + ' 份教材，單品價格合計 $' + sum + (missing ? '（有教材未填單品價格）' : '') + '</div>';
+  };
   box.innerHTML = rules.map((r, i) => {
     const isCustom = !!r.eventLegacyId && knownLegacyIds.indexOf(r.eventLegacyId) === -1;
     const options = ['<option value=""' + (!r.eventLegacyId ? ' selected' : '') + '>（任何團）</option>']
@@ -573,6 +597,7 @@ function hallRenderCodeRules() {
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;" title="勾選＝每組發1張碼（買1組送1張，適合下單者已由解鎖規則涵蓋的團）；不勾＝買n組發n−1張"><input type="checkbox"' + (r.includeFirst ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].includeFirst=this.checked"> 含第1組</label>' +
       '<label style="display:flex; align-items:center; gap:4px; font-size:12px;"><input type="checkbox"' + (r.active !== false ? ' checked' : '') + ' onchange="HALL_EDIT.codeRules[' + i + '].active=this.checked"> 啟用</label>' +
       '<button type="button" class="task-mini-btn" onclick="hallRemoveCodeRule(' + i + ')">✕</button>' +
+      hallBindHint(r) +
     '</div>';
   }).join('');
 }
