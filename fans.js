@@ -886,12 +886,14 @@ function switchFanTab(tab, skipSave) {
 Object.keys(FAN_TAB_BTNS).forEach(key => {
   FAN_TAB_BTNS[key].addEventListener('click', () => switchFanTab(key));
 });
-// 開機還原上次停留的子分頁；讀不到（私密模式等）就用預設的未歸戶訂單
-(function restoreFanTab() {
+// 開機還原上次停留的子分頁；讀不到（私密模式等）就用預設的未歸戶訂單。
+// 延到整支腳本跑完再執行：還原到「點數與商城」會用到檔案後段才宣告的 FAN_REWARDS_LOADED 等 let 變數，
+// 同步執行會撞到宣告前存取（ReferenceError）。
+setTimeout(function restoreFanTab() {
   let saved = null;
   try { saved = sessionStorage.getItem('fanAdminSubTab'); } catch (e) { /* 忽略 */ }
   switchFanTab(saved || 'unclaimed', true);
-})();
+}, 0);
 
 // ===== DOM 事件掛載 =====
 document.getElementById('fanUnclaimedRefreshBtn').addEventListener('click', () => loadFanAdminView(true));
@@ -1002,7 +1004,6 @@ function faFillRewardsSelects(data) {
   ).join('');
   document.getElementById('fanShopMaterial').innerHTML =
     '<option value="">（請選擇教材或遊戲）</option>' +
-    '<optgroup label="教材">' + shopMaterialOptions + '</optgroup>' +
     (shopHallOptions ? '<optgroup label="遊戲／教材館">' + shopHallOptions + '</optgroup>' : '');
   document.getElementById('fanGrantMaterial').innerHTML = '<option value="">（請選擇教材）</option>' + materialOptionsNoBlank;
 }
@@ -1216,7 +1217,13 @@ function faEditShop(id) {
   const s = (FAN_REWARDS_CFG.shopItems || []).find(x => String(x.id) === String(id));
   if (!s) return;
   document.getElementById('fanShopEditingId').value = s.id;
-  document.getElementById('fanShopMaterial').value = s.hallResourceId ? ('h:' + s.hallResourceId) : ('m:' + s.materialId);
+  const shopSel = document.getElementById('fanShopMaterial');
+  const shopVal = s.hallResourceId ? ('h:' + s.hallResourceId) : ('m:' + s.materialId);
+  // 舊繪本教材上架項目（下拉已不列舊教材）：編輯時補一個臨時選項，才能改價／停用
+  if (!Array.from(shopSel.options).some(o => o.value === shopVal)) {
+    const op = document.createElement('option'); op.value = shopVal; op.textContent = (s.materialTitle || '舊繪本教材') + '（舊）'; shopSel.appendChild(op);
+  }
+  shopSel.value = shopVal;
   document.getElementById('fanShopCurrency').value = s.currencyCode;
   document.getElementById('fanShopPrice').value = s.pointsPrice;
   document.getElementById('fanShopNote').value = s.note || '';
@@ -1409,21 +1416,11 @@ async function faAdjustPoints() {
   }
 }
 
-async function faGrantMaterial() {
-  const memberNo = document.getElementById('fanWalletMemberNo').value.trim();
-  if (!memberNo) { alert('請先在上方輸入並查詢會員編號'); return; }
-  const materialId = document.getElementById('fanGrantMaterial').value;
-  if (!materialId) { alert('請選擇教材'); return; }
-  const matTitle = faMaterialTitle(materialId);
-  if (!confirm('確定要給 ' + memberNo + ' 「' + matTitle + '」的教材下載資格嗎？')) return;
-  try {
-    const res = await faApiPost('fan-admin-grant-material', { memberNo, materialId });
-    if (!res || !res.success) throw new Error((res && res.error) || '給予失敗');
-    alert('已給予');
-    faLoadFanWallet();
-  } catch (err) {
-    alert('給予失敗：' + err.message);
-  }
+// 舊繪本教材已搬到教材館（docs/13）：手動給教材資格改由教材館「手動開通」
+function faGrantMaterial() {
+  if (typeof switchView !== 'function') { alert('請到 教材館 → 教材，開啟該教材後用「手動開通」'); return; }
+  switchView('hall');
+  if (typeof setHallTab === 'function') setHallTab('mat');
 }
 
 // ----- 區塊 E：認領嘗試紀錄 -----

@@ -1286,7 +1286,9 @@ document.getElementById('deleteBookBtn').addEventListener('click', async () => {
 });
 
 // ===== 延伸教材 =====
+let materialsSectionBook = null; // 目前教材區對應的書（到教材館新增時預帶綁定）
 function renderMaterialsSection(book) {
+  materialsSectionBook = book || null;
   const hint = document.getElementById('materialsNeedSaveHint');
   const body = document.getElementById('materialsBody');
   closeMaterialForm();
@@ -1538,6 +1540,39 @@ function formatBytes(n) {
 }
 
 document.getElementById('addMaterialBtn').addEventListener('click', () => openMaterialForm(null));
+
+// 教材正本已改教材館（docs/13）：切到教材館「教材」分頁、開新增資源表單，並預帶綁定這本書
+document.getElementById('addHallMaterialBtn').addEventListener('click', () => {
+  const book = materialsSectionBook;
+  if (!book) { showToast('請先儲存這本書', true); return; }
+  if (typeof switchView !== 'function' || typeof hallOpenEdit !== 'function' || typeof HALL_LIST === 'undefined') {
+    showToast('請到「教材館 → 教材」新增，並在綁定繪本勾選《' + (book.title || '') + '》', true); return;
+  }
+  switchView('hall');
+  if (typeof setHallTab === 'function') setHallTab('mat');
+  let tries = 0;
+  const attempt = () => {
+    if (typeof HALL_LOADED !== 'undefined' && HALL_LOADED && typeof HALL_EDIT !== 'undefined') {
+      if (typeof HALL_TABLE_READY !== 'undefined' && !HALL_TABLE_READY) { showToast('教材館資料表尚未建立（待 db push）', true); return; }
+      hallOpenEdit(-1);
+      try {
+        HALL_EDIT.kind = 'file';
+        HALL_EDIT.bookIds = [book.id];
+        if (typeof hallRenderEditor === 'function') hallRenderEditor();
+        showToast('已預帶綁定《' + (book.title || '') + '》');
+        // 新增表單在教材庫長清單下方，自動捲過去，免得看起來像沒反應
+        const editArea = document.getElementById('hallEditArea');
+        if (editArea) setTimeout(() => editArea.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      } catch (err) {
+        showToast('請在綁定繪本勾選《' + (book.title || '') + '》', true);
+      }
+      return;
+    }
+    if (++tries > 24) { showToast('教材館還沒載入完，請到「教材館 → 教材」新增，並勾選《' + (book.title || '') + '》', true); return; }
+    setTimeout(attempt, 250);
+  };
+  attempt();
+});
 document.getElementById('cancelMaterialBtn').addEventListener('click', closeMaterialForm);
 
 function openMaterialForm(material, opts) {

@@ -5345,8 +5345,10 @@
           <div id="materialsNeedSaveHint" class="pba-empty-list">請先儲存這本書，才能新增延伸教材</div>
           <div id="materialsBody" style="display:none;">
             <div id="materialList"></div>
-            <button type="button" class="pba-mini-btn" id="addMaterialBtn">＋ 新增教材</button>
-            <button type="button" class="pba-mini-btn" id="addFromLibraryBtn">📚 從教材庫加入</button>
+            <!-- 教材正本已改教材館（docs/13）：舊「新增教材／從教材庫加入」隱藏保留（books.js 仍綁事件），改一顆到教材館新增 -->
+            <button type="button" class="pba-mini-btn" id="addMaterialBtn" style="display:none;">＋ 新增教材</button>
+            <button type="button" class="pba-mini-btn" id="addFromLibraryBtn" style="display:none;">從教材庫加入</button>
+            <button type="button" class="pba-mini-btn" id="addHallMaterialBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 5v14M5 12h14"/></svg>到教材館新增教材</button>
 
             <!-- 教材庫選單：列出全部教材（排除已掛在這本書的），點「加入」＝把這本書掛進該教材，
                  檔案共用一份、下載計數合併；不會複製檔案 -->
@@ -6180,7 +6182,9 @@
       <button type="button" class="task-mini-btn" id="fanRuleResetBtn">清空表單</button>
     </div>
 
-    <h3 style="margin:24px 0 8px; font-size:15px;">兌換券商品規則（買指定商品送兌換券，該品項不入點）</h3>
+    <div style="font-size:13px; color:#8B6E5E; margin:24px 0 8px;">兌換券已停用，跟團送教材請到 教材館 → 教材 設定兌換碼規則</div>
+    <div id="fanVoucherRetiredBox" style="display:none;">
+    <h3 style="margin:24px 0 8px; font-size:15px;">兌換券商品規則（已停用）</h3>
     <div id="fanVruleListArea"><div class="task-empty">讀取中…</div></div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;">
       <input type="hidden" id="fanVruleEditingId" value="">
@@ -6195,6 +6199,7 @@
       <button type="button" class="task-mini-btn" id="fanVruleResetBtn">清空表單</button>
     </div>
     <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">注意：綁定教材後，該教材檔案會轉為會員專屬（私有），繪本館前台不再提供免費下載</div>
+    </div><!-- /fanVoucherRetiredBox -->
 
     <h3 style="margin:24px 0 8px; font-size:15px;">教材商城定價</h3>
     <div id="fanShopListArea"><div class="task-empty">讀取中…</div></div>
@@ -6208,7 +6213,7 @@
       <button type="button" class="task-mini-btn" id="fanShopSaveBtn">儲存</button>
       <button type="button" class="task-mini-btn" id="fanShopResetBtn">清空表單</button>
     </div>
-    <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">注意：綁定教材後，該教材檔案會轉為會員專屬（私有），繪本館前台不再提供免費下載</div>
+    <div style="font-size:12px; color:#8B6E5E; margin-bottom:16px;">商城只能上架教材館的教材與遊戲；舊繪本教材已搬到教材館。</div>
 
     <h3 style="margin:24px 0 8px; font-size:15px;">會員錢包工具</h3>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
@@ -6225,8 +6230,9 @@
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
       <strong style="font-size:13px;">手動給教材資格</strong>
-      <select id="fanGrantMaterial" style="min-width:220px;"></select>
-      <button type="button" class="task-mini-btn" id="fanGrantBtn">送出</button>
+      <span style="font-size:13px; color:#8B6E5E;">已改到教材館：開啟教材 → 手動開通</span>
+      <select id="fanGrantMaterial" style="display:none;"></select>
+      <button type="button" class="task-mini-btn" id="fanGrantBtn">前往教材館</button>
     </div>
 
     <h3 style="margin:24px 0 8px; font-size:15px;">認領嘗試紀錄</h3>
@@ -7461,7 +7467,7 @@
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=54"></script>
+<script src="books.js?v=55"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
@@ -7471,7 +7477,7 @@
 <script src="changelog.js?v=5"></script>
 <script src="announce.js?v=1"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=16"></script>
+<script src="fans.js?v=17"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
