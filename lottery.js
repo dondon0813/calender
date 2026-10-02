@@ -173,6 +173,44 @@ async function lotApiPost(type, extra) {
   return data;
 }
 
+// ===== 訂單編號 ↔ 訂單庫對照（2026-10-03，docs/09 §13）=====
+// 抽出來就先填訂單編號：後端 GET 每位得獎人帶 order（對到的訂單｜null＝訂單庫沒有），
+// 表單輸入時另打 lottery-order-lookup 即時核對是不是這團的訂單。
+let LOTTERY_ORDERS_READY = true; // 後端對照查詢失敗（或舊後端沒這個欄位）時 false＝只顯示編號、不顯示核對結果
+function lotMoney(n) { return '$' + Number(n || 0).toLocaleString('en-US'); }
+// 核對結果一行字：這團已付款訂單＝綠、別團或未付款＝警示色、訂單庫沒有＝淡字
+function lotOrderInfoHtml(order) {
+  if (!order) return '<span class="lot-ord lot-ord-none">訂單庫沒有這筆（還沒收單，或編號打錯）</span>';
+  const parts = [order.customerName, lotMoney(order.amount), order.statusLabel, order.memberNo ? '會員 ' + order.memberNo : '']
+    .filter(Boolean).map(lotEscapeHtml).join('・');
+  if (order.sameTeam === false) {
+    return '<span class="lot-ord lot-ord-warn">不是這團的訂單' + (order.teamTitle ? '（' + lotEscapeHtml(order.teamTitle) + '）' : '') + '：' + parts + '</span>';
+  }
+  return '<span class="lot-ord ' + (order.paid ? 'lot-ord-ok' : 'lot-ord-warn') + '">' + (order.paid ? lotIcon('check') : '') + parts + '</span>';
+}
+// 輸入框即時核對：停手 500ms 後查，結果寫進 hintEl；過期的回應丟棄。getCtx 回 {drawId}｜{acctId}｜{eventId}｜{}
+function lotBindOrderLookup(input, hintEl, getCtx) {
+  let timer = null, seq = 0;
+  const run = () => {
+    const val = input.value.trim();
+    const mySeq = ++seq;
+    if (!/[A-Za-z0-9]{8,}/.test(val)) { hintEl.innerHTML = ''; return; } // 空的或還沒打完，不查
+    hintEl.innerHTML = '<span class="lot-ord lot-ord-none">核對中…</span>';
+    lotApiPost('lottery-order-lookup', Object.assign({ orderNos: [val] }, getCtx() || {})).then(res => {
+      if (mySeq !== seq) return;
+      const r = res && res.success ? (res.results || [])[0] : null;
+      hintEl.innerHTML = r ? lotOrderInfoHtml(r.order) : '';
+    }).catch(() => { if (mySeq === seq) hintEl.innerHTML = ''; });
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 500); });
+  input._lotLookup = () => { clearTimeout(timer); run(); };
+  input._lotLookupCancel = () => { clearTimeout(timer); seq++; }; // 作廢排程中／在途的查詢（視窗換人時用）
+}
+// 這段文字裡有沒有像訂單編號的片段（8 碼以上英數、至少 6 個數字）；貼上模式用來分辨哪一段是訂單編號
+function lotLooksLikeOrderNo(text) {
+  return String(text || '').split(/[^A-Za-z0-9]+/).some(t => t.length >= 8 && (t.match(/\d/g) || []).length >= 6);
+}
+
 // ===== 小工具 =====
 function lotSetStatus(id, text, cls) {
   const el = document.getElementById(id);
@@ -384,6 +422,7 @@ function loadLotteryView(forceReload) {
     LOTTERY_ACCT_READY = data.acctReady !== false;
     LOTTERY_PRIZE_READY = data.prizeReady !== false;
     LOTTERY_WINNER_TYPE_READY = data.winnerTypeReady !== false; // 得獎人自訂類型欄位（migration 20260925130000）
+    LOTTERY_ORDERS_READY = data.ordersReady === true; // 訂單編號對照（舊後端沒這個 key＝不顯示核對結果）
     LOTTERY_TODAY = data.today || lotToday();
     LOTTERY_ACCT_TEAMS = Array.isArray(data.acctTeams) ? data.acctTeams : [];
     LOTTERY_DRAWS = Array.isArray(data.draws) ? data.draws : [];
@@ -559,7 +598,7 @@ function lotZoneVisible(key) {
 }
 function lotSearchQuery() { return LOTTERY_FILTER.q.trim().toLowerCase(); }
 function lotWinnerHay(w) {
-  return [w.prize, w.winnerHandle, w.name, w.orderNo].map(x => String(x || '')).join(' ').toLowerCase();
+  return [w.prize, w.winnerHandle, w.name, w.orderNo, w.order && w.order.customerName].map(x => String(x || '')).join(' ').toLowerCase();
 }
 function lotWinnerStatusFilterOk(w) {
   const s = LOTTERY_FILTER.status;
@@ -737,7 +776,9 @@ function lotWinnersRows(draws) {
         // 複製鈕只複製地址（含郵遞區號），不含電話（雪莉 09-29：只要地址就好）
         copy = [v(w.zip), v(w.address)].filter(Boolean).join(' ');
       }
-      rows.push({ prize: w.prize || '', who: v(w.name) || v(w.winnerHandle) || '（未填）', contact, copy, done: w.status === 'done' });
+      // 姓名／暱稱都還沒有時，退回訂單上的姓名或訂單編號（抽出來只先填了訂單編號的階段）
+      const who = v(w.name) || v(w.winnerHandle) || v(w.order && w.order.customerName) || (v(w.orderNo) ? '訂單 ' + v(w.orderNo) : '') || '（未填）';
+      rows.push({ prize: w.prize || '', who, contact, copy, done: w.status === 'done' });
     });
   });
   return rows;
@@ -1313,14 +1354,29 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
     if (w.shippingFee) subParts.push(sub('運費', lotEscapeHtml(w.shippingFee)));
     emptyMsg = '尚未填寫寄件資料';
   }
-  const subHtml = subParts.length ? subParts.join('') : '<span class="lot-sub-empty">' + emptyMsg + '</span>';
+  // 訂單編號放下行最前面＋核對結果（處理中的才提示「訂單庫沒有」，已結束的歷史資料只列編號不吵）；
+  // 團購抽獎還在待聯絡／待回填卻沒填訂單編號 → 提醒補上（2026-10-03 雪莉：抽出來就要先填訂單編號）
+  const orderParts = [];
+  const orderNo = String(w.orderNo || '').trim();
+  const settled = lotIsSettled(w);
+  if (orderNo && orderNo !== '-') {
+    const info = LOTTERY_ORDERS_READY && (w.order || !settled) ? lotOrderInfoHtml(w.order) : '';
+    orderParts.push(sub('訂單', lotEscapeHtml(orderNo)) + (info ? '<span>' + info + '</span>' : ''));
+  } else if (w.status === 'pending' || w.status === 'awaiting_info') {
+    const d = LOTTERY_DRAWS.find(x => x.id === drawId);
+    if (d && d.section === 'groupbuy') orderParts.push('<span class="lot-ord lot-ord-warn">還沒填訂單編號</span>');
+  }
+  const subHtml = orderParts.join('') + (subParts.length ? subParts.join('') : '<span class="lot-sub-empty">' + emptyMsg + '</span>');
+  // 姓名還沒回填時，先淡字顯示訂單上的姓名（僅供辨識，不會寫回資料）
+  const orderName = (!w.name && w.order && w.order.customerName)
+    ? '<span class="lot-ord-name" title="訂單上的姓名（還沒回填）">' + lotEscapeHtml(w.order.customerName) + '</span>' : '';
 
   return '<div class="lot-wl-row' + rowCls + '">' +
     '<div class="lot-wl-main">' +
       '<span class="lot-wl-prize" title="' + lotEscapeHtml(w.prize) + '">' + lotEscapeHtml(w.prize) + typeTag + '</span>' +
       '<span class="lot-wl-who">' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : empty) + '</span>' +
       '<span class="lot-wl-status">' + statusSel + '</span>' +
-      '<span class="lot-wl-name">' + (w.name ? lotEscapeHtml(w.name) : empty) + '</span>' +
+      '<span class="lot-wl-name">' + (w.name ? lotEscapeHtml(w.name) : (orderName || empty)) + '</span>' +
       '<span class="lot-wl-memo">' + (w.memo ? lotEscapeHtml(w.memo) : empty) + '</span>' +
       '<span class="lot-wl-ops">' + actions + '</span>' +
     '</div>' +
@@ -1381,7 +1437,9 @@ function renderLotteryTodo() {
     return '<tr>' +
       '<td>' + teamLabel + sheetRefTxt + '</td>' +
       lotPrizeCellHtml(w.prize) +
-      '<td>' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : '<span class="lot-empty-cell">—</span>') + '</td>' +
+      '<td>' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle)
+        : ((w.name || (w.order && w.order.customerName)) ? lotEscapeHtml(w.name || w.order.customerName)
+          : (w.orderNo ? '<span class="lot-empty-cell">訂單 ' + lotEscapeHtml(w.orderNo) + '</span>' : '<span class="lot-empty-cell">—</span>'))) + '</td>' +
       '<td><span class="lot-status-sel lot-s-' + lotEscapeHtml(w.status) + '" style="display:inline-block; cursor:default;">' + lotStatusLabel(w.status, lotWinnerType(w, draw)) + '</span></td>' +
       '<td class="lot-todo-stuck">' + stuckTxt + '</td>' +
       '<td style="white-space:nowrap;">' + nextBtns + '</td>' +
@@ -1674,11 +1732,17 @@ function lotSetNoLottery(acctId, noLottery) {
     if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
   });
 }
-// 複製通知文：只用暱稱＋獎品，待聯絡／待回填資料的得獎人才列入，不含個資
+// 複製通知文：只用暱稱＋獎品，待聯絡／待回填資料的得獎人才列入，不含個資。
+// 還沒有暱稱（抽出來只先填了訂單編號）→ 改用「訂單編號末 5 碼」稱呼，不露整串編號
 function lotBuildNotifyText(draw) {
   return (draw.winners || [])
     .filter(w => w.status === 'pending' || w.status === 'awaiting_info')
-    .map(w => { const h = String(w.winnerHandle || '').trim(); return (h.startsWith('@') ? h : '@' + h) + ' 恭喜抽中「' + (w.prize || '') + '」，請私訊姓名電話地址'; })
+    .map(w => {
+      const h = String(w.winnerHandle || '').trim();
+      const digits = ((String(w.orderNo || '').split(/[^A-Za-z0-9]+/).filter(t => t.length >= 8).sort((a, b) => b.length - a.length)[0]) || '');
+      const who = h ? (h.startsWith('@') ? h : '@' + h) : (digits ? '訂單編號末五碼 ' + digits.slice(-5) : '@');
+      return who + ' 恭喜抽中「' + (w.prize || '') + '」，請私訊姓名電話地址';
+    })
     .join('\n');
 }
 
@@ -1895,9 +1959,18 @@ document.getElementById('lotDrawAcctSelect').addEventListener('change', function
   lotSyncDrawTitleUI();
 });
 
-// ===== 新增抽獎：得獎人快速輸入列（獎品＋得獎人，狀態固定待聯絡）=====
+// ===== 新增抽獎：得獎人快速輸入列（訂單編號＋獎品＋得獎人，狀態固定待聯絡）=====
+// 訂單編號排第一欄（2026-10-03 雪莉：抽出來就要先填，才知道是這團的哪一筆訂單），輸入後即時核對。
 // 獎品欄預帶目前「活動獎品」欄位的值；沒有手動指定 prize（data.prize 空）時標記 data-auto=1，
 // 之後活動獎品欄改了會同步跟著改，使用者一旦直接編輯這一列的獎品欄就解除同步（見下面的 input 監聽）。
+// 目前表單選的團（給訂單核對用）：非團購分區或沒選團＝{}（只查有沒有這筆、不判斷是不是這團）
+function lotDrawFormTeamCtx() {
+  if ((document.getElementById('lotDrawSectionSelect').value || 'groupbuy') !== 'groupbuy') return {};
+  const parts = (document.getElementById('lotDrawAcctSelect').value || '').split(':');
+  if (parts[0] === 'acct' && parts[1]) return { acctId: parts[1] };
+  if (parts[0] === 'event' && parts[1]) return { eventId: parts[1] };
+  return {};
+}
 function addLotWinnerFormRow(data) {
   const wrap = document.getElementById('lotWinnerRows');
   const row = document.createElement('div');
@@ -1905,6 +1978,13 @@ function addLotWinnerFormRow(data) {
 
   const drawPrize = document.getElementById('lotDrawPrizeInput').value.trim();
   const explicitPrize = data && data.prize;
+
+  const order = document.createElement('input');
+  order.type = 'text';
+  order.className = 'lot-row-order';
+  order.placeholder = '訂單編號';
+  order.value = (data && data.orderNo) || '';
+  row.appendChild(order);
 
   const prize = document.createElement('input');
   prize.type = 'text';
@@ -1918,14 +1998,11 @@ function addLotWinnerFormRow(data) {
   const handle = document.createElement('input');
   handle.type = 'text';
   handle.className = 'lot-row-handle';
-  handle.placeholder = '得獎人暱稱／帳號';
+  handle.placeholder = '暱稱／帳號（可先空著）';
   handle.value = (data && data.winnerHandle) || '';
   row.appendChild(handle);
 
-  const tag = document.createElement('span');
-  tag.className = 'lot-pending-tag';
-  tag.textContent = '待聯絡';
-  row.appendChild(tag);
+  // 「待聯絡」小標拿掉（2026-10-03）：位置讓給訂單編號欄，狀態說明在上方提示文字
 
   const del = document.createElement('button');
   del.type = 'button';
@@ -1935,8 +2012,20 @@ function addLotWinnerFormRow(data) {
   del.addEventListener('click', () => row.remove());
   row.appendChild(del);
 
+  const hint = document.createElement('div');
+  hint.className = 'lot-order-hint';
+  row.appendChild(hint);
+  lotBindOrderLookup(order, hint, lotDrawFormTeamCtx);
+
   wrap.appendChild(row);
+  if (order.value) order._lotLookup();
 }
+// 換團／換分區後，已經填了訂單編號的列重新核對一次（是不是「這團」的答案會變）
+function lotRecheckWinnerFormRows() {
+  document.querySelectorAll('#lotWinnerRows .lot-row-order').forEach(input => { if (input._lotLookup) input._lotLookup(); });
+}
+document.getElementById('lotDrawAcctSelect').addEventListener('change', lotRecheckWinnerFormRows);
+document.getElementById('lotDrawSectionSelect').addEventListener('change', lotRecheckWinnerFormRows);
 // 活動獎品欄一改，所有還沒被手動接管過（data-auto=1）的列跟著同步
 document.getElementById('lotDrawPrizeInput').addEventListener('input', function () {
   const val = this.value;
@@ -1950,6 +2039,7 @@ document.getElementById('lotDrawPrizeInput').addEventListener('input', function 
 function collectLotWinnerFormRows() {
   const drawPrize = document.getElementById('lotDrawPrizeInput').value.trim();
   return Array.from(document.querySelectorAll('#lotWinnerRows .lot-winner-row')).map(row => ({
+    orderNo: row.querySelector('.lot-row-order').value.trim(),
     prize: row.querySelector('.lot-row-prize').value.trim() || drawPrize,
     winnerHandle: row.querySelector('.lot-row-handle').value.trim()
   })).filter(r => r.prize);
@@ -1960,18 +2050,23 @@ document.getElementById('lotPasteToggleBtn').addEventListener('click', () => {
   const box = document.getElementById('lotPasteBox');
   box.style.display = box.style.display === 'none' ? '' : 'none';
 });
-// 貼上模式拆行規則：一行一位，「獎品」與「得獎人」用 Tab／全形空白／連續兩個以上半形空白隔開，
-// 前段當獎品、後段當得獎人；沒有分隔（整行只有得獎人）也接受，獎品用活動獎品欄（見 addLotWinnerFormRow）。
+// 貼上模式拆行規則：一行一位，各段用 Tab／全形空白／連續兩個以上半形空白隔開。
+// 第一個「像訂單編號」的段落（8 碼以上英數、至少 6 個數字，可帶「52.」這類序號前綴）當訂單編號；
+// 其餘段落照舊：兩段＝前段獎品、後段得獎人，一段＝得獎人（獎品用活動獎品欄，見 addLotWinnerFormRow）。
+// 只貼訂單編號也可以（暱稱之後再補）。
 document.getElementById('lotPasteParseBtn').addEventListener('click', () => {
   const raw = document.getElementById('lotPasteArea').value;
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
   let ok = 0;
   lines.forEach(line => {
-    const m = line.match(/^(.*?)(?:\t+|　+| {2,})(.+)$/);
-    if (m) {
-      addLotWinnerFormRow({ prize: m[1].trim(), winnerHandle: m[2].trim() });
+    const parts = line.split(/\t+|　+| {2,}/).map(p => p.trim()).filter(Boolean);
+    // @ 開頭的帳號、手機號碼（LINE ID 常見）就算一長串數字也不是訂單編號
+    const orderIdx = parts.findIndex(p => !/^@/.test(p) && !/^09\d{8}$/.test(p) && lotLooksLikeOrderNo(p));
+    const orderNo = orderIdx === -1 ? '' : parts.splice(orderIdx, 1)[0];
+    if (parts.length >= 2) {
+      addLotWinnerFormRow({ orderNo, prize: parts[0], winnerHandle: parts.slice(1).join(' ') });
     } else {
-      addLotWinnerFormRow({ winnerHandle: line });
+      addLotWinnerFormRow({ orderNo, winnerHandle: parts[0] || '' });
     }
     ok++;
   });
@@ -2012,6 +2107,12 @@ document.getElementById('lotDrawSaveBtn').addEventListener('click', async () => 
   if (titleTouched) payload.title = title;
   if (LOTTERY_EDIT_DRAW_ID) payload.id = LOTTERY_EDIT_DRAW_ID;
 
+  // 團購抽獎：抽出來就要先填訂單編號（2026-10-03 雪莉）。沒填的列提醒一次、不強制擋（有些團是留言抽獎沒有訂單）
+  if (!LOTTERY_EDIT_DRAW_ID && section === 'groupbuy') {
+    const missing = collectLotWinnerFormRows().filter(r => !r.orderNo).length;
+    if (missing && !confirm('有 ' + missing + ' 位得獎人還沒填訂單編號。\n\n團購抽獎建議抽出來就先填中獎的訂單編號，之後才對得到是哪一筆訂單。\n\n確定要先這樣儲存嗎？')) return;
+  }
+
   const btn = document.getElementById('lotDrawSaveBtn');
   btn.disabled = true;
   lotSetStatus('lotDrawFormStatus', '儲存中…', '');
@@ -2022,8 +2123,8 @@ document.getElementById('lotDrawSaveBtn').addEventListener('click', async () => 
     if (!LOTTERY_EDIT_DRAW_ID && drawId) {
       const rows = collectLotWinnerFormRows();
       for (const r of rows) {
-        const wres = await lotApiPost('lottery-winner-upsert', { drawId, prize: r.prize, winnerHandle: r.winnerHandle, status: 'pending' });
-        if (!wres || !wres.success) throw new Error('得獎人「' + r.prize + '」存檔失敗：' + ((wres && wres.error) || '未知錯誤'));
+        const wres = await lotApiPost('lottery-winner-upsert', { drawId, prize: r.prize, winnerHandle: r.winnerHandle, orderNo: r.orderNo, status: 'pending' });
+        if (!wres || !wres.success) throw new Error('得獎人「' + (r.orderNo || r.winnerHandle || r.prize) + '」存檔失敗：' + ((wres && wres.error) || '未知錯誤'));
       }
     }
     closeLotteryDrawModal();
@@ -2092,6 +2193,15 @@ function openLotteryWinnerModal(drawId, winner) {
   v('lotWinnerBankBranchInput', winner ? winner.bankBranch : '');
   v('lotWinnerBankAccountInput', winner ? winner.bankAccount : '');
   v('lotWinnerEmailInput', winner ? winner.email : '');
+  // 訂單編號核對：先用清單帶回來的結果，之後輸入時即時重查
+  const orderHint = document.getElementById('lotWinnerOrderHint');
+  const orderInput = document.getElementById('lotWinnerOrderNoInput');
+  if (orderInput._lotLookupCancel) orderInput._lotLookupCancel(); // 上一位得獎人還在途中的查詢不能寫到這一位
+  if (orderHint) {
+    const hasNo = !!(winner && String(winner.orderNo || '').trim());
+    // 已結束的歷史資料查無訂單就不提示（同清單列規則）
+    orderHint.innerHTML = (hasNo && LOTTERY_ORDERS_READY && (winner.order || !lotIsSettled(winner))) ? lotOrderInfoHtml(winner.order) : '';
+  }
   lotSyncWinnerModalFields(prizeType);
   lotSetStatus('lotWinnerFormStatus', '', '');
   document.getElementById('lotteryWinnerModal').classList.add('show');
@@ -2100,6 +2210,8 @@ function closeLotteryWinnerModal() {
   document.getElementById('lotteryWinnerModal').classList.remove('show');
   LOTTERY_WINNER_EDIT = null;
 }
+lotBindOrderLookup(document.getElementById('lotWinnerOrderNoInput'), document.getElementById('lotWinnerOrderHint'),
+  () => (LOTTERY_WINNER_EDIT ? { drawId: LOTTERY_WINNER_EDIT.drawId } : {}));
 
 document.getElementById('lotWinnerSaveBtn').addEventListener('click', async () => {
   if (!LOTTERY_WINNER_EDIT) return;

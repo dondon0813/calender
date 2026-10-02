@@ -6025,9 +6025,18 @@
     .lot-todo-stuck{ font-variant-numeric:tabular-nums; color:var(--c-cat-1); font-weight:700; }
     .lot-next-btn{ font-size:12px; color:var(--c-primary); font-weight:700; cursor:pointer; background:none; border:none; padding:0; margin-right:8px; }
     .lot-next-btn.danger{ color:#B5485A; }
-    .lot-winner-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+    .lot-winner-row{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
     .lot-winner-row input{ flex:1; min-width:0; }
-    .lot-winner-row .lot-pending-tag{ flex:none; font-size:11px; padding:2px 8px; border-radius:999px; background:#F5EFE9; color:#7a7166; }
+    .lot-winner-row input.lot-row-order{ flex:1.7; min-width:150px; }
+    /* 訂單編號核對結果（2026-10-03）：新增抽獎的得獎人列下方、得獎人視窗訂單編號欄下方、得獎人列下行 */
+    .lot-order-hint{ flex-basis:100%; font-size:12px; line-height:1.45; color:var(--c-text-soft); margin:0 0 2px 2px; }
+    .lot-order-hint:empty{ display:none; }
+    .lot-ord{ display:inline-flex; align-items:center; gap:3px; flex-wrap:wrap; }
+    .lot-ord svg{ width:12px; height:12px; flex:none; }
+    .lot-ord-ok{ color:var(--c-cat-2); font-weight:600; }
+    .lot-ord-warn{ color:var(--c-cat-1); font-weight:600; }
+    .lot-ord-none{ color:var(--c-muted, var(--c-text-soft)); }
+    .lot-wl-name .lot-ord-name{ color:var(--c-muted, var(--c-text-soft)); }
     /* 「待抽」虛擬卡：帳務團已達待抽門檻但還沒建抽獎 */
     .lot-card-pending{ border:1px dashed var(--c-danger); }
     .lot-card-pending .lot-card-head{ cursor:default; }
@@ -6779,13 +6788,13 @@
           </div>
         </div>
         <div id="lotPasteBox" style="display:none; margin-top:8px;">
-          <textarea id="lotPasteArea" rows="4" placeholder="一行一位，獎品與得獎人用 Tab 或兩個空格隔開，例如：&#10;香草奶茶 一盒　@milk_tea_mom" style="width:100%; box-sizing:border-box; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px;"></textarea>
+          <textarea id="lotPasteArea" rows="4" placeholder="一行一位，只貼訂單編號就可以；要加獎品或得獎人，用 Tab 或兩個空格隔開，例如：&#10;26091234567890&#10;26091234567891　香草奶茶 一盒　@milk_tea_mom" style="width:100%; box-sizing:border-box; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px;"></textarea>
           <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
             <button type="button" class="task-mini-btn" id="lotPasteParseBtn">拆成表格</button>
             <span id="lotPasteParseStatus" style="font-size:12px; color:var(--c-text-soft);"></span>
           </div>
         </div>
-        <p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:8px 0;">狀態一律先設為「待聯絡」；姓名電話地址之後在得獎人列點「編輯」再填。</p>
+        <p class="hint" id="lotWinnerRowsHint" style="font-size:12px; color:var(--c-text-soft); margin:8px 0;">抽出來就先填中獎的訂單編號，系統會核對是不是這團的訂單；暱稱還不知道可以先空著。狀態一律先設為「待聯絡」，姓名電話地址之後在得獎人列點「編輯」再填。</p>
         <div id="lotWinnerRows" style="margin-top:6px;"></div>
       </div>
 
@@ -6816,8 +6825,11 @@
         <option value="virtual">虛擬贈品</option>
       </select>
       <p id="lotWinnerTypeReadyWarn" class="hint" style="display:none; font-size:12px; color:#8B6E5E; margin:-4px 0 10px;">得獎人獎品類型欄位還沒 db push（migration 20260925130000），儲存時「跟活動一樣」以外的選擇會被擋下</p>
+      <label for="lotWinnerOrderNoInput">訂單編號</label>
+      <input type="text" id="lotWinnerOrderNoInput" placeholder="中獎的那筆訂單編號（抽出來就先填）">
+      <div class="lot-order-hint" id="lotWinnerOrderHint"></div>
       <label for="lotWinnerHandleInput">得獎人暱稱／帳號</label>
-      <input type="text" id="lotWinnerHandleInput" placeholder="LINE 或 IG 帳號">
+      <input type="text" id="lotWinnerHandleInput" placeholder="LINE 或 IG 帳號（還不知道可先空著）">
       <label for="lotWinnerStatusSel">狀態</label>
       <select id="lotWinnerStatusSel">
         <option value="pending">待聯絡</option>
@@ -6863,8 +6875,6 @@
         <input type="text" id="lotWinnerEmailInput" placeholder="name@example.com">
       </div>
 
-      <label for="lotWinnerOrderNoInput">訂單編號</label>
-      <input type="text" id="lotWinnerOrderNoInput">
       <label for="lotWinnerShippedAtInput" id="lotWinnerShippedAtLabel">寄出日</label>
       <input type="date" id="lotWinnerShippedAtInput">
       <label for="lotWinnerSponsorNoteInput">贊助方備註</label>
@@ -7536,7 +7546,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=26"></script>
+<script src="lottery.js?v=27"></script>
 <script src="admin.js?v=108"></script>
 <script src="memo.js?v=8"></script>
 
