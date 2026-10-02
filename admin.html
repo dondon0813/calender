@@ -7291,13 +7291,19 @@
       <textarea id="vendorNoteInput" rows="3" placeholder="備註…"></textarea>
       <label for="vendorCustomerServiceInput">💬 客服（給客人看的，會員訂單明細顯示；品牌沒填客服時才會用廠商的。跟上面的內部聯絡窗口分開）</label>
       <textarea id="vendorCustomerServiceInput" rows="3" placeholder="例如：&#10;LINE 官方帳號：@xxxx&#10;客服信箱：service@example.com"></textarea>
-      <label for="vendorOrderListSelect">訂單名單（平台只看得到總數時，廠商肯不肯給含 email 的訂單名單）</label>
-      <select id="vendorOrderListSelect">
-        <option value="">未問過（拿不到 email 時，系統派任務去問）</option>
-        <option value="provide">願意提供（每次結團後直接派任務去要名單）</option>
-        <option value="decline">不提供（不再問；業績照樣回填）</option>
-      </select>
-      <div id="vendorOrderListHint" style="font-size:12px; color:var(--c-text-soft); margin-top:4px;"></div>
+      <div id="vendorOrderListWrap">
+        <label for="vendorOrderListSelect">訂單名單（記在每個品牌上，請到品牌裡設定；整家廠商答案都一樣時，可以在這裡一次填完）</label>
+        <div id="vendorOrderListBrands" style="font-size:12px; color:var(--c-text-soft); margin-bottom:6px; line-height:1.6;"></div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="vendorOrderListSelect" style="flex:1; min-width:0; margin:0;">
+            <option value="">未問過</option>
+            <option value="provide">願意提供</option>
+            <option value="decline">不提供</option>
+          </select>
+          <button type="button" class="task-mini-btn" id="vendorOrderListApplyBtn" style="padding:0 12px; white-space:nowrap;">套用到底下所有品牌</button>
+        </div>
+        <div id="vendorOrderListHint" style="font-size:12px; color:var(--c-text-soft); margin-top:4px;"></div>
+      </div>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="vendorSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="vendorDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -7364,6 +7370,13 @@
       <textarea id="brandOpenChecklistInput" rows="4" placeholder="例如：&#10;確認團購價沒有比官網貴&#10;確認贈品內容跟上一團是否相同"></textarea>
       <label for="brandCustomerServiceInput">💬 客服（會員在會員中心的訂單明細看得到；行事曆那團沒填客服時就用這裡的。網址會變成可點的連結）</label>
       <textarea id="brandCustomerServiceInput" rows="3" placeholder="例如：&#10;LINE 官方帳號：@xxxx&#10;客服電話：02-1234-5678（週一～五 10:00-18:00）"></textarea>
+      <label for="brandOrderListSelect">訂單名單（平台只看得到總數時，這個品牌肯不肯給含 email 的訂單名單）</label>
+      <select id="brandOrderListSelect">
+        <option value="">未問過（拿不到 email 時，系統派任務去問）</option>
+        <option value="provide">願意提供（每次結團後直接派任務去要名單）</option>
+        <option value="decline">不提供（不再問；業績照樣回填）</option>
+      </select>
+      <div id="brandOrderListHint" style="font-size:12px; color:var(--c-text-soft); margin-top:4px; line-height:1.6;"></div>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="brandSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="brandDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -7458,7 +7471,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=27"></script>
+<script src="brandVendor.js?v=28"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

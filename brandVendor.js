@@ -324,18 +324,58 @@ function openVendorEditModal(vendor) {
   bvSyncVendorEndReason_();
   document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
   document.getElementById('vendorCustomerServiceInput').value = vendor ? (vendor.customerService || '') : '';
-  // 訂單名單政策＋最近一團的收單平台（後端自動判斷；migration 20261002163000）
-  const olSel = document.getElementById('vendorOrderListSelect');
-  olSel.value = vendor ? (vendor.orderListPolicy || '') : '';
-  const olReady = !vendor || vendor.orderListReady !== false;
-  olSel.disabled = !olReady;
-  const lt = vendor && vendor.lastTeam;
-  document.getElementById('vendorOrderListHint').textContent = !olReady
-    ? '「訂單名單」欄位待 db push 後才能設定'
-    : lt ? '最近一團：' + String(lt.date || '').slice(0, 10) + ' ' + lt.title + '｜' + lt.platform
-      : '還沒有綁定帳務的團';
+  // 訂單名單政策記在品牌上（2026-10-03）；廠商視窗只做「套用到底下所有品牌」批次填寫＋顯示最近一團的收單平台
+  document.getElementById('vendorOrderListWrap').style.display = vendor ? '' : 'none';
+  document.getElementById('vendorOrderListSelect').value = '';
+  bvRenderVendorOrderList_(vendor);
   document.getElementById('vendorEditModal').classList.add('show');
 }
+
+const BV_ORDER_LIST_LABEL = { '': '未問過', provide: '願意提供', decline: '不提供' };
+function bvOrderListLabel_(policy) { return BV_ORDER_LIST_LABEL[policy || ''] || '未問過'; }
+function bvLastTeamText_(lt) {
+  return lt ? '最近一團：' + String(lt.date || '').slice(0, 10) + ' ' + lt.title + '｜' + lt.platform : '還沒有綁定帳務的團';
+}
+function bvBrandsOfVendor_(vendorId) {
+  return brandDb.filter(b => (b.vendorIds || []).indexOf(vendorId) !== -1);
+}
+// 廠商視窗：列出底下各品牌目前的訂單名單設定
+function bvRenderVendorOrderList_(vendor) {
+  if (!vendor) return;
+  const brands = bvBrandsOfVendor_(vendor.id);
+  const ready = !brands.some(b => b.orderListReady === false);
+  const applyBtn = document.getElementById('vendorOrderListApplyBtn');
+  document.getElementById('vendorOrderListSelect').disabled = !ready || !brands.length;
+  applyBtn.disabled = !ready || !brands.length;
+  document.getElementById('vendorOrderListBrands').textContent = !brands.length
+    ? '底下還沒有品牌'
+    : !ready ? '「訂單名單」欄位待 db push 後才能設定'
+      : '目前：' + brands.map(b => b.name + '（' + bvOrderListLabel_(b.orderListPolicy) + '）').join('、');
+  document.getElementById('vendorOrderListHint').textContent = bvLastTeamText_(vendor.lastTeam);
+}
+document.getElementById('vendorOrderListApplyBtn').addEventListener('click', async () => {
+  if (!vendorEditCtx || vendorEditCtx.isNew) return;
+  const vendor = vendorEditCtx.vendor;
+  const policy = document.getElementById('vendorOrderListSelect').value;
+  const count = bvBrandsOfVendor_(vendor.id).length;
+  if (!count) return;
+  if (!confirm('要把「' + vendor.name + '」底下 ' + count + ' 個品牌的訂單名單都改成「' + bvOrderListLabel_(policy) + '」嗎？')) return;
+  const btn = document.getElementById('vendorOrderListApplyBtn');
+  btn.disabled = true;
+  setFormStatus('vendorEditStatus', '套用中…', '');
+  try {
+    const res = await postTask({ type: 'brand-db-order-list-apply', vendorId: vendor.id, policy });
+    await fetchMemos();
+    // 視窗還開著同一家廠商才重畫（fetchMemos 期間可能已被關掉）
+    if (vendorEditCtx && !vendorEditCtx.isNew && vendorEditCtx.vendor.id === vendor.id) {
+      bvRenderVendorOrderList_(vendorEditCtx.vendor);
+      setFormStatus('vendorEditStatus', '已套用到 ' + ((res && res.count) || count) + ' 個品牌', 'ok');
+    }
+  } catch (err) {
+    setFormStatus('vendorEditStatus', '套用失敗：' + err.message, 'error');
+    btn.disabled = false;
+  }
+});
 function closeVendorEditModal() {
   document.getElementById('vendorEditModal').classList.remove('show');
   vendorEditCtx = null;
@@ -357,10 +397,6 @@ document.getElementById('vendorSaveBtn').addEventListener('click', async () => {
     note: document.getElementById('vendorNoteInput').value.trim(),
     customerService: document.getElementById('vendorCustomerServiceInput').value.trim()
   };
-  // 欄位未 push 時下拉停用，不送（避免後端回「待 db push」擋掉整筆儲存）
-  if (!document.getElementById('vendorOrderListSelect').disabled) {
-    payload.orderListPolicy = document.getElementById('vendorOrderListSelect').value;
-  }
   const btn = document.getElementById('vendorSaveBtn');
   btn.disabled = true;
   setFormStatus('vendorEditStatus', '儲存中…', '');
@@ -440,6 +476,26 @@ function openBrandEditModal(brand) {
   document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
   document.getElementById('brandOpenChecklistInput').value = brand ? (brand.openChecklist || '') : '';
   document.getElementById('brandCustomerServiceInput').value = brand ? (brand.customerService || '') : '';
+  // 訂單名單政策（記在品牌上；migration 20261003150000）＋最近一團的收單平台＋同廠商其他品牌的答案
+  const olSel = document.getElementById('brandOrderListSelect');
+  olSel.value = brand ? (brand.orderListPolicy || '') : '';
+  const olReady = !brandDb.some(b => b.orderListReady === false);
+  olSel.disabled = !olReady;
+  const olHint = [];
+  if (!olReady) {
+    olHint.push('「訂單名單」欄位待 db push 後才能設定');
+  } else if (brand) {
+    olHint.push(bvLastTeamText_(brand.lastTeam));
+    const sibs = brandDb.filter(b => b.id !== brand.id && b.orderListPolicy
+      && (b.vendorIds || []).some(vid => (brand.vendorIds || []).indexOf(vid) !== -1));
+    if (sibs.length) olHint.push('同廠商其他品牌：' + sibs.map(b => b.name + '（' + bvOrderListLabel_(b.orderListPolicy) + '）').join('、'));
+  }
+  const olHintEl = document.getElementById('brandOrderListHint');
+  olHintEl.textContent = '';
+  olHint.forEach((line, i) => {
+    if (i) olHintEl.appendChild(document.createElement('br'));
+    olHintEl.appendChild(document.createTextNode(line));
+  });
   document.getElementById('brandEditModal').classList.add('show');
 }
 function closeBrandEditModal() {
@@ -475,6 +531,10 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     // 多行文字，換行保留
     customerService: document.getElementById('brandCustomerServiceInput').value.trim()
   };
+  // 欄位未 push 時下拉停用，不送（避免後端回「待 db push」擋掉整筆儲存）
+  if (!document.getElementById('brandOrderListSelect').disabled) {
+    payload.orderListPolicy = document.getElementById('brandOrderListSelect').value;
+  }
   const btn = document.getElementById('brandSaveBtn');
   btn.disabled = true;
   setFormStatus('brandEditStatus', '儲存中…', '');
