@@ -324,6 +324,16 @@ function openVendorEditModal(vendor) {
   bvSyncVendorEndReason_();
   document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
   document.getElementById('vendorCustomerServiceInput').value = vendor ? (vendor.customerService || '') : '';
+  // 訂單名單政策＋最近一團的收單平台（後端自動判斷；migration 20261002163000）
+  const olSel = document.getElementById('vendorOrderListSelect');
+  olSel.value = vendor ? (vendor.orderListPolicy || '') : '';
+  const olReady = !vendor || vendor.orderListReady !== false;
+  olSel.disabled = !olReady;
+  const lt = vendor && vendor.lastTeam;
+  document.getElementById('vendorOrderListHint').textContent = !olReady
+    ? '「訂單名單」欄位待 db push 後才能設定'
+    : lt ? '最近一團：' + String(lt.date || '').slice(0, 10) + ' ' + lt.title + '｜' + lt.platform
+      : '還沒有綁定帳務的團';
   document.getElementById('vendorEditModal').classList.add('show');
 }
 function closeVendorEditModal() {
@@ -347,6 +357,10 @@ document.getElementById('vendorSaveBtn').addEventListener('click', async () => {
     note: document.getElementById('vendorNoteInput').value.trim(),
     customerService: document.getElementById('vendorCustomerServiceInput').value.trim()
   };
+  // 欄位未 push 時下拉停用，不送（避免後端回「待 db push」擋掉整筆儲存）
+  if (!document.getElementById('vendorOrderListSelect').disabled) {
+    payload.orderListPolicy = document.getElementById('vendorOrderListSelect').value;
+  }
   const btn = document.getElementById('vendorSaveBtn');
   btn.disabled = true;
   setFormStatus('vendorEditStatus', '儲存中…', '');

@@ -7277,6 +7277,13 @@
       <textarea id="vendorNoteInput" rows="3" placeholder="備註…"></textarea>
       <label for="vendorCustomerServiceInput">💬 客服（給客人看的，會員訂單明細顯示；品牌沒填客服時才會用廠商的。跟上面的內部聯絡窗口分開）</label>
       <textarea id="vendorCustomerServiceInput" rows="3" placeholder="例如：&#10;LINE 官方帳號：@xxxx&#10;客服信箱：service@example.com"></textarea>
+      <label for="vendorOrderListSelect">訂單名單（平台只看得到總數時，廠商肯不肯給含 email 的訂單名單）</label>
+      <select id="vendorOrderListSelect">
+        <option value="">未問過（拿不到 email 時，系統派任務去問）</option>
+        <option value="provide">願意提供（每次結團後直接派任務去要名單）</option>
+        <option value="decline">不提供（不再問；業績照樣回填）</option>
+      </select>
+      <div id="vendorOrderListHint" style="font-size:12px; color:var(--c-text-soft); margin-top:4px;"></div>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="vendorSaveBtn" style="margin-top:0;">💾 儲存</button>
         <button class="task-mini-btn danger" id="vendorDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
@@ -7437,7 +7444,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=26"></script>
+<script src="brandVendor.js?v=27"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
