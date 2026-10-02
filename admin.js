@@ -92,7 +92,7 @@ let splitPersistReady = false;
 // dispatch 保留當 myTasks 別名：兩分頁已合併成單一「任務」分頁（viewMyTasks），
 // 但殘留的 switchView('dispatch') 呼叫或使用者 localStorage 舊值仍要能正常導向。
 // lottery：獨立分頁已併入帳務頁子分頁（見 switchView 開頭的別名解析），VIEW_ID_MAP 不再需要它的項目。
-const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewMyTasks', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks', cardSub: 'viewCardSub', changelog: 'viewChangelog', recipeDb: 'viewRecipeDb', schoolList: 'viewSchoolList', blog: 'viewBlog', fanAdmin: 'viewFanAdmin', hall: 'viewHall' };
+const VIEW_ID_MAP = { home: 'viewHome', calendar: 'viewCalendar', dispatch: 'viewMyTasks', myTasks: 'viewMyTasks', memo: 'viewMemo', prItems: 'viewPrItems', todoList: 'viewTodoList', tools: 'viewTools', lotteryTool: 'viewLotteryTool', convertTool: 'viewConvertTool', bgRemover: 'viewBgRemover', imageLibrary: 'viewImageLibrary', calculator: 'viewCalculator', brandVendor: 'viewBrandVendor', report: 'viewReport', accounting: 'viewAccounting', contractSign: 'viewContractSign', books: 'viewBooks', cardSub: 'viewCardSub', changelog: 'viewChangelog', announce: 'viewAnnounce', recipeDb: 'viewRecipeDb', schoolList: 'viewSchoolList', blog: 'viewBlog', fanAdmin: 'viewFanAdmin', hall: 'viewHall' };
 
 // ===== 開機期就會被讀到的模組層狀態，一律宣告在這裡 =====
 // 理由同上面 VIEW_ID_MAP：initAppUI() 會還原上次停留的分頁，於**最外層**同步呼叫
@@ -2601,6 +2601,7 @@ function switchView(name, target) {
   }
   if (name === 'books') loadBooksView();
   if (name === 'cardSub') loadCardSubView();
+  if (name === 'announce' && typeof loadAnnounceView === 'function') loadAnnounceView();
   if (name === 'changelog' && typeof loadChangelogView === 'function') loadChangelogView();
   if (name === 'recipeDb') loadRecipeDbView();
   if (name === 'schoolList') loadSchoolListView();
@@ -3227,6 +3228,8 @@ function updateUrgentUI() {
   const banner = document.getElementById('newTaskBanner');
   banner.classList.toggle('show', n > 0);
   if (n > 0) banner.textContent = `🟢 你有 ${n} 個新任務，請點擊前往`;
+  // 員工系統更新公告：資料載入、畫面渲染完成後檢查（announce.js 內節流＋只自動跳一次）
+  if (currentToken && typeof checkStaffAnnouncements === 'function') checkStaffAnnouncements();
 }
 
 async function postTask(payload) {
