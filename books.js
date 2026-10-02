@@ -1389,6 +1389,48 @@ async function giftResourceToggle(book, resourceId, linked, btn) {
   }
 }
 
+// ===== 已搬到教材館的舊教材（教材包）：繪本後台唯讀，改到教材館後台編輯 =====
+// 後端 adminView 每份教材多 migratedSlug／migratedResourceId／migratedTitle；空字串或不存在＝未搬。
+function mtlbIsMigrated(m) { return !!(m && m.migratedSlug); }
+
+const MTLB_MIGRATED_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
+
+// 先切到教材館分頁，等資源清單載入後找出該資源開編輯器；任一環節不可行就退回文字提示
+function mtlbOpenHallResource(m) {
+  const fallback = () => showToast('請到「教材館 → 教材」搜尋「' + (m.migratedTitle || m.title || '') + '」編輯', true);
+  try {
+    if (typeof switchView !== 'function' || typeof hallOpenEdit !== 'function' || typeof HALL_LIST === 'undefined') { fallback(); return; }
+    switchView('hall');
+    if (typeof setHallTab === 'function') setHallTab('mat');
+    let tries = 0;
+    const attempt = () => {
+      const idx = (typeof HALL_LOADED !== 'undefined' && HALL_LOADED && Array.isArray(HALL_LIST))
+        ? HALL_LIST.findIndex(r => r.id === m.migratedResourceId || (m.migratedSlug && r.slug === m.migratedSlug)) : -1;
+      if (idx >= 0) { hallOpenEdit(idx); return; }
+      if (++tries > 20) { fallback(); return; }
+      setTimeout(attempt, 250);
+    };
+    attempt();
+  } catch (err) { fallback(); }
+}
+
+// 已搬教材的列：加小標＋只留「開啟教材館」鈕，整列可點。回傳 true 表示已處理（呼叫端略過一般操作鈕）
+function mtlbDecorateMigratedRow(item, info, actions, m) {
+  const tag = document.createElement('div');
+  tag.className = 'pba-material-sub';
+  tag.style.color = '#8a6d3b';
+  tag.innerHTML = MTLB_MIGRATED_ICON + '已搬到教材館';
+  info.appendChild(tag);
+  const openBtn = document.createElement('button');
+  openBtn.type = 'button';
+  openBtn.className = 'pba-mini-btn';
+  openBtn.textContent = '到教材館編輯';
+  openBtn.addEventListener('click', (e) => { e.stopPropagation(); mtlbOpenHallResource(m); });
+  actions.appendChild(openBtn);
+  item.style.cursor = 'pointer';
+  item.addEventListener('click', () => mtlbOpenHallResource(m));
+}
+
 function renderMaterialList(materials) {
   const listEl = document.getElementById('materialList');
   listEl.innerHTML = '';
@@ -1433,6 +1475,12 @@ function renderMaterialList(materials) {
 
     const actions = document.createElement('div');
     actions.className = 'pba-material-actions';
+    if (mtlbIsMigrated(m)) {
+      mtlbDecorateMigratedRow(item, info, actions, m);
+      item.appendChild(actions);
+      listEl.appendChild(item);
+      return;
+    }
     // 已合成：開前台實際給人下載的那張（開團中＝開團版、否則平時版）
     if (m.composedPlainUrl) {
       const outBtn = document.createElement('button');
@@ -1535,12 +1583,36 @@ function openMaterialForm(material, opts) {
   mtplBatchSaving = false;
   mtplBatchReset();
   mtplResetFormState(material);
+  mtlbApplyMigratedGuard(material);
+}
+
+// 已搬到教材館的教材：表單頂端黃色提示＋停用儲存鈕（儲存處理函式也會再擋一次）
+let materialFormMigrated = false;
+function mtlbApplyMigratedGuard(material) {
+  materialFormMigrated = mtlbIsMigrated(material);
+  const form = document.getElementById('materialForm');
+  const saveBtn = document.getElementById('saveMaterialBtn');
+  let warn = document.getElementById('mMigratedWarn');
+  if (!materialFormMigrated) {
+    if (warn) warn.remove();
+    if (saveBtn) saveBtn.disabled = false;
+    return;
+  }
+  if (!warn && form) {
+    warn = document.createElement('div');
+    warn.id = 'mMigratedWarn';
+    warn.style.cssText = 'background:#FFF3CD;color:#7a5b00;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5';
+    form.insertBefore(warn, form.firstChild);
+  }
+  if (warn) warn.textContent = '這份教材已搬到教材館，請到「教材館 → 教材」搜尋「' + (material.migratedTitle || material.title || '') + '」編輯；這裡不能儲存。';
+  if (saveBtn) saveBtn.disabled = true;
 }
 
 function closeMaterialForm() {
   materialFormEditingId = null;
   materialFormEditingBookIds = null;
   materialFormStandalone = false;
+  mtlbApplyMigratedGuard(null);
   const modal = document.getElementById('materialFormModal');
   if (modal) modal.classList.remove('show');
   const form = document.getElementById('materialForm');
@@ -1652,6 +1724,7 @@ document.getElementById('mFileInput').addEventListener('change', async (e) => {
 });
 
 document.getElementById('saveMaterialBtn').addEventListener('click', async () => {
+  if (materialFormMigrated) { showToast('這份教材已搬到教材館，請到教材館編輯', true); return; }
   if (document.getElementById('mBatchMode').checked) {
     if (!mtplBatchFiles.length) { showToast('請先選擇要批次上傳的檔案', true); return; }
     await saveBatchMaterials();
@@ -1789,6 +1862,7 @@ function renderLibraryList() {
   const term = (document.getElementById('materialLibrarySearch').value || '').trim().toLowerCase();
   const bookTitleById = new Map((PACKAGE_DATA.books || []).map(b => [b.id, b.title]));
   const candidates = (PACKAGE_DATA.materialsLibrary || [])
+    .filter(m => !mtlbIsMigrated(m)) // 已搬到教材館的教材不可再從繪本後台掛書
     .filter(m => !(Array.isArray(m.bookIds) && m.bookIds.includes(CURRENT_BOOK.id)))
     .filter(m => !term || (m.title || '').toLowerCase().includes(term));
   if (!candidates.length) {
@@ -3902,7 +3976,7 @@ document.getElementById('tplFrameFile').addEventListener('change', async (e) => 
 document.getElementById('tplRecomposeAllBtn').addEventListener('click', async () => {
   if (!mtplReady()) { showToast('模板資料表尚未建立', true); return; }
   const mats = ((PACKAGE_DATA && PACKAGE_DATA.materialsLibrary) || []).filter(m =>
-    (m.layerFrame || m.layerPromo || m.layerWatermark || m.layerQr || m.layerCaption) && m.cleanPath);
+    !mtlbIsMigrated(m) && (m.layerFrame || m.layerPromo || m.layerWatermark || m.layerQr || m.layerCaption) && m.cleanPath);
   if (!mats.length) { showToast('沒有勾模板合成的教材', true); return; }
   if (!confirm('要用目前的框與文字設定，重新產生 ' + mats.length + ' 份教材的成品嗎？')) return;
   const btn = document.getElementById('tplRecomposeAllBtn');
@@ -4121,13 +4195,13 @@ function renderMatLibPanel() {
   const canEdit = typeof hasEditPerm !== 'function' || hasEditPerm('bookEdit');
   document.getElementById('matLibAddBtn').style.display = canEdit ? '' : 'none';
   // 待確認按鈕：常駐顯示帶數量（雪莉 09-13 指正：藏起來會找不到）
-  const pendingCount = (PACKAGE_DATA.materialsLibrary || []).filter(m => m.visible === false).length;
+  const pendingCount = (PACKAGE_DATA.materialsLibrary || []).filter(m => m.visible === false && !mtlbIsMigrated(m)).length;
   const pendBtn = document.getElementById('matLibPendingBtn');
   pendBtn.style.display = '';
   pendBtn.textContent = '🚧 待確認 ' + pendingCount;
   pendBtn.classList.toggle('on', matLibPendingOnly);
   const items = (PACKAGE_DATA.materialsLibrary || []).filter(m => {
-    if (matLibPendingOnly && m.visible !== false) return false;
+    if (matLibPendingOnly && (m.visible !== false || mtlbIsMigrated(m))) return false;
     if (!term) return true;
     const boundTitles = (m.bookIds || []).map(id => {
       const b = (PACKAGE_DATA.books || []).find(x => x.id === id);
@@ -4176,6 +4250,12 @@ function renderMatLibPanel() {
     item.appendChild(info);
     const actions = document.createElement('div');
     actions.className = 'pba-material-actions';
+    if (mtlbIsMigrated(m)) {
+      mtlbDecorateMigratedRow(item, info, actions, m);
+      item.appendChild(actions);
+      listEl.appendChild(item);
+      return;
+    }
     // 已合成：開前台實際給人下載的那張（開團中＝開團版、否則平時版）
     if (m.composedPlainUrl) {
       const outBtn = document.createElement('button');
