@@ -3017,6 +3017,12 @@ function renderPurchaseSection(book) {
 }
 
 // ===== 延伸教材面板 =====
+const PB_LOCK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+const PB_PACK_DOC_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>';
+// 該書的教材包（後端 book.packs；fileCount=0 不顯示）
+function pbVisiblePacks(book) {
+  return (Array.isArray(book && book.packs) ? book.packs : []).filter(p => p && p.slug && Number(p.fileCount) > 0);
+}
 function renderMaterials(book) {
   const toggle = document.getElementById('pbMaterialsToggle');
   const panel = document.getElementById('pbMaterialsPanel');
@@ -3025,12 +3031,75 @@ function renderMaterials(book) {
   toggle.onclick = null;
 
   const materials = book.materials || [];
-  if (!materials.length) {
+  const packs = pbVisiblePacks(book);
+  if (!materials.length && !packs.length) {
     toggle.style.display = 'none';
     return;
   }
   toggle.style.display = 'block';
-  toggle.textContent = `📎 延伸教材（${materials.length}）`;
+  toggle.textContent = `📎 延伸教材（${materials.length + packs.length}）`;
+
+  // 教材包（教材館統一教材；舊 materials 尚未搬家的照舊列在下面）
+  packs.forEach(p => {
+    const lockedP = !!p.locked;
+    const direct = !lockedP && p.isFree && p.singleFileId && (p.kind || 'file') === 'file';
+    const href = lockedP ? '' : (direct
+      ? 'https://member.sheridondon.com.tw/api/hall/file?id=' + encodeURIComponent(String(p.singleFileId))
+      : 'https://member.sheridondon.com.tw/materials/' + encodeURIComponent(String(p.slug)));
+    const card = document.createElement(lockedP ? 'div' : 'a');
+    card.className = 'pb-material-card pb-pack-card';
+    if (!lockedP) {
+      card.href = href;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      card.style.textDecoration = 'none';
+      card.style.color = 'inherit';
+      if (direct) card.addEventListener('click', () => pbTrackClick('booksdownload'));
+    }
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'pb-material-card-img';
+    if (p.coverUrl) {
+      const img = document.createElement('img');
+      img.src = p.coverUrl;
+      img.alt = p.title || '';
+      img.loading = 'lazy';
+      imgWrap.appendChild(img);
+    } else {
+      imgWrap.classList.add('placeholder');
+      imgWrap.innerHTML = PB_PACK_DOC_SVG;
+    }
+    card.appendChild(imgWrap);
+    const body = document.createElement('div');
+    body.className = 'pb-material-card-body';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'pb-material-card-title';
+    titleEl.textContent = p.title || '教材包';
+    body.appendChild(titleEl);
+    const meta = document.createElement('div');
+    meta.style.cssText = 'font-size:12px;color:var(--c-muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;';
+    const parts = [];
+    if (p.fileCount) parts.push(`${p.fileCount} 張`);
+    if (!p.isFree) parts.push('跟團贈品');
+    const span = document.createElement('span');
+    span.textContent = parts.join('・');
+    meta.appendChild(span);
+    if (lockedP) {
+      const lk = document.createElement('span');
+      lk.className = 'pb-mat-locked';
+      lk.style.cssText = 'display:inline-flex;align-items:center;gap:3px;';
+      lk.innerHTML = PB_LOCK_SVG;
+      lk.appendChild(document.createTextNode(`${formatPbAvailableFrom(p.availableFrom)} 開放下載`));
+      meta.appendChild(lk);
+    } else {
+      const go = document.createElement('span');
+      go.style.cssText = 'color:var(--c-primary);font-weight:600;';
+      go.textContent = direct ? '下載' : '前往教材館 ›';
+      meta.appendChild(go);
+    }
+    body.appendChild(meta);
+    card.appendChild(body);
+    panel.appendChild(card);
+  });
 
   materials.forEach(m => {
     const card = document.createElement('div');
@@ -3169,7 +3238,8 @@ function renderMaterials(book) {
 function renderGiftResources(book) {
   const wrap = document.getElementById('pbGiftRes');
   if (!wrap) return;
-  const list = (Array.isArray(book.gift_resources) ? book.gift_resources : []).filter(r => r && r.slug);
+  const packSlugs = new Set(pbVisiblePacks(book).map(p => String(p.slug)));
+  const list = (Array.isArray(book.gift_resources) ? book.gift_resources : []).filter(r => r && r.slug && !packSlugs.has(String(r.slug)));
   if (!list.length) {
     wrap.innerHTML = '';
     wrap.style.display = 'none';
