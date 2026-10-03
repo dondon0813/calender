@@ -429,6 +429,22 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   overflow: hidden;
   word-break: break-word;
 }
+/* 橫條模式（雪莉咚咚的每月行事曆，2026-10-04 雪莉定）：每團一條，從開團日拉到結團日（含延長），跨週換行接著畫；
+   同一週重疊的團往下排一層（data-lane）。高度與上緣位置由 layoutCalBars() 依格子實際高度算。 */
+.cal-bar {
+  flex: none;
+  align-self: start;
+  /* position:relative 才能疊在格子上面：格子本身是 position:relative，出圖工具（html2canvas）不認非定位元素的 z-index，
+     沒有這行下載的圖會被格子底色蓋掉、只剩文字 */
+  position: relative;
+  z-index: 2;
+  margin: 0 6px;
+  flex-direction: row;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 2px 10px;
+}
+.cal-bar .chip-name { overflow: hidden; text-overflow: ellipsis; }
 .chip.hi {
   background: var(--p-hi-bg);
   border-color: var(--p-hi-border);
@@ -1644,6 +1660,7 @@ function renderPoster() {
 // 插進 DOM 之後量一次實際高寬，塞不下就一格一格降字級，降到剛好放得下為止。
 // 使用者仍然可以在左邊改「顯示名稱」把名字縮短，讓字回到大字級。
 function autoFit() {
+  layoutCalBars();   // 雪莉咚咚橫條：先依格子高度定好每條的高度，下面的縮字才量得準
   // 行事曆模式：格子裡的團
   document.querySelectorAll('#poster .chip').forEach(chip => {
     const badge = chip.querySelector('.chip-badge');
@@ -1888,6 +1905,7 @@ function outMonthEvents() {
 }
 
 function buildCalendar() {
+  if (ACCOUNT === 'dondon') return buildCalendarBars();
   const { cols, cells, rows, baseWeek, weekStartOf, cellDateOf, isThisMonth, outCells } = calendarGeometry();
 
   // 把團放進「開團日」那一格（同框的團是一組，整組一起放）
@@ -1954,6 +1972,113 @@ function buildCalendar() {
 
   renderMoveWarn();
   return grid;
+}
+
+/* 雪莉咚咚：橫條版每月行事曆（跟官網首頁行事曆同一種看法）。
+   格子照原本畫（日期、補位格、間距、配色都沿用），團改成一條橫條橫跨開團日～結團日（含延長）：
+   ・每週一行，跨週的團在下一行接著畫，每段都寫團名；
+   ・「週一～五」版型不畫週末，橫條只畫週一～五那幾格；
+   ・同一週重疊的團往下排一層；同框（逐團微調勾「與上一團同框」）的團併成一條。 */
+function buildCalendarBars() {
+  const { cols, cells, rows, baseWeek, weekStartOf, cellDateOf, isThisMonth } = calendarGeometry();
+  movedFromWeekend = [];
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid cal-grid-bars' + (S.gap === 0 ? ' collapse' : '');
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${rows.length}, 1fr)`;
+
+  // 格子（只有日期）；明確指定位置，橫條才能疊在同一列上
+  rows.forEach((row, rowIdx) => {
+    for (let col = 0; col < cols; col++) {
+      const d = cellDateOf(row, col);
+      const mine = isThisMonth(d);
+      const el = document.createElement('div');
+      el.className = 'cal-cell' + (mine ? '' : ' out') + (rowIdx === 0 ? ' first-row' : '') + (col === 0 ? ' first-col' : '');
+      el.style.gridRow = String(rowIdx + 1);
+      el.style.gridColumn = String(col + 1);
+      const n = document.createElement('div');
+      n.className = 'daynum';
+      n.textContent = mine ? d.getDate() : (d.getMonth() + 1) + '/' + d.getDate();
+      el.appendChild(n);
+      grid.appendChild(el);
+    }
+  });
+  if (!rows.length) return grid;
+
+  // 圖上畫得到的日期範圍（含月初月底補位格）
+  const dayMs = 86400000;
+  const rangeStart = cellDateOf(rows[0], 0);
+  const rangeEnd = cellDateOf(rows[rows.length - 1], 6);
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  // 要畫的團：本月照逐團微調（同框、藏起來）；補位格日期裡的鄰月團一團一條
+  const groups = visibleGroups('calendar').slice();
+  const inMonthIds = new Set(groups.flat().map(ev => ev.id));
+  allEvents.forEach(ev => {
+    if (inMonthIds.has(ev.id) || ovRead(ev.id, 'calendar').hidden || !accountKeeps(ev)) return;
+    const s0 = dayStart(ev.start), e0 = dayStart(ev.displayEnd || ev.end);
+    if (e0 < rangeStart || s0 > rangeEnd) return;
+    groups.push([ev]);
+  });
+  groups.sort((a, b) => a[0].start - b[0].start || dayStart(b[0].displayEnd || b[0].end) - dayStart(a[0].displayEnd || a[0].end));
+
+  // 週一～五版型：日期 → 欄（週末回 null）
+  const colOfDate = (d) => colOf(d.getDay(), cols);
+  const lanesByRow = {};   // rowIdx → [[colStart, colEnd], ...] 每層已占用的區段
+  groups.forEach(group => {
+    const ev = group[0];
+    const s0 = dayStart(ev.start);
+    const e0 = dayStart(group.reduce((m, g) => { const x = g.displayEnd || g.end; return x > m ? x : m; }, ev.displayEnd || ev.end));
+    rows.forEach((row, rowIdx) => {
+      const wStart = cellDateOf(row, 0);
+      const wEnd = cellDateOf(row, cols === 7 ? 6 : 4);
+      let a = s0 > wStart ? s0 : wStart;
+      let b = e0 < wEnd ? e0 : wEnd;
+      if (a > b) return;
+      // 週末起訖往內縮到週一／週五（週一～五版型）
+      while (a <= b && colOfDate(a) === null) a = new Date(a.getTime() + dayMs);
+      while (b >= a && colOfDate(b) === null) b = new Date(b.getTime() - dayMs);
+      if (a > b) return;
+      const cs = colOfDate(a), ce = colOfDate(b);
+      const lanes = lanesByRow[rowIdx] || (lanesByRow[rowIdx] = []);
+      let lane = 0;
+      while (lanes[lane] && lanes[lane].some(([x, y]) => !(ce < x || cs > y))) lane++;
+      (lanes[lane] || (lanes[lane] = [])).push([cs, ce]);
+
+      const bar = buildChip(group, 1);
+      bar.classList.add('cal-bar');
+      bar.style.gridRow = String(rowIdx + 1);
+      bar.style.gridColumn = `${cs + 1} / ${ce + 2}`;
+      bar.dataset.lane = String(lane);
+      bar.dataset.row = String(rowIdx);
+      grid.appendChild(bar);
+    });
+  });
+  grid.dataset.lanes = JSON.stringify(Object.fromEntries(Object.entries(lanesByRow).map(([k, v]) => [k, v.length])));
+  return grid;
+}
+
+/* 橫條的高度與上緣位置：依格子實際高度平均分給那一週的層數（畫面排好後才量得到）。 */
+function layoutCalBars() {
+  const grid = document.querySelector('#poster .cal-grid-bars');
+  if (!grid) return;
+  const lanes = JSON.parse(grid.dataset.lanes || '{}');
+  const cell = grid.querySelector('.cal-cell');
+  if (!cell) return;
+  const cs = getComputedStyle(cell);
+  const padTop = parseFloat(cs.paddingTop) || 0;
+  const cellH = cell.offsetHeight;   // offsetHeight 不受預覽縮放（transform）影響
+  const gap = 6;
+  const maxBar = Math.round(48 * S.fs);
+  grid.querySelectorAll('.cal-bar').forEach(bar => {
+    const n = Math.max(1, lanes[bar.dataset.row] || 1);
+    const avail = cellH - padTop - 8;
+    const h = Math.max(18, Math.min(maxBar, Math.floor((avail - gap * (n - 1)) / n)));
+    const lane = Number(bar.dataset.lane || 0);
+    bar.style.height = h + 'px';
+    bar.style.marginTop = (padTop + lane * (h + gap)) + 'px';
+    bar.style.fontSize = Math.round(Math.min(h * 0.62, 28 * S.fs)) + 'px';
+  });
 }
 
 function buildChip(group, siblings) {
