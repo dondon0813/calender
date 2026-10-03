@@ -429,22 +429,39 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   overflow: hidden;
   word-break: break-word;
 }
-/* 橫條模式（雪莉咚咚的每月行事曆，2026-10-04 雪莉定）：每團一條，從開團日拉到結團日（含延長），跨週換行接著畫；
-   同一週重疊的團往下排一層（data-lane）。高度與上緣位置由 layoutCalBars() 依格子實際高度算。 */
+/* 橫條模式（雪莉咚咚的每月行事曆，2026-10-04 雪莉定）：照官網首頁行事曆「顯示全部」的橫條——
+   每團一個顏色（藕粉色系 7 色依團號輪流，該團有自訂顏色就用它）、白字、圓角膠囊，前面團號圓圈＋「M/D–M/D 團名」。
+   跨週換行接著畫；同一週重疊的團往下排一層（data-lane）。高度與上緣位置由 layoutCalBars() 依格子實際高度算。
+   position:relative 才能疊在格子上面：格子本身是 position:relative，出圖工具（html2canvas）不認非定位元素的 z-index。 */
 .cal-bar {
-  flex: none;
-  align-self: start;
-  /* position:relative 才能疊在格子上面：格子本身是 position:relative，出圖工具（html2canvas）不認非定位元素的 z-index，
-     沒有這行下載的圖會被格子底色蓋掉、只剩文字 */
   position: relative;
   z-index: 2;
+  align-self: start;
   margin: 0 6px;
-  flex-direction: row;
-  gap: 6px;
+  box-sizing: border-box;
+  display: flex; align-items: center; gap: .35em;
+  border-radius: 999px;
+  padding: 0 .7em 0 .3em;
+  color: #fff;
+  font-weight: 800;
+  line-height: 1;
   white-space: nowrap;
-  padding: 2px 10px;
+  overflow: hidden;
 }
-.cal-bar .chip-name { overflow: hidden; text-overflow: ellipsis; }
+.cal-bar .bar-num {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.45em; height: 1.45em; border-radius: 50%;
+  background: rgba(255,255,255,.88);
+  font-size: .82em; font-weight: 800;
+}
+.cal-bar .bar-date { flex: none; font-weight: 700; opacity: .95; }
+.cal-bar .bar-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cal-bar .bar-badge {
+  flex: none; margin-left: auto;
+  background: rgba(255,255,255,.88); border-radius: 999px;
+  padding: .15em .5em; font-size: .72em;
+}
 .chip.hi {
   background: var(--p-hi-bg);
   border-color: var(--p-hi-border);
@@ -1153,6 +1170,10 @@ function cloneSettings(src) {
     out.modes = {};
     Object.keys(src.modes).forEach(m => { out.modes[m] = Object.assign({}, src.modes[m]); });
   }
+  if (src && src.sizeLayouts) {
+    out.sizeLayouts = {};
+    Object.keys(src.sizeLayouts).forEach(k => { out.sizeLayouts[k] = Object.assign({}, src.sizeLayouts[k]); });
+  }
   return out;
 }
 
@@ -1363,6 +1384,7 @@ async function loadData() {
         title: String(title).trim(),
         category: c[6] ? String(c[6].v || '').trim() : '',  // G 欄分類：判斷冷凍/冷藏團用（c[25] 沒值時的退路）
         coldFlag: c[25] ? String(c[25].v || '').trim() : '', // 冷凍冷藏雪花（後端算好，2026-10-04 起優先）
+        color: c[11] ? String(c[11].v || '').trim() : '',      // L 欄自訂顏色：雪莉咚咚橫條用（同官網首頁行事曆，有填就用它）
         thumb: c[22] ? String(c[22].v || '').trim() : ''    // W 欄小圖：結單提醒模式用（優先於品牌庫）
       });
     });
@@ -2025,7 +2047,10 @@ function buildCalendarBars() {
   // 週一～五版型：日期 → 欄（週末回 null）
   const colOfDate = (d) => colOf(d.getDay(), cols);
   const lanesByRow = {};   // rowIdx → [[colStart, colEnd], ...] 每層已占用的區段
-  groups.forEach(group => {
+  // 團號（同官網）：本月的團依開團順序 1、2、3…；補位格的鄰月團不編號。顏色依團號輪流
+  const numOf = new Map();
+  visibleGroups('calendar').forEach((g, i) => numOf.set(g[0].id, i + 1));
+  groups.forEach((group, gi) => {
     const ev = group[0];
     const s0 = dayStart(ev.start);
     const e0 = dayStart(group.reduce((m, g) => { const x = g.displayEnd || g.end; return x > m ? x : m; }, ev.displayEnd || ev.end));
@@ -2045,8 +2070,7 @@ function buildCalendarBars() {
       while (lanes[lane] && lanes[lane].some(([x, y]) => !(ce < x || cs > y))) lane++;
       (lanes[lane] || (lanes[lane] = [])).push([cs, ce]);
 
-      const bar = buildChip(group, 1);
-      bar.classList.add('cal-bar');
+      const bar = buildBar(group, numOf.get(ev.id) || 0, gi, s0, e0);
       bar.style.gridRow = String(rowIdx + 1);
       bar.style.gridColumn = `${cs + 1} / ${ce + 2}`;
       bar.dataset.lane = String(lane);
@@ -2056,6 +2080,40 @@ function buildCalendarBars() {
   });
   grid.dataset.lanes = JSON.stringify(Object.fromEntries(Object.entries(lanesByRow).map(([k, v]) => [k, v.length])));
   return grid;
+}
+
+// 官網首頁行事曆的團顏色（theme-lotus.css 的 --c-cat-0～6，藕粉色系），依團號輪流
+const BAR_COLORS = ['#C99A9B', '#D4A98A', '#A9B99A', '#9DBDB8', '#8FA9C7', '#B3A3C9', '#D6BE8A'];
+function buildBar(group, num, order, s0, e0) {
+  const ev = group[0];
+  const bar = document.createElement('div');
+  bar.className = 'cal-bar';
+  const idx = num ? (num - 1) : order;
+  bar.style.background = (ev.color && /^#|^rgb/i.test(ev.color)) ? ev.color : BAR_COLORS[idx % BAR_COLORS.length];
+  if (num) {
+    const n = document.createElement('span');
+    n.className = 'bar-num';
+    n.textContent = num;
+    n.style.color = bar.style.background;
+    bar.appendChild(n);
+  }
+  const d = document.createElement('span');
+  d.className = 'bar-date';
+  d.textContent = `${fmtMD(s0)}–${fmtMD(e0)}`;
+  bar.appendChild(d);
+  const name = document.createElement('span');
+  name.className = 'bar-name';
+  name.textContent = group.map(g => plainNameTight(displayName(g, 'calendar'))).join('＋');
+  bar.appendChild(name);
+  const badge = group.map(g => ovRead(g.id, 'calendar').badge).find(Boolean);
+  if (badge) {
+    const b = document.createElement('span');
+    b.className = 'bar-badge';
+    b.textContent = badge;
+    b.style.color = bar.style.background;
+    bar.appendChild(b);
+  }
+  return bar;
 }
 
 /* 橫條的高度與上緣位置：依格子實際高度平均分給那一週的層數（畫面排好後才量得到）。 */
@@ -2077,7 +2135,11 @@ function layoutCalBars() {
     const lane = Number(bar.dataset.lane || 0);
     bar.style.height = h + 'px';
     bar.style.marginTop = (padTop + lane * (h + gap)) + 'px';
-    bar.style.fontSize = Math.round(Math.min(h * 0.62, 28 * S.fs)) + 'px';
+    let fs = Math.round(Math.min(h * 0.55, 26 * S.fs));
+    bar.style.fontSize = fs + 'px';
+    // 一兩天的短團放不下：先縮字到最小 12px，還放不下團名才用「…」截斷
+    let guard = 0;
+    while (guard++ < 30 && fs > 12 && bar.scrollWidth > bar.clientWidth + 1) { fs -= 1; bar.style.fontSize = fs + 'px'; }
   });
 }
 
@@ -2697,15 +2759,44 @@ function pickModeSettings(src) {
   PER_MODE_KEYS.forEach(k => { out[k] = src[k]; });
   return out;
 }
+/* 2026-10-04 雪莉：同一個模式的 4:5 與 9:16 版面原本共用一套（9:16 上方留給限動連結，4:5 也被留空）。
+   改成「模式＋尺寸」各記一套：S.sizeLayouts['calendar|9:16'] ＝ PER_MODE_KEYS 扣掉 size。
+   某個尺寸還沒調過：「我的預設」或程式初始值剛好是這個尺寸就用它，否則沿用目前畫面的數值當起點。 */
+function pickSizeLayout(src) {
+  const out = {};
+  PER_MODE_KEYS.forEach(k => { if (k !== 'size') out[k] = src[k]; });
+  return out;
+}
+function stashSizeLayout() {
+  if (!S.sizeLayouts) S.sizeLayouts = {};
+  S.sizeLayouts[S.mode + '|' + S.size] = pickSizeLayout(S);
+}
+function loadSizeLayout() {
+  const key = S.mode + '|' + S.size;
+  if (S.sizeLayouts && S.sizeLayouts[key]) { Object.assign(S, S.sizeLayouts[key]); return; }
+  const seeds = [USER_DEFAULTS && USER_DEFAULTS.modes && USER_DEFAULTS.modes[S.mode], DEFAULTS.modes[S.mode]];
+  const seed = seeds.find(x => x && x.size === S.size);
+  if (seed) Object.assign(S, pickSizeLayout(seed));
+}
+function switchSize(next) {
+  if (!next || next === S.size) return;
+  stashSizeLayout();
+  S.size = next;
+  loadSizeLayout();
+  syncControls();
+}
+
 function switchMode(next) {
   if (!next || next === S.mode) return;
   if (!S.modes) S.modes = {};
+  stashSizeLayout();
   S.modes[S.mode] = pickModeSettings(S);
   S.mode = next;
   if (S.modes[next]) Object.assign(S, S.modes[next]);
   // 這個模式從來沒進去過（例：舊設定存檔裡沒有 reminder）就用程式的初始版面，
   // 不要沿用上一個模式的數值——結單提醒預設 9:16，跟 4:5 的行事曆差很多
   else if (DEFAULTS.modes[next]) Object.assign(S, DEFAULTS.modes[next]);
+  if (S.sizeLayouts && S.sizeLayouts[S.mode + '|' + S.size]) Object.assign(S, S.sizeLayouts[S.mode + '|' + S.size]);
   saveSettings();
   syncControls();
   renderAll();
@@ -3478,7 +3569,7 @@ function init() {
     if (ACCOUNT === 'dondon') { await loadBrandCategories(); renderAccountNote(); }
     renderAll();
   });
-  bindSeg('segSize', v => { S.size = v; });
+  bindSeg('segSize', v => { switchSize(v); });   // 4:5／9:16 各記一套版面（見 switchSize）
   bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
   bindSeg('segMonthOv', v => { S.monthOverlay = (v === 'on'); });
   bindSeg('segTitleImg', v => { S.titleImg = v; });
