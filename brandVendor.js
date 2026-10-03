@@ -476,6 +476,7 @@ function openBrandEditModal(brand) {
   document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
   document.getElementById('brandOpenChecklistInput').value = brand ? (brand.openChecklist || '') : '';
   document.getElementById('brandCustomerServiceInput').value = brand ? (brand.customerService || '') : '';
+  bvRenderCategories_(brand);
   // 訂單名單政策（記在品牌上；migration 20261003150000）＋最近一團的收單平台＋同廠商其他品牌的答案
   const olSel = document.getElementById('brandOrderListSelect');
   olSel.value = brand ? (brand.orderListPolicy || '') : '';
@@ -497,6 +498,30 @@ function openBrandEditModal(brand) {
     olHintEl.appendChild(document.createTextNode(line));
   });
   document.getElementById('brandEditModal').classList.add('show');
+}
+// 品牌分類（可複選；brands.categories，migration 20261003180000）。
+// 「繪本」「玩具」＝行事曆圖產生器「雪莉咚咚」帳號要列出的團（calendar-poster.html SHERI_DONDON_CATEGORIES，兩邊名稱要一致）
+const BV_BRAND_CATEGORIES = ['繪本', '玩具', '食品', '生活用品', '家電', '3C', '美妝保養', '服飾'];
+function bvRenderCategories_(brand) {
+  const box = document.getElementById('brandCategoryBox');
+  const hint = document.getElementById('brandCategoryHint');
+  const ready = !brandDb.some(b => b.categoriesReady === false);
+  const have = brand && Array.isArray(brand.categories) ? brand.categories : [];
+  // 資料庫裡有、清單沒列的分類也顯示出來，存檔時才不會被洗掉
+  const all = BV_BRAND_CATEGORIES.concat(have.filter(c => BV_BRAND_CATEGORIES.indexOf(c) === -1));
+  box.innerHTML = '';
+  box.dataset.ready = ready ? '1' : '0';
+  all.forEach(c => {
+    const lab = document.createElement('label');
+    lab.style.cssText = 'display:inline-flex; align-items:center; gap:4px; margin:0; cursor:pointer; font-weight:normal;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = c; cb.checked = have.indexOf(c) !== -1; cb.disabled = !ready;
+    cb.style.cssText = 'width:auto; margin:0;';
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(c));
+    box.appendChild(lab);
+  });
+  hint.textContent = ready ? '' : '「品牌分類」欄位待 db push 後才能設定';
 }
 function closeBrandEditModal() {
   document.getElementById('brandEditModal').classList.remove('show');
@@ -531,6 +556,11 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
     // 多行文字，換行保留
     customerService: document.getElementById('brandCustomerServiceInput').value.trim()
   };
+  // 品牌分類：欄位未 push 時勾選框停用、不送
+  const catBox = document.getElementById('brandCategoryBox');
+  if (catBox.dataset.ready === '1') {
+    payload.categories = Array.from(catBox.querySelectorAll('input[type=checkbox]:checked')).map(el => el.value);
+  }
   // 欄位未 push 時下拉停用，不送（避免後端回「待 db push」擋掉整筆儲存）
   if (!document.getElementById('brandOrderListSelect').disabled) {
     payload.orderListPolicy = document.getElementById('brandOrderListSelect').value;

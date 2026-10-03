@@ -737,6 +737,11 @@ body.rem-drag .remg-note { pointer-events: none; }
     <button data-v="image" class="on">🖼 產生圖片</button>
     <button data-v="text">📝 產生貼文</button>
   </div>
+  <div class="seg seg-pane" id="segAccount" title="要做哪個 IG 帳號的圖">
+    <button data-v="main" class="on">雪莉與朵栗</button>
+    <button data-v="dondon">雪莉咚咚</button>
+  </div>
+  <span class="status" id="accountNote"></span>
   <span class="status" id="status">資料載入中…</span>
   <span class="spacer"></span>
   <button class="btn" id="btnReload">重新載入資料</button>
@@ -1252,6 +1257,64 @@ function thumbUrl(u) {
   return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
 }
 
+/* ---------- IG 帳號切換（2026-10-03 雪莉）----------
+   「雪莉與朵栗」＝全部團（原本的樣子）；「雪莉咚咚」＝只列品牌分類含「繪本」或「玩具」的團，
+   標題圖換網站 LOGO、底部換「雪莉咚咚 @sheridondon」。三種模式＋產生貼文都套用。
+   品牌分類記在後台品牌廠商資料庫的品牌上（brands.categories；brandVendor.js BV_BRAND_CATEGORIES，名稱要一致）。
+   團名比對品牌照開團前檢查清單同一套：標準化後團名包含品牌名，短名被長名包住時只算長的。
+   分類要用後台登入讀（brand-db-list），沒登入過後台就讀不到。 */
+const LS_ACCOUNT = 'calposter_account';
+const SHERI_DONDON_CATEGORIES = ['繪本', '玩具'];
+let ACCOUNT = (() => { try { return localStorage.getItem(LS_ACCOUNT) === 'dondon' ? 'dondon' : 'main'; } catch (e) { return 'main'; } })();
+let BRAND_CATS = null;        // [{ key, name, cats:[] }]；null＝還沒讀
+let BRAND_CATS_STATE = '';    // '' 正常｜nologin｜notready｜error
+let brandCatsPromise = null;
+function loadBrandCategories(force) {
+  if (force) brandCatsPromise = null;
+  if (brandCatsPromise) return brandCatsPromise;
+  brandCatsPromise = (async () => {
+    const token = (() => { try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; } })();
+    if (!token) { BRAND_CATS = []; BRAND_CATS_STATE = 'nologin'; brandCatsPromise = null; return; }
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ type: 'brand-db-list', token }) });
+      const out = await res.json();
+      if (!out || !out.success) throw new Error((out && out.error) || '讀取失敗');
+      const items = out.items || [];
+      BRAND_CATS = items.map(b => ({ key: normalizeBrandKey(b.name), name: b.name, cats: Array.isArray(b.categories) ? b.categories : [] })).filter(b => b.key);
+      BRAND_CATS_STATE = items.some(b => b.categoriesReady === false) ? 'notready' : '';
+    } catch (e) {
+      BRAND_CATS = []; BRAND_CATS_STATE = 'error';
+      brandCatsPromise = null; // 下次切換再試
+    }
+  })();
+  return brandCatsPromise;
+}
+function brandsInTitle(title) {
+  const key = normalizeBrandKey(title);
+  const hit = (BRAND_CATS || []).filter(b => key.includes(b.key));
+  return hit.filter(b => !hit.some(o => o.key.length > b.key.length && o.key.includes(b.key)));
+}
+function isDondonEvent(ev) {
+  return brandsInTitle(ev.title).some(b => b.cats.some(c => SHERI_DONDON_CATEGORIES.indexOf(c) !== -1));
+}
+function accountKeeps(ev) { return ACCOUNT !== 'dondon' || isDondonEvent(ev); }
+function renderAccountNote() {
+  const el = document.getElementById('accountNote');
+  if (!el) return;
+  el.classList.remove('error');
+  if (ACCOUNT !== 'dondon') { el.textContent = ''; return; }
+  if (BRAND_CATS === null) { el.textContent = '讀取品牌分類中…'; return; }
+  const msg = {
+    nologin: '要先登入過後台，才讀得到品牌分類',
+    notready: '「品牌分類」欄位還沒 db push',
+    error: '品牌分類讀取失敗，按「重新載入資料」再試'
+  }[BRAND_CATS_STATE];
+  if (msg) { el.textContent = msg; el.classList.add('error'); return; }
+  const n = BRAND_CATS.filter(b => b.cats.some(c => SHERI_DONDON_CATEGORIES.indexOf(c) !== -1)).length;
+  if (!n) { el.textContent = '還沒有品牌勾「繪本」或「玩具」（後台品牌廠商資料庫→品牌視窗）'; el.classList.add('error'); return; }
+  el.textContent = '雪莉咚咚：' + n + ' 個繪本／玩具品牌';
+}
+
 async function loadData() {
   const statusEl = document.getElementById('status');
   statusEl.textContent = '資料載入中…';
@@ -1291,6 +1354,8 @@ async function loadData() {
     statusEl.textContent = `已同步 ${events.length} 檔團購 · ${new Date().toLocaleString('zh-TW')}`;
     await notesPromise;
     await thumbsPromise;
+    if (ACCOUNT === 'dondon') await loadBrandCategories(true); // 重新載入資料時順便重讀分類（剛在後台改過）
+    renderAccountNote();
     populateMonths();
     renderAll();
   } catch (err) {
@@ -1328,7 +1393,7 @@ function populateMonths() {
 
 function monthEvents() {
   return allEvents
-    .filter(ev => ev.start.getFullYear() === currentYear && ev.start.getMonth() === currentMonth)
+    .filter(ev => ev.start.getFullYear() === currentYear && ev.start.getMonth() === currentMonth && accountKeeps(ev))
     .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
 }
 
@@ -1676,6 +1741,7 @@ function autoFit() {
    9:16 限動尺寸高度夠，不管幾團一律用標準版（同日雪莉定）。
    圖的下緣刻意切平：貼齊行事曆框上緣，看起來像藏在框後面。 */
 function titleImgSrc() {
+  if (ACCOUNT === 'dondon') return 'images/brand-logo.png'; // 雪莉咚咚：先用網站 LOGO（之後雪莉再給專屬標題圖）
   const mm = String(currentMonth + 1).padStart(2, '0');
   const slim = (S.mode === 'list' && S.size !== '9:16' && visibleGroups('list').length >= 24);
   // ?v= 換標題圖時改日期，避免瀏覽器快取到舊圖
@@ -1732,7 +1798,7 @@ function buildFoot() {
   const f = document.createElement('div');
   f.className = 'poster-foot';
   const h1 = document.createElement('span'); h1.className = 'heart'; h1.textContent = '♥';
-  const tx = document.createElement('span'); tx.textContent = S.foot;
+  const tx = document.createElement('span'); tx.textContent = ACCOUNT === 'dondon' ? '雪莉咚咚 @sheridondon' : S.foot;
   const h2 = document.createElement('span'); h2.className = 'heart'; h2.textContent = '♥';
   f.appendChild(h1); f.appendChild(tx); f.appendChild(h2);
   return f;
@@ -1812,7 +1878,7 @@ function calendarGeometry() {
 function outMonthEvents() {
   const { outCells } = calendarGeometry();
   return allEvents
-    .filter(ev => outCells[`${ev.start.getFullYear()}-${ev.start.getMonth()}-${ev.start.getDate()}`])
+    .filter(ev => accountKeeps(ev) && outCells[`${ev.start.getFullYear()}-${ev.start.getMonth()}-${ev.start.getDate()}`])
     .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
 }
 
@@ -1843,7 +1909,7 @@ function buildCalendar() {
   // 那幾天開的團前台已經看得到了，圖上就不該是空格。
   // 這些團不參與同框（一團一框），但逐團微調的名稱／徽章／藏起來都吃得到。
   allEvents.forEach(ev => {
-    if (ovRead(ev.id, 'calendar').hidden) return;
+    if (ovRead(ev.id, 'calendar').hidden || !accountKeeps(ev)) return;
     const s = ev.start;
     const slot = outCells[`${s.getFullYear()}-${s.getMonth()}-${s.getDate()}`];
     if (slot) slot.events.push([ev]);
@@ -2009,7 +2075,7 @@ function remDateStr(d) {
 function reminderGroups() {
   const today = todayStart();
   const evs = allEvents
-    .filter(ev => ev.start <= today && today <= ev.displayEnd && !ovRead(ev.id, 'list').hidden)
+    .filter(ev => ev.start <= today && today <= ev.displayEnd && !ovRead(ev.id, 'list').hidden && accountKeeps(ev))
     .sort((a, b) => a.displayEnd - b.displayEnd || a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
   const groups = [];
   evs.forEach(ev => {
@@ -3053,6 +3119,11 @@ async function captureInIsolatedFrame(sourceEl, options) {
 }
 
 async function exportPng() {
+  // 雪莉咚咚讀不到品牌分類時圖會是空的，先擋下來（2026-10-03）
+  if (ACCOUNT === 'dondon' && BRAND_CATS_STATE) {
+    alert(document.getElementById('accountNote').textContent || '品牌分類讀不到，雪莉咚咚的圖現在是空的');
+    return;
+  }
   const btn = document.getElementById('btnExport');
   const old = btn.textContent;
   btn.disabled = true; btn.textContent = '產生中…';
@@ -3266,6 +3337,17 @@ function init() {
   // 貼文版本：完整（帶 👉🏻 小介紹）／精簡（只列團名）
   bindSeg('segCapMode', v => { S.capMode = v; renderCaption(); });
   bindSeg('segMode', v => { switchMode(v); });
+  segSet('segAccount', ACCOUNT);
+  document.getElementById('segAccount').addEventListener('click', async e => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.dataset.v === ACCOUNT) return;
+    ACCOUNT = btn.dataset.v === 'dondon' ? 'dondon' : 'main';
+    try { localStorage.setItem(LS_ACCOUNT, ACCOUNT); } catch (err) {}
+    segSet('segAccount', ACCOUNT);
+    renderAccountNote();
+    if (ACCOUNT === 'dondon') { await loadBrandCategories(); renderAccountNote(); }
+    renderAll();
+  });
   bindSeg('segSize', v => { S.size = v; });
   bindSeg('segCols', v => { S.cols = parseInt(v, 10); });
   bindSeg('segMonthOv', v => { S.monthOverlay = (v === 'on'); });

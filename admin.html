@@ -7366,6 +7366,9 @@
       </div>
       <label for="brandNoteInput">品牌備註</label>
       <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
+      <label>品牌分類（可複選；勾「繪本」或「玩具」的品牌，行事曆圖產生器切到「雪莉咚咚」時才會列出它的團）</label>
+      <div id="brandCategoryBox" style="display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:4px;"></div>
+      <div id="brandCategoryHint" style="font-size:12px; color:var(--c-text-soft); margin-top:4px;"></div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
         <input type="checkbox" id="brandShowInRecipeInput" style="width:auto; margin:0;">
         顯示於食材／食譜頁（勾選後這個品牌會出現在前台食材/食譜的品牌篩選）
@@ -7481,7 +7484,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=28"></script>
+<script src="brandVendor.js?v=29"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
