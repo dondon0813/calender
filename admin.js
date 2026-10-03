@@ -299,6 +299,10 @@ function wrapSegment(text, maxCharsPerLine) {
 const FROZEN_KEYWORDS = ['永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
 
 function isFrozenEvent(ev) {
+  // 2026-10-04 起改看後端算好的 c[25]（冷凍冷藏雪花：品牌分類「冷凍冷藏」＋這團分類欄寫冷凍或冷藏都算，冷藏也有雪花）。
+  // c[25] 沒有值（後端還沒更新）才退回下面的舊規則。
+  if (ev.coldFlag === '是') return true;
+  if (ev.coldFlag === '否') return false;
   const cat = (ev.category || '').toString().trim();
   if (cat !== '') {
     return cat.includes('冷凍');
@@ -463,7 +467,8 @@ async function loadData() {
       events.push({
         id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird,
         color, allDay, startTime: startTimeRaw, endTime: endTimeRaw, isGroupBuy, published,
-        linkedEventId, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc
+        linkedEventId, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc,
+        coldFlag: c[25] ? String(c[25].v || '').trim() : ''   // 冷凍冷藏雪花（後端算好；見 isFrozenEvent）
       });
     });
 

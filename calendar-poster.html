@@ -1345,7 +1345,8 @@ async function loadData() {
         start, end,
         displayEnd: computeDisplayEnd(end, extend),
         title: String(title).trim(),
-        category: c[6] ? String(c[6].v || '').trim() : '',  // G 欄分類：判斷冷凍/冷藏團用
+        category: c[6] ? String(c[6].v || '').trim() : '',  // G 欄分類：判斷冷凍/冷藏團用（c[25] 沒值時的退路）
+        coldFlag: c[25] ? String(c[25].v || '').trim() : '', // 冷凍冷藏雪花（後端算好，2026-10-04 起優先）
         thumb: c[22] ? String(c[22].v || '').trim() : ''    // W 欄小圖：結單提醒模式用（優先於品牌庫）
       });
     });
@@ -1503,6 +1504,10 @@ function groupNamesTight(group, mode) { return group.map(ev => plainNameTight(di
    使用者可以在面板逐團手動改，改過的就以她的為準（存 o.cold）。 */
 const COLD_KEYWORDS = ['永圻魚湯', '雪坊優格', '兔比媽咪廚房'];
 function autoCold(ev) {
+  // 2026-10-04 起改看後端算好的 c[25]（冷凍冷藏雪花：品牌分類「冷凍冷藏」＋這團分類欄寫冷凍或冷藏都算，冷藏也有雪花）。
+  // c[25] 沒有值（後端還沒更新）才退回下面的舊規則。
+  if (ev.coldFlag === '是') return true;
+  if (ev.coldFlag === '否') return false;
   const cat = String(ev.category || '').trim();
   if (cat !== '') return cat.indexOf('冷凍') !== -1;
   const flat = nameLines(ev.title).join('');
