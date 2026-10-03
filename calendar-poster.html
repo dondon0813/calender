@@ -3007,9 +3007,15 @@ async function captureInIsolatedFrame(sourceEl, options) {
     document.querySelectorAll('head style').forEach(el => {
       const s = doc.createElement('style'); s.textContent = el.textContent; doc.head.appendChild(s);
     });
+    // 外部樣式表（Google Fonts 的字型宣告在這裡）要等它載完，iframe 才認得那些字型，
+    // 否則下面的 fonts.load 會因為「還沒有這套字」立刻空手返回
+    const cssLoads = [];
     document.querySelectorAll('head link[rel="stylesheet"]').forEach(el => {
-      const l = doc.createElement('link'); l.rel = 'stylesheet'; l.href = el.href; doc.head.appendChild(l);
+      const l = doc.createElement('link'); l.rel = 'stylesheet'; l.href = el.href;
+      cssLoads.push(new Promise(r => { l.onload = r; l.onerror = r; }));
+      doc.head.appendChild(l);
     });
+    await Promise.race([Promise.all(cssLoads), new Promise(r => setTimeout(r, 8000))]);
 
     const clone = sourceEl.cloneNode(true);
     doc.body.appendChild(clone);
@@ -3022,9 +3028,18 @@ async function captureInIsolatedFrame(sourceEl, options) {
     // 字體：主頁面已載入的每一套字（粗線體 8.6MB、明體…）都在 iframe 裡明確 load 一次再出圖。
     // 原本只等 doc.fonts.ready 最多 3 秒——手機第一次用時粗線體還沒進來就出圖，標題退回一般字體
     // （2026-09-27 雪莉：今日結單／現正開團中的字跑掉）。上限拉到 15 秒，逾時才將就出圖。
+    // 2026-10-03 雪莉：開團列表 9:16 下載後團名變別的字型、圓圈數字變很低。
+    // 原因：圓體（Huninn）、思源黑體是 Google Fonts「分片字型」，每片只含一段字元；
+    // fonts.load() 沒給文字時只載「空白字元」那一片，中文那幾片沒載到 → 出圖退回系統字，
+    // 圓圈數字的置中是照 Baloo 2 字高微調的，字型一換就往下掉。改成把海報上實際出現的字一併交給 load。
     const fontLoads = [];
     try {
-      document.fonts.forEach(f => { if (f.status === 'loaded') fontLoads.push(doc.fonts.load(f.weight + ' ' + (f.style || 'normal') + ' 20px "' + f.family.replace(/["']/g, '') + '"').catch(() => null)); });
+      const text = Array.from(new Set(Array.from((clone.textContent || '') + '0123456789'))).join('');
+      const specs = new Set();
+      document.fonts.forEach(f => {
+        if (f.status === 'loaded') specs.add(f.weight + ' ' + (f.style || 'normal') + ' 20px "' + f.family.replace(/["']/g, '') + '"');
+      });
+      specs.forEach(spec => fontLoads.push(doc.fonts.load(spec, text).catch(() => null)));
     } catch (e) {}
     await Promise.race([
       Promise.all([fontsReady, imgsReady, ...fontLoads]),
