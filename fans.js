@@ -354,8 +354,10 @@ function renderFanMemberList() {
     if (m.childrenCount > 0) badges.push('<span title="寶貝 ' + m.childrenCount + ' 位">' + faIco('baby') + '×' + m.childrenCount + '</span>');
     if (m.marketingConsent) badges.push('<span title="同意收到行銷訊息">' + faIco('mail') + '</span>');
     const emailNote = m.emailsCount > 1 ? '<span style="color:#8B6E5E; font-size:11px;">（+' + (m.emailsCount - 1) + ' 信箱）</span>' : '';
-    const tierBadge = m.adminTier
-      ? ' <span style="background:var(--c-primary); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;">' + faEscapeHtml(m.adminTier) + '</span>' : '';
+    const tierBadge = (m.adminTier
+      ? ' <span style="background:var(--c-primary); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;">' + faEscapeHtml(m.adminTier) + '</span>' : '') +
+      (m.status === 'disabled'
+        ? ' <span style="background:#E6DCD2; color:#8B6E5E; border-radius:999px; padding:1px 8px; font-size:11px;" title="這個帳號已合併到別的帳號，不能再登入">已合併停用</span>' : '');
     const open = FAN_MEMBER_OPEN === m.userId;
     let html = '<tr class="fa-mem-row" data-uid="' + faEscapeHtml(m.userId) + '" style="border-bottom:1px solid var(--c-line); cursor:pointer;' + (open ? ' background:var(--c-bg-bottom);' : '') + '">' +
       '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + (open ? faIco('chevDown') : faIco('chevRight')) + faEscapeHtml(m.memberNo) + '</td>' +
@@ -384,6 +386,8 @@ function renderFanMemberList() {
   }));
   const saveBtn = document.getElementById('faMemTierSaveBtn');
   if (saveBtn) saveBtn.addEventListener('click', (e) => { e.stopPropagation(); faSaveMemberTier(saveBtn.dataset.uid); });
+  const mergeBtn = document.getElementById('faMergePreviewBtn');
+  if (mergeBtn) mergeBtn.addEventListener('click', (e) => { e.stopPropagation(); faMergePreview(mergeBtn.dataset.uid); });
   const detail = area.querySelector('.fa-mem-detail');
   if (detail) detail.addEventListener('click', (e) => e.stopPropagation());
   if (FAN_MEMBER_OPEN) faLoadMemberOrders(FAN_MEMBER_OPEN);
@@ -420,7 +424,75 @@ function faMemberDetailRow(m) {
     '<input type="text" id="faMemNoteInput" value="' + faEscapeHtml(m.adminNote) + '" placeholder="內部備註（客人看不到）" style="flex:1; min-width:200px;">' +
     '<button type="button" class="task-mini-btn" id="faMemTierSaveBtn" data-uid="' + faEscapeHtml(m.userId) + '">儲存</button>' +
     '</div>' +
+    (m.status === 'disabled'
+      ? '<div style="border-top:1px dashed var(--c-border-light); padding-top:10px; margin-top:10px; font-size:12px; color:var(--c-text-soft);">這個帳號已合併到別的帳號、不能再登入（合併到哪個帳號寫在上方內部備註）。</div>'
+      : '<div style="border-top:1px dashed var(--c-border-light); padding-top:10px; margin-top:10px;">' +
+        '<div style="font-size:12px; font-weight:800; margin-bottom:4px;">合併帳號（客人不小心用兩個信箱各註冊一個帳號時用）</div>' +
+        '<div style="font-size:12px; color:var(--c-text-soft); margin-bottom:6px; line-height:1.6;">把<b>這個帳號（' + faEscapeHtml(m.memberNo) + '）</b>的訂單、點數、兌換碼、開通的教材、收藏、綁定信箱全部搬到另一個帳號，這個帳號合併後停用、不能再登入。客人之後用保留的帳號登入，這個帳號的信箱會變成保留帳號的綁定信箱。</div>' +
+        '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">' +
+        '<input type="text" id="faMergeTargetInput" placeholder="要保留的帳號：會員編號（例 D26090005）或信箱" style="flex:1; min-width:240px;">' +
+        '<button type="button" class="task-mini-btn" id="faMergePreviewBtn" data-uid="' + faEscapeHtml(m.userId) + '">預覽合併</button>' +
+        '</div>' +
+        '<div id="faMergeResult" style="margin-top:8px;"></div>' +
+        '</div>') +
     '</td></tr>';
+}
+
+// ===== 合併帳號（2026-10-04；後端 fan-admin-member-merge，lib/fans/merge.ts）=====
+// 先預覽（不寫入）列出會搬哪些東西，確認後才真的合併；合併後重新整理總覽。
+function faMergeSummaryHtml(p) {
+  const c = p.counts || {};
+  const pts = Object.entries(c.pointsByCurrency || {}).map(([k, v]) => faEscapeHtml(k) + ' ' + faEscapeHtml(v) + ' 點').join('、');
+  const line = (label, val) => '<li>' + label + '：' + val + '</li>';
+  const items = [
+    line('訂單', (c.orders || 0) + ' 筆（' + faEscapeHtml(faMoney(c.ordersAmount || 0)) + '）'),
+    line('點數紀錄', (c.ledger || 0) + ' 筆' + (pts ? '（合計 ' + pts + '）' : '')),
+    line('兌換碼', (c.codes || 0) + ' 張'),
+    line('開通的教材／遊戲', (c.grants || 0) + ' 份' + (c.grantsDup ? '（另有 ' + c.grantsDup + ' 份保留帳號已經有，略過）' : '')),
+    line('點數兌換紀錄', (c.redemptions || 0) + ' 筆'),
+    line('收藏', (c.favorites || 0) + ' 筆' + (c.favoritesDup ? '（' + c.favoritesDup + ' 筆重複略過）' : '')),
+    line('綁定信箱', (p.source.emails || []).map(faEscapeHtml).join('、') || '—'),
+    line('認領回報', (c.claimReports || 0) + ' 筆' + (c.claimReportsDup ? '（' + c.claimReportsDup + ' 筆重複略過）' : '')),
+  ];
+  if ((p.profileFilled || []).length) items.push(line('保留帳號空白、會從這個帳號補上的資料', p.profileFilled.map(faEscapeHtml).join('、')));
+  const warn = (p.warnings || []).map(w => '<div style="color:#B5485A; font-size:12px; margin-top:4px;">注意：' + faEscapeHtml(w) + '</div>').join('');
+  return '<div style="font-size:12px; line-height:1.7;"><b>' + faEscapeHtml(p.source.memberNo) + '</b> 併入 <b>' + faEscapeHtml(p.target.memberNo) + '</b>（保留）：' +
+    '<ul style="margin:4px 0 0 18px; padding:0;">' + items.join('') + '</ul>' + warn + '</div>';
+}
+
+async function faMergePreview(sourceUserId) {
+  const box = document.getElementById('faMergeResult');
+  const target = (document.getElementById('faMergeTargetInput').value || '').trim();
+  if (!target) { box.innerHTML = '<div style="color:#B5485A; font-size:12px;">請先輸入要保留的帳號</div>'; return; }
+  box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">讀取中…</div>';
+  try {
+    const res = await faApiPost('fan-admin-member-merge', { sourceUserId, target });
+    if (!res || !res.success) throw new Error((res && res.error) || '預覽失敗');
+    box.innerHTML = faMergeSummaryHtml(res.preview) +
+      '<button type="button" class="task-mini-btn danger" id="faMergeApplyBtn" style="margin-top:8px;">確認合併（' + faEscapeHtml(res.preview.source.memberNo) + ' 停用）</button>';
+    document.getElementById('faMergeApplyBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      faMergeApply(sourceUserId, target, res.preview);
+    });
+  } catch (err) {
+    box.innerHTML = '<div style="color:#B5485A; font-size:12px;">' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+
+async function faMergeApply(sourceUserId, target, preview) {
+  if (!confirm('確定把 ' + preview.source.memberNo + ' 合併到 ' + preview.target.memberNo + ' 嗎？\n合併後 ' + preview.source.memberNo + ' 會停用、不能再登入。')) return;
+  const box = document.getElementById('faMergeResult');
+  box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">合併中…</div>';
+  try {
+    const res = await faApiPost('fan-admin-member-merge', { sourceUserId, target, apply: true });
+    if (!res || !res.success) throw new Error((res && res.error) || '合併失敗');
+    const warn = (res.preview.warnings || []).map(w => '\n注意：' + w).join('');
+    alert('已合併：' + res.preview.source.memberNo + ' → ' + res.preview.target.memberNo + warn);
+    FAN_MEMBER_OPEN = res.preview.target.userId;
+    faLoadMemberOverview(true);
+  } catch (err) {
+    box.innerHTML = '<div style="color:#B5485A; font-size:12px;">合併失敗：' + faEscapeHtml(err.message || '') + '（資料已搬的部分不會遺失，可以再按一次預覽→合併接著做完）</div>';
+  }
 }
 
 // ===== 展開列的訂單紀錄（2026-09-20；後端 fan-admin-member-orders）=====
