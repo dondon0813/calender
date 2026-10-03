@@ -1392,7 +1392,8 @@ async function loadData() {
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
       if (!published) return;
       const coldFlag = c[25] ? String(c[25].v || '').trim() : '';   // 冷凍冷藏雪花（後端算好；見 isFrozenEvent）
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc, coldFlag });
+      const recipeOk = c[26] ? String(c[26].v || '').trim() : '';   // 食譜品牌有沒有食譜（'否'＝不顯示食譜大全鈕；後端依實際匯入的食譜判斷）
+      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc, coldFlag, recipeOk });
     });
 
     allEvents = events;
@@ -2097,7 +2098,7 @@ function openGroupChoiceModal(ev, srcCode) {
   // 食物團（recipeBrand）：食材介紹＋食譜大全；繪本團：介紹連繪本館品牌視角、無食譜鈕；
   // 都不是（只有折扣碼）：只留「前往下單」
   introBtn.style.display = (brand || bookBrand) ? '' : 'none';
-  recipeBtn.style.display = brand ? '' : 'none';
+  recipeBtn.style.display = (brand && ev.recipeOk !== '否') ? '' : 'none';   // 這個品牌還沒有食譜就不顯示（2026-10-04）
   if (brand) {
     introBtn.href = `${RECIPES_PAGE_URL}?view=ingredients&brand=${encodeURIComponent(brand)}`;
     introBtn.onclick = () => sendStat(baseKey + '_intro', 'click');

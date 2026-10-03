@@ -214,7 +214,7 @@
     gc.title.textContent = o.title.replace(/｜/g, ' ');
 
     gc.introBtn.style.display = (brand || bookBrand) ? '' : 'none';
-    gc.recipeBtn.style.display = brand ? '' : 'none';
+    gc.recipeBtn.style.display = (brand && o.recipeOk !== '否') ? '' : 'none';   // 這個品牌還沒有食譜就不顯示（2026-10-04）
     if (brand) {
       gc.introBtn.href = RECIPES_PAGE_URL + '?view=ingredients&brand=' + encodeURIComponent(brand);
       gc.introBtn.onclick = () => sendStat(baseKey + '_intro', 'click');
@@ -302,6 +302,7 @@
       const title = c[4] ? String(c[4].v || '').trim() : '';
       const url = c[7] ? c[7].v : '';
       const recipeBrand = c[10] ? String(c[10].v || '').trim() : '';
+      const recipeOk = c[26] ? String(c[26].v || '').trim() : '';   // 食譜品牌有沒有食譜（'否'＝不顯示食譜大全鈕；2026-10-04）
       const rowThumb = c[22] ? String(c[22].v || '').trim() : '';
       const discountCode = c[23] ? String(c[23].v || '').trim() : '';
       const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
@@ -311,7 +312,7 @@
       const displayEnd = computeDisplayEnd(end, extend);
       if (startOfDay(start) > today || today > startOfDay(displayEnd)) return;
       const evKey = `${id}_${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}`;
-      open.push({ title, url, thumb: resolveThumb(title, rowThumb), end: displayEnd, recipeBrand, discountCode, discountDesc, evKey });
+      open.push({ title, url, thumb: resolveThumb(title, rowThumb), end: displayEnd, recipeBrand, recipeOk, discountCode, discountDesc, evKey });
     });
     open.sort((a, b) => a.end - b.end);
     return open;
