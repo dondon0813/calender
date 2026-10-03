@@ -357,7 +357,9 @@ function renderFanMemberList() {
     const tierBadge = (m.adminTier
       ? ' <span style="background:var(--c-primary); color:#fff; border-radius:999px; padding:1px 8px; font-size:11px;">' + faEscapeHtml(m.adminTier) + '</span>' : '') +
       (m.status === 'disabled'
-        ? ' <span style="background:#E6DCD2; color:#8B6E5E; border-radius:999px; padding:1px 8px; font-size:11px;" title="這個帳號已合併到別的帳號，不能再登入">已合併停用</span>' : '');
+        ? ' <span style="background:#E6DCD2; color:#8B6E5E; border-radius:999px; padding:1px 8px; font-size:11px;" title="這個帳號已合併到別的帳號，不能再登入">已合併停用</span>' : '') +
+      (m.mergePending
+        ? ' <span style="background:#FCEFD8; color:#A0661E; border-radius:999px; padding:1px 8px; font-size:11px;" title="已送出合併申請，等會員登入這個帳號確認">等會員確認合併到 ' + faEscapeHtml(m.mergePending.targetMemberNo) + '</span>' : '');
     const open = FAN_MEMBER_OPEN === m.userId;
     let html = '<tr class="fa-mem-row" data-uid="' + faEscapeHtml(m.userId) + '" style="border-bottom:1px solid var(--c-line); cursor:pointer;' + (open ? ' background:var(--c-bg-bottom);' : '') + '">' +
       '<td style="padding:8px 10px; font-weight:800; white-space:nowrap;">' + (open ? faIco('chevDown') : faIco('chevRight')) + faEscapeHtml(m.memberNo) + '</td>' +
@@ -388,6 +390,8 @@ function renderFanMemberList() {
   if (saveBtn) saveBtn.addEventListener('click', (e) => { e.stopPropagation(); faSaveMemberTier(saveBtn.dataset.uid); });
   const mergeBtn = document.getElementById('faMergePreviewBtn');
   if (mergeBtn) mergeBtn.addEventListener('click', (e) => { e.stopPropagation(); faMergePreview(mergeBtn.dataset.uid); });
+  const mergeCancelBtn = document.getElementById('faMergeCancelBtn');
+  if (mergeCancelBtn) mergeCancelBtn.addEventListener('click', (e) => { e.stopPropagation(); faMergeCancel(mergeCancelBtn.dataset.uid); });
   const detail = area.querySelector('.fa-mem-detail');
   if (detail) detail.addEventListener('click', (e) => e.stopPropagation());
   if (FAN_MEMBER_OPEN) faLoadMemberOrders(FAN_MEMBER_OPEN);
@@ -428,7 +432,11 @@ function faMemberDetailRow(m) {
       ? '<div style="border-top:1px dashed var(--c-border-light); padding-top:10px; margin-top:10px; font-size:12px; color:var(--c-text-soft);">這個帳號已合併到別的帳號、不能再登入（合併到哪個帳號寫在上方內部備註）。</div>'
       : '<div style="border-top:1px dashed var(--c-border-light); padding-top:10px; margin-top:10px;">' +
         '<div style="font-size:12px; font-weight:800; margin-bottom:4px;">合併帳號（客人不小心用兩個信箱各註冊一個帳號時用）</div>' +
-        '<div style="font-size:12px; color:var(--c-text-soft); margin-bottom:6px; line-height:1.6;">把<b>這個帳號（' + faEscapeHtml(m.memberNo) + '）</b>的訂單、點數、兌換碼、開通的教材、收藏、綁定信箱全部搬到另一個帳號，這個帳號合併後停用、不能再登入。客人之後用保留的帳號登入，這個帳號的信箱會變成保留帳號的綁定信箱。</div>' +
+        '<div style="font-size:12px; color:var(--c-text-soft); margin-bottom:6px; line-height:1.6;">把<b>這個帳號（' + faEscapeHtml(m.memberNo) + '）</b>的訂單、點數、兌換碼、開通的教材、收藏、綁定信箱全部搬到另一個帳號，這個帳號合併後停用、不能再登入。<br>為了防止有人冒充申請，這裡只能<b>送出申請</b>：送出後請會員<b>登入這個帳號（要被合併掉的）</b>，會員中心會跳出確認視窗，會員按確認才真的合併（申請 7 天內有效）。兩個帳號重複兌換的教材不補發點數。</div>' +
+        (m.mergePending
+          ? '<div style="font-size:12px; background:#FCEFD8; color:#A0661E; border-radius:8px; padding:6px 10px; margin-bottom:6px;">已送出申請：等會員登入這個帳號確認合併到 <b>' + faEscapeHtml(m.mergePending.targetMemberNo) + '</b>（' + faEscapeHtml(String(m.mergePending.expiresAt || '').slice(0, 10)) + ' 前有效）　' +
+            '<button type="button" class="task-mini-btn" id="faMergeCancelBtn" data-uid="' + faEscapeHtml(m.userId) + '" style="font-size:12px; padding:2px 10px;">取消申請</button></div>'
+          : '') +
         '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">' +
         '<input type="text" id="faMergeTargetInput" placeholder="要保留的帳號：會員編號（例 D26090005）或信箱" style="flex:1; min-width:240px;">' +
         '<button type="button" class="task-mini-btn" id="faMergePreviewBtn" data-uid="' + faEscapeHtml(m.userId) + '">預覽合併</button>' +
@@ -439,7 +447,7 @@ function faMemberDetailRow(m) {
 }
 
 // ===== 合併帳號（2026-10-04；後端 fan-admin-member-merge，lib/fans/merge.ts）=====
-// 先預覽（不寫入）列出會搬哪些東西，確認後才真的合併；合併後重新整理總覽。
+// 先預覽（不寫入）列出會搬哪些東西 → 送出申請 → 會員登入被併入的帳號在會員中心按確認才真的合併（防冒充，雪莉定）。
 function faMergeSummaryHtml(p) {
   const c = p.counts || {};
   const pts = Object.entries(c.pointsByCurrency || {}).map(([k, v]) => faEscapeHtml(k) + ' ' + faEscapeHtml(v) + ' 點').join('、');
@@ -469,29 +477,38 @@ async function faMergePreview(sourceUserId) {
     const res = await faApiPost('fan-admin-member-merge', { sourceUserId, target });
     if (!res || !res.success) throw new Error((res && res.error) || '預覽失敗');
     box.innerHTML = faMergeSummaryHtml(res.preview) +
-      '<button type="button" class="task-mini-btn danger" id="faMergeApplyBtn" style="margin-top:8px;">確認合併（' + faEscapeHtml(res.preview.source.memberNo) + ' 停用）</button>';
-    document.getElementById('faMergeApplyBtn').addEventListener('click', (e) => {
+      '<button type="button" class="task-mini-btn" id="faMergeRequestBtn" style="margin-top:8px;">送出合併申請（請會員登入 ' + faEscapeHtml(res.preview.source.memberNo) + ' 確認）</button>';
+    document.getElementById('faMergeRequestBtn').addEventListener('click', (e) => {
       e.stopPropagation();
-      faMergeApply(sourceUserId, target, res.preview);
+      faMergeRequest(sourceUserId, target, res.preview);
     });
   } catch (err) {
     box.innerHTML = '<div style="color:#B5485A; font-size:12px;">' + faEscapeHtml(err.message || '') + '</div>';
   }
 }
 
-async function faMergeApply(sourceUserId, target, preview) {
-  if (!confirm('確定把 ' + preview.source.memberNo + ' 合併到 ' + preview.target.memberNo + ' 嗎？\n合併後 ' + preview.source.memberNo + ' 會停用、不能再登入。')) return;
+async function faMergeRequest(sourceUserId, target, preview) {
+  if (!confirm('送出合併申請：' + preview.source.memberNo + ' → ' + preview.target.memberNo + '\n\n送出後請會員登入 ' + preview.source.memberNo + '（' + (preview.source.emails || []).join('、') + '）按確認，才會真的合併。')) return;
   const box = document.getElementById('faMergeResult');
-  box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">合併中…</div>';
+  box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">送出中…</div>';
   try {
-    const res = await faApiPost('fan-admin-member-merge', { sourceUserId, target, apply: true });
-    if (!res || !res.success) throw new Error((res && res.error) || '合併失敗');
-    const warn = (res.preview.warnings || []).map(w => '\n注意：' + w).join('');
-    alert('已合併：' + res.preview.source.memberNo + ' → ' + res.preview.target.memberNo + warn);
-    FAN_MEMBER_OPEN = res.preview.target.userId;
+    const res = await faApiPost('fan-admin-member-merge-request', { sourceUserId, target });
+    if (!res || !res.success) throw new Error((res && res.error) || '送出失敗');
+    alert('已送出申請。請告訴會員：登入 ' + (preview.source.emails || []).join('、') + ' 這個帳號，會員中心會跳出確認視窗，按「確認合併」即可（' + String(res.expiresAt || '').slice(0, 10) + ' 前有效）。');
     faLoadMemberOverview(true);
   } catch (err) {
-    box.innerHTML = '<div style="color:#B5485A; font-size:12px;">合併失敗：' + faEscapeHtml(err.message || '') + '（資料已搬的部分不會遺失，可以再按一次預覽→合併接著做完）</div>';
+    box.innerHTML = '<div style="color:#B5485A; font-size:12px;">送出失敗：' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+
+async function faMergeCancel(sourceUserId) {
+  if (!confirm('取消這筆合併申請？')) return;
+  try {
+    const res = await faApiPost('fan-admin-member-merge-request', { sourceUserId, cancel: true });
+    if (!res || !res.success) throw new Error((res && res.error) || '取消失敗');
+    faLoadMemberOverview(true);
+  } catch (err) {
+    alert('取消失敗：' + err.message);
   }
 }
 
