@@ -92,11 +92,15 @@ function renderBrandVendorView() {
   const bSec = document.getElementById('bvBrandSection');
   const cSec = document.getElementById('bvCommissionSection');
   const isCommission = bvSearchScope === 'commission';
-  // 沒輸入關鍵字＝維持原本兩區都看得到；一旦搜尋就只留下被搜尋的那一區；分潤確認是獨立第三分頁，跟搜尋無關
-  if (vSec) vSec.style.display = !isCommission && (!kw || bvSearchScope === 'vendor') ? '' : 'none';
-  if (bSec) bSec.style.display = !isCommission && (!kw || bvSearchScope === 'brand') ? '' : 'none';
+  const isCategory = bvSearchScope === 'category';
+  const catSec = document.getElementById('bvCategorySection');
+  // 沒輸入關鍵字＝維持原本兩區都看得到；一旦搜尋就只留下被搜尋的那一區；分潤確認／品牌分類是獨立分頁
+  if (vSec) vSec.style.display = !isCommission && !isCategory && (!kw || bvSearchScope === 'vendor') ? '' : 'none';
+  if (bSec) bSec.style.display = !isCommission && !isCategory && (!kw || bvSearchScope === 'brand') ? '' : 'none';
   if (cSec) cSec.style.display = isCommission ? '' : 'none';
+  if (catSec) catSec.style.display = isCategory ? '' : 'none';
   if (isCommission) { loadBrandCommissionReview(); return; }
+  if (isCategory) { bvCatRender_(); return; }
   renderVendorDbList();
   renderBrandDbList();
 }
@@ -293,6 +297,7 @@ document.querySelectorAll('.bv-scope-btn').forEach(btn => {
       input.style.display = isCommission ? 'none' : '';
       if (!isCommission) { input.placeholder = bvSearchScope === 'vendor' ? '搜尋廠商…' : '搜尋品牌…'; input.focus(); }
     }
+    if (bvSearchScope === 'category') bvCatLoad_();
     const clearBtn = document.getElementById('bvSearchClearBtn');
     if (clearBtn) clearBtn.style.display = isCommission ? 'none' : '';
     renderBrandVendorView();
@@ -500,8 +505,167 @@ function openBrandEditModal(brand) {
   document.getElementById('brandEditModal').classList.add('show');
 }
 // 品牌分類（可複選；brands.categories，migration 20261003180000）。
-// 「繪本」「玩具」＝行事曆圖產生器「雪莉咚咚」帳號要列出的團（calendar-poster.html SHERI_DONDON_CATEGORIES，兩邊名稱要一致）
-const BV_BRAND_CATEGORIES = ['繪本', '玩具', '食品', '生活用品', '家電', '3C', '美妝保養', '服飾'];
+// 2026-10-03 雪莉定：新分類先另外做（舊功能不讀它），全部歸類完再一項一項正式取代舊的各自分類、規則照舊。
+// 功能分類＝之後要接管舊規則的：冷凍／冷藏（冷凍標籤、藍底）、食譜食材（點團跳食譜）、副食品成品、繪本（點團跳繪本館）、教材玩具。
+// 「繪本」「教材玩具」＝行事曆圖產生器「雪莉咚咚」帳號要列出的團（calendar-poster.html SHERI_DONDON_CATEGORIES，兩邊名稱要一致）
+const BV_CATEGORY_GROUPS = [
+  { label: '功能分類', items: ['冷凍', '冷藏', '食譜食材', '副食品成品', '繪本', '教材玩具'] },
+  { label: '商品分類', items: ['生活用品', '家電3C', '美妝保養', '服飾'] }
+];
+const BV_BRAND_CATEGORIES = BV_CATEGORY_GROUPS.reduce((a, g) => a.concat(g.items), []);
+
+/* ---------- 品牌分類總表（品牌廠商頁「🗂 品牌分類」分頁）----------
+   一次列全部品牌勾分類。建議值＝後端依舊規則推算（brand-db-category-suggest：冷凍分類欄、食材表、成品表、
+   繪本館、教材館…），還沒有任何分類的品牌會先「預勾」建議值但不存，標「未儲存」，雪莉看過按儲存才寫入。 */
+let bvCatSuggest = null;      // { [brandId]: [{category, reasons}] }；null＝還沒讀
+let bvCatDraft = {};          // { [brandId]: [分類...] } 畫面上改過、還沒存的
+let bvCatFilter = 'all';      // all｜todo（還沒歸類）｜sug（有建議還沒採用）
+let bvCatLoading = false;
+async function bvCatLoad_() {
+  if (bvCatSuggest || bvCatLoading) { bvCatRender_(); return; }
+  bvCatLoading = true;
+  bvCatRender_();
+  try {
+    const out = await postTask({ type: 'brand-db-category-suggest' });
+    bvCatSuggest = {};
+    (out.items || []).forEach(it => { bvCatSuggest[it.id] = it.suggestions || []; });
+  } catch (e) {
+    bvCatSuggest = null;
+    alert('讀取分類建議失敗：' + e.message);
+  }
+  bvCatLoading = false;
+  bvCatRender_();
+}
+// 預勾：還沒有任何分類、又有建議的品牌（每個品牌只預勾一次；品牌清單晚到也會補）
+const bvCatPrefilled = new Set();
+function bvCatPrefill_() {
+  if (!bvCatSuggest) return;
+  brandDb.forEach(b => {
+    if (bvCatPrefilled.has(b.id)) return;
+    const sug = bvCatSuggest[b.id] || [];
+    if (!(b.categories || []).length && sug.length && !bvCatDraft[b.id]) bvCatDraft[b.id] = sug.map(x => x.category);
+    if (sug.length) bvCatPrefilled.add(b.id);
+  });
+}
+function bvCatCurrent_(b) { return bvCatDraft[b.id] || b.categories || []; }
+function bvCatSame_(a, b) { return a.length === b.length && a.every(x => b.indexOf(x) !== -1); }
+function bvCatDirtyIds_() {
+  return Object.keys(bvCatDraft).filter(id => {
+    const b = brandDb.find(x => x.id === id);
+    return b && !bvCatSame_(bvCatDraft[id], b.categories || []);
+  });
+}
+function bvCatRender_() {
+  const box = document.getElementById('bvCategoryList');
+  const bar = document.getElementById('bvCategoryBar');
+  if (!box || !bar) return;
+  const ready = !brandDb.some(b => b.categoriesReady === false);
+  const canEdit = typeof hasEditPerm !== 'function' || hasEditPerm('brandVendorEdit');
+  if (!ready) { bar.innerHTML = ''; box.innerHTML = '<div class="task-empty">「品牌分類」欄位還沒 db push</div>'; return; }
+  if (bvCatLoading) { bar.innerHTML = ''; box.innerHTML = '<div class="task-empty">讀取分類建議中…</div>'; return; }
+  bvCatPrefill_();
+  const sugOf = b => (bvCatSuggest && bvCatSuggest[b.id]) || [];
+  const kw = bvSearchText_();
+  const all = brandDb.filter(b => !b.ended || (b.categories || []).length || bvCatDraft[b.id]);
+  const todoN = all.filter(b => !bvCatCurrent_(b).length).length;
+  const sugPending = b => sugOf(b).some(s => bvCatCurrent_(b).indexOf(s.category) === -1);
+  const sugN = all.filter(sugPending).length;
+  const dirty = bvCatDirtyIds_();
+  const list = all
+    .filter(b => bvCatFilter === 'all' || (bvCatFilter === 'todo' ? !bvCatCurrent_(b).length : sugPending(b)))
+    .filter(b => bvMatch_(kw, [b.name, bvCatCurrent_(b).join(' ')]));
+  const chip = (v, t) => `<button class="task-mini-btn${bvCatFilter === v ? ' on' : ''}" data-catf="${v}" style="font-size:12px; padding:6px 12px;">${t}</button>`;
+  bar.innerHTML =
+    `<div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; align-items:center;">` +
+    chip('all', '全部 ' + all.length) + chip('todo', '還沒歸類 ' + todoN) + chip('sug', '有建議沒採用 ' + sugN) +
+    (canEdit ? `<button class="task-submit-btn" id="bvCatSaveAll" style="width:auto; margin:0 0 0 8px; padding:7px 16px; font-size:13px;"${dirty.length ? '' : ' disabled'}>儲存全部變更（${dirty.length}）</button>` : '') +
+    `</div><div class="form-status" id="bvCatStatus" style="text-align:center;"></div>`;
+  bar.querySelectorAll('[data-catf]').forEach(btn => btn.addEventListener('click', () => { bvCatFilter = btn.dataset.catf; bvCatRender_(); }));
+  const saveAll = document.getElementById('bvCatSaveAll');
+  if (saveAll) saveAll.addEventListener('click', () => bvCatSave_(bvCatDirtyIds_()));
+
+  box.innerHTML = '';
+  if (!list.length) { box.innerHTML = '<div class="task-empty">沒有符合的品牌</div>'; return; }
+  list.forEach(b => {
+    const cur = bvCatCurrent_(b);
+    const isDirty = dirty.indexOf(b.id) !== -1;
+    const sugs = sugOf(b);
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:10px 12px; border-bottom:1px solid var(--c-line); ' + (isDirty ? 'background:#FFF6E8;' : '');
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;';
+    head.innerHTML = `<b style="font-size:14px;">${escHtml(b.name)}</b>` +
+      (b.ended ? '<span style="font-size:11px; color:var(--c-text-soft);">（已結束合作）</span>' : '') +
+      (isDirty ? '<span style="font-size:11px; color:#C07A1E;">未儲存</span>' : '') +
+      (!cur.length ? '<span style="font-size:11px; color:var(--c-text-soft);">還沒歸類</span>' : '');
+    if (canEdit && isDirty) {
+      const sv = document.createElement('button');
+      sv.className = 'task-mini-btn'; sv.textContent = '儲存'; sv.style.cssText = 'font-size:12px; padding:4px 12px; margin-left:auto;';
+      sv.addEventListener('click', () => bvCatSave_([b.id]));
+      head.appendChild(sv);
+      const rv = document.createElement('button');
+      rv.className = 'task-mini-btn'; rv.textContent = '還原'; rv.style.cssText = 'font-size:12px; padding:4px 12px;';
+      rv.addEventListener('click', () => { bvCatDraft[b.id] = (b.categories || []).slice(); bvCatRender_(); });
+      head.appendChild(rv);
+    }
+    row.appendChild(head);
+    const extra = cur.filter(c => BV_BRAND_CATEGORIES.indexOf(c) === -1);
+    BV_CATEGORY_GROUPS.concat(extra.length ? [{ label: '其他', items: extra }] : []).forEach(g => {
+      const line = document.createElement('div');
+      line.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; font-size:13px; margin:2px 0;';
+      line.innerHTML = `<span style="font-size:11px; color:var(--c-text-soft); width:56px; flex:none;">${g.label}</span>`;
+      g.items.forEach(c => {
+        const sug = sugs.find(s => s.category === c);
+        const lab = document.createElement('label');
+        lab.style.cssText = 'display:inline-flex; align-items:center; gap:3px; margin:0; cursor:pointer; font-weight:normal;' +
+          (sug ? ' border-bottom:1.5px dashed #E0A15A;' : '');
+        if (sug) lab.title = '建議：' + sug.reasons.join('；');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = cur.indexOf(c) !== -1; cb.disabled = !canEdit;
+        cb.style.cssText = 'width:auto; margin:0;';
+        cb.addEventListener('change', () => {
+          const next = bvCatCurrent_(b).filter(x => x !== c);
+          if (cb.checked) next.push(c);
+          bvCatDraft[b.id] = next;
+          bvCatRender_();
+        });
+        lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(c));
+        line.appendChild(lab);
+      });
+      row.appendChild(line);
+    });
+    if (sugs.length) {
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:11.5px; color:#B07A3A; margin-top:4px; line-height:1.6;';
+      hint.textContent = '建議依據：' + sugs.map(s => s.category + '（' + s.reasons.join('；') + '）').join('、');
+      row.appendChild(hint);
+    }
+    box.appendChild(row);
+  });
+}
+async function bvCatSave_(ids) {
+  if (!ids.length) return;
+  setFormStatus('bvCatStatus', '儲存中…（0/' + ids.length + '）', '');
+  let ok = 0;
+  const fails = [];
+  for (const id of ids) {
+    const b = brandDb.find(x => x.id === id);
+    if (!b) continue;
+    const cats = bvCatDraft[id].slice();
+    try {
+      await postTask({ type: 'brand-db-update', id, categories: cats });
+      b.categories = cats;
+      delete bvCatDraft[id];
+      ok++;
+      setFormStatus('bvCatStatus', '儲存中…（' + ok + '/' + ids.length + '）', '');
+    } catch (e) {
+      fails.push(b.name + '：' + e.message);
+    }
+  }
+  bvCatRender_();
+  setFormStatus('bvCatStatus', fails.length ? '已存 ' + ok + ' 個，失敗 ' + fails.length + ' 個：' + fails.join('、') : '已儲存 ' + ok + ' 個品牌', fails.length ? 'error' : 'success');
+}
 function bvRenderCategories_(brand) {
   const box = document.getElementById('brandCategoryBox');
   const hint = document.getElementById('brandCategoryHint');

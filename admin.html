@@ -4644,6 +4644,7 @@
       <button class="task-mini-btn bv-scope-btn on" id="bvScopeVendorBtn" data-scope="vendor">🏭 廠商</button>
       <button class="task-mini-btn bv-scope-btn" id="bvScopeBrandBtn" data-scope="brand">🏷 品牌</button>
       <button class="task-mini-btn bv-scope-btn" id="bvScopeCommissionBtn" data-scope="commission" data-perm="commission">🔍 分潤確認</button>
+      <button class="task-mini-btn bv-scope-btn" id="bvScopeCategoryBtn" data-scope="category">🗂 品牌分類</button>
       <input type="text" id="bvSearchInput" placeholder="搜尋廠商…">
       <button class="task-mini-btn" id="bvSearchClearBtn" title="清除搜尋">✕</button>
     </div>
@@ -4666,6 +4667,15 @@
       </div>
       <div class="cal-edit-day-panel" style="display:block; max-width:640px;">
         <div id="brandDbList"></div>
+      </div>
+    </div>
+
+    <div id="bvCategorySection" style="display:none;">
+      <div style="text-align:center; margin:22px 0 10px;"><span class="task-section-title">🗂 品牌分類總表</span></div>
+      <p style="font-size:11.5px; color:var(--c-text-soft); text-align:center; margin:-4px 0 10px; line-height:1.7;">新的品牌分類先在這裡歸類，<b>目前還沒有任何功能讀它</b>（除了行事曆產生器的「雪莉咚咚」），全部歸好再一項一項正式取代舊的冷凍／食譜／繪本判斷。<br>虛線底的是系統依舊規則找到的<b>建議</b>（滑鼠移上去看理由）；還沒歸類的品牌已先幫你預勾建議、標「未儲存」，看過沒問題再按儲存。已結束合作且沒分類的品牌不列。</p>
+      <div id="bvCategoryBar" style="margin-bottom:10px;"></div>
+      <div class="cal-edit-day-panel" style="display:block; max-width:720px;">
+        <div id="bvCategoryList"></div>
       </div>
     </div>
 
@@ -7366,7 +7376,7 @@
       </div>
       <label for="brandNoteInput">品牌備註</label>
       <textarea id="brandNoteInput" rows="3" placeholder="備註…"></textarea>
-      <label>品牌分類（可複選；勾「繪本」或「玩具」的品牌，行事曆圖產生器切到「雪莉咚咚」時才會列出它的團）</label>
+      <label>品牌分類（可複選；勾「繪本」或「教材玩具」的品牌，行事曆圖產生器切到「雪莉咚咚」時才會列出它的團；要一次整理全部品牌用上方「🗂 品牌分類」分頁）</label>
       <div id="brandCategoryBox" style="display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:4px;"></div>
       <div id="brandCategoryHint" style="font-size:12px; color:var(--c-text-soft); margin-top:4px;"></div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;">
@@ -7484,7 +7494,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=29"></script>
+<script src="brandVendor.js?v=30"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

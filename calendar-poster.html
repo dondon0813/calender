@@ -1258,13 +1258,13 @@ function thumbUrl(u) {
 }
 
 /* ---------- IG 帳號切換（2026-10-03 雪莉）----------
-   「雪莉與朵栗」＝全部團（原本的樣子）；「雪莉咚咚」＝只列品牌分類含「繪本」或「玩具」的團，
+   「雪莉與朵栗」＝全部團（原本的樣子）；「雪莉咚咚」＝只列品牌分類含「繪本」或「教材玩具」的團，
    標題圖換網站 LOGO、底部換「雪莉咚咚 @sheridondon」。三種模式＋產生貼文都套用。
    品牌分類記在後台品牌廠商資料庫的品牌上（brands.categories；brandVendor.js BV_BRAND_CATEGORIES，名稱要一致）。
    團名比對品牌照開團前檢查清單同一套：標準化後團名包含品牌名，短名被長名包住時只算長的。
    分類要用後台登入讀（brand-db-list），沒登入過後台就讀不到。 */
 const LS_ACCOUNT = 'calposter_account';
-const SHERI_DONDON_CATEGORIES = ['繪本', '玩具'];
+const SHERI_DONDON_CATEGORIES = ['繪本', '教材玩具'];
 let ACCOUNT = (() => { try { return localStorage.getItem(LS_ACCOUNT) === 'dondon' ? 'dondon' : 'main'; } catch (e) { return 'main'; } })();
 let BRAND_CATS = null;        // [{ key, name, cats:[] }]；null＝還沒讀
 let BRAND_CATS_STATE = '';    // '' 正常｜nologin｜notready｜error
@@ -1311,8 +1311,8 @@ function renderAccountNote() {
   }[BRAND_CATS_STATE];
   if (msg) { el.textContent = msg; el.classList.add('error'); return; }
   const n = BRAND_CATS.filter(b => b.cats.some(c => SHERI_DONDON_CATEGORIES.indexOf(c) !== -1)).length;
-  if (!n) { el.textContent = '還沒有品牌勾「繪本」或「玩具」（後台品牌廠商資料庫→品牌視窗）'; el.classList.add('error'); return; }
-  el.textContent = '雪莉咚咚：' + n + ' 個繪本／玩具品牌';
+  if (!n) { el.textContent = '還沒有品牌勾「繪本」或「教材玩具」（後台品牌廠商→🗂 品牌分類）'; el.classList.add('error'); return; }
+  el.textContent = '雪莉咚咚：' + n + ' 個繪本／教材玩具品牌';
 }
 
 async function loadData() {
