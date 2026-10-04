@@ -6,29 +6,141 @@
    ============================================================ */
 
 /* ===== 整批版（09-20）：變數與前台同一組 ===== */
-:root{
---c-text:#5A4A42;--c-text-soft:#7D6A5F;--c-muted:#A3948A;--c-muted-light:#A3948A;--c-brown:#8B6E5E;
---c-bg-top:#FFFFFF;--c-bg-bottom:#FFFFFF;--c-surface:#F5EFE9;--c-surface-2:#F5EFE9;--c-surface-3:#F5EFE9;
---c-border:transparent;--c-border-light:transparent;--c-line:#E6DCD2;--c-line-2:#E6DCD2;
---c-primary:#C99A9B;--c-primary-dark:#B07F83;--c-danger:#B5485A;
---c-cat-0:#C99A9B;--c-cat-1:#D4A98A;--c-cat-2:#A9B99A;--c-cat-3:#9DBDB8;--c-cat-4:#8FA9C7;--c-cat-5:#B3A3C9;--c-cat-6:#D6BE8A;
---c-coral-text:#B5485A;--c-coral-bg:#F3E3E1;--c-coral-border:transparent;
---c-mint-text:#6F8466;--c-mint-bg:#EAF0E6;--c-mint-border:transparent;
---c-pink-deep:#B07F83;--c-pink-text:#C99A9B;--c-pink-bg:#F3E3E1;--c-pink-bg-2:#F3E3E1;
---c-purple-text:#84709E;--c-purple-bg:#EEE9F3;--c-purple-border:transparent;
---c-blue-text:#4A6A8F;--c-blue-bg:#E6ECF3;--c-blue-border:transparent;
---c-gold-text:#A8876A;--c-gold-badge-bg:#F4ECE3;--c-gold-border:transparent;--c-gold-gradient:#F4ECE3;
---c-orange-bg:#F5EFE9;--c-orange-bg-2:#F1E8E0;--c-orange-badge-bg:#F1E8E0;--c-orange-dash:#DCCBBE;--c-orange-dash-2:#DCCBBE;--c-orange-text:#8B6E5E;
---c-placeholder:#B9ACA2;--c-tag-bg:#BFA18B;--c-tan-border:#DCCBBE;--c-title-rule:#E5CFCD;--c-badge-bg:#F3E3E1;
---ix-month-shadow:#F3E3E1;--ix-day-dim-bg:#F5EFE9;--ix-day-today-bg:#F3E3E1;--ix-day-today-ring:#C99A9B;--ix-day-dim-text:#D8CFC7;--ix-day-today-text:#9C5F68;
---ix-closing-title:#BA6B78;--ix-active-title:#A8876A;
---ix-card-bg:#BFA18B;--ix-card-today-bg:#B07F83;--ix-card-gray-bg:#D8CFC7;--ix-card-gray-text:#7A6D64;
---ix-today-badge-bg:#B5485A;--ix-tag-bg:#C49A45;--ix-social-icon-default:#5A4A42;
---ix-btn-intro-hover:#6F8FB3;--ix-btn-recipe-hover:#C4936F;--ix-code-hover-bg:#F1E8E0;
---ix-c0-badge-bg:#F3E3E1;--ix-c1-badge-bg:#F1E8E0;--ix-c3-badge-bg:#E6EFEE;--ix-c6-badge-bg:#F4ECE3;--ix-c6-text:#A8876A;
+/* GENERATED from design/tokens.json — 勿手改，改 tokens 後跑 node scripts/gen-theme.mjs */
+:root {
+  /* ---------- 文字色 ---------- */
+  --c-text: #5A4A42;          /* 主要文字（棕） */
+  --c-text-soft: #7D6A5F;     /* 次要文字 */
+  --c-muted: #A3948A;         /* 淡化文字、日期數字 */
+  --c-muted-strong: #8E7F76;  /* 淡字放在奶茶卡片上用深一階（會員端次要文字）；classic 版刻意與 --c-muted 同值（舊色系沒有這一階） */
+  --c-muted-light: #A3948A;   /* 最淡：狀態列 */
+  --c-brown: #8B6E5E;         /* 按鈕文字、圖示 */
+
+  /* ---------- 底色／面板 ---------- */
+  --c-bg-top: #FFFFFF;     /* body 漸層上緣 */
+  --c-bg-bottom: #FFFFFF;  /* body 漸層下緣，也是 hover 底色 */
+  --c-surface: #F5EFE9;    /* 卡片 / 面板底 */
+  --c-surface-2: #F5EFE9;  /* 日期格底 */
+  --c-surface-3: #F5EFE9;  /* 卡片底白偏黃 */
+
+  /* ---------- 邊框／分隔線 ---------- */
+  --c-border: transparent;        /* 主要邊框（按鈕、輸入框） */
+  --c-border-light: transparent;  /* 外框（.wrap、modal） */
+  --c-line: #E6DCD2;              /* 表格線、虛線分隔 */
+  --c-line-2: #E6DCD2;            /* 表格虛線分隔 */
+
+  /* ---------- 品牌／強調色 ---------- */
+  --c-primary: #C99A9B;       /* 主粉 */
+  --c-primary-dark: #B07F83;  /* 主粉 hover */
+  --c-danger: #B5485A;        /* 錯誤訊息 */
+  --c-input-bg: #FFFFFF;      /* 輸入框內裡（表單欄位一律用這個，別硬寫白） */
+  --c-text-invert: #fff;      /* 深底上的反白文字 */
+
+  /* ---------- 分類色盤（星期、標籤共用） ---------- */
+  --c-cat-0: #C99A9B;  /* 粉 */
+  --c-cat-1: #D4A98A;  /* 橘 */
+  --c-cat-2: #A9B99A;  /* 綠 */
+  --c-cat-3: #9DBDB8;  /* 青 */
+  --c-cat-4: #8FA9C7;  /* 藍 */
+  --c-cat-5: #B3A3C9;  /* 紫 */
+  --c-cat-6: #D6BE8A;  /* 黃 */
+
+  /* ---------- 跨頁共用色（色碼變數化重構新增） ---------- */
+  --c-coral-text: #B5485A;         /* 珊瑚卡標題 */
+  --c-coral-bg: #F3E3E1;           /* 珊瑚淡底 */
+  --c-coral-border: transparent;   /* 珊瑚邊框 */
+  --c-mint-text: #6F8466;          /* 綠系標題文字 */
+  --c-mint-bg: #EAF0E6;            /* 綠淡底 */
+  --c-mint-border: transparent;    /* 綠邊框 */
+  --c-ibon-green: #72A576;         /* ibon 教學圖上的按鈕綠（取樣自圖片，按鈕要跟圖一致） */
+  --c-ibon-green-dark: #5F9163;    /* 同上 hover */
+  --c-pink-deep: #B07F83;          /* 粉紅重點文字 */
+  --c-pink-text: #C99A9B;          /* 粉文字 */
+  --c-pink-bg: #F3E3E1;            /* 粉淡底 */
+  --c-pink-bg-2: #F3E3E1;          /* 粉淡底2 */
+  --c-purple-text: #84709E;        /* 紫卡標題 */
+  --c-purple-bg: #EEE9F3;          /* 紫卡淡底 */
+  --c-purple-border: transparent;  /* 紫邊框 */
+  --c-blue-text: #4A6A8F;          /* 藍卡標題 */
+  --c-blue-bg: #E6ECF3;            /* 藍淡底 */
+  --c-blue-border: transparent;    /* 藍邊框 */
+  --c-gold-text: #A8876A;          /* 黃金文字 */
+  --c-gold-badge-bg: #F4ECE3;      /* 黃淡底徽章 */
+  --c-gold-border: transparent;    /* 黃邊框 */
+  --c-gold-gradient: #F4ECE3;      /* 漸層黃 */
+  --c-orange-bg: #F5EFE9;          /* 淡橘卡片底 */
+  --c-orange-bg-2: #F1E8E0;        /* 橘淡底2 */
+  --c-orange-badge-bg: #F1E8E0;    /* 橘淡底徽章 */
+  --c-orange-dash: #DCCBBE;        /* 虛線邊框橘 */
+  --c-orange-dash-2: #DCCBBE;      /* 虛線邊框橘2 */
+  --c-orange-text: #8B6E5E;        /* 橘文字 */
+  --c-placeholder: #B9ACA2;        /* placeholder 灰棕 */
+  --c-tag-bg: #BFA18B;             /* 標籤底按鈕 */
+  --c-tan-border: #DCCBBE;         /* 淺棕邊框（checkbox／狀態框，跨 admin.html／school-list.html） */
+
+  /* ---------- 頁面標題 ---------- */
+  --c-title-rule: #E5CFCD;  /* 標題下方虛線 */
+  --c-badge-bg: #F3E3E1;    /* 標題上方小徽章底色 */
+
+  /* ---------- 首頁（index.html）專屬色 ---------- */
+  --ix-month-shadow: #F3E3E1;         /* 月份數字陰影 */
+  --ix-day-dim-bg: #F5EFE9;           /* 月曆格：非本月淡出背景 */
+  --ix-day-today-bg: #F3E3E1;         /* 月曆格：今天背景 */
+  --ix-day-today-ring: #C99A9B;       /* 月曆格：今天外框 */
+  --ix-day-dim-text: #D8CFC7;         /* 月曆格：非本月淡出文字 */
+  --ix-day-today-text: #9C5F68;       /* 月曆格：今天日期文字 */
+  --ix-upcoming-border: #E8B93D;      /* 即將開團：外框／圖例外框 */
+  --ix-upcoming-text: #8A6D1F;        /* 即將開團：文字 */
+  --ix-active-border: #FF9F4A;        /* 開團中：外框／圖例外框 */
+  --ix-closing-bg: #FFE7ED;           /* 即將截止：背景／圖例背景 */
+  --ix-closing-text: #C1315A;         /* 即將截止：文字 */
+  --ix-ended-bg: #F3EDE7;             /* 已結束：背景／圖例背景 */
+  --ix-ended-border: #B8AC9C;         /* 已結束：外框／圖例外框 */
+  --ix-ended-text: #7A7166;           /* 已結束：文字（也用於清單標題） */
+  --ix-frozen-bg: #E2EBFD;            /* 已凍結：背景／圖例背景 */
+  --ix-frozen-border: #5F97DB;        /* 已凍結：外框／圖例外框／今日凍結徽章背景 */
+  --ix-frozen-text: #2F6FB0;          /* 已凍結：文字 */
+  --ix-closing-title: #BA6B78;        /* 現正開團中清單：即將截止標題色 */
+  --ix-active-title: #A8876A;         /* 現正開團中清單：開團中標題色 */
+  --ix-card-bg: #BFA18B;              /* 現正開團中卡片：預設背景 */
+  --ix-card-today-bg: #B07F83;        /* 現正開團中卡片：今天特別背景 */
+  --ix-card-today-ring: #FFD6E0;      /* 現正開團中卡片：今天外環光暈 */
+  --ix-card-gray-bg: #D8CFC7;         /* 現正開團中卡片：已結束灰卡背景 */
+  --ix-card-gray-text: #7A6D64;       /* 現正開團中卡片：已結束灰卡文字 */
+  --ix-today-badge-bg: #B5485A;       /* 今日徽章背景 */
+  --ix-social-icon-default: #5A4A42;  /* 品牌社群圖示：預設底色（無自訂色時） */
+  --ix-btn-intro-hover: #6F8FB3;      /* 頁首按鈕：品牌介紹 hover */
+  --ix-btn-recipe-hover: #C4936F;     /* 頁首按鈕：食譜 hover */
+  --ix-code-hover-bg: #F1E8E0;        /* 折扣碼區塊 hover 背景 */
+  --ix-tag-bg: #C49A45;               /* 活動標籤背景 */
+  --ix-c0-badge-bg: #F3E3E1;          /* 分類0 徽章背景 */
+  --ix-c1-badge-bg: #F1E8E0;          /* 分類1 徽章背景 */
+  --ix-c3-badge-bg: #E6EFEE;          /* 分類3 徽章背景 */
+  --ix-c6-badge-bg: #F4ECE3;          /* 分類6 徽章背景 */
+  --ix-c6-text: #A8876A;              /* 分類6 文字色 */
+
+  /* ---------- 食譜頁（recipes.html）專屬色 ---------- */
+  --rcp-peach-accent: #C98A55;      /* 桃橘強調色：標題文字／分隔線／邊框 */
+  --rcp-oil-text: #8a5426;          /* 油切徽章／按鈕的深棕文字 */
+  --rcp-hover-bg: #FFECD9;          /* 食譜/食材清單項目 hover 底色 */
+  --rcp-pink-card-border: #FFC2CE;  /* 首頁粉色卡片邊框 */
+  --rcp-oil-bg: #FFF6DD;            /* 油切切換按鈕底色 */
+  --rcp-oil-hover-bg: #ffe9c2;      /* 油切切換按鈕 hover 底色 */
+  --rcp-badge-pink: #EB99AC;        /* 小圓形數字徽章底色 */
+  --rcp-gift-text: #4E9A8F;         /* 免費資源卡：標題文字／分隔線 */
+  --rcp-gift-bg: #DEF5F4;           /* 免費資源卡：底色 */
+  --rcp-gift-border: #A9E6DA;       /* 免費資源卡：邊框 */
+
+  /* ---------- 頂端導覽列 SiteBanner（會員端） ---------- */
+  --sb-bg: #FFFFFF;                /* 頂端導覽列底色 */
+  --sb-text: #5A4A42;              /* 導覽列文字／線條 */
+  --sb-accent: #C99A9B;            /* 導覽列強調（會員圖示填色、小圓點） */
+  --sb-panel-border: transparent;  /* 選單面板外框 */
+  --sb-icon: #8B6E5E;              /* 選單項目圖示 */
+  --sb-active: #F5EFE9;            /* 選單項目按下底色 */
 }
+/* END GENERATED */
 body{background:#FFFFFF!important}
-:root{--c-input-bg:#FFFFFF}
 /* 食譜貼文產生器：畫成品圖用，維持原配色（只釘它用到的四個變數） */
 #pgPosterStage{--c-bg-bottom:#FFF1E6;--c-border-light:#FFE3CC;--c-text:#5a4a3f;--c-text-soft:#8a7462}
 /* 月份大數字 */

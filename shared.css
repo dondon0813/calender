@@ -14,41 +14,45 @@
    遇到手機網路不穩或字型快取沒命中就會整個卡死，改成同源檔案後不再受外部網路影響。 */
 @import url('fonts.css');
 
+/* GENERATED from design/tokens.json — 勿手改，改 tokens 後跑 node scripts/gen-theme.mjs */
 :root {
   /* ---------- 字體 ----------
      Huninn（jf open 粉圓）＝圓體，用在標題與按鈕；說明小字維持 Noto Sans TC。
      英數排在中文前面，所以英文數字仍由 Baloo 2 負責，中文才落到粉圓。
      注意：Huninn 在 Google Fonts 只有 400 一個字重，700/800 是瀏覽器合成的。 */
-  --font-body:    'Noto Sans TC', sans-serif;
+  --font-body: 'Noto Sans TC', sans-serif;
   --font-display: 'Baloo 2', 'Huninn', 'Noto Sans TC', sans-serif;
-  --font-round:   'Baloo 2', 'Huninn', 'Noto Sans TC', sans-serif;
+  --font-round: 'Baloo 2', 'Huninn', 'Noto Sans TC', sans-serif;
 
   /* ---------- 文字色 ---------- */
-  --c-text:        #5a4a3f;  /* 主要文字（棕） */
-  --c-text-soft:   #8a7462;  /* 次要文字 */
-  --c-muted:       #a89888;  /* 淡化文字、日期數字 */
-  --c-muted-light: #a89888;  /* 最淡：狀態列 */
-  --c-brown:       #b5755a;  /* 按鈕文字、圖示 */
+  --c-text: #5a4a3f;          /* 主要文字（棕） */
+  --c-text-soft: #8a7462;     /* 次要文字 */
+  --c-muted: #a89888;         /* 淡化文字、日期數字 */
+  --c-muted-strong: #a89888;  /* 淡字放在奶茶卡片上用深一階（會員端次要文字）；classic 版刻意與 --c-muted 同值（舊色系沒有這一階） */
+  --c-muted-light: #a89888;   /* 最淡：狀態列 */
+  --c-brown: #b5755a;         /* 按鈕文字、圖示 */
 
-  /* ---------- 底色 / 面板 ---------- */
-  --c-bg-top:    #FFF7EE;  /* body 漸層上緣 */
+  /* ---------- 底色／面板 ---------- */
+  --c-bg-top: #FFF7EE;     /* body 漸層上緣 */
   --c-bg-bottom: #FFF1E6;  /* body 漸層下緣，也是 hover 底色 */
-  --c-surface:   #FFFBF5;  /* 卡片 / 面板底 */
+  --c-surface: #FFFBF5;    /* 卡片 / 面板底 */
   --c-surface-2: #FFFBF5;  /* 日期格底 */
+  --c-surface-3: #FFFBF5;  /* 卡片底白偏黃 */
 
-  /* ---------- 邊框 / 分隔線 ---------- */
-  --c-border:       #FFD3B6;  /* 主要邊框（按鈕、輸入框） */
+  /* ---------- 邊框／分隔線 ---------- */
+  --c-border: #FFD3B6;        /* 主要邊框（按鈕、輸入框） */
   --c-border-light: #FFE3CC;  /* 外框（.wrap、modal） */
-  --c-line:         #F3E2D3;  /* 表格線、虛線分隔 */
+  --c-line: #F3E2D3;          /* 表格線、虛線分隔 */
+  --c-line-2: #F3E2D3;        /* 表格虛線分隔 */
 
-  /* ---------- 品牌 / 強調色 ---------- */
-  --c-primary:       #FF8FA3;  /* 主粉 */
-  --c-primary-dark:  #FF6F91;  /* 主粉 hover */
-  --c-danger:        #e0654f;  /* 錯誤訊息 */
-  --c-input-bg:      #fff;     /* 輸入框內裡（表單欄位一律用這個，別硬寫白） */
-  --c-text-invert:   #fff;     /* 深底上的反白文字 */
+  /* ---------- 品牌／強調色 ---------- */
+  --c-primary: #FF8FA3;       /* 主粉 */
+  --c-primary-dark: #FF6F91;  /* 主粉 hover */
+  --c-danger: #e0654f;        /* 錯誤訊息 */
+  --c-input-bg: #fff;         /* 輸入框內裡（表單欄位一律用這個，別硬寫白） */
+  --c-text-invert: #fff;      /* 深底上的反白文字 */
 
-  /* ---------- 分類色盤（星期、標籤共用）---------- */
+  /* ---------- 分類色盤（星期、標籤共用） ---------- */
   --c-cat-0: #FF8FA3;  /* 粉 */
   --c-cat-1: #FFB37A;  /* 橘 */
   --c-cat-2: #9ACB85;  /* 綠 */
@@ -58,71 +62,119 @@
   --c-cat-6: #F0C36D;  /* 黃 */
 
   /* ---------- 跨頁共用色（色碼變數化重構新增） ---------- */
-  --c-coral-text:   #FF6F55;  /* 珊瑚卡標題 */
-  --c-coral-bg:     #FFE3DC;  /* 珊瑚淡底 */
-  --c-coral-border: #FFB6A6;  /* 珊瑚邊框 */
-
-  --c-mint-text:    #5C9147;  /* 綠系標題文字 */
-  --c-mint-bg:      #E4F5DF;  /* 綠淡底 */
-  --c-mint-border:  #B9E3AC;  /* 綠邊框 */
-
-  --c-ibon-green:      #72A576;  /* ibon 教學圖上的按鈕綠（取樣自圖片，按鈕要跟圖一致） */
+  --c-coral-text: #FF6F55;       /* 珊瑚卡標題 */
+  --c-coral-bg: #FFE3DC;         /* 珊瑚淡底 */
+  --c-coral-border: #FFB6A6;     /* 珊瑚邊框 */
+  --c-mint-text: #5C9147;        /* 綠系標題文字 */
+  --c-mint-bg: #E4F5DF;          /* 綠淡底 */
+  --c-mint-border: #B9E3AC;      /* 綠邊框 */
+  --c-ibon-green: #72A576;       /* ibon 教學圖上的按鈕綠（取樣自圖片，按鈕要跟圖一致） */
   --c-ibon-green-dark: #5F9163;  /* 同上 hover */
-
-  --c-pink-deep:    #FF6F91;  /* 粉紅重點文字 */
-  --c-pink-text:    #FFB4C2;  /* 粉文字 */
-  --c-pink-bg:      #FFF0F3;  /* 粉淡底 */
-  --c-pink-bg-2:    #FFE7ED;  /* 粉淡底2 */
-
-  --c-purple-text:   #8E6BB5;  /* 紫卡標題 */
-  --c-purple-bg:     #EFE4FB;  /* 紫卡淡底 */
-  --c-purple-border: #D5BCF0;  /* 紫邊框 */
-
-  --c-blue-text:   #5F87C9;  /* 藍卡標題 */
-  --c-blue-bg:     #E2EBFD;  /* 藍淡底 */
-  --c-blue-border: #B9CDF5;  /* 藍邊框 */
-
-  --c-gold-text:      #C99A3A;  /* 黃金文字 */
-  --c-gold-badge-bg:  #FFF6DD;  /* 黃淡底徽章 */
-  --c-gold-border:    #F0DBA0;  /* 黃邊框 */
-  --c-gold-gradient:  #FFF0D9;  /* 漸層黃 */
-
-  --c-orange-bg:       #FFF7EE;  /* 淡橘卡片底 */
-  --c-orange-bg-2:     #FFE9CE;  /* 橘淡底2 */
+  --c-pink-deep: #FF6F91;        /* 粉紅重點文字 */
+  --c-pink-text: #FFB4C2;        /* 粉文字 */
+  --c-pink-bg: #FFF0F3;          /* 粉淡底 */
+  --c-pink-bg-2: #FFE7ED;        /* 粉淡底2 */
+  --c-purple-text: #8E6BB5;      /* 紫卡標題 */
+  --c-purple-bg: #EFE4FB;        /* 紫卡淡底 */
+  --c-purple-border: #D5BCF0;    /* 紫邊框 */
+  --c-blue-text: #5F87C9;        /* 藍卡標題 */
+  --c-blue-bg: #E2EBFD;          /* 藍淡底 */
+  --c-blue-border: #B9CDF5;      /* 藍邊框 */
+  --c-gold-text: #C99A3A;        /* 黃金文字 */
+  --c-gold-badge-bg: #FFF6DD;    /* 黃淡底徽章 */
+  --c-gold-border: #F0DBA0;      /* 黃邊框 */
+  --c-gold-gradient: #FFF0D9;    /* 漸層黃 */
+  --c-orange-bg: #FFF7EE;        /* 淡橘卡片底 */
+  --c-orange-bg-2: #FFE9CE;      /* 橘淡底2 */
   --c-orange-badge-bg: #FFECD9;  /* 橘淡底徽章 */
-  --c-orange-dash:     #FFD3AC;  /* 虛線邊框橘 */
-  --c-orange-dash-2:   #FFC79A;  /* 虛線邊框橘2 */
-  --c-orange-text:     #B5601C;  /* 橘文字 */
-
-  --c-line-2:      #F3E2D3;  /* 表格虛線分隔 */
-  --c-surface-3:   #FFFBF5;  /* 卡片底白偏黃 */
-  --c-placeholder: #CBB8A8;  /* placeholder 灰棕 */
-  --c-tag-bg:      #C9A66B;  /* 標籤底按鈕 */
-  --c-tan-border:  #E0C9B0;  /* 淺棕邊框（checkbox／狀態框，跨 admin.html／school-list.html） */
+  --c-orange-dash: #FFD3AC;      /* 虛線邊框橘 */
+  --c-orange-dash-2: #FFC79A;    /* 虛線邊框橘2 */
+  --c-orange-text: #B5601C;      /* 橘文字 */
+  --c-placeholder: #CBB8A8;      /* placeholder 灰棕 */
+  --c-tag-bg: #C9A66B;           /* 標籤底按鈕 */
+  --c-tan-border: #E0C9B0;       /* 淺棕邊框（checkbox／狀態框，跨 admin.html／school-list.html） */
 
   /* ---------- 圓角 ---------- */
-  --r-sm:    10px;
-  --r-md:    12px;
-  --r-lg:    16px;
+  --r-sm: 10px;
+  --r-md: 12px;
+  --r-lg: 16px;
   --r-modal: 18px;
-  --r-xl:    22px;
-  --r-pill:  999px;
+  --r-xl: 22px;
+  --r-pill: 999px;
 
   /* ---------- 陰影 ---------- */
-  --sh-card:   0 10px 30px rgba(230, 160, 120, 0.15);
-  --sh-float:  0 3px 10px rgba(230, 160, 120, 0.25);
-  --sh-soft:   0 3px 8px rgba(0, 0, 0, 0.15);
-  --sh-modal:  0 10px 30px rgba(0, 0, 0, 0.2);
+  --sh-card: 0 10px 30px rgba(230, 160, 120, 0.15);
+  --sh-float: 0 3px 10px rgba(230, 160, 120, 0.25);
+  --sh-soft: 0 3px 8px rgba(0, 0, 0, 0.15);
+  --sh-modal: 0 10px 30px rgba(0, 0, 0, 0.2);
 
   /* ---------- 頁面標題 ---------- */
   --c-title-rule: #FFC2CE;  /* 標題下方虛線 */
-  --c-badge-bg:   #FFE7ED;  /* 標題上方小徽章底色 */
-  --title-size:   28px;     /* 各頁可覆寫：star-card 26px、school-labels 24px */
+  --c-badge-bg: #FFE7ED;    /* 標題上方小徽章底色 */
+  --title-size: 28px;       /* 各頁可覆寫：star-card 26px、school-labels 24px */
   --title-rule-w: 120px;    /* 各頁可覆寫：star-card 110px、school-labels 60% */
 
   /* ---------- 版面 ---------- */
   --wrap-max: 1080px;  /* 各頁可覆寫：star-card 640px、school-labels 560px */
+
+  /* ---------- 首頁（index.html）專屬色 ---------- */
+  --ix-month-shadow: #FFE7ED;               /* 月份數字陰影 */
+  --ix-day-dim-bg: #FFF7EE;                 /* 月曆格：非本月淡出背景 */
+  --ix-day-today-bg: #FFE9C2;               /* 月曆格：今天背景 */
+  --ix-day-today-ring: #FFB454;             /* 月曆格：今天外框 */
+  --ix-day-dim-text: #ddd0c2;               /* 月曆格：非本月淡出文字 */
+  --ix-day-today-text: #C97A1A;             /* 月曆格：今天日期文字 */
+  --ix-upcoming-border: #E8B93D;            /* 即將開團：外框／圖例外框 */
+  --ix-upcoming-text: #8A6D1F;              /* 即將開團：文字 */
+  --ix-active-border: #FF9F4A;              /* 開團中：外框／圖例外框 */
+  --ix-closing-bg: #FFE7ED;                 /* 即將截止：背景／圖例背景 */
+  --ix-closing-text: #C1315A;               /* 即將截止：文字 */
+  --ix-ended-bg: #F3EDE7;                   /* 已結束：背景／圖例背景 */
+  --ix-ended-border: #B8AC9C;               /* 已結束：外框／圖例外框 */
+  --ix-ended-text: #7A7166;                 /* 已結束：文字（也用於清單標題） */
+  --ix-frozen-bg: #E2EBFD;                  /* 已凍結：背景／圖例背景 */
+  --ix-frozen-border: #5F97DB;              /* 已凍結：外框／圖例外框／今日凍結徽章背景 */
+  --ix-frozen-text: #2F6FB0;                /* 已凍結：文字 */
+  --ix-closing-title: var(--c-pink-deep);   /* 現正開團中清單：即將截止標題色 */
+  --ix-active-title: var(--c-gold-text);    /* 現正開團中清單：開團中標題色 */
+  --ix-card-bg: #B98868;                    /* 現正開團中卡片：預設背景 */
+  --ix-card-today-bg: #7A6248;              /* 現正開團中卡片：今天特別背景 */
+  --ix-card-today-ring: #FFD6E0;            /* 現正開團中卡片：今天外環光暈 */
+  --ix-card-gray-bg: #C9C1B4;               /* 現正開團中卡片：已結束灰卡背景 */
+  --ix-card-gray-text: #6b5c4e;             /* 現正開團中卡片：已結束灰卡文字 */
+  --ix-today-badge-bg: var(--c-pink-deep);  /* 今日徽章背景 */
+  --ix-social-icon-default: #3a2f28;        /* 品牌社群圖示：預設底色（無自訂色時） */
+  --ix-btn-intro-hover: #5F97DB;            /* 頁首按鈕：品牌介紹 hover */
+  --ix-btn-recipe-hover: #F5A25D;           /* 頁首按鈕：食譜 hover */
+  --ix-code-hover-bg: #FFECD9;              /* 折扣碼區塊 hover 背景 */
+  --ix-tag-bg: var(--c-pink-deep);          /* 活動標籤背景 */
+  --ix-c0-badge-bg: #FFE7ED;                /* 分類0 徽章背景 */
+  --ix-c1-badge-bg: #ffecd9;                /* 分類1 徽章背景 */
+  --ix-c3-badge-bg: #DEF5F4;                /* 分類3 徽章背景 */
+  --ix-c6-badge-bg: #FFF0D9;                /* 分類6 徽章背景 */
+  --ix-c6-text: #D9A441;                    /* 分類6 文字色 */
+
+  /* ---------- 食譜頁（recipes.html）專屬色 ---------- */
+  --rcp-peach-accent: #E0954A;      /* 桃橘強調色：標題文字／分隔線／邊框 */
+  --rcp-oil-text: #8a5426;          /* 油切徽章／按鈕的深棕文字 */
+  --rcp-hover-bg: #FFECD9;          /* 食譜/食材清單項目 hover 底色 */
+  --rcp-pink-card-border: #FFC2CE;  /* 首頁粉色卡片邊框 */
+  --rcp-oil-bg: #FFF6DD;            /* 油切切換按鈕底色 */
+  --rcp-oil-hover-bg: #ffe9c2;      /* 油切切換按鈕 hover 底色 */
+  --rcp-badge-pink: #EB99AC;        /* 小圓形數字徽章底色 */
+  --rcp-gift-text: #2F9E8F;         /* 免費資源卡：標題文字／分隔線 */
+  --rcp-gift-bg: #DEF5F4;           /* 免費資源卡：底色 */
+  --rcp-gift-border: #A9E6DA;       /* 免費資源卡：邊框 */
+
+  /* ---------- 頂端導覽列 SiteBanner（會員端） ---------- */
+  --sb-bg: #FFF7EE;            /* 頂端導覽列底色 */
+  --sb-text: #5a4a3f;          /* 導覽列文字／線條 */
+  --sb-accent: #FF8FA3;        /* 導覽列強調（會員圖示填色、小圓點） */
+  --sb-panel-border: #FFD3B6;  /* 選單面板外框 */
+  --sb-icon: #b5755a;          /* 選單項目圖示 */
+  --sb-active: #FFF1E6;        /* 選單項目按下底色 */
 }
+/* END GENERATED */
 
 /* ============================================================
    基礎 reset
