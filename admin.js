@@ -356,12 +356,14 @@ const EVENT_ICON_DEFS = [
   { key: 'iconIg', label: 'Instagram' },
   { key: 'iconTiktok', label: 'TikTok' },
   { key: 'iconFb', label: 'Facebook' },
+  { key: 'iconYoutube', label: 'YouTube' },
   { key: 'iconEmail', label: 'Email／其他' }
 ];
 const SOCIAL_SVG_ICONS = {
   iconIg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="12" cy="12" r="4.3"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>',
   iconTiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 2.5c.4 2.4 1.9 4 4.4 4.3v3.4c-1.6 0-3.1-.5-4.4-1.4v6.9c0 3.5-2.8 6.3-6.3 6.3s-6.3-2.8-6.3-6.3 2.8-6.3 6.3-6.3c.3 0 .6 0 .9.1v3.5a2.9 2.9 0 1 0 2 2.8V2.5h3.4z"/></svg>',
   iconFb: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.8h2.6l.4-3H13.5V8.2c0-.9.2-1.5 1.6-1.5h1.6V4c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.3H7.7v3h2.6V21h3.2z"/></svg>',
+  iconYoutube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4.5"/><path d="M10 9.3v5.4l4.6-2.7z" fill="currentColor"/></svg>',
   iconEmail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>'
 };
 
@@ -3242,6 +3244,7 @@ function openSocialLinkEditor() {
   document.getElementById('socialLinkIgInput').value = socialLinks.iconIg || '';
   document.getElementById('socialLinkTiktokInput').value = socialLinks.iconTiktok || '';
   document.getElementById('socialLinkFbInput').value = socialLinks.iconFb || '';
+  document.getElementById('socialLinkYoutubeInput').value = socialLinks.iconYoutube || '';
   document.getElementById('socialLinkEmailInput').value = socialLinks.iconEmail || '';
   document.getElementById('socialLinkColorInput').value = socialLinks.iconColor || '#3a2f28';
   setFormStatus('socialLinkStatus', '', '');
@@ -3257,6 +3260,7 @@ document.getElementById('socialLinkSaveBtn').addEventListener('click', async () 
     iconIg: document.getElementById('socialLinkIgInput').value.trim(),
     iconTiktok: document.getElementById('socialLinkTiktokInput').value.trim(),
     iconFb: document.getElementById('socialLinkFbInput').value.trim(),
+    iconYoutube: document.getElementById('socialLinkYoutubeInput').value.trim(),
     iconEmail: document.getElementById('socialLinkEmailInput').value.trim(),
     iconColor: document.getElementById('socialLinkColorInput').value
   };
