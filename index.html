@@ -156,15 +156,16 @@
   }
   .search-clear-btn:hover { color: var(--c-brown); }
   @media (max-width: 480px) {
-    .search-box { flex: 1 1 100%; order: -1; }
+    .controls { flex: 1 1 100%; flex-wrap: nowrap; }
+    .search-box { flex: 1 1 0; min-width: 0; }
     /* 手機上輸入框字級 < 16px 會被 iOS Safari 自動放大整頁，這裡固定 16px */
     #calSearchInput { width: 100%; font-size: 16px; padding-top: 8px; padding-bottom: 8px; }
   }
 
   /* 左上角複製網址按鈕（跟右上角回首頁按鈕對稱，見 shared.css .site-home-btn），
-     用 fixed 定位浮在頁面上，不佔 header-row2 版面，不會擠到其他控制項 */
+     不佔 header-row2 版面；2026-10-05 雪莉：fixed 改 absolute＝固定在頁面頂端，不再跟著捲動飄 */
   .header-copy-url-btn {
-    position: fixed;
+    position: absolute;
     top: calc(var(--smn-bar-h, 56px) + env(safe-area-inset-top, 0px) + 15px);
     left: 14px;
     width: 44px;
@@ -183,6 +184,10 @@
   }
   .header-copy-url-btn:hover { background: var(--c-bg-bottom); }
   .header-copy-url-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* 重新整理改線條圖示圓鈕（2026-10-05 雪莉：不用佔一排），跟搜尋框同一列 */
+  .controls button.refresh-icon-btn { width: 36px; height: 36px; padding: 0; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+  .refresh-icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ===== 星期列 ===== */
   .weekdays {
@@ -762,7 +767,7 @@
         <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="清除搜尋" style="display:none;">✕</button>
       </div>
       <select id="monthSelect"></select>
-      <button id="refreshBtn">重新整理</button>
+      <button id="refreshBtn" class="refresh-icon-btn" type="button" title="重新整理" aria-label="重新整理"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5A8 8 0 1 1 17.7 6"/><path d="M20 4v5h-5"/></svg></button>
     </div>
   </div>
 
