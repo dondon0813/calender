@@ -173,6 +173,26 @@
   --sb-panel-border: #FFD3B6;  /* 選單面板外框 */
   --sb-icon: #b5755a;          /* 選單項目圖示 */
   --sb-active: #FFF1E6;        /* 選單項目按下底色 */
+
+  /* ---------- 共用元件（app/components/ui） ---------- */
+  --ui-bar-bg: #FFF0F3;                                    /* 共用元件：「現正開團中」橫列底色 */
+  --ui-bar-border: #FFD6E0;                                /* 共用元件：「現正開團中」橫列外框 */
+  --ui-promo-bg: #FFFFFF;                                  /* 共用元件：清單條（食譜頁置頂開團宣傳）底色 */
+  --ui-promo-bg-hover: var(--c-bg-bottom);                 /* 共用元件：清單條 hover 底色 */
+  --ui-promo-border: var(--c-border);                      /* 共用元件：清單條外框 */
+  --ui-promo-shadow: 0 2px 6px rgba(230, 160, 120, 0.12);  /* 共用元件：清單條陰影 */
+  --ui-promo-badge-bg: var(--c-pink-bg);                   /* 共用元件：清單條「開團中」小標籤底色 */
+  --ui-promo-badge-text: var(--c-pink-deep);               /* 共用元件：清單條「開團中」小標籤字色 */
+  --ui-modal-bg: #FFFBF5;                                  /* 共用元件：彈出視窗底色（藕粉色系一律白底） */
+  --ui-chip-bg: #FFFFFF;                                   /* 共用元件：副選單小膠囊（未選中）底色 */
+  --ui-chip-bg-hover: var(--c-bg-bottom);                  /* 共用元件：副選單小膠囊 hover 底色 */
+  --ui-brand-tag-text: #d9677f;                            /* 共用元件：品牌標籤字色 */
+  --ui-brand-tag-border: #ffd6e0;                          /* 共用元件：品牌標籤外框 */
+  --ui-live-dot: #34C759;                                  /* 共用元件：「現正開團中」小綠點（功能語意色，不隨色系換） */
+  --ui-overlay-modal: rgba(90, 74, 63, 0.45);              /* 共用元件：彈出視窗灰底遮罩 */
+  --ui-overlay-menu: rgba(90, 60, 40, 0.28);               /* 共用元件：選單面板灰底遮罩 */
+  --sh-panel: 0 10px 30px rgba(120, 80, 50, 0.18);         /* 共用元件：選單面板陰影 */
+  --sh-arrow: 0 2px 8px rgba(90, 74, 66, 0.18);            /* 共用元件：橫滑箭頭鈕陰影 */
 }
 /* END GENERATED */
 
