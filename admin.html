@@ -2064,6 +2064,18 @@
     transition: transform 0.12s ease;
   }
   .gs-card:hover { transform: scale(1.015); }
+  /* 顯示模式按鈕列＋清單卡品牌小圖（2026-10-04 照抄前台 index.html，兩邊長相統一） */
+  .mode-tabs { display: flex; background: var(--c-orange-bg-2); border-radius: 999px; padding: 3px; margin: 0 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mode-tabs::-webkit-scrollbar { display: none; }
+  .mode-tab { flex: 1 0 auto; border: 0; background: transparent; border-radius: 999px; padding: 8px 9px; font-size: 13.5px; font-weight: 700; color: var(--c-brown); cursor: pointer; font-family: inherit; white-space: nowrap; -webkit-appearance: none; appearance: none; }
+  .mode-tab.on { background: #fff; color: var(--c-primary-dark); }
+  .gs-card.has-thumb { padding-left: 116px; padding-right: 92px; }
+  .gs-thumb { position: absolute; left: 12px; top: 6px; bottom: 6px; display: flex; align-items: center; justify-content: center; }
+  .gs-thumb img { height: 100%; width: auto; display: block; }
+  @media (max-width: 480px) {
+    .gs-card.has-thumb { padding-left: 84px; padding-right: 68px; }
+    .gs-thumb { left: 8px; top: 5px; bottom: 5px; }
+  }
   .gs-card.gs-today {
     background: #7A6248;
     box-shadow: 0 0 0 3px #E5CFCD;
@@ -5156,13 +5168,6 @@
     <div class="month-num" id="monthNum">7月</div>
     <img class="title-img" id="titleImg" alt="雪莉與朵栗 團購行事曆" src="images/title-logo.webp" onerror="if(!this.dataset.f){this.dataset.f='1'; this.src='images/title-logo.png';}">
     <div class="controls">
-      <select id="modeSelect">
-        <option value="all">顯示全部</option>
-        <option value="start" selected>開團日</option>
-        <option value="end">結團日</option>
-        <option value="list">現正開團中</option>
-        <option value="mytasks">工作表</option>
-      </select>
       <select id="monthSelect"></select>
       <button id="refreshBtn">重新整理</button>
       <label class="pr-toggle show" id="calEditToggleWrap" title="開啟／關閉行事曆編輯模式">
@@ -5176,6 +5181,9 @@
       </label>
     </div>
   </div>
+
+  <!-- 顯示模式按鈕列（2026-10-04 與前台統一，原本是下拉選單） -->
+  <div class="mode-tabs" id="modeTabs" role="tablist"></div>
 
   <div class="status" id="status">資料載入中…</div>
 
@@ -7560,7 +7568,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=27"></script>
-<script src="admin.js?v=109"></script>
+<script src="admin.js?v=110"></script>
 <script src="memo.js?v=8"></script>
 
 </body>

@@ -970,6 +970,7 @@ function getRecentEndedEvents(limit) {
 function renderGroupStatusList(targetId) {
   const listEl = document.getElementById(targetId || 'calGroupList');
   if (!listEl) return;
+  loadBrandThumbs();
   listEl.innerHTML = '';
 
   // 【新】品牌社群連結列，放在整個清單最上方
@@ -1003,6 +1004,8 @@ function renderGroupStatusList(targetId) {
       if (calendarEditMode) openEventEditModal(ev);
       else openAdminModal(ev);
     });
+
+    addCardThumb(card, ev);
 
     const nameEl = document.createElement('div');
     nameEl.className = 'gs-card-name';
@@ -2413,10 +2416,94 @@ document.getElementById('copyMemoBtn').addEventListener('click', (e) => {
   copyText(document.getElementById('memoText').value, e.currentTarget);
 });
 
-document.getElementById('modeSelect').addEventListener('change', (e) => {
-  currentMode = e.target.value;
-  render();
-});
+// 顯示模式按鈕列（2026-10-04 與前台統一：原本是下拉選單）；前台四顆＋後台專用「工作表」
+const MODE_TABS = [
+  { v: 'list', t: '現正開團中' },
+  { v: 'start', t: '開團日' },
+  { v: 'end', t: '結團日' },
+  { v: 'all', t: '顯示全部' },
+  { v: 'mytasks', t: '工作表' },
+];
+function renderModeTabs() {
+  const el = document.getElementById('modeTabs');
+  if (!el) return;
+  el.innerHTML = '';
+  MODE_TABS.forEach(m => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'tab');
+    btn.className = 'mode-tab' + (currentMode === m.v ? ' on' : '');
+    btn.textContent = m.t;
+    btn.addEventListener('click', () => {
+      if (currentMode === m.v) return;
+      currentMode = m.v;
+      renderModeTabs();
+      render();
+    });
+    el.appendChild(btn);
+  });
+}
+renderModeTabs();
+
+/* ===== 清單卡品牌小圖（2026-10-04 照抄前台 index.html）=====
+   規則同前台：行事曆該檔 W 欄（thumb）優先 > 品牌庫（標準化品牌名是團名子字串、命中最長；
+   長度打平＝無法判斷就不顯示）。品牌庫小圖從免登入 scope=blocks 抓一次，抓到後重畫清單。 */
+let BRAND_THUMBS = {};
+let brandThumbsLoaded = false;
+function normalizeBrandKey(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
+}
+function thumbUrl(u) {
+  return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
+}
+function resolveThumb(ev) {
+  if (typeof ev.thumb === 'string' && /^https?:\/\//i.test(ev.thumb.trim())) return thumbUrl(ev.thumb.trim());
+  const key = normalizeBrandKey(ev.title);
+  let best = '', bestLen = 0, tied = false;
+  Object.keys(BRAND_THUMBS).forEach(bk => {
+    if (!bk || !key.includes(bk)) return;
+    if (bk.length > bestLen) { best = bk; bestLen = bk.length; tied = false; }
+    else if (bk.length === bestLen) { tied = true; }
+  });
+  return (best && !tied) ? thumbUrl(BRAND_THUMBS[best]) : '';
+}
+function fitThumbByArea(img) {
+  const apply = () => {
+    const ar = img.naturalWidth / Math.max(1, img.naturalHeight);
+    if (ar > 1.15) img.style.height = (100 / Math.sqrt(ar)).toFixed(1) + '%';
+  };
+  if (img.complete && img.naturalWidth) apply();
+  else img.addEventListener('load', apply);
+}
+async function loadBrandThumbs() {
+  if (brandThumbsLoaded) return;
+  brandThumbsLoaded = true;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?scope=blocks&t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    (data.brandThumbs || []).forEach(b => {
+      const name = String(b['品牌名稱'] || '').trim();
+      const url = String(b['去背小圖'] || '').trim();
+      if (name && url) BRAND_THUMBS[normalizeBrandKey(name)] = url;
+    });
+    if (document.getElementById('calGroupList')) renderGroupStatusList();
+  } catch (e) { brandThumbsLoaded = false; }
+}
+function addCardThumb(card, ev) {
+  const src = resolveThumb(ev);
+  if (!src) return;
+  card.classList.add('has-thumb');
+  const tb = document.createElement('div');
+  tb.className = 'gs-thumb';
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '';
+  img.loading = 'lazy';
+  img.addEventListener('error', () => { tb.remove(); card.classList.remove('has-thumb'); });
+  fitThumbByArea(img);
+  tb.appendChild(img);
+  card.appendChild(tb);
+}
 
 // 公關品狀態顯示開關：切換後記到 localStorage 並重繪
 document.getElementById('prToggleWrap').addEventListener('click', () => {
