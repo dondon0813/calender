@@ -771,7 +771,7 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   font-weight: 700;
   font-size: calc(var(--p-rem-base, 44px) * var(--p-rem-note-fs, 0.48) * var(--p-rem-text-scale, 1)); line-height: 1.45;
   border-radius: 0;
-  padding: 0.25em 0.7em;
+  padding: 0.25em var(--p-rem-note-px, 0.7em);
   margin-top: 0.3em;
   max-width: 100%;
   box-sizing: border-box;
@@ -876,6 +876,7 @@ body.rem-drag .remg-note { pointer-events: none; }
       <div class="row rem-icon-only"><label>名稱寬度</label><input type="range" id="rRemItemW" min="120" max="500" step="5"><input type="number" class="val" id="vRemItemW"></div>
       <div class="row rem-icon-only"><label>團名字級</label><input type="range" id="rRemNameFs" min="0.4" max="1.3" step="0.02"><input type="number" class="val" id="vRemNameFs"></div>
       <div class="row rem-icon-only"><label>介紹字級</label><input type="range" id="rRemNoteFs" min="0.3" max="1.2" step="0.02"><input type="number" class="val" id="vRemNoteFs"></div>
+      <div class="row rem-icon-only"><label>介紹左右留空</label><input type="range" id="rRemNotePadX" min="0" max="2" step="0.05"><input type="number" class="val" id="vRemNotePadX"></div>
       <div class="row rem-icon-only"><label>小圖大小</label><input type="range" id="rRemThumb" min="1.5" max="5" step="0.1"><input type="number" class="val" id="vRemThumb"></div>
       <p class="hint rem-icon-only">團太多塞不下時，系統會先縮小圖、標題和間距，<b>最後才縮文字</b>；想讓文字更大，把「小圖大小」調小或「每排幾個」選多一點就能騰出空間。</p>
       <div class="row rem-icon-only"><label>每排幾個</label>
@@ -1202,6 +1203,7 @@ const DEFAULTS = {
   remItemW: 260,                 // 圖案式：每團文字框寬度（px），名稱超過這個寬度才換行
   remNameFs: 0.62,               // 圖案式：團名字級（em，基準＝整體字級）——2026-09-27 雪莉嫌字糊，預設從 0.58 調大
   remNoteFs: 0.48,               // 圖案式：簡短介紹字級（em）——預設從 0.42 調大
+  remNotePadX: 0.7,              // 圖案式：介紹底色框左右留空（em，2026-10-04 雪莉要可調）
   remThumb: 3.1,                 // 圖案式：小圖高度（em）——想要文字更大就把圖縮小騰空間
   remFont: 'default',            // 結單提醒字體：'default'＝粗線體標題＋圓體｜'serif'＝明體（IG Literature 風，思源宋體＋EB Garamond）
   remListNote: 'on',             // 列表式：每列右側顯示簡短介紹
@@ -1722,6 +1724,7 @@ function renderPoster() {
   // （2026-09-27 雪莉：字級拉到最大還是小＝以前塞不下時整組縮，滑桿再大也被吃掉）
   poster.style.setProperty('--p-rem-base', Math.round(44 * (S.fs || 1)) + 'px');
   poster.style.setProperty('--p-rem-name-fs', String(typeof S.remNameFs === 'number' ? S.remNameFs : 0.62));
+  poster.style.setProperty('--p-rem-note-px', (typeof S.remNotePadX === 'number' ? S.remNotePadX : 0.7) + 'em');
   poster.style.setProperty('--p-rem-note-fs', String(typeof S.remNoteFs === 'number' ? S.remNoteFs : 0.48));
   poster.style.setProperty('--p-rem-thumb', (typeof S.remThumb === 'number' ? S.remThumb : 3.1) + 'em');
 
@@ -3721,7 +3724,7 @@ function syncControls() {
    'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH',
    'rTextShift|textShift|vTextShift', 'rFs|fs|vFs',
    'rRemGapX|remGapX|vRemGapX', 'rRemItemW|remItemW|vRemItemW',
-   'rRemNameFs|remNameFs|vRemNameFs', 'rRemNoteFs|remNoteFs|vRemNoteFs', 'rRemThumb|remThumb|vRemThumb'].forEach(spec => {
+   'rRemNameFs|remNameFs|vRemNameFs', 'rRemNoteFs|remNoteFs|vRemNoteFs', 'rRemNotePadX|remNotePadX|vRemNotePadX', 'rRemThumb|remThumb|vRemThumb'].forEach(spec => {
     const [id, key, valId] = spec.split('|');
     const el = document.getElementById(id);
     el.value = S[key];
@@ -3817,6 +3820,7 @@ function init() {
   bindRange('rRemItemW', 'remItemW', 'vRemItemW');
   bindRange('rRemNameFs', 'remNameFs', 'vRemNameFs');
   bindRange('rRemNoteFs', 'remNoteFs', 'vRemNoteFs');
+  bindRange('rRemNotePadX', 'remNotePadX', 'vRemNotePadX');
   bindRange('rRemThumb', 'remThumb', 'vRemThumb');
   bindSeg('segRemCols', v => { S.remCols = parseInt(v, 10) || 0; });
   bindSeg('segRemFont', v => { S.remFont = v; });
@@ -3991,7 +3995,7 @@ function init() {
     if (!S.modes) S.modes = {};
     S.modes[S.mode] = Object.assign({}, src);
     if (S.mode === 'reminder') {
-      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remThumb', 'remFont', 'remListNote', 'remgTitleOff', 'remCols', 'remgToday', 'remgOpen']
+      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remNotePadX', 'remThumb', 'remFont', 'remListNote', 'remgTitleOff', 'remCols', 'remgToday', 'remgOpen']
         .forEach(k => { S[k] = base[k]; });
     }
     saveSettings(); syncControls(); renderAll();
