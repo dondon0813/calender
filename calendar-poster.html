@@ -2784,7 +2784,13 @@ function buildEvItem(ev, mk, isOut) {
     noteIn.placeholder = notePlaceholder(ev);
     noteIn.value = rec.note || '';
     noteIn.addEventListener('input', () => { rec.note = noteIn.value; saveEvents(); renderCaption(); });
+    // 2026-10-04 雪莉：這裡打的新介紹也要自己存進系統（原本只有結單提醒會，這裡要按「☁️ 同步」才存）
+    const noteState = document.createElement('span');
+    noteState.className = 'remnote-state hint';
+    noteState.setAttribute('data-pane', 'text');
+    noteIn.addEventListener('change', () => { autoSaveRemNote(ev, noteIn.value, t => { noteState.textContent = t; }); });
     item.appendChild(noteIn);
+    item.appendChild(noteState);
   }
 
   const opts = document.createElement('div');
@@ -3235,7 +3241,42 @@ function segSet(id, v) {
    ============================================================ */
 
 function saveSettings() { try { localStorage.setItem(lsk(LS_SETTINGS), JSON.stringify(S)); } catch (e) {} }
-function saveEvents()   { try { localStorage.setItem(lsk(LS_EVENTS), JSON.stringify(EV_OVERRIDES)); } catch (e) {} }
+function saveEvents()   { try { localStorage.setItem(lsk(LS_EVENTS), JSON.stringify(EV_OVERRIDES)); } catch (e) {} saveSharedNotes(); }
+
+/* 2026-10-04 雪莉：每團手打的 👉🏻 介紹句兩個帳號共用（在雪莉與朵栗打的，雪莉咚咚也要用）。
+   逐團微調其他欄位（團名縮寫／藏起來／同框）仍各帳號分開；介紹句另外鏡一份到不分帳號的鑰匙 LS_NOTES，
+   載入任一帳號時疊回 EV_OVERRIDES[id].note。第一次（還沒有 LS_NOTES）把兩個帳號既有的句子合併進來，雪莉與朵栗優先。 */
+const LS_NOTES = 'calposter.notes.v1';
+function saveSharedNotes() {
+  let notes = {};
+  try { notes = JSON.parse(localStorage.getItem(LS_NOTES) || '{}') || {}; } catch (e) {}
+  Object.keys(EV_OVERRIDES).forEach(id => {
+    const n = EV_OVERRIDES[id] && typeof EV_OVERRIDES[id].note === 'string' ? EV_OVERRIDES[id].note : '';
+    if (n || id in notes) notes[id] = n;
+  });
+  try { localStorage.setItem(LS_NOTES, JSON.stringify(notes)); } catch (e) {}
+}
+function applySharedNotes() {
+  let raw = null;
+  try { raw = localStorage.getItem(LS_NOTES); } catch (e) {}
+  let notes = {};
+  if (raw === null) {
+    // 首次：合併兩個帳號既有的手打句子（雪莉與朵栗優先）
+    [LS_EVENTS + '.dondon', LS_EVENTS].forEach(k => {
+      try {
+        const ev = JSON.parse(localStorage.getItem(k) || '{}') || {};
+        Object.keys(ev).forEach(id => { if (ev[id] && ev[id].note) notes[id] = ev[id].note; });
+      } catch (e) {}
+    });
+    try { localStorage.setItem(LS_NOTES, JSON.stringify(notes)); } catch (e) {}
+  } else {
+    try { notes = JSON.parse(raw) || {}; } catch (e) {}
+  }
+  Object.keys(notes).forEach(id => {
+    if (notes[id]) ovOf(id).note = notes[id];
+    else if (EV_OVERRIDES[id]) EV_OVERRIDES[id].note = '';
+  });
+}
 function saveAssets() {
   try { localStorage.setItem(lsk(LS_ASSETS), JSON.stringify(ASSETS)); }
   catch (e) { alert('圖片太大，瀏覽器存不下，這次可以用但重新整理後要再上傳一次。'); }
@@ -3384,6 +3425,7 @@ function loadStored() {
   } catch (e) {}
   try { EV_OVERRIDES = JSON.parse(localStorage.getItem(lsk(LS_EVENTS)) || '{}') || {}; } catch (e) {}
   migrateOverrides();   // 舊的單一套微調 → 原封不動複製成行事曆／列表兩套
+  applySharedNotes();   // 手打介紹句兩帳號共用
   try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(lsk(LS_ASSETS)) || '{}')); } catch (e) {}
 }
 
