@@ -3286,8 +3286,22 @@ function saveAssets() {
    （要讓別台電腦也是這一版的話，把設定值給我寫進 DEFAULTS。）*/
 let USER_DEFAULTS = null;
 let USERDEF_SYNC = '';   // 雲端同步狀態的一句話，接在 userDefState 後面顯示
+/* 2026-10-04 雪莉：雪莉咚咚的貼文文案（開頭／清單標題／結尾；hashtag 沿用）。 */
+const DONDON_CAPTION = {
+  capIntro: '❤️ {月}月團購行事曆來囉 ❤️\n趕快來看看有沒有你們喜歡的繪本或玩具吧💕',
+  capListTitle: '📅 {國字月}月教玩具、繪本團購行事曆',
+  capOutro: '趕快留言告訴我，你這個月最期待哪一團？',
+};
 function effectiveDefaults() {
-  return cloneSettings(Object.assign({}, DEFAULTS, USER_DEFAULTS || {}));
+  const base = ACCOUNT === 'dondon' ? Object.assign({}, DEFAULTS, DONDON_CAPTION) : DEFAULTS;
+  return cloneSettings(Object.assign({}, base, USER_DEFAULTS || {}));
+}
+/* 雪莉咚咚已經在用的裝置：文案還是原本預設（沒自己改過）的才換成雪莉咚咚版，只做一次。 */
+function migrateDondonCaption() {
+  if (ACCOUNT !== 'dondon' || S.capDondonV1) return;
+  Object.keys(DONDON_CAPTION).forEach(k => { if (S[k] === DEFAULTS[k]) S[k] = DONDON_CAPTION[k]; });
+  S.capDondonV1 = true;
+  saveSettings();
 }
 function getAdminToken() {
   try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; }
@@ -3426,6 +3440,7 @@ function loadStored() {
   try { EV_OVERRIDES = JSON.parse(localStorage.getItem(lsk(LS_EVENTS)) || '{}') || {}; } catch (e) {}
   migrateOverrides();   // 舊的單一套微調 → 原封不動複製成行事曆／列表兩套
   applySharedNotes();   // 手打介紹句兩帳號共用
+  migrateDondonCaption();
   try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(lsk(LS_ASSETS)) || '{}')); } catch (e) {}
 }
 
