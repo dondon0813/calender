@@ -1334,6 +1334,40 @@ function brandsInTitle(title) {
 function isDondonEvent(ev) {
   return brandsInTitle(ev.title).some(b => b.cats.some(c => SHERI_DONDON_CATEGORIES.indexOf(c) !== -1));
 }
+/* 2026-10-04 雪莉：兩個帳號的設定各記一套——版面、顏色、底圖、文案樣板、我的預設、命名設定檔、逐團微調。
+   雪莉與朵栗用原本的鑰匙（舊資料原封不動），雪莉咚咚的鑰匙加 .dondon 後綴；品牌介紹句（資料庫 brand_post_notes）兩邊共用。 */
+function lsk(base) { return ACCOUNT === 'dondon' ? base + '.dondon' : base; }
+
+/* 切換帳號：先把目前帳號的狀態存好，再載入另一個帳號的設定。
+   雪莉咚咚第一次切過去（這台裝置還沒有它的設定）＝複製一份雪莉與朵栗目前的設定當起點，之後各改各的。 */
+function switchAccount(next) {
+  next = next === 'dondon' ? 'dondon' : 'main';
+  if (next === ACCOUNT) return;
+  stashSizeLayout();
+  saveSettings(); saveEvents();   // 底圖在上傳當下就存了，這裡不重存（存不下會跳警告）
+  const prevMode = S.mode;
+  const snap = { s: JSON.stringify(S), ev: JSON.stringify(EV_OVERRIDES), as: JSON.stringify(ASSETS) };
+  ACCOUNT = next;
+  try { localStorage.setItem(LS_ACCOUNT, ACCOUNT); } catch (e) {}
+  let fresh = true;
+  try { fresh = localStorage.getItem(lsk(LS_SETTINGS)) === null; } catch (e) {}
+  if (fresh) {
+    try { localStorage.setItem(lsk(LS_SETTINGS), snap.s); } catch (e) {}
+    try { localStorage.setItem(lsk(LS_EVENTS), snap.ev); } catch (e) {}
+    try { localStorage.setItem(lsk(LS_ASSETS), snap.as); } catch (e) {}
+  }
+  ASSETS = { bg: '', photo: '' };
+  EV_OVERRIDES = {};
+  loadStored();
+  if (S.mode !== prevMode) switchMode(prevMode);
+  loadPresets();
+  renderPresetList();
+  renderUserDefState();
+  syncControls();
+  fetchServerDefaults();
+  fetchServerPresets();
+}
+
 function accountKeeps(ev) { return ACCOUNT !== 'dondon' || isDondonEvent(ev); }
 function renderAccountNote() {
   const el = document.getElementById('accountNote');
@@ -2877,10 +2911,10 @@ async function copyToClipboard(btn, text) {
 let PRESETS = {};
 
 function loadPresets() {
-  try { PRESETS = JSON.parse(localStorage.getItem(LS_PRESETS) || '{}') || {}; } catch (e) { PRESETS = {}; }
+  try { PRESETS = JSON.parse(localStorage.getItem(lsk(LS_PRESETS)) || '{}') || {}; } catch (e) { PRESETS = {}; }
 }
 function savePresets() {
-  try { localStorage.setItem(LS_PRESETS, JSON.stringify(PRESETS)); }
+  try { localStorage.setItem(lsk(LS_PRESETS), JSON.stringify(PRESETS)); }
   catch (e) { presetSay('存不下了（瀏覽器空間不足），可以先刪掉用不到的設定檔'); }
   pushPresets();   // 另存／覆寫／刪除都順手同步到系統（沒登入就只存本機並提示）
 }
@@ -3111,10 +3145,10 @@ function segSet(id, v) {
    5. 設定存取
    ============================================================ */
 
-function saveSettings() { try { localStorage.setItem(LS_SETTINGS, JSON.stringify(S)); } catch (e) {} }
-function saveEvents()   { try { localStorage.setItem(LS_EVENTS, JSON.stringify(EV_OVERRIDES)); } catch (e) {} }
+function saveSettings() { try { localStorage.setItem(lsk(LS_SETTINGS), JSON.stringify(S)); } catch (e) {} }
+function saveEvents()   { try { localStorage.setItem(lsk(LS_EVENTS), JSON.stringify(EV_OVERRIDES)); } catch (e) {} }
 function saveAssets() {
-  try { localStorage.setItem(LS_ASSETS, JSON.stringify(ASSETS)); }
+  try { localStorage.setItem(lsk(LS_ASSETS), JSON.stringify(ASSETS)); }
   catch (e) { alert('圖片太大，瀏覽器存不下，這次可以用但重新整理後要再上傳一次。'); }
 }
 /* 「我的預設」：把調好的版面存成這台電腦的預設值。
@@ -3130,17 +3164,17 @@ function getAdminToken() {
 }
 function saveUserDefaults() {
   USER_DEFAULTS = cloneSettings(S);
-  try { localStorage.setItem(LS_USERDEF, JSON.stringify(USER_DEFAULTS)); } catch (e) {}
+  try { localStorage.setItem(lsk(LS_USERDEF), JSON.stringify(USER_DEFAULTS)); } catch (e) {}
   pushUserDefaults();
   renderUserDefState();
 }
 function clearUserDefaults() {
   USER_DEFAULTS = null;
-  try { localStorage.removeItem(LS_USERDEF); } catch (e) {}
+  try { localStorage.removeItem(lsk(LS_USERDEF)); } catch (e) {}
   // 雲端那份也一起清（沒登入就只清本機）
   const token = getAdminToken();
   if (token) {
-    settingCall({ type: 'setting-set', token, key: USERDEF_KEY, value: '' })
+    settingCall({ type: 'setting-set', token, key: lsk(USERDEF_KEY), value: '' })
       .then(out => { USERDEF_SYNC = (out && out.success) ? '（系統那份也清掉了）' : ''; renderUserDefState(); })
       .catch(() => {});
   }
@@ -3172,7 +3206,7 @@ async function pushUserDefaults() {
   if (!token) { USERDEF_SYNC = '（沒登入過後台，這份只存在這台電腦）'; renderUserDefState(); return; }
   USERDEF_SYNC = '（存進系統中…）'; renderUserDefState();
   try {
-    const out = await settingCall({ type: 'setting-set', token, key: USERDEF_KEY, value: JSON.stringify(USER_DEFAULTS) });
+    const out = await settingCall({ type: 'setting-set', token, key: lsk(USERDEF_KEY), value: JSON.stringify(USER_DEFAULTS) });
     if (out && out.success) USERDEF_SYNC = '（已存進系統，別台電腦也會用這份 ✓）';
     else if (out && out.notReady) USERDEF_SYNC = '（系統同步還沒啟用，先存這台電腦）';
     else USERDEF_SYNC = '（存系統失敗：' + ((out && out.error) || '未知錯誤') + '，先存這台電腦）';
@@ -3184,12 +3218,14 @@ async function fetchServerDefaults() {
   const token = getAdminToken();
   if (!token) return;   // 沒登入：維持本機行為，不吵
   try {
-    const out = await settingCall({ type: 'setting-get', token, key: USERDEF_KEY });
+    const acct = ACCOUNT;   // 請求途中切了帳號＝這份回應屬於舊帳號，丟掉（不然會寫進新帳號）
+    const out = await settingCall({ type: 'setting-get', token, key: lsk(USERDEF_KEY) });
+    if (acct !== ACCOUNT) return;
     if (!out || !out.success || !out.ready) return;   // 讀不到／還沒 db push：用本機版
     if (out.value) {
       try {
         USER_DEFAULTS = JSON.parse(out.value);
-        try { localStorage.setItem(LS_USERDEF, out.value); } catch (e) {}
+        try { localStorage.setItem(lsk(LS_USERDEF), out.value); } catch (e) {}
         USERDEF_SYNC = '（已從系統同步）';
         // 新裝置（本機沒有工作中的設定）：直接把雲端預設套到畫面上，
         // 不用等下次重新整理才生效；已經在調整中的裝置不打擾
@@ -3220,7 +3256,7 @@ async function pushPresets() {
   const token = getAdminToken();
   if (!token) { presetSayAppendSync('沒登入過後台，設定檔只存這台電腦'); return; }
   try {
-    const out = await settingCall({ type: 'setting-set', token, key: PRESETS_KEY, value: JSON.stringify(PRESETS) });
+    const out = await settingCall({ type: 'setting-set', token, key: lsk(PRESETS_KEY), value: JSON.stringify(PRESETS) });
     if (out && out.success) presetSayAppendSync('已同步到系統 ✓');
     else if (out && out.notReady) presetSayAppendSync('系統同步還沒啟用，先存這台電腦');
     else presetSayAppendSync('存系統失敗：' + ((out && out.error) || '未知錯誤') + '，先存這台電腦');
@@ -3231,12 +3267,14 @@ async function fetchServerPresets() {
   const token = getAdminToken();
   if (!token) return;
   try {
-    const out = await settingCall({ type: 'setting-get', token, key: PRESETS_KEY });
+    const acct = ACCOUNT;
+    const out = await settingCall({ type: 'setting-get', token, key: lsk(PRESETS_KEY) });
+    if (acct !== ACCOUNT) return;
     if (!out || !out.success || !out.ready) return;
     if (out.value) {
       try {
         PRESETS = JSON.parse(out.value) || {};
-        try { localStorage.setItem(LS_PRESETS, out.value); } catch (e) {}
+        try { localStorage.setItem(lsk(LS_PRESETS), out.value); } catch (e) {}
         renderPresetList();
         presetSayAppendSync('設定檔已從系統同步');
       } catch (e) { /* 雲端內容壞掉就不動本機 */ }
@@ -3248,16 +3286,16 @@ async function fetchServerPresets() {
 
 let HAD_STORED_SETTINGS = false;   // 這台裝置本來就有工作中的設定？（新手機＝false）
 function loadStored() {
-  try { USER_DEFAULTS = JSON.parse(localStorage.getItem(LS_USERDEF) || 'null'); } catch (e) { USER_DEFAULTS = null; }
+  try { USER_DEFAULTS = JSON.parse(localStorage.getItem(lsk(LS_USERDEF)) || 'null'); } catch (e) { USER_DEFAULTS = null; }
   S = effectiveDefaults();
   try {
-    const raw = localStorage.getItem(LS_SETTINGS);
+    const raw = localStorage.getItem(lsk(LS_SETTINGS));
     HAD_STORED_SETTINGS = !!raw;
     Object.assign(S, JSON.parse(raw || '{}'));
   } catch (e) {}
-  try { EV_OVERRIDES = JSON.parse(localStorage.getItem(LS_EVENTS) || '{}') || {}; } catch (e) {}
+  try { EV_OVERRIDES = JSON.parse(localStorage.getItem(lsk(LS_EVENTS)) || '{}') || {}; } catch (e) {}
   migrateOverrides();   // 舊的單一套微調 → 原封不動複製成行事曆／列表兩套
-  try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(LS_ASSETS) || '{}')); } catch (e) {}
+  try { Object.assign(ASSETS, JSON.parse(localStorage.getItem(lsk(LS_ASSETS)) || '{}')); } catch (e) {}
 }
 
 function readFileAsDataURL(file) {
@@ -3566,8 +3604,7 @@ function init() {
   document.getElementById('segAccount').addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!btn || btn.dataset.v === ACCOUNT) return;
-    ACCOUNT = btn.dataset.v === 'dondon' ? 'dondon' : 'main';
-    try { localStorage.setItem(LS_ACCOUNT, ACCOUNT); } catch (err) {}
+    switchAccount(btn.dataset.v);
     segSet('segAccount', ACCOUNT);
     renderAccountNote();
     if (ACCOUNT === 'dondon') { await loadBrandCategories(); renderAccountNote(); }
