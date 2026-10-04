@@ -2189,8 +2189,12 @@ function buildList() {
   const rows = Math.max(1, Math.ceil(groups.length / 2));
   const dim = SIZES[S.size];
   const avail = dim.h - S.insetT - S.insetB;
-  const rowH = Math.max(28, Math.floor((avail - (rows - 1) * S.gap) / rows));
+  // 每列高度上限 150px（2026-10-04：雪莉咚咚一個月只有幾團，平均分配會把每列拉到 400px，
+  // 團號圓圈跟著變超大、團名被擠不見）。團少時整組在版面裡上下置中。
+  const rowHFit = Math.floor((avail - (rows - 1) * S.gap) / rows);
+  const rowH = Math.max(28, Math.min(150, rowHFit));
   grid.style.gridTemplateRows = `repeat(${rows}, ${rowH}px)`;
+  if (rowH < rowHFit) grid.style.alignContent = 'center';
   grid.style.gridAutoFlow = 'column';   // 先填滿左欄再換右欄（跟你 Canva 版一樣 1~12 / 13~24）
 
   const fs = Math.round(Math.min(rowH * 0.42, 30) * S.fs);
