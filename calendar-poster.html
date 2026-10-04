@@ -245,6 +245,57 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   overflow: auto;
 }
 .stage-scaler { transform-origin: top left; }
+.stage-hint { display: none; }
+
+/* ===== 手機版面（2026-10-04 雪莉：平常用手機開，調整區太長要滑到最底才看得到預覽）=====
+   窄畫面（≤980px，原本就會上下堆疊）才生效，電腦左右並排完全不變：
+   ①預覽搬到最上面並固定，約佔畫面上半 4 成高，下方「放大預覽」切換成幾乎整個畫面高；
+   ②調整區每個區塊可摺疊（點標題），預設只開模式／月份／版面，記住上次開了哪幾區；
+   ③按鈕、滑桿加大，手指比較好點。 */
+@media (max-width: 980px) {
+  /* 頂列在手機上會換成好幾行（實測 228px），不固定、精簡排列，捲動時讓位給預覽 */
+  .topbar { position: static; padding: 8px 10px; gap: 6px; }
+  .topbar h1 { font-size: 16px; }
+  .topbar .status { flex-basis: 100%; font-size: 11px; order: 9; }
+  .topbar .spacer, .topbar #btnExport { display: none; }
+  .topbar .btn, .topbar .seg-pane button { padding: 6px 10px; font-size: 13px; }
+  /* 共用樣式的 overflow-x:hidden 會讓 html／body 變成捲動容器，sticky 就失效；改用 clip（一樣不能左右晃，但不建立捲動容器） */
+  html, body { overflow: visible !important; overflow-x: clip !important; }
+  /* grid 的子項目 sticky 只能在自己那一格裡動（＝固定不住），手機改成直向 flex，預覽才能黏在整個畫面上方 */
+  .layout { display: flex; flex-direction: column; align-items: stretch; padding: 10px; gap: 10px; }
+  .layout > * { min-width: 0; }
+  .stage-col { order: -1; }
+  body.pane-image .stage-col {
+    position: sticky; top: 0; z-index: 15;
+    background: var(--c-bg-top, #FFF7EE);
+    padding-bottom: 6px;
+  }
+  body.pane-image .stage-wrap {
+    height: 40vh !important; padding: 8px; overflow: hidden;
+    display: flex; justify-content: center;
+  }
+  body.pane-image .stage-col.expanded .stage-wrap { height: calc(100vh - 70px) !important; }
+  .stage-hint { display: flex; justify-content: center; gap: 8px; margin-top: 6px; }
+  .stage-hint .btn { padding: 7px 18px; font-size: 13px; }
+
+  .panel fieldset.fold > legend { cursor: pointer; position: relative; padding-right: 26px; user-select: none; }
+  .panel fieldset.fold > legend::after {
+    content: ''; position: absolute; right: 8px; top: 6px;
+    width: 8px; height: 8px;
+    border-right: 2px solid var(--c-brown); border-bottom: 2px solid var(--c-brown);
+    transform: rotate(45deg); transition: transform .15s;
+  }
+  .panel fieldset.fold.collapsed > legend::after { transform: rotate(-45deg); top: 9px; }
+  .panel fieldset.fold.collapsed > :not(legend) { display: none !important; }
+  .panel fieldset.fold.collapsed { margin-bottom: 6px; }
+  .panel legend { padding: 8px 0; }
+
+  .seg button { padding: 10px 6px; font-size: 14px; }
+  .row { margin: 12px 0; }
+  .row input[type="range"] { height: 30px; }
+  .row input[type="text"], .row select, .row input[type="number"] { padding: 9px 8px; font-size: 15px; }
+  .btn { padding: 10px 14px; }
+}
 
 /* ============================================================
    以下是「圖本身」的樣式。單位一律用 px（1080 寬的座標系），
@@ -1048,6 +1099,7 @@ body.rem-drag .remg-note { pointer-events: none; }
         <div class="poster" id="poster"></div>
       </div>
     </div>
+    <div class="stage-hint" data-pane="image"><button type="button" class="btn" id="btnExpandPreview">放大預覽</button><button type="button" class="btn primary" id="btnExportMobile">下載 PNG</button></div>
 
     <!-- 產生貼文 -->
     <div class="cap-pane" id="paneText" data-pane="text">
@@ -2609,18 +2661,52 @@ function buildReminderList() {
 
 // 預覽縮放：S.zoom = 0 代表「自動符合寬度」，其他是百分比（只影響畫面，
 // 下載的 PNG 一律是 SIZES 裡的原尺寸，不受這裡影響）
+function isMobileLayout() {
+  return window.matchMedia('(max-width: 980px)').matches && !document.body.classList.contains('pane-text');
+}
+// 手機：頂列換行後高度會變，預覽固定的位置要跟著頂列高度走
+function syncTopbarHeight() {
+  const tb = document.querySelector('.topbar');
+  if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}
+/* 調整區摺疊（手機才有效果；電腦上 CSS 不隱藏任何東西）。記住哪幾區是打開的。 */
+const LS_FOLD = 'calposter.fold';
+const FOLD_DEFAULT_OPEN = ['模式', '結單提醒', '月份', '版面'];
+function setupFolds() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(LS_FOLD) || '{}') || {}; } catch (e) {}
+  document.querySelectorAll('.panel fieldset').forEach(fs => {
+    const lg = fs.querySelector(':scope > legend');
+    if (!lg) return;
+    const key = lg.textContent.split('（')[0].trim();
+    fs.classList.add('fold');
+    const open = key in saved ? !!saved[key] : FOLD_DEFAULT_OPEN.indexOf(key) !== -1;
+    fs.classList.toggle('collapsed', !open);
+    lg.addEventListener('click', () => {
+      if (!window.matchMedia('(max-width: 980px)').matches) return;
+      fs.classList.toggle('collapsed');
+      saved[key] = !fs.classList.contains('collapsed');
+      try { localStorage.setItem(LS_FOLD, JSON.stringify(saved)); } catch (e) {}
+    });
+  });
+}
 function fitScaler() {
   const wrap = document.querySelector('.stage-wrap');
   const scaler = document.getElementById('scaler');
   const dim = SIZES[S.size];
   const avail = Math.max(240, wrap.clientWidth - 32);
   const auto = Math.min(1, avail / dim.w);
-  const k = S.zoom > 0 ? S.zoom / 100 : auto;
+  let k = S.zoom > 0 ? S.zoom / 100 : auto;
+  // 手機（≤980px、產生圖片分頁）：預覽固定在上方的框裡，整張圖一定要放得下，寬高一起算
+  if (isMobileLayout()) {
+    const w = Math.max(100, wrap.clientWidth - 16), h = Math.max(100, wrap.clientHeight - 16);
+    k = Math.min(1, w / dim.w, h / dim.h);
+  }
   scaler.style.transform = `scale(${k})`;
   // 讓外框的捲動範圍等於「縮放後」的實際大小，縮小時才不會多出一堆空白／捲軸
   scaler.style.width = Math.round(dim.w * k) + 'px';
   scaler.style.height = Math.round(dim.h * k) + 'px';
-  wrap.style.height = (dim.h * k + 32) + 'px';
+  if (!isMobileLayout()) wrap.style.height = (dim.h * k + 32) + 'px';
   const label = document.getElementById('zoomNow');
   if (label) label.textContent = Math.round(k * 100) + '%';
 }
@@ -3390,6 +3476,8 @@ async function exportPng() {
   const btn = document.getElementById('btnExport');
   const old = btn.textContent;
   btn.disabled = true; btn.textContent = '產生中…';
+  const mbtn = document.getElementById('btnExportMobile');   // 手機預覽下方那顆
+  if (mbtn) { mbtn.disabled = true; mbtn.textContent = '產生中…'; }
   // 圖上介紹還在編輯就先收尾存檔；「點這裡輸入介紹」占位框出圖時隱藏
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   document.getElementById('poster').classList.add('exporting');
@@ -3421,6 +3509,7 @@ async function exportPng() {
   } finally {
     document.getElementById('poster').classList.remove('exporting');
     btn.disabled = false; btn.textContent = old;
+    if (mbtn) { mbtn.disabled = false; mbtn.textContent = '下載 PNG'; }
   }
 }
 
@@ -3591,6 +3680,18 @@ function syncControls() {
 }
 
 function init() {
+  setupFolds();
+  syncTopbarHeight();
+  window.addEventListener('resize', () => { syncTopbarHeight(); fitScaler(); });
+  document.getElementById('btnExpandPreview').addEventListener('click', () => {
+    const col = document.querySelector('.stage-col');
+    const on = col.classList.toggle('expanded');
+    document.getElementById('btnExpandPreview').textContent = on ? '縮小預覽' : '放大預覽';
+    fitScaler();
+    if (on) window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  // 手機：頂列的「下載 PNG」會跟著捲走，預覽下方這顆同一個功能
+  document.getElementById('btnExportMobile').addEventListener('click', () => document.getElementById('btnExport').click());
   loadStored();
   fetchServerDefaults();   // 雲端的「我的預設」：非同步帶回，讀不到就維持本機版
   loadPresets();
