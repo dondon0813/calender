@@ -1,11 +1,12 @@
 // 全站共用「現正開團中」置頂橫列。獨立區塊，不依賴載入頁面的其他程式碼。
-// 抓「全部」目前開團中的團購（不篩品牌），不像開學清單舊版只挑跟開學品項有關的品牌。
+// 資料來源＝後端 GET ?scope=opengroupbuys（2026-10-05 起）：開團判定（含延長）、品牌小圖、繪本團品牌、
+// 食譜品牌與折扣碼全部由後端算好，本檔只負責渲染與點擊，不再自己抓行事曆與品牌庫兩支端點。
 // 用法：頁面裡放一個容器
 //   <div class="ogb-bar" id="openGroupBuyBar" style="display:none;" data-src="xxx"></div>
 // 再引入 <script src="openGroupBuy.js"></script>（放哪裡都行，只要在容器 div 之後）。
 // data-src 是統計來源代號（stat key 的 _src_xxx，只能小寫英數），各頁面填不同值方便報表分開看，
 // 沒填就預設 'ogbtop'；style 見 shared.css 的 .ogb-* 規則。
-// 2026-09-04 起與 index.html 行事曆同一套點擊邏輯：食物團（recipeBrand）／繪本團（BOOK_TEAM_BRANDS）
+// 2026-09-04 起與 index.html 行事曆同一套點擊邏輯：食物團（recipeBrand）／繪本團（bookBrand）
 // ／有折扣碼的團，點小圖先跳選擇視窗（介紹／食譜大全／下單＋折扣碼點擊複製），其餘直接開團購連結。
 // 視窗樣式靠 shared.css 的 .modal-* 與色彩變數，其餘 .ogbgc-* 規則由本檔自行注入，不依賴各頁面的 CSS。
 // ===== 會員 App 內嵌模式（2026-09-09）=====
@@ -34,57 +35,23 @@
   const bar = document.getElementById('openGroupBuyBar');
   if (!bar) return;
   const SRC_CODE = (bar.dataset.src || '').replace(/[^a-z0-9]/g, '') || 'ogbtop';
-  let BRAND_THUMBS = {};
 
   // ===== 選擇視窗（與 index.html 的 groupChoiceModal 同一套規則）=====
   const RECIPES_PAGE_URL = 'recipes.html';
   const PICTURE_BOOKS_PAGE_URL = 'picture-books.html';
-  // 繪本團判定：團名含 match 字樣（不分大小寫）＝繪本團。這份清單與 index.html 的
-  // BOOK_TEAM_BRANDS 是同一份規則的複本，改品牌時兩邊要一起改。
-  const BOOK_TEAM_BRANDS = [
-    { match: '禾流', brand: '禾流文創' },
-    { match: 'kidsread', brand: 'KIDsREAD點讀筆' },
-  ];
-  function bookTeamBrandOf(title) {
-    const t = String(title || '').toLowerCase();
-    const hit = BOOK_TEAM_BRANDS.find(b => t.includes(b.match.toLowerCase()));
-    return hit ? hit.brand : '';
-  }
   // 有食譜品牌（食材／食譜入口）、折扣碼、或是繪本團（繪本館介紹入口），點擊時先跳選擇視窗
+  // 繪本團判定由後端算好（item.bookBrand＝品牌全名，非空＝繪本團）
   function needsGroupModal(o) {
-    return !!((o.recipeBrand && o.recipeBrand.trim()) || (o.discountCode && o.discountCode.trim()) || bookTeamBrandOf(o.title));
+    return !!((o.recipeBrand && o.recipeBrand.trim()) || (o.discountCode && o.discountCode.trim()) || o.bookBrand);
   }
 
-  function normalizeBrandKey(s) {
-    return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
-  }
   function isValidUrl(s) {
     return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
   }
-  function parseDateStr(s) {
-    if (!s) return null;
-    s = String(s).trim();
-    const gvizMatch = s.match(/Date\((\d+),(\d+),(\d+)\)/);
-    if (gvizMatch) return new Date(parseInt(gvizMatch[1]), parseInt(gvizMatch[2]), parseInt(gvizMatch[3]));
-    const parts = s.split(/[\/\-]/).map(p => parseInt(p, 10));
-    if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
-    return null;
-  }
-  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-  function fmtSingleDate(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
-  function parseExtendRaw(raw) {
-    if (raw === null || raw === undefined || raw === '') return null;
-    if (typeof raw === 'number') return { type: 'days', value: raw };
-    const d = parseDateStr(raw);
-    return d ? { type: 'date', value: d } : null;
-  }
-  function computeDisplayEnd(end, extend) {
-    if (!extend) return end;
-    const todayStart = startOfDay(new Date());
-    const endStart = startOfDay(end);
-    if (todayStart <= endStart) return end;
-    if (extend.type === 'days') return new Date(end.getFullYear(), end.getMonth(), end.getDate() + extend.value);
-    return extend.value;
+  // endDate 為後端給的 'YYYY-MM-DD'，顯示成 M/D
+  function fmtEndDate(s) {
+    const m = String(s || '').match(/^(\d+)-(\d+)-(\d+)/);
+    return m ? `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}` : '';
   }
   function sendStat(key, field) {
     if (!key || !APPS_SCRIPT_URL) return;
@@ -208,7 +175,7 @@
     const gc = ensureChoiceModal();
     const brand = (o.recipeBrand || '').trim();
     const code = (o.discountCode || '').trim();
-    const bookBrand = bookTeamBrandOf(o.title);
+    const bookBrand = o.bookBrand || '';
     const baseKey = o.evKey;
 
     gc.title.textContent = o.title.replace(/｜/g, ' ');
@@ -269,53 +236,20 @@
     return 'ogb-grid' + best.cols;
   }
 
-  // 小圖優先序：行事曆該檔 W 欄 > 品牌資料庫預設小圖（用標準化後的品牌名找是否為團名子字串）
-  // 「一團多品牌」合併團名（例如「Nadle腳踏車/Jolly電動扭扭車」）可能同時命中兩個品牌，
-  // 命中長度打平時不可用 Object.keys 的列舉順序硬選一個——那是試算表列順序，跟哪個品牌才是這次
-  // 主打完全無關，選錯就會把另一個不相關品牌的圖放上去。打平就視為無法判斷，寧可不顯示小圖，
-  // 也不要顯示錯的；真的要顯示就手動填行事曆該檔的 W 欄覆蓋掉。
-  function resolveThumb(title, rowThumb) {
-    if (isValidUrl(rowThumb)) return rowThumb;
-    const key = normalizeBrandKey(title);
-    let best = '', bestLen = 0, tied = false;
-    Object.keys(BRAND_THUMBS).forEach(bk => {
-      if (!bk || !key.includes(bk)) return;
-      if (bk.length > bestLen) { best = bk; bestLen = bk.length; tied = false; }
-      else if (bk.length === bestLen) { tied = true; }
-    });
-    return (best && !tied) ? BRAND_THUMBS[best] : '';
-  }
-
-  function parseOpenEvents(calText) {
-    const jsonStr = calText.substring(calText.indexOf('{'), calText.lastIndexOf('}') + 1);
-    const data = JSON.parse(jsonStr);
-    const rows = data.table.rows;
-    const today = startOfDay(new Date());
-    const open = [];
-    rows.forEach(row => {
-      const c = row.c;
-      if (!c || !c[0] || c[0].v === null || c[0].v === '') return;
-      const id = c[0].v;
-      const start = parseDateStr(c[1] ? c[1].v : null);
-      const end = parseDateStr(c[2] ? c[2].v : null);
-      const extend = parseExtendRaw(c[3] ? c[3].v : null);
-      const title = c[4] ? String(c[4].v || '').trim() : '';
-      const url = c[7] ? c[7].v : '';
-      const recipeBrand = c[10] ? String(c[10].v || '').trim() : '';
-      const recipeOk = c[26] ? String(c[26].v || '').trim() : '';   // 食譜品牌有沒有食譜（'否'＝不顯示食譜大全鈕；2026-10-04）
-      const rowThumb = c[22] ? String(c[22].v || '').trim() : '';
-      const discountCode = c[23] ? String(c[23].v || '').trim() : '';
-      const discountDesc = c[24] ? String(c[24].v || '').trim() : '';
-      const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
-      const published = publishedRaw === '' ? true : (publishedRaw === '是');
-      if (!start || !end || !title || !published) return;
-      const displayEnd = computeDisplayEnd(end, extend);
-      if (startOfDay(start) > today || today > startOfDay(displayEnd)) return;
-      const evKey = `${id}_${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}`;
-      open.push({ title, url, thumb: resolveThumb(title, rowThumb), end: displayEnd, recipeBrand, recipeOk, discountCode, discountDesc, evKey });
-    });
-    open.sort((a, b) => a.end - b.end);
-    return open;
+  // 後端 opengroupbuys 的一筆 → renderOpenGroupBuyBar 吃的物件（title 的｜與 thumb 網域後端都已處理好）
+  function toOpenItem(it) {
+    return {
+      title: String(it.title || ''),
+      url: it.url || '',
+      thumb: it.thumb || '',
+      end: fmtEndDate(it.endDate),
+      recipeBrand: String(it.recipeBrand || '').trim(),
+      recipeOk: it.recipeOk ? '是' : '否',   // 後端給 boolean；'否'＝不顯示食譜大全鈕
+      discountCode: String(it.discountCode || '').trim(),
+      discountDesc: String(it.discountDesc || '').trim(),
+      evKey: it.evKey,
+      bookBrand: String(it.bookBrand || '')
+    };
   }
 
   function renderOpenGroupBuyBar(open) {
@@ -387,7 +321,7 @@
       const end = document.createElement('div');
       end.className = 'ogb-end';
       // 折扣碼不寫在小圖下面（2026-09-20 雪莉：文字多、把整條撐高）——有折扣碼的團點下去會跳浮動視窗顯示折扣碼＋前往下單
-      end.textContent = fmtSingleDate(o.end) + ' 收單';
+      end.textContent = o.end + ' 收單';
       cell.appendChild(end);
 
       list.appendChild(cell);
@@ -410,18 +344,9 @@
   }
 
   async function init() {
-    const [calRes, pubRes] = await Promise.all([
-      fetchWithRetry(APPS_SCRIPT_URL + '?scope=calendar&t=' + Date.now(), 2),
-      fetchWithRetry(APPS_SCRIPT_URL + '?scope=public&t=' + Date.now(), 2)
-    ]);
-    const calText = await calRes.text();
-    const pubData = await pubRes.json();
-    (pubData.brandThumbs || []).forEach(b => {
-      const name = String(b['品牌名稱'] || '').trim();
-      const url = String(b['去背小圖'] || '').trim();
-      if (name && url) BRAND_THUMBS[normalizeBrandKey(name)] = url;
-    });
-    renderOpenGroupBuyBar(parseOpenEvents(calText));
+    const res = await fetchWithRetry(APPS_SCRIPT_URL + '?scope=opengroupbuys&t=' + Date.now(), 2);
+    const list = await res.json();
+    renderOpenGroupBuyBar((Array.isArray(list) ? list : []).map(toOpenItem));
   }
   init().catch(err => console.error('現正開團中載入失敗', err));
 })();

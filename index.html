@@ -831,17 +831,11 @@ const WD_LABEL = ['日','一','二','三','四','五','六'];
 const RECIPES_PAGE_URL = 'recipes.html';
 const PICTURE_BOOKS_PAGE_URL = 'picture-books.html';
 
-// 繪本團判定（2026-08-27 雪莉指定）：活動標題含 match 字樣（不分大小寫）＝繪本團，
-// 點開團跳「前往下單／前往觀看介紹」視窗，介紹連到繪本館的品牌專屬視角（?brand=）。
-// 食物團照舊走 recipeBrand（食材／食譜大全）。要新增繪本團品牌就在這裡加一行。
-const BOOK_TEAM_BRANDS = [
-  { match: '禾流', brand: '禾流文創' },
-  { match: 'kidsread', brand: 'KIDsREAD點讀筆' },
-];
+// 繪本團判定（2026-08-27 雪莉指定；2026-10-05 起改由後端算）：scope=calendar 每列 c[30] BOOK_BRAND＝
+// 團名對到「有已發布繪本的品牌」時的品牌全名，非空＝繪本團，點開團跳「前往下單／前往觀看介紹」視窗，
+// 介紹連到繪本館的品牌專屬視角（?brand=）。食物團照舊走 recipeBrand（食材／食譜大全）。
 function bookTeamBrandOf(ev) {
-  const t = String(ev.title || '').toLowerCase();
-  const hit = BOOK_TEAM_BRANDS.find(b => t.includes(b.match.toLowerCase()));
-  return hit ? hit.brand : '';
+  return ev.bookBrand || null;
 }
 
 let CUSTOM_BLOCKS = [];
@@ -913,43 +907,14 @@ async function loadCustomBlocks() {
     const data = await res.json();
     CUSTOM_BLOCKS = Array.isArray(data.blocks) ? data.blocks : [];
     SOCIAL_LINKS = data.socialLinks || {};
-    // 品牌去背小圖（2026-09-06 起 blocks 包順便帶回來，「現正開團中」清單卡用；
-    // 後端還沒部署新版時拿不到這個 key，卡片就維持沒有小圖的舊長相，不會壞）
-    (data.brandThumbs || []).forEach(b => {
-      const name = String(b['品牌名稱'] || '').trim();
-      const url = String(b['去背小圖'] || '').trim();
-      if (name && url) BRAND_THUMBS[normalizeBrandKey(name)] = url;
-    });
   } catch (err) {
     console.warn('自訂區塊讀取失敗：', err);
   }
 }
 
 /* ===== 品牌小圖（「現正開團中」清單卡用）=====
-   規則照抄 openGroupBuy.js：行事曆該檔 W 欄優先 > 品牌庫（標準化品牌名是團名子字串、
-   命中最長的那個；命中長度打平＝無法判斷，寧可不顯示也不要放錯品牌的圖）。 */
-let BRAND_THUMBS = {};
-function normalizeBrandKey(s) {
-  return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\p{P}\p{S}]/gu, '');
-}
-function isValidThumbUrl(s) {
-  return typeof s === 'string' && /^https?:\/\//i.test(s.trim());
-}
-function resolveThumb(ev) {
-  if (isValidThumbUrl(ev.thumb)) return thumbUrl(ev.thumb);
-  const key = normalizeBrandKey(ev.title);
-  let best = '', bestLen = 0, tied = false;
-  Object.keys(BRAND_THUMBS).forEach(bk => {
-    if (!bk || !key.includes(bk)) return;
-    if (bk.length > bestLen) { best = bk; bestLen = bk.length; tied = false; }
-    else if (bk.length === bestLen) { tied = true; }
-  });
-  return (best && !tied) ? thumbUrl(BRAND_THUMBS[best]) : '';
-}
-// 品牌庫不少小圖還是舊的 dondon0813.github.io 網址（會 301 轉到正式網域），改寫成直連省一跳
-function thumbUrl(u) {
-  return String(u || '').replace(/^https?:\/\/dondon0813\.github\.io\/calender\//i, 'https://sheridondon.com.tw/');
-}
+   2026-10-05 起由後端算好放在 scope=calendar 的 c[31] THUMB_RESOLVED（團圖優先、否則品牌庫小圖取最長命中、
+   打平不給，網域已改寫成 sheridondon.com.tw），前端直接用 ev.thumbResolved。 */
 // 高度統一之下，超寬的圖（prepara 保鮮盒）會顯得特別大：寬高比>1.15 就把高度
 // 除以 √寬高比，視覺面積跟方形圖差不多；仍照比例完整顯示（與產生器同一套規則）
 function fitThumbByArea(img) {
@@ -1399,8 +1364,10 @@ async function loadData() {
       const published = publishedRaw === '' ? true : (publishedRaw === '是');
       if (!published) return;
       const coldFlag = c[25] ? String(c[25].v || '').trim() : '';   // 冷凍冷藏雪花（後端算好；見 isFrozenEvent）
+      const bookBrand = c[30] ? String(c[30].v || '').trim() : '';   // 繪本團品牌全名（後端判定；空＝非繪本團）
+      const thumbResolved = c[31] ? String(c[31].v || '').trim() : '';   // 清單卡小圖（後端已決定：團圖優先、否則品牌小圖）
       const recipeOk = c[26] ? String(c[26].v || '').trim() : '';   // 食譜品牌有沒有食譜（'否'＝不顯示食譜大全鈕；後端依實際匯入的食譜判斷）
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc, coldFlag, recipeOk });
+      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc, coldFlag, recipeOk, bookBrand, thumbResolved });
     });
 
     allEvents = events;
@@ -1691,7 +1658,7 @@ function buildGroupCard(ev, grayOut, srcOverride) {
   card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
   // 品牌小圖：有對到圖才出白色圓圈；圖真的載不進來就整顆拿掉，回到原本的卡片長相
-  const thumbSrc = resolveThumb(ev);
+  const thumbSrc = ev.thumbResolved || '';
   if (thumbSrc) {
     card.classList.add('has-thumb');
     const tb = document.createElement('div');
