@@ -140,19 +140,23 @@
   --sb-active: #F5EFE9;            /* 選單項目按下底色 */
 
   /* ---------- 共用元件（app/components/ui） ---------- */
-  --ui-bar-bg: #F9F0EE;                /* 共用元件：「現正開團中」橫列底色 */
-  --ui-bar-border: transparent;        /* 共用元件：「現正開團中」橫列外框 */
-  --ui-promo-bg: #F7E4E2;              /* 共用元件：清單條（食譜頁置頂開團宣傳）底色 */
-  --ui-promo-bg-hover: #F1D8D6;        /* 共用元件：清單條 hover 底色 */
-  --ui-promo-border: transparent;      /* 共用元件：清單條外框 */
-  --ui-promo-shadow: none;             /* 共用元件：清單條陰影 */
-  --ui-promo-badge-bg: #BA6B78;        /* 共用元件：清單條「開團中」小標籤底色 */
-  --ui-promo-badge-text: #FFFFFF;      /* 共用元件：清單條「開團中」小標籤字色 */
-  --ui-modal-bg: #FFFFFF;              /* 共用元件：彈出視窗底色（藕粉色系一律白底） */
-  --ui-chip-bg: #F8F3EE;               /* 共用元件：副選單小膠囊（未選中）底色 */
-  --ui-chip-bg-hover: #EFE7DF;         /* 共用元件：副選單小膠囊 hover 底色 */
-  --ui-brand-tag-text: #9C5F68;        /* 共用元件：品牌標籤字色 */
-  --ui-brand-tag-border: transparent;  /* 共用元件：品牌標籤外框 */
+  --ui-bar-bg: #F9F0EE;                                        /* 共用元件：「現正開團中」橫列底色 */
+  --ui-bar-border: transparent;                                /* 共用元件：「現正開團中」橫列外框 */
+  --ui-promo-bg: #F7E4E2;                                      /* 共用元件：清單條（食譜頁置頂開團宣傳）底色 */
+  --ui-promo-bg-hover: #F1D8D6;                                /* 共用元件：清單條 hover 底色 */
+  --ui-promo-border: transparent;                              /* 共用元件：清單條外框 */
+  --ui-promo-shadow: none;                                     /* 共用元件：清單條陰影 */
+  --ui-promo-badge-bg: #BA6B78;                                /* 共用元件：清單條「開團中」小標籤底色 */
+  --ui-promo-badge-text: #FFFFFF;                              /* 共用元件：清單條「開團中」小標籤字色 */
+  --ui-modal-bg: #FFFFFF;                                      /* 共用元件：彈出視窗底色（藕粉色系一律白底） */
+  --ui-chip-bg: #F8F3EE;                                       /* 共用元件：副選單小膠囊（未選中）底色 */
+  --ui-chip-bg-hover: #EFE7DF;                                 /* 共用元件：副選單小膠囊 hover 底色 */
+  --ui-brand-tag-text: #9C5F68;                                /* 共用元件：品牌標籤字色 */
+  --ui-brand-tag-border: transparent;                          /* 共用元件：品牌標籤外框 */
+  --ui-hcard-yellow-bg: #E6EFCF;                               /* 共用元件：首頁入口卡（教材館那張）底色；lotus 為青蘋果綠，雪莉 09-20 選 C */
+  --ui-hcard-yellow-text: #5F7A38;                             /* 共用元件：首頁入口卡（教材館那張）標題／圖示／分隔線色 */
+  --ui-hcard-hover-shadow: 0 8px 18px rgba(90, 74, 66, 0.10);  /* 共用元件：首頁入口卡 hover 陰影 */
+  --ui-hcard-border-strength: 0%;                              /* 共用元件：首頁入口卡外框顯示比例（100%＝用各卡自己的框色；0%＝全部去框，藕粉色系零外框） */
 }
 /* END GENERATED */
 body{background:#FFFFFF!important}
