@@ -261,6 +261,28 @@
   --cal-legend-frozen-img: none;                                                                                                                                                                                             /* 行事曆頁：圖例「冷凍團」圓點雪花圖 */
   --cal-gs-today-shadow: 0 0 0 3px var(--ix-card-today-ring);                                                                                                                                                                /* 行事曆頁：清單卡「今日截止」卡片外環陰影 */
   --cal-frozen-badge-bg: var(--ix-frozen-border);                                                                                                                                                                            /* 行事曆頁：清單卡「冷藏冷凍團」徽章底色 */
+
+  /* ---------- 繪本館頁（/books）專屬色 ---------- */
+  --pb-new-bg: #3ddc84;                                   /* 繪本館：New 徽章綠底（功能色，不隨色系換） */
+  --pb-new-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);         /* 繪本館：New 徽章陰影 */
+  --pb-video-bg: #000;                                    /* 繪本館：影片框黑底 */
+  --pb-video-caption: #888;                               /* 繪本館：影片標題列文字色（舊頁引用了未定義的 --c-text-light，實際顯示 #888，照舊） */
+  --pb-btn-shadow: 0 3px 10px rgba(0, 0, 0, 0.10);        /* 繪本館：頂端團購膠囊按鈕陰影 */
+  --pb-alt-hover: #5F97DB;                                /* 繪本館：次要（藍）按鈕 hover 底色 */
+  --pb-active-promos-bg: rgba(255, 255, 255, 0.65);       /* 繪本館：開團活動區裡優惠條列的半透明白底 */
+  --pb-mat-hover-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);  /* 繪本館：教材卡 hover 陰影 */
+  --pb-mat-img-tint: rgba(20, 15, 10, 0.03);              /* 繪本館：教材縮圖疊一層薄灰（白底圖從背景浮出來） */
+  --pb-locked-bg: #dddddd;                                /* 繪本館：教材未到開放日的灰色標籤底 */
+  --pb-locked-text: #666666;                              /* 繪本館：教材未到開放日的灰色標籤字 */
+  --pb-search-bg: #fff;                                   /* 繪本館：搜尋框底色 */
+  --pb-search-focus-border: var(--c-primary);             /* 繪本館：搜尋框聚焦框色 */
+  --pb-active-bg: #fff1e6;                                /* 繪本館：開團活動區底色 */
+  --pb-active-border: #f0c8b4;                            /* 繪本館：開團活動區外框 */
+  --pb-active-accent: #df7972;                            /* 繪本館：開團活動區的按鈕／滿額標／折扣碼提示底色 */
+  --pb-active-accent-hover: #c9615a;                      /* 繪本館：開團活動區按鈕 hover 底色 */
+  --pb-active-rule: #f0c8b4;                              /* 繪本館：開團活動區內折扣碼上方分隔虛線 */
+  --pb-code-bg: #fff;                                     /* 繪本館：折扣碼框底色 */
+  --pb-code-border: var(--c-border);                      /* 繪本館：折扣碼框虛線色 */
 }
 /* END GENERATED */
 
