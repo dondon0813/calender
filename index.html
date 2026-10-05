@@ -1345,7 +1345,8 @@ async function loadData() {
       const colorRaw = c[11] ? c[11].v : '';
       const isGroupBuyRaw = c[15] ? String(c[15].v || '').trim() : '';
       const publishedRaw = c[16] ? String(c[16].v || '').trim() : '';
-      const iconIg = c[17] ? String(c[17].v || '').trim() : '';
+      // c[17] 已改放「合併品牌團的主團編號」（後端 calendar.ts），不是 IG 網址；不能再當圖示讀
+      const iconIg = '';
       const iconTiktok = c[18] ? String(c[18].v || '').trim() : '';
       const iconFb = c[19] ? String(c[19].v || '').trim() : '';
       const iconEmail = c[20] ? String(c[20].v || '').trim() : '';
