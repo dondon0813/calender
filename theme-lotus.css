@@ -131,6 +131,13 @@
   --rcp-gift-text: #4E9A8F;         /* 免費資源卡：標題文字／分隔線 */
   --rcp-gift-bg: #DEF5F4;           /* 免費資源卡：底色 */
   --rcp-gift-border: #A9E6DA;       /* 免費資源卡：邊框 */
+  --rcp-age-6m: #9ACB85;            /* 月齡小標籤色：6m+（跟色系無關的固定識別色） */
+  --rcp-age-8m: #FFB37A;            /* 月齡小標籤色：8m+ */
+  --rcp-age-10m: #FF8FA3;           /* 月齡小標籤色：10m+ */
+  --rcp-age-1y: #7AAEEB;            /* 月齡小標籤色：1y+ */
+  --rcp-age-2y: #B79AE8;            /* 月齡小標籤色：2y+ */
+  --rcp-age-adult: #a89888;         /* 月齡小標籤色：成人 */
+  --rcp-age-other: #b5755a;         /* 月齡小標籤色：其他（沒對到的月齡） */
 
   /* ---------- 頂端導覽列 SiteBanner（會員端） ---------- */
   --sb-bg: #FFFFFF;                /* 頂端導覽列底色 */
@@ -141,23 +148,33 @@
   --sb-active: #F5EFE9;            /* 選單項目按下底色 */
 
   /* ---------- 共用元件（app/components/ui） ---------- */
-  --ui-bar-bg: #F9F0EE;                                        /* 共用元件：「現正開團中」橫列底色 */
-  --ui-bar-border: transparent;                                /* 共用元件：「現正開團中」橫列外框 */
-  --ui-promo-bg: #F7E4E2;                                      /* 共用元件：清單條（食譜頁置頂開團宣傳）底色 */
-  --ui-promo-bg-hover: #F1D8D6;                                /* 共用元件：清單條 hover 底色 */
-  --ui-promo-border: transparent;                              /* 共用元件：清單條外框 */
-  --ui-promo-shadow: none;                                     /* 共用元件：清單條陰影 */
-  --ui-promo-badge-bg: #BA6B78;                                /* 共用元件：清單條「開團中」小標籤底色 */
-  --ui-promo-badge-text: #FFFFFF;                              /* 共用元件：清單條「開團中」小標籤字色 */
-  --ui-modal-bg: #FFFFFF;                                      /* 共用元件：彈出視窗底色（藕粉色系一律白底） */
-  --ui-chip-bg: #F8F3EE;                                       /* 共用元件：副選單小膠囊（未選中）底色 */
-  --ui-chip-bg-hover: #EFE7DF;                                 /* 共用元件：副選單小膠囊 hover 底色 */
-  --ui-brand-tag-text: #9C5F68;                                /* 共用元件：品牌標籤字色 */
-  --ui-brand-tag-border: transparent;                          /* 共用元件：品牌標籤外框 */
-  --ui-hcard-yellow-bg: #E6EFCF;                               /* 共用元件：首頁入口卡（教材館那張）底色；lotus 為青蘋果綠，雪莉 09-20 選 C */
-  --ui-hcard-yellow-text: #5F7A38;                             /* 共用元件：首頁入口卡（教材館那張）標題／圖示／分隔線色 */
-  --ui-hcard-hover-shadow: 0 8px 18px rgba(90, 74, 66, 0.10);  /* 共用元件：首頁入口卡 hover 陰影 */
-  --ui-hcard-border-strength: 0%;                              /* 共用元件：首頁入口卡外框顯示比例（100%＝用各卡自己的框色；0%＝全部去框，藕粉色系零外框） */
+  --ui-bar-bg: #F9F0EE;                                                                           /* 共用元件：「現正開團中」橫列底色 */
+  --ui-bar-border: transparent;                                                                   /* 共用元件：「現正開團中」橫列外框 */
+  --ui-promo-bg: #F7E4E2;                                                                         /* 共用元件：清單條（食譜頁置頂開團宣傳）底色 */
+  --ui-promo-bg-hover: #F1D8D6;                                                                   /* 共用元件：清單條 hover 底色 */
+  --ui-promo-border: transparent;                                                                 /* 共用元件：清單條外框 */
+  --ui-promo-shadow: none;                                                                        /* 共用元件：清單條陰影 */
+  --ui-promo-badge-bg: #BA6B78;                                                                   /* 共用元件：清單條「開團中」小標籤底色 */
+  --ui-promo-badge-text: #FFFFFF;                                                                 /* 共用元件：清單條「開團中」小標籤字色 */
+  --ui-modal-bg: #FFFFFF;                                                                         /* 共用元件：彈出視窗底色（藕粉色系一律白底） */
+  --ui-chip-bg: #F8F3EE;                                                                          /* 共用元件：副選單小膠囊（未選中）底色 */
+  --ui-chip-bg-hover: #EFE7DF;                                                                    /* 共用元件：副選單小膠囊 hover 底色 */
+  --ui-brand-tag-text: #9C5F68;                                                                   /* 共用元件：品牌標籤字色 */
+  --ui-brand-tag-border: transparent;                                                             /* 共用元件：品牌標籤外框 */
+  --ui-hcard-yellow-bg: #E6EFCF;                                                                  /* 共用元件：首頁入口卡（教材館那張）底色；lotus 為青蘋果綠，雪莉 09-20 選 C */
+  --ui-hcard-yellow-text: #5F7A38;                                                                /* 共用元件：首頁入口卡（教材館那張）標題／圖示／分隔線色 */
+  --ui-hcard-hover-shadow: 0 8px 18px rgba(90, 74, 66, 0.10);                                     /* 共用元件：首頁入口卡 hover 陰影 */
+  --ui-hcard-border-strength: 0%;                                                                 /* 共用元件：首頁入口卡外框顯示比例（100%＝用各卡自己的框色；0%＝全部去框，藕粉色系零外框） */
+  --ui-rcard-bg: #FFFFFF;                                                                         /* 共用元件：食譜卡／食材卡／食材圖磚底色（藕粉色系為白） */
+  --ui-rcard-shadow: 0 1px 3px rgba(90, 74, 66, 0.08), 0 6px 16px rgba(90, 74, 66, 0.08);         /* 共用元件：食譜卡／食材卡陰影 */
+  --ui-rcard-shadow-hover: 0 1px 3px rgba(90, 74, 66, 0.08), 0 6px 16px rgba(90, 74, 66, 0.08);   /* 共用元件：食譜卡／食材卡 hover 陰影 */
+  --ui-rtile-shadow: 0 1px 3px rgba(90, 74, 66, 0.08), 0 6px 16px rgba(90, 74, 66, 0.08);         /* 共用元件：食材圖磚陰影（粉橘色系沒有） */
+  --ui-rtile-active-bg: #FFFFFF;                                                                  /* 共用元件：食材圖磚選中底色 */
+  --ui-rtile-active-shadow: 0 1px 3px rgba(90, 74, 66, 0.08), 0 6px 16px rgba(90, 74, 66, 0.08);  /* 共用元件：食材圖磚選中陰影 */
+  --ui-ph-bg: #FFF1E6;                                                                            /* 共用元件：食材／食譜沒照片時的預設圖底色 */
+  --ui-ph-icon: #C9A48F;                                                                          /* 共用元件：食材／食譜沒照片時的預設圖線條色 */
+  --ui-tip-bg: #FBF1EF;                                                                           /* 共用元件：小提醒框底色 */
+  --ui-tip-border: #E5CFCD;                                                                       /* 共用元件：小提醒框虛線色 */
 }
 /* END GENERATED */
 body{background:#FFFFFF!important}

@@ -107,6 +107,9 @@
   --sh-float: 0 3px 10px rgba(230, 160, 120, 0.25);
   --sh-soft: 0 3px 8px rgba(0, 0, 0, 0.15);
   --sh-modal: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --sh-badge: 0 1px 4px rgba(0, 0, 0, 0.15);           /* 小徽章陰影（油品標籤） */
+  --sh-rmodal: 0 16px 40px rgba(210, 150, 110, 0.28);  /* 食譜／食材小卡視窗陰影 */
+  --sh-step-badge: 0 2px 5px rgba(0, 0, 0, 0.2);       /* 食譜步驟編號小圓徽章陰影 */
 
   /* ---------- 頁面標題 ---------- */
   --c-title-rule: #FFC2CE;  /* 標題下方虛線 */
@@ -165,6 +168,13 @@
   --rcp-gift-text: #2F9E8F;         /* 免費資源卡：標題文字／分隔線 */
   --rcp-gift-bg: #DEF5F4;           /* 免費資源卡：底色 */
   --rcp-gift-border: #A9E6DA;       /* 免費資源卡：邊框 */
+  --rcp-age-6m: #9ACB85;            /* 月齡小標籤色：6m+（跟色系無關的固定識別色） */
+  --rcp-age-8m: #FFB37A;            /* 月齡小標籤色：8m+ */
+  --rcp-age-10m: #FF8FA3;           /* 月齡小標籤色：10m+ */
+  --rcp-age-1y: #7AAEEB;            /* 月齡小標籤色：1y+ */
+  --rcp-age-2y: #B79AE8;            /* 月齡小標籤色：2y+ */
+  --rcp-age-adult: #a89888;         /* 月齡小標籤色：成人 */
+  --rcp-age-other: #b5755a;         /* 月齡小標籤色：其他（沒對到的月齡） */
 
   /* ---------- 頂端導覽列 SiteBanner（會員端） ---------- */
   --sb-bg: #FFF7EE;            /* 頂端導覽列底色 */
@@ -197,6 +207,16 @@
   --ui-hcard-border-strength: 100%;                                /* 共用元件：首頁入口卡外框顯示比例（100%＝用各卡自己的框色；0%＝全部去框，藕粉色系零外框） */
   --sh-panel: 0 10px 30px rgba(120, 80, 50, 0.18);                 /* 共用元件：選單面板陰影 */
   --sh-arrow: 0 2px 8px rgba(90, 74, 66, 0.18);                    /* 共用元件：橫滑箭頭鈕陰影 */
+  --ui-rcard-bg: var(--c-surface-2);                               /* 共用元件：食譜卡／食材卡／食材圖磚底色（藕粉色系為白） */
+  --ui-rcard-shadow: 0 3px 8px rgba(230, 160, 120, 0.12);          /* 共用元件：食譜卡／食材卡陰影 */
+  --ui-rcard-shadow-hover: 0 10px 18px rgba(230, 160, 120, 0.25);  /* 共用元件：食譜卡／食材卡 hover 陰影 */
+  --ui-rtile-shadow: none;                                         /* 共用元件：食材圖磚陰影（粉橘色系沒有） */
+  --ui-rtile-active-bg: var(--c-pink-bg);                          /* 共用元件：食材圖磚選中底色 */
+  --ui-rtile-active-shadow: 0 4px 12px rgba(255, 143, 163, 0.25);  /* 共用元件：食材圖磚選中陰影 */
+  --ui-ph-bg: #FFF1E6;                                             /* 共用元件：食材／食譜沒照片時的預設圖底色 */
+  --ui-ph-icon: #C9A48F;                                           /* 共用元件：食材／食譜沒照片時的預設圖線條色 */
+  --ui-tip-bg: var(--c-orange-bg);                                 /* 共用元件：小提醒框底色 */
+  --ui-tip-border: var(--c-orange-dash-2);                         /* 共用元件：小提醒框虛線色 */
 }
 /* END GENERATED */
 
