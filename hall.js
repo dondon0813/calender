@@ -116,21 +116,152 @@ function hallRenderBanner() {
 }
 
 // ===== 清單 =====
+// 2026-10-07 雪莉：42 份混在一起很難找 → 品牌分組＋篩選（選定方案：上排品牌大按鈕、下排類型小膠囊、
+// 同一本書的教材收成一組；與前台教材館「跟團贈品」依品牌分組一致，也符合「主選單大按鈕／副選單小膠囊」規則）。
+// 品牌＝資源自己的 brandId；沒設時用第一本綁定書的品牌；都沒有＝未分類。
+let HALL_F_BRAND = 'all';   // 'all' | 品牌 uuid | 'none'
+let HALL_F_TYPE = 'all';    // 'all' | 'gift' | 'free' | 'draft'
+let HALL_F_SEARCH = '';
+const HALL_OPEN_BOOKS = new Set();    // 展開中的書組 key（品牌|書 id）
+const HALL_CLOSED_BRANDS = new Set(); // 收起來的品牌區
+try {
+  HALL_F_BRAND = localStorage.getItem('hall_f_brand') || 'all';
+  HALL_F_TYPE = localStorage.getItem('hall_f_type') || 'all';
+  if (!['all', 'gift', 'free', 'draft'].includes(HALL_F_TYPE)) HALL_F_TYPE = 'all';
+} catch (e) { /* storage 被擋：用預設 */ }
+
+function hallBrandOf(r) {
+  if (r.brandId) return r.brandId;
+  const ids = Array.isArray(r.bookIds) ? r.bookIds : [];
+  for (const id of ids) {
+    const b = HALL_BOOK_CHOICES.find(x => x.id === id);
+    if (b && b.brandId) return b.brandId;
+  }
+  return 'none';
+}
+function hallBrandName(id) {
+  if (id === 'none') return '未分類';
+  const b = HALL_BRAND_CHOICES.find(x => x.id === id);
+  return b ? b.name : '未分類';
+}
+function hallBookTitle(id) {
+  const b = HALL_BOOK_CHOICES.find(x => x.id === id);
+  return b ? b.title : '（書已刪除）';
+}
+function hallTypeMatch(r) {
+  if (HALL_F_TYPE === 'gift') return !r.isFree;
+  if (HALL_F_TYPE === 'free') return !!r.isFree;
+  if (HALL_F_TYPE === 'draft') return !r.isPublished;
+  return true;
+}
+function hallSearchMatch(r) {
+  const q = HALL_F_SEARCH.trim().toLowerCase();
+  if (!q) return true;
+  const books = (r.bookIds || []).map(hallBookTitle).join(' ');
+  return [r.title, r.slug, hallBrandName(hallBrandOf(r)), books, (r.tags || []).join(' ')].join(' ').toLowerCase().includes(q);
+}
+function hallSetFilter(kind, val) {
+  if (kind === 'brand') HALL_F_BRAND = val; else HALL_F_TYPE = val;
+  try { localStorage.setItem(kind === 'brand' ? 'hall_f_brand' : 'hall_f_type', val); } catch (e) { /* 忽略 */ }
+  hallRenderList();
+}
+function hallToggleBookGroup(key) {
+  if (HALL_OPEN_BOOKS.has(key)) HALL_OPEN_BOOKS.delete(key); else HALL_OPEN_BOOKS.add(key);
+  hallRenderListBody();
+}
+function hallToggleBrandGroup(id) {
+  if (HALL_CLOSED_BRANDS.has(id)) HALL_CLOSED_BRANDS.delete(id); else HALL_CLOSED_BRANDS.add(id);
+  hallRenderListBody();
+}
+function hallBrandSort(countOf) {
+  return (a, b) => (a === 'none') - (b === 'none') || countOf(b) - countOf(a) || hallBrandName(a).localeCompare(hallBrandName(b), 'zh-Hant');
+}
+
 function hallRenderList() {
   const area = document.getElementById('hallListArea');
   const editArea = document.getElementById('hallEditArea');
   if (!area) return;
   if (editArea) editArea.style.display = 'none';
   area.style.display = '';
-  // 依教材館子分頁過濾（HALL_KIND_TAB 由 books.js setHallTab 控制：file/game/audio）；
-  // i 一律保留 HALL_LIST 原索引（hallOpenEdit/hallDeleteFromList 都吃它）
-  const rows = HALL_LIST.map((r, i) => ({ r, i })).filter(x => (x.r.kind || 'game') === HALL_KIND_TAB);
-  if (!rows.length) {
+  // 依教材館子分頁過濾（HALL_KIND_TAB 由 books.js setHallTab 控制：file/game/audio）
+  const tabRows = HALL_LIST.filter(r => (r.kind || 'game') === HALL_KIND_TAB);
+  if (!tabRows.length) {
     const kindName = HALL_KIND_TAB === 'file' ? '解鎖教材檔' : HALL_KIND_TAB === 'audio' ? '音檔' : '遊戲';
     area.innerHTML = '<div class="task-empty">還沒有' + kindName + '資源，按上面的「＋ 新增資源」開始！</div>';
     return;
   }
-  const html = rows.map(({ r, i }) => {
+  // 品牌按鈕：只列這個分頁有教材的品牌（數量多→少，未分類最後）
+  const counts = new Map();
+  tabRows.forEach(r => { const b = hallBrandOf(r); counts.set(b, (counts.get(b) || 0) + 1); });
+  if (HALL_F_BRAND !== 'all' && !counts.has(HALL_F_BRAND)) HALL_F_BRAND = 'all';
+  const brands = [...counts.keys()].sort(hallBrandSort(b => counts.get(b)));
+  const bigBtn = (val, label, n) => {
+    const on = HALL_F_BRAND === val;
+    return '<button type="button" onclick="hallSetFilter(\'brand\',\'' + hallEscape(val) + '\')" style="flex:none; border:none; cursor:pointer; border-radius:12px; padding:8px 14px; font-size:13px; font-weight:700; ' +
+      (on ? 'background:var(--c-primary,#C99A9B); color:#fff;' : 'background:var(--c-surface,#F5EFE9); color:var(--c-text,#5a4a42);') + '">' +
+      hallEscape(label) + ' <span style="opacity:.75; font-weight:600;">' + n + '</span></button>';
+  };
+  const pill = (val, label) => {
+    const on = HALL_F_TYPE === val;
+    return '<button type="button" onclick="hallSetFilter(\'type\',\'' + val + '\')" style="flex:none; cursor:pointer; border-radius:999px; padding:3px 12px; font-size:12px; font-weight:700; ' +
+      (on ? 'background:var(--c-text,#5a4a42); color:#fff; border:1px solid var(--c-text,#5a4a42);' : 'background:#fff; color:var(--c-text,#5a4a42); border:1px solid #E6DCD2;') + '">' + label + '</button>';
+  };
+  area.innerHTML =
+    '<input type="search" id="hallSearchInput" placeholder="搜尋教材名稱、書名、品牌、標籤" value="' + hallEscape(HALL_F_SEARCH) + '" ' +
+      'style="width:100%; box-sizing:border-box; border:1px solid #E6DCD2; border-radius:10px; padding:8px 12px; font-size:13px; background:#fff; margin-bottom:10px;">' +
+    '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">' + bigBtn('all', '全部', tabRows.length) +
+      brands.map(b => bigBtn(b, hallBrandName(b), counts.get(b))).join('') + '</div>' +
+    '<div style="display:flex; gap:6px; overflow-x:auto; white-space:nowrap; padding-bottom:4px; margin-bottom:10px;">' +
+      pill('all', '全部') + pill('gift', '跟團贈品') + pill('free', '免費') + pill('draft', '未發布') + '</div>' +
+    '<div id="hallListBody"></div>';
+  const input = document.getElementById('hallSearchInput');
+  input.addEventListener('input', () => { HALL_F_SEARCH = input.value; hallRenderListBody(); });
+  hallRenderListBody();
+}
+
+function hallRenderListBody() {
+  const body = document.getElementById('hallListBody');
+  if (!body) return;
+  const searching = HALL_F_SEARCH.trim() !== '';
+  // i 一律保留 HALL_LIST 原索引（hallOpenEdit/hallDeleteFromList 都吃它）
+  const rows = HALL_LIST.map((r, i) => ({ r, i, b: hallBrandOf(r) }))
+    .filter(x => (x.r.kind || 'game') === HALL_KIND_TAB && hallTypeMatch(x.r) && hallSearchMatch(x.r) &&
+      (HALL_F_BRAND === 'all' || x.b === HALL_F_BRAND));
+  if (!rows.length) { body.innerHTML = '<div class="task-empty">沒有符合的教材</div>'; return; }
+  const byBrand = new Map();
+  rows.forEach(x => { if (!byBrand.has(x.b)) byBrand.set(x.b, []); byBrand.get(x.b).push(x); });
+  const brandOrder = [...byBrand.keys()].sort(hallBrandSort(b => byBrand.get(b).length));
+  const single = HALL_F_BRAND !== 'all'; // 已選單一品牌：不顯示品牌標題
+  body.innerHTML = brandOrder.map(bid => {
+    const list = byBrand.get(bid);
+    const closed = !single && !searching && HALL_CLOSED_BRANDS.has(bid);
+    // 沒綁書的直接列；有綁書的依第一本書收成一組（預設收合，搜尋時全展開）
+    const loose = [], books = new Map();
+    list.forEach(x => {
+      const first = (x.r.bookIds || [])[0];
+      if (!first) { loose.push(x); return; }
+      if (!books.has(first)) books.set(first, []);
+      books.get(first).push(x);
+    });
+    let inner = loose.map(x => hallRowHtml(x.r, x.i)).join('');
+    [...books.entries()].sort((a, b) => hallBookTitle(a[0]).localeCompare(hallBookTitle(b[0]), 'zh-Hant')).forEach(([bookId, xs]) => {
+      const key = bid + '|' + bookId;
+      const open = searching || HALL_OPEN_BOOKS.has(key);
+      inner += '<div onclick="hallToggleBookGroup(\'' + hallEscape(key) + '\')" style="cursor:pointer; display:flex; align-items:center; gap:8px; background:var(--c-surface,#F5EFE9); border-radius:12px; padding:10px 12px; margin-bottom:8px; font-weight:700; font-size:14px;">' +
+        '<span style="width:14px; flex:none;">' + (open ? '▼' : '▶') + '</span>' +
+        '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + hallEscape(hallBookTitle(bookId)) + '</span>' +
+        '<span style="flex:none; font-size:12px; color:var(--c-text-light); font-weight:600;">' + xs.length + ' 份</span></div>' +
+        (open ? '<div style="margin-left:18px;">' + xs.map(x => hallRowHtml(x.r, x.i)).join('') + '</div>' : '');
+    });
+    const head = single ? '' :
+      '<div onclick="hallToggleBrandGroup(\'' + hallEscape(bid) + '\')" style="cursor:pointer; display:flex; align-items:center; gap:8px; margin:14px 0 8px; font-weight:800; font-size:15px;">' +
+        '<span style="width:14px;">' + (closed ? '▶' : '▼') + '</span>' + hallEscape(hallBrandName(bid)) +
+        '<span style="font-size:12px; color:var(--c-text-light); font-weight:600;">（' + list.length + '）</span></div>';
+    return head + (closed ? '' : inner);
+  }).join('');
+}
+
+function hallRowHtml(r, i) {
     const kindBadge = '<span style="background:#E6ECF3; color:#3949ab; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">' +
       (r.kind === 'game' ? '🎮 遊戲' : r.kind === 'audio' ? '🎵 音檔' : '📄 檔案') + '</span>';
     const freeBadge = r.isFree
@@ -160,8 +291,6 @@ function hallRenderList() {
       '<button type="button" class="task-mini-btn" style="flex:none;" onclick="hallOpenEdit(' + i + ')">✏️ 編輯</button>' +
       '<button type="button" class="task-mini-btn" style="flex:none; color:#B5485A;" onclick="hallDeleteFromList(' + i + ')">🗑</button>' +
     '</div>';
-  }).join('');
-  area.innerHTML = html;
 }
 
 async function hallDeleteFromList(i) {
