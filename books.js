@@ -4352,9 +4352,17 @@ document.getElementById('matLibPendingBtn').addEventListener('click', () => {
   matLibPendingOnly = !matLibPendingOnly;
   renderMatLibPanel();
 });
+// 2026-10-06：原本開舊教材庫表單（寫進舊表 book_materials），10/3 搬家漏改，雪莉 10/4 上傳的教材全進了舊表。
+// 改成開教材館的新增教材包表單（kind=file），與繪本表單「到教材館新增教材」同一條路。
 document.getElementById('matLibAddBtn').addEventListener('click', () => {
-  if (!PACKAGE_DATA) { showToast('資料還在載入，稍等一下', true); return; }
-  openMaterialForm(null, { standalone: true });
+  if (typeof hallOpenEdit !== 'function' || typeof HALL_EDIT === 'undefined') { showToast('教材館還在載入，稍等一下', true); return; }
+  if (typeof HALL_LOADED !== 'undefined' && !HALL_LOADED) { showToast('教材館還在載入，稍等一下', true); return; }
+  if (typeof HALL_TABLE_READY !== 'undefined' && !HALL_TABLE_READY) { showToast('教材館資料表尚未建立（待 db push）', true); return; }
+  hallOpenEdit(-1);
+  HALL_EDIT.kind = 'file';
+  if (typeof hallRenderEditor === 'function') hallRenderEditor();
+  const editArea = document.getElementById('hallEditArea');
+  if (editArea) setTimeout(() => editArea.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 });
 
 // 教材館子分頁切換（📄 教材｜🎮 遊戲｜🎵 音檔，2026-09-13 雪莉定案：前後台同一套分類）
