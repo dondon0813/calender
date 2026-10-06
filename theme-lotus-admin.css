@@ -164,6 +164,17 @@
   --ui-hcard-yellow-text: #5F7A38;                                                                /* 共用元件：首頁入口卡（教材館那張）標題／圖示／分隔線色 */
   --ui-hcard-hover-shadow: 0 8px 18px rgba(90, 74, 66, 0.10);                                     /* 共用元件：首頁入口卡 hover 陰影 */
   --ui-hcard-border-strength: 0%;                                                                 /* 共用元件：首頁入口卡外框顯示比例（100%＝用各卡自己的框色；0%＝全部去框，藕粉色系零外框） */
+  --ui-ecard-books-bg: #F3E3E1;                                                                   /* 共用元件：橫式入口大卡（EntryCard，玩中學頁）繪本館卡底色；classic 為粉漸層、lotus 為純色 */
+  --ui-ecard-toys-bg: #EAF0E6;                                                                    /* 共用元件：橫式入口大卡 玩具館卡底色；classic 為綠漸層、lotus 為純色 */
+  --ui-ecard-materials-bg: #E6EFCF;                                                               /* 共用元件：橫式入口大卡 教材館卡底色；classic 為黃漸層、lotus 為青蘋果綠純色 */
+  --ui-ecard-border: transparent;                                                                 /* 共用元件：橫式入口大卡外框色（框寬固定 2px，藕粉色系透明＝零外框） */
+  --ui-ecard-shadow: none;                                                                        /* 共用元件：橫式入口大卡陰影（藕粉色系無陰影） */
+  --ui-ecard-hover-shadow: 0 8px 18px rgba(90, 74, 66, 0.10);                                     /* 共用元件：橫式入口大卡 hover 陰影 */
+  --ui-ecard-title: #6d4c52;                                                                      /* 共用元件：橫式入口大卡標題與圖示色 */
+  --ui-ecard-desc: #8a6a70;                                                                       /* 共用元件：橫式入口大卡說明字色與「準備中」徽章字色 */
+  --ui-ecard-arrow: #b98a94;                                                                      /* 共用元件：橫式入口大卡右側箭頭色 */
+  --ui-ecard-badge-bg: rgba(255, 255, 255, 0.8);                                                  /* 共用元件：橫式入口大卡「準備中」徽章底色 */
+  --ui-ecard-icon-filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.08));                             /* 共用元件：橫式入口大卡圖示的淡陰影（drop-shadow 濾鏡） */
   --ui-rcard-bg: #FFFFFF;                                                                         /* 共用元件：食譜卡／食材卡／食材圖磚底色（藕粉色系為白） */
   --ui-rcard-shadow: 0 1px 3px rgba(90, 74, 66, 0.08), 0 6px 16px rgba(90, 74, 66, 0.08);         /* 共用元件：食譜卡／食材卡陰影 */
   --ui-rcard-shadow-hover: 0 1px 3px rgba(90, 74, 66, 0.08), 0 6px 16px rgba(90, 74, 66, 0.08);   /* 共用元件：食譜卡／食材卡 hover 陰影 */
