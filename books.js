@@ -3435,7 +3435,7 @@ function mtplComposeCanvas(srcImg, o, withPromo) {
   let qrBox = null;
   let qrBoxTop = null;
   if (o.layers.qr && o.qrImg) {
-    const pad = Math.round(base * 0.014);
+    const pad = Math.round(base * 0.005); // 2026-10-06 雪莉：再貼邊一點（原 1.4%≈A4 4mm → 0.5%≈1.5mm）
     const qrW = Math.max(60, Math.round(base * 0.05));
     const qrH = Math.round(qrW * (o.qrImg.height / o.qrImg.width));
     const qp = o.qrPos === 'tl' || o.qrPos === 'bl' || o.qrPos === 'br' ? o.qrPos : 'tr';
