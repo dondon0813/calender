@@ -240,6 +240,19 @@
   --pb-active-rule: #E5CFCD;              /* 繪本館：開團活動區內折扣碼上方分隔虛線 */
   --pb-code-bg: var(--c-orange-bg);       /* 繪本館：折扣碼框底色 */
   --pb-code-border: var(--c-primary);     /* 繪本館：折扣碼框虛線色 */
+
+  /* ---------- 開學清單頁（/school-list）專屬色 ---------- */
+  --sl-card-bg: #FFF1E6;                      /* 開學清單：品項卡片底色 */
+  --sl-card-border: #FFD3B6;                  /* 開學清單：品項卡片／姓名貼輸入框／尺寸鈕外框 */
+  --sl-card-checked-bg: #E4F5DF;              /* 開學清單：品項卡片勾選後底色 */
+  --sl-checkbox-border: #CDBBAD;              /* 開學清單：勾選框外框（藕粉色系改較深的奶茶褐） */
+  --sl-checkbox-checked-border: #CDBBAD;      /* 開學清單：已勾選的勾選框外框（經典＝同底色的綠；藕粉色系沿用舊頁的奶茶褐，不隨綠底變） */
+  --sl-remove-bg: rgba(255, 255, 255, 0.85);  /* 開學清單：品項右上角移除鈕底色（半透明白） */
+  --sl-done-glow: rgba(255, 143, 163, 0.65);  /* 開學清單：全部準備完成時進度條的柔光 */
+  --sl-dc-bg: #F5EFE9;                        /* 折扣碼視窗：折扣碼框底色 */
+  --sl-dc-border: #C99A9B;                    /* 折扣碼視窗：折扣碼框虛線色 */
+  --sl-dc-hover-bg: #F5EFE9;                  /* 折扣碼視窗：折扣碼框滑過底色（藕粉色系不變色） */
+  --sl-dc-hover-border: #C99A9B;              /* 折扣碼視窗：折扣碼框滑過虛線色 */
 }
 /* END GENERATED */
 body{background:#FFFFFF!important}
