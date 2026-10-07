@@ -254,6 +254,17 @@
   --sl-dc-border: #C99A9B;                    /* 折扣碼視窗：折扣碼框虛線色 */
   --sl-dc-hover-bg: #F5EFE9;                  /* 折扣碼視窗：折扣碼框滑過底色（藕粉色系不變色） */
   --sl-dc-hover-border: #C99A9B;              /* 折扣碼視窗：折扣碼框滑過虛線色 */
+
+  /* ---------- 集點卡頁（/star-card）專屬色 ---------- */
+  --stc-cream-bg: #FFFDF6;                /* 集點卡：新增小朋友按鈕背景（舊頁定義但未使用，保留） */
+  --stc-pink-badge: #FFD3E0;              /* 集點卡：未蓋星星的空格星號色／星星集點徽章粉底 */
+  --stc-gold-star: #F0A93C;               /* 集點卡：已蓋星星的金色星星 */
+  --stc-coral: #E0644A;                   /* 集點卡：珊瑚色重點文字（錯誤訊息、刪除鈕） */
+  --stc-coral-bg: #FFCFC2;                /* 集點卡：珊瑚色淺底（刪除鈕外框） */
+  --stc-ctl-bg: #F5EFE9;                  /* 集點卡：次要控制項底色（模式鈕／頭像／輸入框／左右箭頭／次要按鈕；經典＝白、藕粉色系＝奶茶底） */
+  --stc-ghost-hover: #F5EFE9;             /* 集點卡：次要按鈕滑過底色（經典沿用舊頁的主色深；藕粉色系不變色） */
+  --stc-input-focus-border: transparent;  /* 集點卡：輸入框聚焦邊框（經典＝主色；藕粉色系＝透明，同 theme-lotus.css 去框規則） */
+  --stc-alt-hover: #5F97DB;               /* 集點卡：藍色次要動作按鈕滑過底色 */
 }
 /* END GENERATED */
 body{background:#FFFFFF!important}
