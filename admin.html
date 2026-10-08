@@ -6324,22 +6324,37 @@
   <div id="splitDivider" title="拖曳調整左右欄寬度"></div>
   <div id="paneRight">
     <select id="paneRightPicker">
+      <!-- 選項要跟側欄 #sideNav 一致（同順序、同 data-perm），側欄新增分頁時這裡也要補一條；
+           <select> 放不了 SVG 圖示，所以只有文字、不用 emoji（藕粉奶茶色系規則） -->
       <option value="">（關閉右欄）</option>
-      <option value="home">🏠 工作首頁</option>
-      <option value="calendar" data-perm="calendarEdit">📅 行事曆</option>
-      <option value="myTasks">📋 任務</option>
-      <option value="memo">📝 備忘錄</option>
-      <option value="todoList">🗒️ 待辦事項</option>
-      <option value="prItems">🎀 公關品狀態</option>
-      <option value="brandVendor" data-perm="brandVendorEdit">🏢 品牌廠商</option>
-      <option value="report" data-perm="report">📊 報表統計</option>
-      <option value="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">💰 開團帳務</option>
-      <option value="tools">🧰 便利小工具</option>
-      <option value="lotteryTool">🎉 抽獎小幫手</option>
-      <option value="imageLibrary">🖼️ 圖片庫</option>
-      <option value="convertTool">🔄 轉檔小工具</option>
-      <option value="bgRemover">✂️ 圖片去背器</option>
-      <option value="calculator">🧮 計算機</option>
+      <optgroup label="工作">
+        <option value="home">工作首頁</option>
+        <option value="calendar" data-perm="calendarEdit">行事曆</option>
+        <option value="myTasks">任務</option>
+        <option value="memo">備忘錄</option>
+        <option value="todoList">待辦事項</option>
+        <option value="prItems">公關品狀態</option>
+        <option value="brandVendor" data-perm="brandVendorEdit">品牌廠商</option>
+        <option value="report" data-perm="report">報表統計</option>
+        <option value="accounting" data-perm="revenue|commission|acctRecon|lotteryEdit">開團帳務</option>
+        <option value="books" data-perm="bookEdit">繪本後台</option>
+        <option value="cardSub" data-perm="cardSubEdit">訂閱管理</option>
+        <option value="recipeDb" data-perm="recipeEdit">食譜資料庫</option>
+        <option value="schoolList" data-perm="schoolEdit">開學清單</option>
+        <option value="blog" data-perm="blogEdit">文章管理</option>
+        <option value="fanAdmin" data-perm="fanEdit">會員管理</option>
+        <option value="hall" data-perm="bookEdit">教材館</option>
+        <option value="changelog" data-perm="changelogEdit">更新日誌</option>
+        <option value="announce">系統更新</option>
+      </optgroup>
+      <optgroup label="工具">
+        <option value="tools">便利小工具</option>
+        <option value="lotteryTool">抽獎小幫手</option>
+        <option value="imageLibrary" data-perm="imageLibrary">圖片庫</option>
+        <option value="convertTool">轉檔小工具</option>
+        <option value="bgRemover">圖片去背器</option>
+        <option value="calculator">計算機</option>
+      </optgroup>
     </select>
     <div id="paneRightEmpty">請選擇要在右側顯示的分頁</div>
   </div>
