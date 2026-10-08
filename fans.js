@@ -536,8 +536,17 @@ async function faLoadIdentityLinks(userId) {
     if (!data || !data.success) throw new Error((data && data.error) || '未知錯誤');
     if (data.tableReady === false) { b.innerHTML = '<div style="font-size:12px; color:#A0661E;">身分對照表尚未建立（待 db push）——自動歸戶照常，只是還不會留紀錄。</div>'; return; }
     const links = Array.isArray(data.links) ? data.links : [];
-    if (!links.length) { b.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">還沒有對照紀錄</div>'; return; }
-    b.innerHTML = '<table style="width:100%; border-collapse:collapse; font-size:12px;">' + links.map(l =>
+    const sugg = Array.isArray(data.suggestions) ? data.suggestions : [];
+    // 系統建議＝證據較弱（Shopline 只露首字＋姓氏）沒自動歸的，列出來給雪莉一鍵確認（確認＝加一組手動對照並歸戶）
+    const suggHtml = !sugg.length ? '' :
+      '<div style="margin-top:8px; padding:8px 10px; background:#FCEFD8; border-radius:8px;"><div style="font-size:12px; font-weight:800; color:#A0661E; margin-bottom:4px;">系統建議（證據較弱，沒自動歸戶，請你確認）</div>' +
+      sugg.map(h => '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; padding:3px 0;">' +
+        '<span>' + faEscapeHtml(h.emailMasked) + ' ＋ ' + faEscapeHtml(h.customerName) + '</span>' +
+        '<span style="color:var(--c-text-light);">訂單 ' + faEscapeHtml(h.orderNo) + '（' + faEscapeHtml(h.platform) + '）・她以前的訂單姓名 ' + faEscapeHtml(h.matchedName) + '</span>' +
+        '<button type="button" class="task-mini-btn fa-idlink-confirm" data-email="' + faEscapeHtml(h.emailMasked) + '" data-name="' + faEscapeHtml(h.customerName) + '" data-uid="' + faEscapeHtml(userId) + '" style="font-size:11px; padding:1px 8px;">是本人，加入</button>' +
+        '</div>').join('') + '</div>';
+    if (!links.length) { b.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">還沒有對照紀錄</div>' + suggHtml; faBindIdLinkConfirm(b); return; }
+    b.innerHTML = suggHtml + '<table style="width:100%; border-collapse:collapse; font-size:12px;">' + links.map(l =>
       '<tr style="border-top:1px solid var(--c-line);' + (l.active ? '' : ' color:var(--c-text-light); text-decoration:line-through;') + '">' +
       '<td style="padding:4px 8px; white-space:nowrap;">' + faEscapeHtml(l.emailPattern) + '</td>' +
       '<td style="padding:4px 8px; white-space:nowrap;">' + faEscapeHtml(l.name) + '</td>' +
@@ -553,15 +562,22 @@ async function faLoadIdentityLinks(userId) {
       if (!r || !r.success) { alert('失敗：' + ((r && r.error) || '未知錯誤')); btn.disabled = false; return; }
       faLoadIdentityLinks(btn.dataset.uid);
     }));
+    faBindIdLinkConfirm(b);
   } catch (err) {
     const b = document.getElementById('faIdLinksBox');
     if (b && b.dataset.uid === userId) b.innerHTML = '<div style="font-size:12px; color:#B5485A;">讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
   }
 }
-async function faIdentityLinkAdd(userId) {
-  const email = (document.getElementById('faIdLinkEmail') || {}).value || '';
-  const name = (document.getElementById('faIdLinkName') || {}).value || '';
-  const note = (document.getElementById('faIdLinkNote') || {}).value || '';
+function faBindIdLinkConfirm(box) {
+  box.querySelectorAll('.fa-idlink-confirm').forEach(btn => btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    faIdentityLinkAdd(btn.dataset.uid, { email: btn.dataset.email, name: btn.dataset.name, note: '系統建議，後台確認' });
+  }));
+}
+async function faIdentityLinkAdd(userId, preset) {
+  const email = preset ? preset.email : ((document.getElementById('faIdLinkEmail') || {}).value || '');
+  const name = preset ? preset.name : ((document.getElementById('faIdLinkName') || {}).value || '');
+  const note = preset ? preset.note : ((document.getElementById('faIdLinkNote') || {}).value || '');
   if (!email.trim() || !name.trim()) { alert('email 與下單姓名都要填（照訂單上的樣子）'); return; }
   if (!confirm('確認「' + email.trim() + ' ＋ ' + name.trim() + '」是這位會員本人？加入後這組合的訂單（含已入庫的）會立刻歸給她。')) return;
   const btn = document.getElementById('faIdLinkAddBtn');
