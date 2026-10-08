@@ -394,7 +394,9 @@ function renderFanMemberList() {
   if (mergeCancelBtn) mergeCancelBtn.addEventListener('click', (e) => { e.stopPropagation(); faMergeCancel(mergeCancelBtn.dataset.uid); });
   const detail = area.querySelector('.fa-mem-detail');
   if (detail) detail.addEventListener('click', (e) => e.stopPropagation());
-  if (FAN_MEMBER_OPEN) faLoadMemberOrders(FAN_MEMBER_OPEN);
+  const idAddBtn = document.getElementById('faIdLinkAddBtn');
+  if (idAddBtn) idAddBtn.addEventListener('click', (e) => { e.stopPropagation(); faIdentityLinkAdd(idAddBtn.dataset.uid); });
+  if (FAN_MEMBER_OPEN) { faLoadMemberOrders(FAN_MEMBER_OPEN); faLoadIdentityLinks(FAN_MEMBER_OPEN); }
 }
 
 // 展開列：完整個資＋分級標註編輯（前台看不到分級，僅後台）
@@ -420,6 +422,17 @@ function faMemberDetailRow(m) {
     '<div style="border-top:1px dashed var(--c-border-light); padding:10px 0;">' +
     '<div style="font-size:12px; font-weight:800; margin-bottom:6px;">訂單紀錄</div>' +
     '<div id="faMemOrdersBox" data-uid="' + faEscapeHtml(m.userId) + '"><div style="font-size:12px; color:var(--c-text-light);">讀取中…</div></div>' +
+    '</div>' +
+    '<div style="border-top:1px dashed var(--c-border-light); padding:10px 0;">' +
+    '<div style="font-size:12px; font-weight:800; margin-bottom:4px;">身分對照（遮罩 email＋姓名 → 這位會員）</div>' +
+    '<div style="font-size:12px; color:var(--c-text-soft); margin-bottom:6px; line-height:1.6;">跟團買／Shopline 報表的 email 是遮罩的（h******@gmail.com），系統每天會用「遮罩信箱與她的信箱吻合＋下單姓名與她以前的訂單姓名吻合」自動歸戶並記在這裡；你確認是本人的其他信箱也可以手動加一組，之後這組合的訂單都自動歸給她。撤銷＝以後不再自動歸、已歸的訂單不會退回。</div>' +
+    '<div id="faIdLinksBox" data-uid="' + faEscapeHtml(m.userId) + '"><div style="font-size:12px; color:var(--c-text-light);">讀取中…</div></div>' +
+    '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">' +
+    '<input type="text" id="faIdLinkEmail" placeholder="email（照訂單上的樣子，可含 *）" style="flex:1; min-width:200px;">' +
+    '<input type="text" id="faIdLinkName" placeholder="下單姓名（可含 *）" style="width:140px;">' +
+    '<input type="text" id="faIdLinkNote" placeholder="備註（選填）" style="width:160px;">' +
+    '<button type="button" class="task-mini-btn" id="faIdLinkAddBtn" data-uid="' + faEscapeHtml(m.userId) + '">確認是本人，加入</button>' +
+    '</div>' +
     '</div>' +
     '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; border-top:1px dashed var(--c-border-light); padding-top:10px;">' +
     '<span style="font-size:12px; font-weight:800;">⭐ 分級標註（僅後台可見）</span>' +
@@ -512,10 +525,61 @@ async function faMergeCancel(sourceUserId) {
   }
 }
 
+// ===== 展開列的身分對照（2026-10-09；後端 fan-admin-identity-links／link-add／link-set-active，docs/07 §3.2）=====
+async function faLoadIdentityLinks(userId) {
+  const box = document.getElementById('faIdLinksBox');
+  if (!box || box.dataset.uid !== userId) return;
+  try {
+    const data = await faApiPost('fan-admin-identity-links', { userId });
+    const b = document.getElementById('faIdLinksBox');
+    if (!b || b.dataset.uid !== userId) return;
+    if (!data || !data.success) throw new Error((data && data.error) || '未知錯誤');
+    if (data.tableReady === false) { b.innerHTML = '<div style="font-size:12px; color:#A0661E;">身分對照表尚未建立（待 db push）——自動歸戶照常，只是還不會留紀錄。</div>'; return; }
+    const links = Array.isArray(data.links) ? data.links : [];
+    if (!links.length) { b.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">還沒有對照紀錄</div>'; return; }
+    b.innerHTML = '<table style="width:100%; border-collapse:collapse; font-size:12px;">' + links.map(l =>
+      '<tr style="border-top:1px solid var(--c-line);' + (l.active ? '' : ' color:var(--c-text-light); text-decoration:line-through;') + '">' +
+      '<td style="padding:4px 8px; white-space:nowrap;">' + faEscapeHtml(l.emailPattern) + '</td>' +
+      '<td style="padding:4px 8px; white-space:nowrap;">' + faEscapeHtml(l.name) + '</td>' +
+      '<td style="padding:4px 8px; white-space:nowrap; color:var(--c-text-light);">' + (l.source === 'auto' ? '系統自動對到' : '手動確認（' + faEscapeHtml(l.confirmedBy) + '）') + ' ' + faEscapeHtml(faDate(l.createdAt)) + (l.note ? '・' + faEscapeHtml(l.note) : '') + '</td>' +
+      '<td style="padding:4px 8px; white-space:nowrap; text-align:right;"><button type="button" class="task-mini-btn fa-idlink-toggle" data-id="' + faEscapeHtml(l.id) + '" data-active="' + (l.active ? '1' : '0') + '" data-uid="' + faEscapeHtml(userId) + '" style="font-size:11px; padding:1px 8px;">' + (l.active ? '撤銷' : '恢復') + '</button></td></tr>'
+    ).join('') + '</table>';
+    b.querySelectorAll('.fa-idlink-toggle').forEach(btn => btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const toActive = btn.dataset.active !== '1';
+      if (!toActive && !confirm('撤銷後這組 email＋姓名不會再自動歸給這位會員（已歸的訂單不會退回）。確定？')) return;
+      btn.disabled = true;
+      const r = await faApiPost('fan-admin-identity-link-set-active', { id: btn.dataset.id, active: toActive });
+      if (!r || !r.success) { alert('失敗：' + ((r && r.error) || '未知錯誤')); btn.disabled = false; return; }
+      faLoadIdentityLinks(btn.dataset.uid);
+    }));
+  } catch (err) {
+    const b = document.getElementById('faIdLinksBox');
+    if (b && b.dataset.uid === userId) b.innerHTML = '<div style="font-size:12px; color:#B5485A;">讀取失敗：' + faEscapeHtml(err.message || '') + '</div>';
+  }
+}
+async function faIdentityLinkAdd(userId) {
+  const email = (document.getElementById('faIdLinkEmail') || {}).value || '';
+  const name = (document.getElementById('faIdLinkName') || {}).value || '';
+  const note = (document.getElementById('faIdLinkNote') || {}).value || '';
+  if (!email.trim() || !name.trim()) { alert('email 與下單姓名都要填（照訂單上的樣子）'); return; }
+  if (!confirm('確認「' + email.trim() + ' ＋ ' + name.trim() + '」是這位會員本人？加入後這組合的訂單（含已入庫的）會立刻歸給她。')) return;
+  const btn = document.getElementById('faIdLinkAddBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await faApiPost('fan-admin-identity-link-add', { userId, emailPattern: email, name, note });
+    if (!r || !r.success) { alert('失敗：' + ((r && r.error) || '未知錯誤')); return; }
+    alert('已加入' + (r.claimedCount ? '，並歸戶了 ' + r.claimedCount + ' 筆訂單' : '（目前沒有這組合的未歸戶訂單）'));
+    ['faIdLinkEmail', 'faIdLinkName', 'faIdLinkNote'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    delete FAN_MEMBER_ORDERS_CACHE[userId];
+    faLoadIdentityLinks(userId); faLoadMemberOrders(userId);
+  } finally { if (btn) btn.disabled = false; }
+}
+
 // ===== 展開列的訂單紀錄（2026-09-20；後端 fan-admin-member-orders）=====
 // 每位會員抓一次就快取（清單重畫很頻繁：搜尋、篩選、存分級都會重畫）；按「重新整理」整個總覽重抓時一併清掉。
 const FAN_MEMBER_ORDERS_CACHE = {};
-const FAN_CLAIMED_VIA_LABELS = { email: 'email 自動', claim: '客人認領', manual: '後台手動' };
+const FAN_CLAIMED_VIA_LABELS = { email: 'email 自動', claim: '客人認領', manual: '後台手動', masked: '遮罩自動對到' };
 
 async function faLoadMemberOrders(userId) {
   const box = document.getElementById('faMemOrdersBox');
