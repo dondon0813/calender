@@ -265,6 +265,22 @@
   --stc-ghost-hover: #F5EFE9;             /* 集點卡：次要按鈕滑過底色（經典沿用舊頁的主色深；藕粉色系不變色） */
   --stc-input-focus-border: transparent;  /* 集點卡：輸入框聚焦邊框（經典＝主色；藕粉色系＝透明，同 theme-lotus.css 去框規則） */
   --stc-alt-hover: #5F97DB;               /* 集點卡：藍色次要動作按鈕滑過底色 */
+
+  /* ---------- 會員端三頁（/member、/materials、/blog）狀態與重點色 ---------- */
+  --ui-ok-text: #4F6B45;            /* 會員端狀態色：成功訊息／已付款／免費徽章／正向差額的綠字（底用 --c-mint-bg） */
+  --ui-owned-bg: #E6EFCF;           /* 會員端狀態色：教材館「已開通」徽章底（經典＝淡藍、藕粉＝青蘋果綠；雪莉 09-20 指定綠色） */
+  --ui-owned-text: #5F7A38;         /* 會員端狀態色：教材館「已開通」徽章字 */
+  --ui-gold-text: #8A6D3B;          /* 會員端狀態色：待確認／補登／提示的黃褐字（底用 --c-gold-badge-bg） */
+  --ui-void-text: #7A6D64;          /* 會員端狀態色：已結束／已取消徽章的灰褐字（底用 --c-line） */
+  --ui-accent-text: #9C5F68;        /* 會員端重點色：開團中徽章字／分頁數字／開團列字／橫幅日期（藕粉＝深藕粉） */
+  --ui-accent-title: #BA6B78;       /* 會員端重點色：開團橫幅標題「開團中！」 */
+  --ui-accent-bg: #F7E4E2;          /* 會員端重點色：開團橫幅／開團列的淺底 */
+  --ui-accent-bg-soft: #F9F0EE;     /* 會員端重點色：更淡一階的重點底（教材包使用說明框、開團小圖列底） */
+  --ui-accent-badge-bg: #F3E3E1;    /* 會員端重點色：部落格「開團中」徽章底（經典＝主色實心、藕粉＝淡粉底） */
+  --ui-accent-badge-text: #9C5F68;  /* 會員端重點色：部落格「開團中」徽章字（經典＝白字） */
+  --ui-surface-soft: #FBF8F5;       /* 會員端：比奶茶更淡一階的底（商城卡片按下、書組展開列底） */
+  --fm-member-card-bg: #B07F83;     /* 會員中心：會員卡底（經典＝粉橘漸層、藕粉＝主色深） */
+  --fm-nav-on-text: #9C5F68;        /* 會員中心：底部導覽選中字色（藕粉主色在奶茶底對比只有 2.15，改用深藕粉；經典＝主色） */
 }
 /* END GENERATED */
 body{background:#FFFFFF!important}
