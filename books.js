@@ -1539,7 +1539,8 @@ function formatBytes(n) {
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-document.getElementById('addMaterialBtn').addEventListener('click', () => openMaterialForm(null));
+// 2026-10-08：舊「＋ 新增教材」（已隱藏）就算被點到也走教材館那條路，不再開舊表單
+document.getElementById('addMaterialBtn').addEventListener('click', () => document.getElementById('addHallMaterialBtn').click());
 
 // 教材正本已改教材館（docs/13）：切到教材館「教材」分頁、開新增資源表單，並預帶綁定這本書
 document.getElementById('addHallMaterialBtn').addEventListener('click', () => {
@@ -1576,6 +1577,14 @@ document.getElementById('addHallMaterialBtn').addEventListener('click', () => {
 document.getElementById('cancelMaterialBtn').addEventListener('click', closeMaterialForm);
 
 function openMaterialForm(material, opts) {
+  // 2026-10-08：舊表 book_materials 不再新增（後端 material-upsert 沒帶 id 也會擋）——
+  // 沒有 material＝要新增 → 一律導到教材館的新增表單；這個表單只剩編輯既有教材
+  if (!material) {
+    showToast('教材請到「教材館」分頁新增，這裡只能編輯既有教材', true);
+    const hallBtn = document.getElementById(materialsSectionBook ? 'addHallMaterialBtn' : 'matLibAddBtn');
+    if (hallBtn) hallBtn.click();
+    return;
+  }
   materialFormStandalone = Boolean(opts && opts.standalone);
   materialFormEditingId = material ? material.id : null;
   // 編輯共用教材時要原封不動帶回 bookIds（只送 book_id 會把其他書的掛載洗掉）
