@@ -17,6 +17,10 @@ const HOME_LAYOUT_DEFAULT = ['memo', 'calendar', 'myTasks', 'todoList', 'tools',
 const HOME_LAYOUT_SETTING_KEY = 'adminHome';
 let homeLayoutViews = HOME_LAYOUT_DEFAULT.slice();
 let homeLayoutLoaded = false;   // 雲端讀過一次就不再讀（每次重新整理資料都會呼叫 homeLayoutLoad）
+// 桌機每排幾個：4～6（預設 4；2026-10-10 雪莉定：不給下拉選，編輯模式把東西拖到右邊虛線「多一欄」才增加，最多 6）
+// 手機（<768px）一律 2 個，見 admin.html CSS。卡片少於欄數時自動縮回（最少 4）。
+const HL_COLS_MIN = 4, HL_COLS_MAX = 6;
+let homeLayoutCols = HL_COLS_MIN;
 let homeEditMode = false;
 let hlSaveTimer = null;
 let hlDrag = null;
@@ -125,7 +129,10 @@ function renderHomeLayout() {
     }
   });
   const view = document.getElementById('viewHome');
-  if (view) view.classList.toggle('home-editing', homeEditMode);
+  if (view) {
+    view.classList.toggle('home-editing', homeEditMode);
+    hlApplyCols(view);
+  }
   const sideNav = document.getElementById('sideNav');
   if (sideNav) {
     sideNav.classList.toggle('hl-editing', homeEditMode);
@@ -141,6 +148,49 @@ function renderHomeLayout() {
   const bar = document.getElementById('homeEditBar');
   if (bar) bar.style.display = homeEditMode ? '' : 'none';
   hlRenderTray();
+}
+
+function hlNormCols(v) {
+  const n = parseInt(v, 10);
+  return (n >= HL_COLS_MIN && n <= HL_COLS_MAX) ? n : HL_COLS_MIN; // 舊版存的 'auto'／2／3 一律當 4
+}
+function hlIsDesktop() { return window.matchMedia('(min-width: 768px)').matches; }
+// 編輯模式＋桌機＋還沒到 6 欄：格子右邊多一條虛線「多一欄」放置區
+function hlExtraColOn() { return homeEditMode && hlIsDesktop() && homeLayoutCols < HL_COLS_MAX; }
+function hlApplyCols(view) {
+  const tracks = homeLayoutCols + (hlExtraColOn() ? 1 : 0);
+  view.style.setProperty('--home-cols', 'repeat(' + tracks + ', 1fr)');
+  view.style.setProperty('--home-maxw', (tracks * 180) + 'px');
+  hlPositionCards();
+}
+// 有「多一欄」放置區時，卡片要明確指定欄列，才不會自動流進最右那欄；其他時候交回自動排列
+function hlPositionCards() {
+  const grid = document.querySelector('#viewHome .home-grid');
+  if (!grid) return;
+  let zone = document.getElementById('homeExtraCol');
+  if (!zone) {
+    zone = document.createElement('div');
+    zone.id = 'homeExtraCol';
+    zone.className = 'home-extra-col';
+    zone.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>拖到這裡<br>每排多一個</span>';
+    grid.appendChild(zone);
+  }
+  const on = hlExtraColOn();
+  const cards = Array.from(grid.querySelectorAll('.home-card')).filter(c => c.style.display !== 'none');
+  if (!on) {
+    zone.style.display = 'none';
+    cards.forEach(c => { c.style.gridColumn = ''; c.style.gridRow = ''; });
+    return;
+  }
+  const n = homeLayoutCols;
+  cards.forEach((c, i) => { c.style.gridColumn = String((i % n) + 1); c.style.gridRow = String(Math.floor(i / n) + 1); });
+  const rows = Math.max(1, Math.ceil(cards.length / n));
+  zone.style.display = '';
+  zone.style.gridColumn = String(n + 1);
+  zone.style.gridRow = '1 / span ' + rows;
+}
+function hlWriteCache() {
+  try { localStorage.setItem(hlCacheKey(), JSON.stringify({ views: homeLayoutViews, cols: homeLayoutCols })); } catch (e) {}
 }
 
 function hlRenderTray() {
@@ -178,7 +228,9 @@ function hlRenderTray() {
 // 套用新順序：畫面＋本機快取＋排程雲端存檔
 function hlSetViews(views) {
   homeLayoutViews = hlSanitize(views);
-  try { localStorage.setItem(hlCacheKey(), JSON.stringify(homeLayoutViews)); } catch (e) {}
+  const count = homeLayoutViews.filter(v => { const it = hlCatalogMap()[v]; return it && hlAllowed(it); }).length;
+  if (count < homeLayoutCols) homeLayoutCols = Math.max(HL_COLS_MIN, count); // 卡片少於欄數＝縮回
+  hlWriteCache();
   renderHomeLayout();
   hlScheduleSave();
 }
@@ -201,7 +253,7 @@ async function hlSaveNow() {
   hlSaveTimer = null;
   const views = homeLayoutViews.slice();
   try {
-    const res = await postTask({ type: 'setting-set', key: HOME_LAYOUT_SETTING_KEY, personal: true, value: JSON.stringify({ views }) });
+    const res = await postTask({ type: 'setting-set', key: HOME_LAYOUT_SETTING_KEY, personal: true, value: JSON.stringify({ views, cols: homeLayoutCols }) });
     if (!res || !res.success) { hlStatus('儲存失敗：' + ((res && res.error) || '請稍後再試'), true); return false; }
     homeLayoutLoaded = true;
     hlStatus('已儲存');
@@ -216,7 +268,11 @@ async function hlSaveNow() {
 function homeLayoutBoot() {
   try {
     const raw = localStorage.getItem(hlCacheKey());
-    if (raw) homeLayoutViews = hlSanitize(JSON.parse(raw));
+    if (raw) {
+      const c = JSON.parse(raw); // 舊快取是純陣列、新快取是 {views, cols}
+      homeLayoutViews = hlSanitize(Array.isArray(c) ? c : c.views);
+      if (!Array.isArray(c)) homeLayoutCols = hlNormCols(c.cols);
+    }
   } catch (e) {}
   renderHomeLayout();
 }
@@ -234,9 +290,12 @@ async function homeLayoutLoad() {
     if (res.value) {
       const parsed = JSON.parse(res.value);
       if (parsed && Array.isArray(parsed.views)) views = parsed.views;
+      homeLayoutCols = hlNormCols(parsed && parsed.cols);
+    } else {
+      homeLayoutCols = HL_COLS_MIN;
     }
     homeLayoutViews = hlSanitize(views);
-    try { localStorage.setItem(hlCacheKey(), JSON.stringify(homeLayoutViews)); } catch (e) {}
+    hlWriteCache();
     renderHomeLayout();
   } catch (e) { /* 讀不到就維持快取／預設 */ }
 }
@@ -254,7 +313,8 @@ async function exitHomeEditMode() {
   renderHomeLayout();
 }
 function homeLayoutResetDefault() {
-  if (!confirm('要把首頁恢復成預設的 7 個入口嗎？')) return;
+  if (!confirm('要把首頁恢復成預設的 7 個入口（每排 4 個）嗎？')) return;
+  homeLayoutCols = HL_COLS_MIN;
   hlSetViews(HOME_LAYOUT_DEFAULT.slice());
 }
 
@@ -353,12 +413,18 @@ function hlMoveGhost(x, y) {
 }
 
 // 落點判斷（第二版：驗收抓到「依最近卡片中心算」會因版面位移來回抖動，改成只看游標正下方那張卡）
+// 可放下的範圍＝整個首頁畫面（不只格子；雪莉：拖到格子外也要有用），「可以加入」區除外（放回去＝取消）
 function hlGridInRange(x, y) {
-  const grid = document.querySelector('#viewHome .home-grid');
+  const view = document.getElementById('viewHome');
+  const grid = view && view.querySelector('.home-grid');
   if (!grid) return null;
-  const r = grid.getBoundingClientRect();
-  const pad = 40;
-  if (x < r.left - pad || x > r.right + pad || y < r.top - pad || y > r.bottom + pad) return null;
+  const r = view.getBoundingClientRect();
+  if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
+  const tray = document.getElementById('homeAddTray');
+  if (tray && tray.style.display !== 'none') {
+    const tr = tray.getBoundingClientRect();
+    if (x >= tr.left && x <= tr.right && y >= tr.top && y <= tr.bottom) return null;
+  }
   return grid;
 }
 function hlCardUnder(x, y, grid) {
@@ -376,6 +442,20 @@ function hlDragMove(e) {
     if (!hlDrag.started) return;
   }
   e.preventDefault();
+  if (hlDrag.kind === 'add') hlMoveGhost(e.clientX, e.clientY);
+  // 拖到右邊「多一欄」放置區：記下游標所在的列，放開時欄數＋1
+  const zone = document.getElementById('homeExtraCol');
+  if (zone && zone.style.display !== 'none') {
+    const zr = zone.getBoundingClientRect();
+    const inZone = e.clientX >= zr.left && e.clientX <= zr.right && e.clientY >= zr.top - 20 && e.clientY <= zr.bottom + 20;
+    zone.classList.toggle('is-over', inZone);
+    if (inZone) {
+      hlDrag.overExtraRow = hlRowAt(e.clientY);
+      if (hlDrag.placeholder && hlDrag.placeholder.parentNode) { hlDrag.placeholder.remove(); hlPositionCards(); }
+      return;
+    }
+    hlDrag.overExtraRow = null;
+  }
   const grid = hlGridInRange(e.clientX, e.clientY);
   if (hlDrag.kind === 'card') {
     // 同 customBlocks.js cbDrag：游標下的卡在後面＝放到它後面、在前面＝放到它前面（交換後游標落在自己身上就不再動＝不抖）
@@ -385,17 +465,35 @@ function hlDragMove(e) {
     const cards = Array.from(grid.querySelectorAll('.home-card'));
     if (cards.indexOf(hlDrag.source) < cards.indexOf(target)) target.after(hlDrag.source);
     else target.before(hlDrag.source);
+    hlPositionCards();
     return;
   }
-  hlMoveGhost(e.clientX, e.clientY);
   const ph = hlDrag.placeholder;
-  if (!grid) { if (ph && ph.parentNode) ph.remove(); return; }
+  if (!grid) { if (ph && ph.parentNode) { ph.remove(); hlPositionCards(); } return; }
   const target = hlCardUnder(e.clientX, e.clientY, grid); // 占位 pointer-events:none，不會被抓到
-  if (!target) { if (!ph.parentNode) grid.appendChild(ph); return; }
+  if (!target) {
+    // 游標在格子下方（低於最後一排）＝放最後；在卡片之間的縫隙＝維持原占位
+    const gr = grid.getBoundingClientRect();
+    const last = Array.from(grid.querySelectorAll('.home-card')).pop();
+    if (!ph.parentNode || e.clientY > gr.bottom) { if (last !== ph) { grid.appendChild(ph); hlPositionCards(); } }
+    return;
+  }
   // 游標在卡片左半＝插在它前面、右半＝後面；插入後游標下的卡已滑開，下一次判斷落在占位或同一張卡上，不會來回跳
   const r = target.getBoundingClientRect();
-  if (e.clientX < r.left + r.width / 2) { if (target.previousElementSibling !== ph) target.before(ph); }
-  else if (target.nextElementSibling !== ph) target.after(ph);
+  if (e.clientX < r.left + r.width / 2) { if (target.previousElementSibling !== ph) { target.before(ph); hlPositionCards(); } }
+  else if (target.nextElementSibling !== ph) { target.after(ph); hlPositionCards(); }
+}
+
+// 游標在第幾列（依目前看得到的卡片頂端位置）
+function hlRowAt(y) {
+  const grid = document.querySelector('#viewHome .home-grid');
+  if (!grid) return 0;
+  const tops = [];
+  grid.querySelectorAll('.home-card').forEach(c => { if (c.style.display === 'none' || c.classList.contains('hc-placeholder')) return; const t = Math.round(c.getBoundingClientRect().top); if (!tops.includes(t)) tops.push(t); });
+  tops.sort((p, q) => p - q);
+  let row = 0;
+  tops.forEach((t, i) => { if (y >= t) row = i; });
+  return row;
 }
 
 function hlDragCleanup() {
@@ -406,6 +504,8 @@ function hlDragCleanup() {
   document.removeEventListener('pointercancel', hlDragCancel);
   document.removeEventListener('touchmove', hlBlockScroll);
   document.body.classList.remove('hl-dragging');
+  const zone = document.getElementById('homeExtraCol');
+  if (zone) zone.classList.remove('is-over');
   if (hlDrag.ghost) hlDrag.ghost.remove();
   if (hlDrag.source) hlDrag.source.classList.remove('hc-dragging');
   if (hlDrag.started) hlSuppressClickUntil = Date.now() + 400;
@@ -424,6 +524,17 @@ function hlDragUp() {
   hlDragCleanup();
   hlDrag = null;
   if (!d.started) return;
+  if (d.overExtraRow !== null && d.overExtraRow !== undefined && homeLayoutCols < HL_COLS_MAX) {
+    if (d.placeholder) d.placeholder.remove();
+    const newCols = homeLayoutCols + 1;
+    const views = hlGridViews().filter(v => v !== d.view);
+    const idx = Math.min(d.overExtraRow * newCols + newCols - 1, views.length);
+    views.splice(idx, 0, d.view);
+    homeLayoutCols = newCols;
+    hlSetViews(views);
+    hlFlashCard(d.view);
+    return;
+  }
   if (d.kind === 'card') {
     const views = hlGridViews();
     if (views.join() !== homeLayoutViews.join()) hlSetViews(views);
@@ -441,3 +552,11 @@ function hlDragUp() {
   hlSetViews(views);
   hlFlashCard(d.view);
 }
+
+// 編輯中跨過手機／桌機寬度時，重排「多一欄」放置區與卡片位置
+let hlResizeTimer = null;
+window.addEventListener('resize', () => {
+  if (!homeEditMode) return;
+  clearTimeout(hlResizeTimer);
+  hlResizeTimer = setTimeout(renderHomeLayout, 150);
+});
