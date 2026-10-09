@@ -4014,6 +4014,7 @@
   .promo-state-showing { color:#8B6E5E; }
   .promo-state-active { color:#5C9147; }
   .promo-state-expired { color:var(--c-muted-light); }
+  .promo-state-beyond { color:#B5485A; }
   .promo-row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
   .promo-notified { font-size:11.5px; color:var(--c-muted); }
   .promo-card { background:#fff; border:1px solid #E6DCD2; border-radius:12px; padding:12px 14px; margin-bottom:12px; }
@@ -7603,7 +7604,7 @@
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=5"></script>
 <!-- promos.js（團購優惠：事件視窗優惠區＋優惠總覽分頁）同樣必須排在 admin.js 之前（開機還原分頁停在 promos 會同步呼叫 loadPromosView） -->
-<script src="promos.js?v=1"></script>
+<script src="promos.js?v=2"></script>
 <script src="announce.js?v=1"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=21"></script>

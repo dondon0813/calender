@@ -263,12 +263,13 @@ function pmBuildWeeklyForm(state) {
     btn.disabled = true;
     pmSetStatus(state, '新增中…');
     try {
-      await promoApi('promo-upsert', {
+      const res = await promoApi('promo-upsert', {
         eventId: state.eventId, kind: 'weekly', text,
         promoFrom: from.value || null, promoTo: to.value || null
       });
       ta.value = '';
       await pmAfterChange(state, '已新增本週優惠（還沒通知粉絲，要通知請按該筆的「確認並通知」）');
+      if (res.warning) alert('注意：' + res.warning);
     } catch (err) {
       pmSetStatus(state, err.message || '新增失敗', true);
     } finally {
@@ -295,9 +296,10 @@ function pmBuildLongForm(state) {
     btn.disabled = true;
     pmSetStatus(state, '新增中…');
     try {
-      await promoApi('promo-upsert', { eventId: state.eventId, kind: 'long', text });
+      const res = await promoApi('promo-upsert', { eventId: state.eventId, kind: 'long', text });
       ta.value = '';
       await pmAfterChange(state, '已新增整團優惠');
+      if (res.warning) alert('注意：' + res.warning);
     } catch (err) {
       pmSetStatus(state, err.message || '新增失敗', true);
     } finally {
@@ -333,7 +335,10 @@ function pmBuildRow(state, p) {
   const main = pmEl('div', 'promo-row-main');
   main.appendChild(pmEl('span', 'promo-when promo-when-' + (p.kind === 'long' ? 'long' : 'weekly'), pmWhenText(p)));
   main.appendChild(pmEl('span', 'promo-text', p.text || ''));
-  main.appendChild(pmEl('span', 'promo-state promo-state-' + (p.state || 'scheduled'), PM_STATE_LABEL[p.state] || p.state || ''));
+  // 優惠日超過結團日（後端 beyondEnd）：前台永遠不會顯示，狀態改標紅字提醒
+  main.appendChild(p.beyondEnd
+    ? pmEl('span', 'promo-state promo-state-beyond', '超過結團日')
+    : pmEl('span', 'promo-state promo-state-' + (p.state || 'scheduled'), PM_STATE_LABEL[p.state] || p.state || ''));
   row.appendChild(main);
 
   if (state.readOnly) return row;
@@ -438,7 +443,7 @@ function pmBuildEditRow(state, p) {
     pmSetStatus(state, '儲存中…');
     try {
       // 整組欄位都帶（沒改的照原值），不論後端是 partial 還是整列覆蓋都不會把沒改的欄位洗掉
-      await promoApi('promo-upsert', {
+      const res = await promoApi('promo-upsert', {
         id: p.id, eventId: state.eventId, kind: p.kind, text,
         showFrom: showFrom ? (showFrom.value || null) : (p.showFrom || null),
         promoFrom: from ? (from.value || null) : (p.promoFrom || null),
@@ -447,6 +452,7 @@ function pmBuildEditRow(state, p) {
       });
       state.editingId = null;
       await pmAfterChange(state, '已儲存修改（已發出的通知內容不會跟著變）');
+      if (res.warning) alert('注意：' + res.warning);
     } catch (err) {
       saveBtn.disabled = false;
       pmSetStatus(state, err.message || '儲存失敗', true);

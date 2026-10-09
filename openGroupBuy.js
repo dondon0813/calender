@@ -281,6 +281,9 @@
     const pb = o.promoBrand;
     subCurrent = null;
     if (!pb || !window.DDPromo) { gc.sub.classList.remove('show'); return; }
+    // 登入後跳回這一頁（會員頁讀 ?back=，只收官網網址）
+    const hintLink = gc.subHint.querySelector('a');
+    if (hintLink) hintLink.href = window.DDPromo.MEMBER_LOGIN_URL + '?back=' + encodeURIComponent(location.href.split('#')[0]);
     subCurrent = pb;
     const paint = () => {
       if (subCurrent !== pb) return;   // 視窗已換成別團
