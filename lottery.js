@@ -493,6 +493,8 @@ function renderLotteryTiles() {
     el.addEventListener('click', () => {
       const key = el.dataset.tile;
       LOTTERY_FILTER.status = (LOTTERY_FILTER.status === key) ? 'all' : key;
+      // 摘要磚的數字是「全部年份」算的，點磚要一起把年份切回全部，不然舊年度的待辦會被預設今年篩掉＝點了是空的（曾曾 10/9 回報）
+      if (LOTTERY_FILTER.status !== 'all') LOTTERY_FILTER.year = '';
       renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
     });
   });
@@ -594,6 +596,8 @@ function lotZoneVisible(key) {
   if (s === 'unpaired') return key === 'unpaired';
   if (s === 'unopened') return key === 'unopened';
   if (s === 'pending_draw') return key === 'groupbuy';
+  // 舊資料（已結案）不算進任何待辦統計，篩選某個狀態時不顯示，免得點了待辦只看到結案歷史（曾曾 10/9 回報）
+  if (key === 'archived') return s === 'all';
   return true;
 }
 function lotSearchQuery() { return LOTTERY_FILTER.q.trim().toLowerCase(); }
