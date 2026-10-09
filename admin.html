@@ -502,7 +502,7 @@
   }
   .home-card .hc-urgent svg { display: block; width: 100%; height: 100%; }
 
-  /* 工作首頁自訂（2026-10-10，homeLayout.js） */
+  /* 工作首頁自訂（2026-10-10，homeLayout.js；編輯模式＋拖曳） */
   .home-title-row { position: relative; max-width: 520px; margin: 0 auto; }
   .home-settings-btn {
     position: absolute; right: 0; top: 50%; transform: translateY(-50%);
@@ -514,21 +514,39 @@
   .home-settings-btn svg { width: 16px; height: 16px; display: block; }
   @media (max-width: 480px) { .home-settings-btn span { display: none; } .home-settings-btn { padding: 7px; } }
   .home-empty-hint { text-align: center; font-size: 13px; color: var(--c-text-soft); margin: 18px 0; }
-  .hl-section-title { font-size: 13px; font-weight: 900; color: var(--c-text-soft); margin: 14px 0 6px; }
-  .hl-list { display: flex; flex-direction: column; gap: 6px; }
-  .hl-row { display: flex; align-items: center; gap: 10px; background: var(--c-surface); border-radius: 12px; padding: 7px 8px 7px 12px; }
-  .hl-row-icon { width: 20px; height: 20px; flex: none; color: var(--c-text-soft); }
-  .hl-row-icon svg { width: 100%; height: 100%; display: block; }
-  .hl-row-name { flex: 1 1 auto; font-size: 14px; font-weight: 700; color: var(--c-text); }
-  .hl-row-ctrl { display: flex; gap: 4px; flex: none; }
-  .hl-icon-btn { width: 30px; height: 30px; border: none; border-radius: 8px; background: #fff; color: var(--c-text-soft); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
-  .hl-icon-btn svg { width: 16px; height: 16px; display: block; }
-  .hl-icon-btn:disabled { opacity: .35; cursor: default; }
-  .hl-icon-btn.hl-add { color: var(--c-primary); }
-  .hl-icon-btn.hl-remove { color: var(--c-danger); }
+  .home-edit-bar { max-width: 520px; margin: 10px auto 0; background: var(--c-surface); border-radius: 14px; padding: 10px 12px; }
+  .home-edit-tip { font-size: 12.5px; color: var(--c-text-soft); line-height: 1.6; }
+  .home-edit-tip-wide { display: none; }
+  @media (min-width: 1200px) { .home-edit-tip-wide { display: inline; } }
+  .home-edit-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .home-edit-status { flex: 1 1 auto; font-size: 12px; color: var(--c-text-soft); }
+  .home-edit-status.is-error { color: var(--c-danger); }
+  .home-edit-btn { border: 1px solid #E6DCD2; background: #fff; color: var(--c-text); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700; font-family: var(--font-body); cursor: pointer; }
+  .home-edit-btn.is-primary { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+  #viewHome.home-editing .home-grid { min-height: 120px; border-radius: 18px; outline: 2px dashed #E6DCD2; outline-offset: 6px; }
+  #viewHome.home-editing .home-card { cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #viewHome.home-editing .home-card:hover { transform: none; }
+  .home-card .hc-remove {
+    position: absolute; top: -7px; left: -7px; width: 24px; height: 24px; border-radius: 50%;
+    border: none; background: var(--c-danger); color: #fff; padding: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .home-card .hc-remove svg { width: 100%; height: 100%; display: block; }
+  .home-card.hc-dragging { opacity: .45; }
+  .home-card.hc-placeholder { opacity: .55; outline: 2px dashed var(--c-primary); outline-offset: -2px; pointer-events: none; }
+  .home-card.hc-flash { animation: hcFlash .8s ease; }
+  @keyframes hcFlash { 0%,100% { box-shadow: none; } 35% { box-shadow: 0 0 0 3px var(--c-primary); } }
+  .home-add-tray { max-width: 520px; margin: 22px auto 8px; }
+  .home-add-tray-title { font-size: 13px; font-weight: 900; color: var(--c-text-soft); margin-bottom: 8px; }
+  .home-add-tray-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hl-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed #D9C9BC; background: #fff; color: var(--c-text); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; font-family: var(--font-body); cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .hl-chip-icon { width: 16px; height: 16px; color: var(--c-text-soft); display: inline-flex; }
+  .hl-chip-icon svg { width: 100%; height: 100%; display: block; }
   .hl-empty { font-size: 12.5px; color: var(--c-text-soft); margin: 4px 0; }
-  .hl-actions { display: flex; gap: 8px; margin-top: 16px; }
-  .hl-actions button { flex: 1 1 auto; }
+  .hl-ghost { position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; background: #fff; color: var(--c-text); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px rgba(90,74,66,.18); }
+  body.hl-dragging, body.hl-dragging * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; }
+  #sideNav.hl-editing .sn-item[data-view]:not([data-view="home"]):not(.hl-on-home) { cursor: grab; outline: 1px dashed #D9C9BC; outline-offset: -3px; user-select: none; -webkit-user-select: none; }
+  #sideNav.hl-editing .sn-item.hl-on-home { opacity: .45; }
 
   /* ===== 便利小工具：App桌面風格圖示 ===== */
   .tools-grid {
@@ -4545,9 +4563,17 @@
   <div class="view" id="viewHome">
     <div class="home-title-row">
       <h2 class="view-title">工作首頁</h2>
-      <button type="button" class="home-settings-btn" id="homeSettingsBtn" onclick="openHomeLayoutModal()" title="設定首頁要放哪些入口" aria-label="首頁設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9"/><path d="M17 7h3"/><circle cx="15" cy="7" r="2"/><path d="M4 17h3"/><path d="M11 17h9"/><circle cx="9" cy="17" r="2"/></svg><span>首頁設定</span></button>
+      <button type="button" class="home-settings-btn" id="homeSettingsBtn" onclick="enterHomeEditMode()" title="編輯首頁要放哪些入口" aria-label="編輯首頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9"/><path d="M17 7h3"/><circle cx="15" cy="7" r="2"/><path d="M4 17h3"/><path d="M11 17h9"/><circle cx="9" cy="17" r="2"/></svg><span>編輯首頁</span></button>
     </div>
-    <p class="home-empty-hint" id="homeEmptyHint" style="display:none;">首頁目前沒有入口，按右上「首頁設定」加入常用功能。</p>
+    <div class="home-edit-bar" id="homeEditBar" style="display:none;">
+      <div class="home-edit-tip">編輯模式：拖曳卡片排順序、按 ✕ 移除；下方「可以加入」的功能點一下或拖進來<span class="home-edit-tip-wide">，也可以直接從左邊選單拖進來</span>。改完會自動儲存。</div>
+      <div class="home-edit-actions">
+        <span class="home-edit-status" id="homeEditStatus"></span>
+        <button type="button" class="home-edit-btn" onclick="homeLayoutResetDefault()">恢復預設</button>
+        <button type="button" class="home-edit-btn is-primary" onclick="exitHomeEditMode()">完成</button>
+      </div>
+    </div>
+    <p class="home-empty-hint" id="homeEmptyHint" style="display:none;">首頁目前沒有入口，按右上「編輯首頁」加入常用功能。</p>
     <div class="home-grid">
       <div class="home-card" data-view="memo" onclick="switchView('memo')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 20.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5h8L19 8v4"/><path d="M14.5 3.5V8H19"/><path d="M8.5 12h6"/><path d="M8.5 15.5h3.5"/><path d="M20.6 14.9l-5.1 5.1-2.4.5.5-2.4 5.1-5.1a1.35 1.35 0 0 1 1.9 1.9z"/></svg></span><span class="hc-name">我的備忘錄</span>
@@ -4571,6 +4597,10 @@
       <div class="home-card" data-view="report" data-perm="report" onclick="switchView('report')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V4"/><path d="M4 20.5h16.5"/><path d="M7.5 16.5l3.5-4 3 2.5 5-6"/></svg></span><span class="hc-name">報表統計</span>
       </div>
+    </div>
+    <div class="home-add-tray" id="homeAddTray" style="display:none;">
+      <div class="home-add-tray-title">可以加入（點一下或拖到上面）</div>
+      <div class="home-add-tray-list" id="homeAddTrayList"></div>
     </div>
     <!-- 沒放到首頁的卡片收在這裡（不刪：任務卡的 #homeUrgentIcon 要一直在 DOM 裡），見 homeLayout.js -->
     <div id="homeCardPool" style="display:none;"></div>
@@ -6663,24 +6693,6 @@
 <!-- 食譜貼文產生器：離畫面外的隱藏繪製區，html2canvas 從這裡截圖，不需要另外加樣式進 .wrap -->
 <div id="pgPosterStage"></div>
 
-<!-- ===== 工作首頁設定（每位員工自己的首頁入口，綁後台帳號；homeLayout.js） ===== -->
-<div class="modal-backdrop" id="homeLayoutModal" onclick="if(event.target===this) closeHomeLayoutModal()">
-  <div class="modal-box" style="width:min(440px, 94vw);">
-    <button class="modal-close" onclick="closeHomeLayoutModal()">✕</button>
-    <h3>首頁設定</h3>
-    <p style="font-size:12.5px; color:var(--c-text-soft); margin:0 0 4px;">選擇你的工作首頁要放哪些入口、排列順序。設定跟著你的後台帳號，換電腦或手機登入也一樣。</p>
-    <div class="hl-section-title">放在首頁（依序排列）</div>
-    <div class="hl-list" id="homeLayoutOn"></div>
-    <div class="hl-section-title">可以加入</div>
-    <div class="hl-list" id="homeLayoutOff"></div>
-    <div class="hl-actions">
-      <button type="button" class="action-btn" onclick="homeLayoutResetDraft()">恢復預設</button>
-      <button type="button" class="task-submit-btn" id="homeLayoutSaveBtn" style="margin:0;" onclick="saveHomeLayout()">儲存</button>
-    </div>
-    <div class="form-status" id="homeLayoutStatus"></div>
-  </div>
-</div>
-
 <!-- ===== 設定：修改密碼彈窗 ===== -->
 <!-- ===== 設定總覽（點漢堡選單「設定」先進這裡，再選要修改密碼還是權限設定） ===== -->
 <div class="modal-backdrop" id="settingsHubModal" onclick="if(event.target===this) closeSettingsHubModal()">
@@ -7706,7 +7718,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=27"></script>
-<script src="homeLayout.js?v=1"></script>
+<script src="homeLayout.js?v=3"></script>
 <script src="admin.js?v=114"></script>
 <script src="memo.js?v=8"></script>
 
