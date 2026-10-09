@@ -1698,16 +1698,25 @@ function sellableIngredientsPool() {
 }
 
 // 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
+// 同一層（開團中／即將開團同一天／都沒開團）裡，優先挑雪莉自己拍的去背圖（官網 images/Ingredients/）；
+// 開團狀態仍是第一優先，所以購買連結的選擇不受影響（雪莉 10-09：兔比只拍了香菇肉燥，要優先用這張）
+function isOwnIngredientPhoto(item) {
+  return /\/images\/Ingredients\//.test(String(item['圖片網址'] || ''));
+}
+function preferOwnPhoto(list) {
+  return list.find(isOwnIngredientPhoto) || list[0];
+}
 function pickBestBrandIngredient(group) {
   const withStatus = group.map(item => ({ item, status: getBrandStatus(item['品牌']) }));
-  const open = withStatus.find(w => w.status.status === 'open');
-  if (open) return open.item;
+  const open = withStatus.filter(w => w.status.status === 'open').map(w => w.item);
+  if (open.length) return preferOwnPhoto(open);
   const upcoming = withStatus.filter(w => w.status.status === 'upcoming');
   if (upcoming.length) {
     upcoming.sort((a, b) => a.status.nextDate - b.status.nextDate);
-    return upcoming[0].item;
+    const soonest = upcoming.filter(w => w.status.nextDate - upcoming[0].status.nextDate === 0).map(w => w.item);
+    return preferOwnPhoto(soonest);
   }
-  return group[0]; // 全部都已結單且沒有下一團資訊，就固定回傳第一個
+  return preferOwnPhoto(group); // 全部都已結單且沒有下一團資訊：有自拍圖的優先，否則第一個
 }
 
 // 篩選用的分類key：優先用「簡稱」，沒填才用「食材名稱」
