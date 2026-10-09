@@ -1137,7 +1137,8 @@ let currentSearchQuery = '';
 // 支援網址帶入預設顯示模式，例如 index.html?mode=start（開團日）；
 // 沒帶或帶到不認識的值就維持預設「現正開團中」
 const urlMode = new URLSearchParams(location.search).get('mode');
-if (['all', 'start', 'end', 'list'].includes(urlMode)) {
+// 2026-10-10 雪莉：'all' 暫不收（見 MODE_TABS 註解）；要還原把 'all' 加回這個清單
+if (['start', 'end', 'list'].includes(urlMode)) {
   currentMode = urlMode;
 }
 
@@ -1146,7 +1147,9 @@ const MODE_TABS = [
   { v: 'list', t: '現正開團中' },
   { v: 'start', t: '開團日' },
   { v: 'end', t: '結團日' },
-  { v: 'all', t: '顯示全部' },
+  // 2026-10-10 雪莉：團數多時橫條看不清楚，先隱藏；程式保留給多租戶／團少時用，
+  // 要還原把下面這行解開＋上面 urlMode 白名單加回 'all'
+  // { v: 'all', t: '顯示全部' },
 ];
 function renderModeTabs() {
   const el = document.getElementById('modeTabs');
