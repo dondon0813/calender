@@ -539,7 +539,9 @@
     display: flex; align-items: center; justify-content: center;
   }
   .home-card .hc-remove svg { width: 100%; height: 100%; display: block; }
-  .home-card.hc-dragging { opacity: .45; }
+  .home-card.hc-dragging { opacity: .25; }
+  /* 拖曳中游標下的半透明卡（homeLayout.js hlMountGhost） */
+  .home-card.hl-card-ghost { position: fixed; left: 0; top: 0; margin: 0; z-index: 9999; pointer-events: none; opacity: .7; transition: none; box-shadow: 0 10px 24px rgba(90,74,66,.22); box-sizing: border-box; }
   .home-card.hc-placeholder { opacity: .55; outline: 2px dashed var(--c-primary); outline-offset: -2px; pointer-events: none; }
   .home-card.hc-flash { animation: hcFlash .8s ease; }
   @keyframes hcFlash { 0%,100% { box-shadow: none; } 35% { box-shadow: 0 0 0 3px var(--c-primary); } }
@@ -550,7 +552,6 @@
   .hl-chip-icon { width: 16px; height: 16px; color: var(--c-text-soft); display: inline-flex; }
   .hl-chip-icon svg { width: 100%; height: 100%; display: block; }
   .hl-empty { font-size: 12.5px; color: var(--c-text-soft); margin: 4px 0; }
-  .hl-ghost { position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none; display: inline-flex; align-items: center; gap: 6px; background: #fff; color: var(--c-text); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; box-shadow: 0 6px 18px rgba(90,74,66,.18); }
   body.hl-dragging, body.hl-dragging * { user-select: none !important; -webkit-user-select: none !important; cursor: grabbing !important; }
   #sideNav.hl-editing .sn-item[data-view]:not([data-view="home"]):not(.hl-on-home) { cursor: grab; outline: 1px dashed #D9C9BC; outline-offset: -3px; user-select: none; -webkit-user-select: none; }
   #sideNav.hl-editing .sn-item.hl-on-home { opacity: .45; }
@@ -7725,7 +7726,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=27"></script>
-<script src="homeLayout.js?v=6"></script>
+<script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=114"></script>
 <script src="memo.js?v=8"></script>
 

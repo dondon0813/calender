@@ -379,24 +379,25 @@ function hlPointerDown(e, info) {
 }
 function hlBlockScroll(e) { e.preventDefault(); }
 
+// 拖曳時游標下跟著一張半透明的卡（2026-10-10 雪莉：比較直覺），尺寸同首頁卡片；
+// 拖既有卡片＝抓哪裡就從哪裡跟著走，從左欄／加入區拖＝卡片中心對準游標。
 function hlStartDrag(x, y) {
   hlDrag.started = true;
   document.addEventListener('touchmove', hlBlockScroll, { passive: false });
   document.body.classList.add('hl-dragging');
   if (hlDrag.kind === 'card') {
+    const r = hlDrag.source.getBoundingClientRect();
+    const ghost = hlDrag.source.cloneNode(true);
+    ghost.removeAttribute('onclick');
+    ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); // 任務卡含 #homeUrgentIcon，複本不能重複 id
+    ghost.querySelectorAll('.hc-remove').forEach(n => n.remove());
+    hlMountGhost(ghost, r.width, r.height, hlDrag.startX - r.left, hlDrag.startY - r.top);
     hlDrag.source.classList.add('hc-dragging');
+    hlMoveGhost(x, y);
     return;
   }
   const item = hlCatalogMap()[hlDrag.view];
   if (!item) return;
-  const ghost = document.createElement('div');
-  ghost.className = 'hl-ghost';
-  ghost.appendChild(hlIconSpan('hl-chip-icon', item.iconHtml, '1.8'));
-  const name = document.createElement('span');
-  name.textContent = item.name;
-  ghost.appendChild(name);
-  document.body.appendChild(ghost);
-  hlDrag.ghost = ghost;
   const ph = document.createElement('div');
   ph.className = 'home-card hc-placeholder';
   ph.appendChild(hlIconSpan('hc-icon', item.iconHtml, '1.6'));
@@ -405,11 +406,32 @@ function hlStartDrag(x, y) {
   phName.textContent = item.name;
   ph.appendChild(phName);
   hlDrag.placeholder = ph;
+  // 浮動卡尺寸＝目前首頁一張卡的大小（沒有卡就用預設）
+  const sample = Array.from(document.querySelectorAll('#viewHome .home-grid .home-card')).find(c => c.style.display !== 'none');
+  const sr = sample ? sample.getBoundingClientRect() : null;
+  const w = sr && sr.width ? sr.width : 150;
+  const h = sr && sr.height ? sr.height : 110;
+  const ghost = ph.cloneNode(true);
+  ghost.className = 'home-card';
+  hlMountGhost(ghost, w, h, w / 2, h / 2);
   hlMoveGhost(x, y);
 }
 
+function hlMountGhost(ghost, w, h, offX, offY) {
+  ghost.classList.add('hl-card-ghost');
+  ghost.style.width = w + 'px';
+  ghost.style.height = h + 'px';
+  ghost.style.display = '';
+  ghost.style.gridColumn = '';
+  ghost.style.gridRow = '';
+  document.body.appendChild(ghost);
+  hlDrag.ghost = ghost;
+  hlDrag.offX = offX;
+  hlDrag.offY = offY;
+}
+
 function hlMoveGhost(x, y) {
-  if (hlDrag.ghost) hlDrag.ghost.style.transform = 'translate(' + (x + 12) + 'px,' + (y + 12) + 'px)';
+  if (hlDrag && hlDrag.ghost) hlDrag.ghost.style.transform = 'translate(' + (x - hlDrag.offX) + 'px,' + (y - hlDrag.offY) + 'px)';
 }
 
 // 落點判斷（第二版：驗收抓到「依最近卡片中心算」會因版面位移來回抖動，改成只看游標正下方那張卡）
@@ -442,7 +464,7 @@ function hlDragMove(e) {
     if (!hlDrag.started) return;
   }
   e.preventDefault();
-  if (hlDrag.kind === 'add') hlMoveGhost(e.clientX, e.clientY);
+  hlMoveGhost(e.clientX, e.clientY);
   // 拖到右邊「多一欄」放置區：記下游標所在的列，放開時欄數＋1
   const zone = document.getElementById('homeExtraCol');
   if (zone && zone.style.display !== 'none') {
