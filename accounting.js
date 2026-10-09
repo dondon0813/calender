@@ -190,13 +190,10 @@ function renderAccountingView() {
     (acctCan.revenue && pend ? tile('其中未結算', acctMoney(pend), 'pend') : '');
 
   // 其他分頁各自渲染，但摘要四格是共用的，所以上面一定要先算完。
-  // 「lottery」＝子分頁抽獎（lottery.js），它有自己整套摘要磚/篩選列/資料來源（/api/lottery，
-  // 不是 acctData），這裡不用算、也不該算（只有 lotteryEdit 權限的人 acctData 本來就是空的）。
   if (acctTab === 'trend') { renderAcctTrend(); return; }
   if (acctTab === 'rank') { renderAcctRank(); return; }
   if (acctTab === 'print') { renderAcctPrint(); return; }
   if (acctTab === 'recon') { renderAcctRecon(); return; }
-  if (acctTab === 'lottery') { if (typeof loadLotteryView === 'function') loadLotteryView(); return; }
 
   if (!list.length) {
     box.innerHTML = '<div class="task-empty">沒有符合條件的紀錄</div>';
@@ -968,20 +965,12 @@ function acctSwitchTab(tab) {
   document.getElementById('acctPaneRank').style.display = tab === 'rank' ? '' : 'none';
   document.getElementById('acctPanePrint').style.display = tab === 'print' ? '' : 'none';
   document.getElementById('acctPaneRecon').style.display = tab === 'recon' ? '' : 'none';
-  // 抽獎子分頁（lottery.js；dondon-platform docs/09-lottery-design.md §11）：它自己有一整套
-  // 摘要磚／篩選列，不吃這裡的 acct-filters／acctSummary，跟列印/對帳同一組待遇
-  const paneLottery = document.getElementById('acctPaneLottery');
-  if (paneLottery) paneLottery.style.display = tab === 'lottery' ? '' : 'none';
   // 列印報表自己有範圍選單、對帳是獨立工作佇列，兩者都不吃上面的篩選列/摘要
-  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon' || tab === 'lottery') ? 'none' : '';
-  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon' || tab === 'lottery') ? 'none' : '';
+  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon') ? 'none' : '';
+  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon') ? 'none' : '';
   // 只有真的在列印分頁才掛這個 class，否則在別頁按 Ctrl+P 會印出空白紙（見 @media print 註解）
   document.body.classList.toggle('acct-printing', tab === 'print');
-  // 只有 lotteryEdit、沒有 revenue/commission/acctRecon 的人（典典）acctData 是空的，
-  // 進來這個分頁不需要（也不能）打 acct-list，renderAccountingView 對 tab==='lottery' 會直接
-  // 早退去載抽獎資料，不會去跑後面那段依賴 acctData 的統計/列表渲染。
-  if (tab === 'lottery' && typeof loadLotteryView === 'function') loadLotteryView();
-  else renderAccountingView();
+  renderAccountingView();
 }
 
 // ----- 開票抬頭候選清單 -----
