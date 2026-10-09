@@ -3791,7 +3791,8 @@
       width: 200px;
       position: sticky;
       top: 16px;
-      max-height: calc(100vh - 32px);
+      /* 固定高度＝整個畫面高（像 Claude 左側欄）：右邊頁面捲動時外框不跟著捲走，選單太長只在框內捲（2026-10-10 雪莉） */
+      height: calc(100vh - 32px);
       overflow-y: auto;
       background: var(--c-surface-2);
       border: 1px solid var(--c-border-light);
@@ -3831,6 +3832,15 @@
     }
 
     #mainContentCol { flex: 1 1 auto; min-width: 0; }
+
+    /* 2026-10-10 雪莉：左欄要固定在畫面左邊、「內部後台版本」那行要在最下方。
+       ① shared.css 的 html,body{overflow-x:hidden} 會讓 position:sticky 失效（左欄跟著頁面捲走），寬螢幕改 clip（一樣不出橫向捲軸，但不影響 sticky）
+       ② 右欄至少撐滿一個畫面高（扣掉 body 上下各 16；.wrap 上下內距歸零＝首頁剛好一個畫面高、不多出捲軸），footer 用 margin-top:auto 推到最底 */
+    html, body { overflow-x: clip; }
+    body { padding-bottom: 16px; }
+    #mainWrap { padding-top: 0; padding-bottom: 0; }
+    #mainContentCol { display: flex; flex-direction: column; min-height: calc(100vh - 32px); }
+    #mainContentCol > .footer { margin-top: auto; padding-top: 18px; }
 
     .menu-wrap { display: none; }
 
