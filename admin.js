@@ -3764,7 +3764,7 @@ function buildPendingItem(task) {
   // 刪除按鈕：僅「自己安排」的任務可以刪除，別人派給你的任務不能刪；放在名稱這一行的最右邊
   if (!task.from || task.from === currentUser) {
     const delBtn = document.createElement('button');
-    delBtn.className = 'task-mini-btn danger';
+    delBtn.className = 'task-mini-btn x-btn';
     delBtn.textContent = '✕';
     delBtn.title = '刪除這個任務';
     delBtn.style.marginLeft = 'auto';
@@ -3969,7 +3969,7 @@ function renderDispatchedList() {
     // 刪除按鈕：這裡的任務都是自己派遣出去的，可以直接刪除；放在名稱右邊、狀態標籤前面
     if (!task.from || task.from === currentUser) {
       const delBtn = document.createElement('button');
-      delBtn.className = 'task-mini-btn danger';
+      delBtn.className = 'task-mini-btn x-btn';
       delBtn.textContent = '✕';
       delBtn.title = '刪除這個任務';
       delBtn.addEventListener('click', (e) => {

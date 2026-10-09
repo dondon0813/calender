@@ -2010,7 +2010,7 @@ function addLotWinnerFormRow(data) {
 
   const del = document.createElement('button');
   del.type = 'button';
-  del.className = 'task-mini-btn danger';
+  del.className = 'task-mini-btn x-btn';
   del.style.cssText = 'flex:none; padding:2px 8px;';
   del.textContent = '✕';
   del.addEventListener('click', () => row.remove());

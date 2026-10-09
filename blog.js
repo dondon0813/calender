@@ -243,7 +243,7 @@ function blogRenderBlocks() {
         '<div style="flex:1;"></div>' +
         '<button class="task-mini-btn" ' + (i === 0 ? 'disabled' : '') + ' onclick="blogMoveBlock(' + i + ',-1)">↑</button>' +
         '<button class="task-mini-btn" ' + (i === BLOG_EDIT.blocks.length - 1 ? 'disabled' : '') + ' onclick="blogMoveBlock(' + i + ',1)">↓</button>' +
-        '<button class="task-mini-btn" style="color:#B5485A;" onclick="blogRemoveBlock(' + i + ')">✕</button>' +
+        '<button class="task-mini-btn x-btn" onclick="blogRemoveBlock(' + i + ')">✕</button>' +
       '</div>' + inner + '</div>';
   }).join('') || '<div style="font-size:12px; color:var(--c-text-light);">還沒有內容，用下面的按鈕加入第一塊。</div>';
 }

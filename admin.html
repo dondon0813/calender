@@ -535,7 +535,7 @@
   #viewHome.home-editing .home-card:hover { transform: none; }
   .home-card .hc-remove {
     position: absolute; top: -7px; left: -7px; width: 24px; height: 24px; border-radius: 50%;
-    border: none; background: var(--c-danger); color: #fff; padding: 4px; cursor: pointer;
+    border: none; background: var(--c-muted); color: #fff; padding: 4px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
   .home-card .hc-remove svg { width: 100%; height: 100%; display: block; }
@@ -713,7 +713,7 @@
     flex: none;
     border: none;
     background: #fff;
-    color: #B5485A;
+    color: var(--c-muted);
     width: 16px;
     height: 16px;
     line-height: 16px;
@@ -871,6 +871,9 @@
   .task-mini-btn.working { border-color: #C4936F; color: #E58B4E; }
   .task-mini-btn.working.on { background: #C4936F; color: #fff; }
   .task-mini-btn.danger { border-color: #D9A3A8; color: #B5485A; }
+  /* 叉叉（✕）按鈕一律灰色、不用紅色（2026-10-10 雪莉定，全站規則）；紅色只留給寫了「刪除」字樣的按鈕 */
+  .task-mini-btn.x-btn, .pba-mini-btn.x-btn { color: var(--c-muted); }
+  .task-mini-btn.x-btn:hover, .pba-mini-btn.x-btn:hover { color: var(--c-brown); }
   .task-mini-btn.restore { border-color: var(--c-cat-2); color: #5C9147; }
 
   /* ===== 公關品明細（行事曆彈窗／任務彈窗共用）＋清單頁篩選 ===== */
@@ -1129,13 +1132,13 @@
     flex: none;
     border: none;
     background: none;
-    color: #c99;
+    color: var(--c-muted);
     font-size: 13px;
     cursor: pointer;
     padding: 0 2px;
     margin-left: 4px;
   }
-  .stage-item .stage-del:hover { color: var(--c-danger); }
+  .stage-item .stage-del:hover { color: var(--c-brown); }
   .stage-add-row {
     display: flex;
     gap: 8px;
@@ -1905,7 +1908,7 @@
     padding: 2px 4px;
   }
   .mtree-folder-add:hover { color: #72A576; }
-  .mtree-folder-del:hover { color: var(--c-danger); }
+  .mtree-folder-del:hover { color: var(--c-brown); }
   .mtree-children {
     margin-left: 20px;
     border-left: 1.5px dashed #E6DCD2;
@@ -3679,7 +3682,7 @@
   }
   .cs-placed.selected .cs-placed-del,
   .cs-placed.selected .cs-placed-resize { display: flex; }
-  .cs-placed-del { top: -10px; right: -10px; background: var(--c-danger); }
+  .cs-placed-del { top: -10px; right: -10px; background: var(--c-muted); }
   .cs-placed-resize { bottom: -10px; right: -10px; cursor: nwse-resize; background: var(--c-brown); }
   .cs-action-row {
     display: flex;
@@ -7667,7 +7670,7 @@
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=18"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
-<script src="books.js?v=58"></script>
+<script src="books.js?v=59"></script>
 <!-- contractSign.js 必須排在 admin.js 之前（本檔模組載入順序鐵律，見 10 號檔 §2） -->
 <script src="contractSign.js?v=2"></script>
 <script src="bgRemover.js?v=1"></script>
@@ -7683,7 +7686,7 @@
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
-<script src="blog.js?v=3"></script>
+<script src="blog.js?v=4"></script>
 <!-- hall.js（教材館）：本次任務刻意不掛進 admin.js 的 VIEW_ID_MAP/switchView（範圍鎖定
      只改 admin.html＋新增 hall.js），因此嚴格說載入順序不受「開機還原分頁」規則影響；
      仍比照同批模組放在 admin.js 之前，維持慣例＋方便未來要收進正式分頁時比對。 -->
@@ -7725,9 +7728,9 @@
   </div>
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=28"></script>
+<script src="lottery.js?v=29"></script>
 <script src="homeLayout.js?v=7"></script>
-<script src="admin.js?v=114"></script>
+<script src="admin.js?v=116"></script>
 <script src="memo.js?v=8"></script>
 
 </body>

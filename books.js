@@ -1179,7 +1179,7 @@ function addVideoRow(video) {
 
   const del = document.createElement('button');
   del.type = 'button';
-  del.className = 'pba-mini-btn danger';
+  del.className = 'pba-mini-btn x-btn';
   del.textContent = '✕';
   del.title = '移除這支影片';
   del.style.flex = 'none';
