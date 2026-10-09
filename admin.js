@@ -1516,6 +1516,7 @@ async function fetchMemos() {
     myPermissions = data.permissions || {};
     allPermissions = data.allPermissions || {};
     updatePermissionUI();
+    if (typeof homeLayoutLoad === 'function') homeLayoutLoad(); // 工作首頁自訂入口（homeLayout.js）
     customBlocks = Array.isArray(data.customBlocks) ? data.customBlocks : [];
     socialLinks = data.socialLinks || {};
     vendorDb = Array.isArray(data.vendorDb) ? data.vendorDb : [];

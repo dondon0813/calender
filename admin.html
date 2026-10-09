@@ -502,6 +502,34 @@
   }
   .home-card .hc-urgent svg { display: block; width: 100%; height: 100%; }
 
+  /* 工作首頁自訂（2026-10-10，homeLayout.js） */
+  .home-title-row { position: relative; max-width: 520px; margin: 0 auto; }
+  .home-settings-btn {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    display: inline-flex; align-items: center; gap: 4px;
+    border: none; background: var(--c-surface); color: var(--c-text-soft);
+    border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 700;
+    font-family: var(--font-body); cursor: pointer;
+  }
+  .home-settings-btn svg { width: 16px; height: 16px; display: block; }
+  @media (max-width: 480px) { .home-settings-btn span { display: none; } .home-settings-btn { padding: 7px; } }
+  .home-empty-hint { text-align: center; font-size: 13px; color: var(--c-text-soft); margin: 18px 0; }
+  .hl-section-title { font-size: 13px; font-weight: 900; color: var(--c-text-soft); margin: 14px 0 6px; }
+  .hl-list { display: flex; flex-direction: column; gap: 6px; }
+  .hl-row { display: flex; align-items: center; gap: 10px; background: var(--c-surface); border-radius: 12px; padding: 7px 8px 7px 12px; }
+  .hl-row-icon { width: 20px; height: 20px; flex: none; color: var(--c-text-soft); }
+  .hl-row-icon svg { width: 100%; height: 100%; display: block; }
+  .hl-row-name { flex: 1 1 auto; font-size: 14px; font-weight: 700; color: var(--c-text); }
+  .hl-row-ctrl { display: flex; gap: 4px; flex: none; }
+  .hl-icon-btn { width: 30px; height: 30px; border: none; border-radius: 8px; background: #fff; color: var(--c-text-soft); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .hl-icon-btn svg { width: 16px; height: 16px; display: block; }
+  .hl-icon-btn:disabled { opacity: .35; cursor: default; }
+  .hl-icon-btn.hl-add { color: var(--c-primary); }
+  .hl-icon-btn.hl-remove { color: var(--c-danger); }
+  .hl-empty { font-size: 12.5px; color: var(--c-text-soft); margin: 4px 0; }
+  .hl-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .hl-actions button { flex: 1 1 auto; }
+
   /* ===== 便利小工具：App桌面風格圖示 ===== */
   .tools-grid {
     display: grid;
@@ -4515,31 +4543,37 @@
 
   <!-- ===== 工作首頁 ===== -->
   <div class="view" id="viewHome">
-    <h2 class="view-title">工作首頁</h2>
+    <div class="home-title-row">
+      <h2 class="view-title">工作首頁</h2>
+      <button type="button" class="home-settings-btn" id="homeSettingsBtn" onclick="openHomeLayoutModal()" title="設定首頁要放哪些入口" aria-label="首頁設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9"/><path d="M17 7h3"/><circle cx="15" cy="7" r="2"/><path d="M4 17h3"/><path d="M11 17h9"/><circle cx="9" cy="17" r="2"/></svg><span>首頁設定</span></button>
+    </div>
+    <p class="home-empty-hint" id="homeEmptyHint" style="display:none;">首頁目前沒有入口，按右上「首頁設定」加入常用功能。</p>
     <div class="home-grid">
-      <div class="home-card" onclick="switchView('memo')">
+      <div class="home-card" data-view="memo" onclick="switchView('memo')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 20.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5h8L19 8v4"/><path d="M14.5 3.5V8H19"/><path d="M8.5 12h6"/><path d="M8.5 15.5h3.5"/><path d="M20.6 14.9l-5.1 5.1-2.4.5.5-2.4 5.1-5.1a1.35 1.35 0 0 1 1.9 1.9z"/></svg></span><span class="hc-name">我的備忘錄</span>
       </div>
-      <div class="home-card" onclick="switchView('calendar')">
+      <div class="home-card" data-view="calendar" onclick="switchView('calendar')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17"/><path d="M8.5 3v4"/><path d="M15.5 3v4"/><path d="M12 18c-.3-.2-2.6-1.6-2.6-3.1a1.3 1.3 0 0 1 2.6-.6 1.3 1.3 0 0 1 2.6.6c0 1.5-2.3 2.9-2.6 3.1z"/></svg></span><span class="hc-name">行事曆</span>
       </div>
-      <div class="home-card" onclick="switchView('myTasks')">
+      <div class="home-card" data-view="myTasks" onclick="switchView('myTasks')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="3" rx="1.2"/><path d="M8.8 13.2l2.2 2.2 4.4-4.6"/></svg></span><span class="hc-name">任務</span>
         <span class="hc-urgent" id="homeUrgentIcon" style="display:none;" title="有緊急任務"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5"/><path d="M12 15.9h.01" stroke-width="2.6"/></svg></span>
       </div>
-      <div class="home-card" onclick="switchView('todoList')">
+      <div class="home-card" data-view="todoList" onclick="switchView('todoList')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.8l1.6 1.6 2.6-3"/><path d="M11.5 6.5H20"/><path d="M4 12.3l1.6 1.6 2.6-3"/><path d="M11.5 12H20"/><path d="M4 17.8l1.6 1.6 2.6-3"/><path d="M11.5 17.5H20"/></svg></span><span class="hc-name">待辦事項</span>
       </div>
-      <div class="home-card" onclick="switchView('tools')">
+      <div class="home-card" data-view="tools" onclick="switchView('tools')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span><span class="hc-name">便利小工具</span>
       </div>
-      <div class="home-card" onclick="switchView('brandVendor')">
+      <div class="home-card" data-view="brandVendor" onclick="switchView('brandVendor')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M3.5 20.5h17"/><path d="M8.5 7.5h2M13.5 7.5h2M8.5 11h2M13.5 11h2M8.5 14.5h2M13.5 14.5h2"/><path d="M10.5 20.5v-3h3v3"/></svg></span><span class="hc-name">品牌廠商</span>
       </div>
-      <div class="home-card" data-perm="report" onclick="switchView('report')">
+      <div class="home-card" data-view="report" data-perm="report" onclick="switchView('report')">
         <span class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V4"/><path d="M4 20.5h16.5"/><path d="M7.5 16.5l3.5-4 3 2.5 5-6"/></svg></span><span class="hc-name">報表統計</span>
       </div>
     </div>
+    <!-- 沒放到首頁的卡片收在這裡（不刪：任務卡的 #homeUrgentIcon 要一直在 DOM 裡），見 homeLayout.js -->
+    <div id="homeCardPool" style="display:none;"></div>
   </div>
 
   <!-- ===== 任務（我的任務＋派遣任務合併） ===== -->
@@ -6629,6 +6663,24 @@
 <!-- 食譜貼文產生器：離畫面外的隱藏繪製區，html2canvas 從這裡截圖，不需要另外加樣式進 .wrap -->
 <div id="pgPosterStage"></div>
 
+<!-- ===== 工作首頁設定（每位員工自己的首頁入口，綁後台帳號；homeLayout.js） ===== -->
+<div class="modal-backdrop" id="homeLayoutModal" onclick="if(event.target===this) closeHomeLayoutModal()">
+  <div class="modal-box" style="width:min(440px, 94vw);">
+    <button class="modal-close" onclick="closeHomeLayoutModal()">✕</button>
+    <h3>首頁設定</h3>
+    <p style="font-size:12.5px; color:var(--c-text-soft); margin:0 0 4px;">選擇你的工作首頁要放哪些入口、排列順序。設定跟著你的後台帳號，換電腦或手機登入也一樣。</p>
+    <div class="hl-section-title">放在首頁（依序排列）</div>
+    <div class="hl-list" id="homeLayoutOn"></div>
+    <div class="hl-section-title">可以加入</div>
+    <div class="hl-list" id="homeLayoutOff"></div>
+    <div class="hl-actions">
+      <button type="button" class="action-btn" onclick="homeLayoutResetDraft()">恢復預設</button>
+      <button type="button" class="task-submit-btn" id="homeLayoutSaveBtn" style="margin:0;" onclick="saveHomeLayout()">儲存</button>
+    </div>
+    <div class="form-status" id="homeLayoutStatus"></div>
+  </div>
+</div>
+
 <!-- ===== 設定：修改密碼彈窗 ===== -->
 <!-- ===== 設定總覽（點漢堡選單「設定」先進這裡，再選要修改密碼還是權限設定） ===== -->
 <div class="modal-backdrop" id="settingsHubModal" onclick="if(event.target===this) closeSettingsHubModal()">
@@ -7654,7 +7706,8 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=27"></script>
-<script src="admin.js?v=113"></script>
+<script src="homeLayout.js?v=1"></script>
+<script src="admin.js?v=114"></script>
 <script src="memo.js?v=8"></script>
 
 </body>
