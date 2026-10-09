@@ -1082,6 +1082,7 @@
 <!-- 藕粉奶茶色系（2026-09-19）：必須放在本頁 <style> 之後；拿掉這行＝回到舊配色 -->
 <script src="theme.js?v=2"></script>
 <script src="modalGuard.js?v=1"></script>
+<script src="promoNotice.js?v=1"></script>
 </head>
 <body>
 
@@ -3025,6 +3026,7 @@ function initFavBridge() {
   ifr.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;';
   document.body.appendChild(ifr);
   favBridgeWin = ifr.contentWindow;
+  window.__ddFanBridgeWin = favBridgeWin;   // 優惠通知腳本 promoNotice.js 共用同一個橋（2026-10-09）
   favRpc({ op: 'state', itemType: 'recipe' }, 12000).then(res => {
     FAV.ready = true;
     FAV.loggedIn = !!res.loggedIn;
@@ -3249,7 +3251,7 @@ loadChangelog();
 </script>
 
 <!-- 「現正開團中」置頂橫列：跨頁共用的 openGroupBuy.js（容器 div 在上方，樣式在 shared.css） -->
-<script src="openGroupBuy.js?v=11"></script>
+<script src="openGroupBuy.js?v=12"></script>
 
 </body>
 </html>

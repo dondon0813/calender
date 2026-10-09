@@ -3983,6 +3983,53 @@
   /* 更新日誌的日期框沿用報表分頁同款（2026-09-26 雪莉：瀏覽器預設樣式突兀） */
   #changelogDate { font-family: var(--font-body); font-size: 13px; font-weight: 700; border: 1px solid var(--c-border); border-radius: 10px; padding: 6px 10px; background: var(--c-input-bg, #fff); color: var(--c-text); outline: none; }
   #changelogDate:focus { border-color: var(--c-primary); }
+
+  /* ===== 團購優惠（promos.js：事件視窗「優惠」區＋優惠總覽分頁；容器用奶茶底＋淡奶茶線，文字框日期框淡奶茶線） ===== */
+  .promo-notready { background:#F4ECE3; border:1px solid #F0DBA0; border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:13px; }
+  .promo-form { background:var(--c-surface, #FFFBF5); border:1px solid #E6DCD2; border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+  .promo-form-title { font-size:13px; font-weight:800; color:var(--c-text); margin-bottom:6px; }
+  .promo-form-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; }
+  .promo-form-label { font-size:12.5px; font-weight:700; color:var(--c-text-soft); }
+  .promo-form-hint { font-size:12px; color:var(--c-muted); margin-top:6px; line-height:1.6; }
+  .promo-textarea { width:100%; box-sizing:border-box; font-family:var(--font-body); font-size:13px; line-height:1.5; padding:8px 10px; border:1px solid #E6DCD2; border-radius:10px; background:#fff; color:var(--c-text); outline:none; resize:vertical; margin:0; }
+  .promo-textarea:focus { border-color:#C99A9B; }
+  .promo-date { font-family:var(--font-body); font-size:13px; font-weight:700; border:1px solid #E6DCD2; border-radius:10px; padding:5px 8px; background:#fff; color:var(--c-text); outline:none; margin:0; width:auto; }
+  .promo-date:focus { border-color:#C99A9B; }
+  /* .task-form 對 date／textarea 有 width:100% 與 min-height:84px，這裡用較高的選擇器壓回去（日期框要併排） */
+  .promo-form input.promo-date, .promo-row input.promo-date { width:auto; flex:1 1 120px; min-width:0; max-width:170px; padding:5px 8px; border-radius:10px; font-size:13px; }
+  .promo-form textarea.promo-textarea, .promo-row textarea.promo-textarea { min-height:0; border-radius:10px; padding:8px 10px; font-size:13px; font-weight:400; }
+  .promo-status { margin:2px 0 8px; font-size:12.5px; }
+  .promo-status:empty { display:none; }
+  .promo-list { display:flex; flex-direction:column; gap:8px; }
+  .promo-empty { text-align:center; color:var(--c-muted-light); font-size:13px; padding:10px 0; }
+  .promo-row { background:var(--c-surface, #FFFBF5); border:1px solid #E6DCD2; border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  .promo-row.is-expired .promo-text { color:var(--c-muted-light); }
+  .promo-row.is-editing { background:#fff; }
+  .promo-row-main { display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start; }
+  .promo-when { flex:none; font-size:12px; font-weight:800; border-radius:999px; padding:2px 9px; background:#F3E3E1; color:#8B6E5E; white-space:nowrap; }
+  .promo-when-long { background:#EDE6DC; color:#7D6A5F; }
+  .promo-text { flex:1 1 160px; min-width:0; font-size:13.5px; line-height:1.55; white-space:pre-wrap; word-break:break-word; }
+  .promo-state { flex:none; font-size:11.5px; font-weight:800; white-space:nowrap; }
+  .promo-state-scheduled { color:var(--c-muted); }
+  .promo-state-showing { color:#8B6E5E; }
+  .promo-state-active { color:#5C9147; }
+  .promo-state-expired { color:var(--c-muted-light); }
+  .promo-row-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .promo-notified { font-size:11.5px; color:var(--c-muted); }
+  .promo-card { background:#fff; border:1px solid #E6DCD2; border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+  .promo-card-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .promo-card-title { flex:1 1 180px; min-width:0; font-size:15px; }
+  .promo-badge { flex:none; font-size:11.5px; font-weight:800; border-radius:999px; padding:2px 10px; }
+  .promo-badge-open { background:#E3EFDB; color:#5C9147; }
+  .promo-badge-upcoming { background:#F3E3E1; color:#8B6E5E; }
+  .promo-card-sub { font-size:12.5px; color:var(--c-muted); margin:4px 0 6px; }
+  .promo-card-meta { display:flex; flex-direction:column; gap:3px; margin-bottom:10px; }
+  .promo-meta-line { display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; font-size:13px; }
+  .promo-meta-key { flex:none; min-width:44px; font-size:12px; font-weight:800; color:var(--c-text-soft); }
+  .promo-meta-val { min-width:0; word-break:break-word; }
+  .promo-meta-small { font-size:11.5px; color:var(--c-muted); }
+  .promo-meta-warn { color:var(--c-danger, #B5485A); font-weight:700; }
+  #evPromoBox { margin-bottom:12px; }
   .rpt-chips { max-width: 900px; margin: 0 auto 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .rpt-chips-label { font-size: 12px; font-weight: 800; color: var(--c-muted); }
   .rpt-chip { font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; border: none; border-radius: var(--r-pill); padding: 4px 10px; background: var(--c-pink-bg); color: var(--c-pink-deep); }
@@ -4380,6 +4427,7 @@
     <div class="sn-group-title">工作</div>
     <button class="sn-item" data-view="home"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5L12 4.5l8.5 7"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1h3.5v-6h4v6h3.5a1 1 0 0 0 1-1V10"/></svg>工作首頁</button>
     <button class="sn-item" data-view="calendar" data-perm="calendarEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17"/><path d="M8.5 3v4"/><path d="M15.5 3v4"/></svg>行事曆</button>
+    <button class="sn-item" data-view="promos" data-perm="calendarEdit:edit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5V5.5a2 2 0 0 1 2-2h7l8 8a2 2 0 0 1 0 2.8l-6.2 6.2a2 2 0 0 1-2.8 0z"/><circle cx="8.2" cy="8.2" r="1.4"/></svg>優惠總覽</button>
     <button class="sn-item" data-view="myTasks"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="3" rx="1.2"/><path d="M8.8 13.2l2.2 2.2 4.4-4.6"/></svg>任務<span class="mi-urgent-dot" id="sideNavUrgentDot" style="display:none;"></span></button>
     <button class="sn-item" data-view="memo"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 20.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5h8L19 8v4"/><path d="M14.5 3.5V8H19"/><path d="M8.5 12h6"/><path d="M20.6 14.9l-5.1 5.1-2.4.5.5-2.4 5.1-5.1a1.35 1.35 0 0 1 1.9 1.9z"/></svg>備忘錄</button>
     <button class="sn-item" data-view="todoList"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.8l1.6 1.6 2.6-3"/><path d="M11.5 6.5H20"/><path d="M4 12.3l1.6 1.6 2.6-3"/><path d="M11.5 12H20"/><path d="M4 17.8l1.6 1.6 2.6-3"/><path d="M11.5 17.5H20"/></svg>待辦事項</button>
@@ -4438,6 +4486,7 @@
         <div class="menu-panel" id="menuPanel">
           <button class="menu-item" data-view="home"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5L12 4.5l8.5 7"/><path d="M5.5 10v9.5a1 1 0 0 0 1 1h3.5v-6h4v6h3.5a1 1 0 0 0 1-1V10"/></svg>工作首頁</button>
           <button class="menu-item" data-view="calendar" data-perm="calendarEdit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17"/><path d="M8.5 3v4"/><path d="M15.5 3v4"/></svg>行事曆</button>
+          <button class="menu-item" data-view="promos" data-perm="calendarEdit:edit"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12.5V5.5a2 2 0 0 1 2-2h7l8 8a2 2 0 0 1 0 2.8l-6.2 6.2a2 2 0 0 1-2.8 0z"/><circle cx="8.2" cy="8.2" r="1.4"/></svg>優惠總覽</button>
           <button class="menu-item" data-view="myTasks"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4.5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-12a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="3" rx="1.2"/><path d="M8.8 13.2l2.2 2.2 4.4-4.6"/></svg>任務<span class="mi-urgent-dot" id="menuUrgentDot" style="display:none;"></span></button>
           <button class="menu-item" data-view="memo"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 20.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5h8L19 8v4"/><path d="M14.5 3.5V8H19"/><path d="M8.5 12h6"/><path d="M20.6 14.9l-5.1 5.1-2.4.5.5-2.4 5.1-5.1a1.35 1.35 0 0 1 1.9 1.9z"/></svg>備忘錄</button>
           <button class="menu-item" data-view="todoList"><svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.8l1.6 1.6 2.6-3"/><path d="M11.5 6.5H20"/><path d="M4 12.3l1.6 1.6 2.6-3"/><path d="M11.5 12H20"/><path d="M4 17.8l1.6 1.6 2.6-3"/><path d="M11.5 17.5H20"/></svg>待辦事項</button>
@@ -5855,6 +5904,19 @@
     <div id="changelogListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewChangelog -->
 
+  <!-- ===== 優惠總覽（promos.js；團購本週優惠／整團優惠，週四五的主要入口）===== -->
+  <div class="view" id="viewPromos">
+    <div class="rpt-header-wrap">
+      <h2 class="view-title">優惠總覽</h2>
+      <button class="task-mini-btn" id="promosRefreshBtn" type="button"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
+    </div>
+    <div id="promosNotReady" style="display:none; background:#F4ECE3; border:1px solid #F0DBA0; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
+      <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.3h.01" stroke-width="2.6"/></svg> 優惠資料表還沒建立，要先執行一次 db push 才能新增。
+    </div>
+    <div style="font-size:13px; color:#7D6A5F; margin-bottom:10px;">列出開團中與即將開團的團購。每一團可直接在卡片上新增「本週優惠」（優惠日預設本週六日），打上去就開始顯示；要通知粉絲請按該筆的「確認並通知」。</div>
+    <div id="promosListArea"><div class="task-empty">讀取中…</div></div>
+  </div><!-- /viewPromos -->
+
   <!-- ===== 抽獎（lottery.js；抽獎活動＋得獎人；掛在帳務頁子分頁「🎁 抽獎」，綁帳務團／R號，
        見 dondon-platform docs/09-lottery-design.md §11）===== -->
   <style>
@@ -6330,6 +6392,7 @@
       <optgroup label="工作">
         <option value="home">工作首頁</option>
         <option value="calendar" data-perm="calendarEdit">行事曆</option>
+        <option value="promos" data-perm="calendarEdit:edit">優惠總覽</option>
         <option value="myTasks">任務</option>
         <option value="memo">備忘錄</option>
         <option value="todoList">待辦事項</option>
@@ -7052,6 +7115,9 @@
         <label for="evEarlyBirdInput">早鳥禮（可不填，一行一個項目）</label>
         <textarea id="evEarlyBirdInput" rows="3" placeholder="例如：&#10;前10名送小禮&#10;滿千贈馬克杯"></textarea>
 
+        <label>優惠（本週優惠／整團優惠；開團後前台才顯示，早鳥禮仍是開團前）</label>
+        <div id="evPromoBox"></div>
+
         <label for="evUrlInput">團購網址（可不填）</label>
         <input type="text" id="evUrlInput" placeholder="貼上團購頁面網址…">
 
@@ -7536,6 +7602,8 @@
 <script src="subscriptions.js?v=6"></script>
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=5"></script>
+<!-- promos.js（團購優惠：事件視窗優惠區＋優惠總覽分頁）同樣必須排在 admin.js 之前（開機還原分頁停在 promos 會同步呼叫 loadPromosView） -->
+<script src="promos.js?v=1"></script>
 <script src="announce.js?v=1"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=21"></script>
@@ -7585,7 +7653,7 @@
 </div>
 <!-- lottery.js（抽獎，掛在帳務頁子分頁）必須排在 admin.js 之前：開機還原分頁若停在 accounting/lottery，會同步呼叫 loadAccounting()／loadLotteryView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=27"></script>
-<script src="admin.js?v=112"></script>
+<script src="admin.js?v=113"></script>
 <script src="memo.js?v=8"></script>
 
 </body>

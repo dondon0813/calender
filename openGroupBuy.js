@@ -41,8 +41,9 @@
   const PICTURE_BOOKS_PAGE_URL = 'picture-books.html';
   // 有食譜品牌（食材／食譜入口）、折扣碼、或是繪本團（繪本館介紹入口），點擊時先跳選擇視窗
   // 繪本團判定由後端算好（item.bookBrand＝品牌全名，非空＝繪本團）
+  // 2026-10-09 起生效中的優惠筆（o.promos，後端算好）也算
   function needsGroupModal(o) {
-    return !!((o.recipeBrand && o.recipeBrand.trim()) || (o.discountCode && o.discountCode.trim()) || o.bookBrand);
+    return !!((o.recipeBrand && o.recipeBrand.trim()) || (o.discountCode && o.discountCode.trim()) || o.bookBrand || (o.promos && o.promos.length));
   }
 
   function isValidUrl(s) {
@@ -98,7 +99,7 @@
     if (GC) return GC;
     const style = document.createElement('style');
     style.textContent = `
-      .ogbgc-box { text-align: center; }
+      .ogbgc-box { text-align: center; max-height: 86vh; overflow-y: auto; }
       .ogbgc-title { font-weight: 800; font-size: 17px; color: var(--c-text); margin: 4px 0 18px; padding-right: 10px; }
       .ogbgc-btns { display: flex; flex-direction: column; gap: 10px; }
       .ogbgc-btn { display: block; text-align: center; text-decoration: none; font-weight: 800; font-size: 14px;
@@ -107,6 +108,21 @@
       .ogbgc-btn-recipe { background: var(--c-cat-1); }
       .ogbgc-btn-order { background: var(--c-primary); }
       .ogbgc-btn-order:hover { background: var(--c-primary-dark); }
+      .ogbgc-promo { display: none; }
+      .ogbgc-promo.show { display: block; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--c-line); }
+      .ogbgc-promo-label { font-size: 12px; font-weight: 800; color: var(--c-text-soft); letter-spacing: 1px; margin-bottom: 8px; }
+      .ogbgc-promo-item + .ogbgc-promo-item { margin-top: 10px; }
+      .ogbgc-promo-when { font-size: 12px; font-weight: 800; color: var(--c-primary-dark); margin-bottom: 2px; }
+      .ogbgc-promo-text { font-size: 14px; line-height: 1.6; color: var(--c-text); white-space: pre-line; word-break: break-word; }
+      .ogbgc-sub { display: none; }
+      .ogbgc-sub.show { display: block; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--c-line); }
+      .ogbgc-sub-btn { display: block; width: 100%; font-weight: 800; font-size: 14px; border-radius: var(--r-pill); padding: 11px 14px;
+        color: var(--c-primary-dark); background: var(--c-bg-bottom); border: none; cursor: pointer; font-family: inherit; }
+      .ogbgc-sub-btn.on { color: var(--c-text-soft); }
+      .ogbgc-sub-btn:disabled { opacity: .6; cursor: default; }
+      .ogbgc-sub-hint { display: none; font-size: 12px; line-height: 1.6; color: var(--c-text-soft); margin-top: 8px; }
+      .ogbgc-sub-hint.show { display: block; }
+      .ogbgc-sub-hint a { color: var(--c-primary-dark); font-weight: 700; }
       .ogbgc-discount { display: none; }
       .ogbgc-discount.show { display: block; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--c-line); }
       .ogbgc-discount-label { font-size: 12px; font-weight: 800; color: var(--c-text-soft); letter-spacing: 1px; margin-bottom: 8px; }
@@ -132,6 +148,10 @@
           <a class="ogbgc-btn ogbgc-btn-recipe" target="_blank" rel="noopener noreferrer">🍽 食譜大全</a>
           <a class="ogbgc-btn ogbgc-btn-order" target="_blank" rel="noopener noreferrer">🛒 前往下單</a>
         </div>
+        <div class="ogbgc-promo">
+          <div class="ogbgc-promo-label">優惠</div>
+          <div class="ogbgc-promo-list"></div>
+        </div>
         <div class="ogbgc-discount">
           <div class="ogbgc-discount-label">專屬折扣碼</div>
           <button type="button" class="ogbgc-code">
@@ -140,6 +160,10 @@
           </button>
           <div class="ogbgc-discount-desc"></div>
           <div class="ogbgc-remind">💡 記得輸入折扣碼才能享有折扣</div>
+        </div>
+        <div class="ogbgc-sub">
+          <button type="button" class="ogbgc-sub-btn"></button>
+          <div class="ogbgc-sub-hint"><a href="https://member.sheridondon.com.tw/member" target="_blank" rel="noopener noreferrer">登入會員</a>後，換手機、換電腦也會收到</div>
         </div>
       </div>`;
     document.body.appendChild(backdrop);
@@ -155,6 +179,11 @@
       codeText: q('.ogbgc-code-text'),
       codeHint: q('.ogbgc-code-hint'),
       desc: q('.ogbgc-discount-desc'),
+      promo: q('.ogbgc-promo'),
+      promoList: q('.ogbgc-promo-list'),
+      sub: q('.ogbgc-sub'),
+      subBtn: q('.ogbgc-sub-btn'),
+      subHint: q('.ogbgc-sub-hint'),
     };
     const close = () => backdrop.classList.remove('show');
     q('.modal-close').addEventListener('click', close);
@@ -218,7 +247,59 @@
       gc.discount.classList.remove('show');
     }
 
+    setupPromoBlock(gc, o.promos || []);
+    setupSubscribeBlock(gc, o, baseKey);
+
     gc.backdrop.classList.add('show');
+  }
+
+  // 優惠區塊（2026-10-09，與 index.html setupPromoBlock 同款）：生效中的優惠筆各一列，沒優惠整塊隱藏
+  function setupPromoBlock(gc, promos) {
+    gc.promoList.textContent = '';
+    if (!promos.length) { gc.promo.classList.remove('show'); return; }
+    promos.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'ogbgc-promo-item';
+      if (p.label) {
+        const when = document.createElement('div');
+        when.className = 'ogbgc-promo-when';
+        when.textContent = p.label;
+        row.appendChild(when);
+      }
+      const text = document.createElement('div');
+      text.className = 'ogbgc-promo-text';
+      text.textContent = p.text;
+      row.appendChild(text);
+      gc.promoList.appendChild(row);
+    });
+    gc.promo.classList.add('show');
+  }
+
+  // 訂閱「XX 優惠通知」：狀態／橋接／localStorage 全在 promoNotice.js 的 window.DDPromo（沒載到就不顯示鈕）
+  let subCurrent = null;
+  function setupSubscribeBlock(gc, o, baseKey) {
+    const pb = o.promoBrand;
+    subCurrent = null;
+    if (!pb || !window.DDPromo) { gc.sub.classList.remove('show'); return; }
+    subCurrent = pb;
+    const paint = () => {
+      if (subCurrent !== pb) return;   // 視窗已換成別團
+      const on = window.DDPromo.isSubscribed(pb.id);
+      gc.subBtn.textContent = on ? '已訂閱，點此取消' : '訂閱 ' + pb.name + ' 優惠通知';
+      gc.subBtn.classList.toggle('on', on);
+      gc.subHint.classList.toggle('show', on && !window.DDPromo.loggedIn());
+    };
+    paint();
+    window.DDPromo.onReady(paint);
+    gc.subBtn.disabled = false;
+    gc.subBtn.onclick = () => {
+      const want = !window.DDPromo.isSubscribed(pb.id);
+      gc.subBtn.disabled = true;
+      window.DDPromo.subscribe(pb.id, pb.name, want).then(r => {
+        if (r && r.subscribed && want) sendStat(baseKey + '_subscribe', 'click');
+      }).catch(() => {}).then(() => { gc.subBtn.disabled = false; paint(); });
+    };
+    gc.sub.classList.add('show');
   }
 
   // 挑 4 欄或 5 欄：優先列數最少，列數打平時再挑最後一排最不零散的（waste 最小＝最後一排最滿）。
@@ -236,6 +317,14 @@
     return 'ogb-grid' + best.cols;
   }
 
+  // 後端 promos：[{kind,label,text}]，壞值當空
+  function toPromos(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter(p => p && typeof p.text === 'string' && p.text.trim() !== '')
+      .map(p => ({ kind: p.kind === 'long' ? 'long' : 'weekly', label: typeof p.label === 'string' ? p.label : '', text: p.text }));
+  }
+
   // 後端 opengroupbuys 的一筆 → renderOpenGroupBuyBar 吃的物件（title 的｜與 thumb 網域後端都已處理好）
   function toOpenItem(it) {
     return {
@@ -248,7 +337,10 @@
       discountCode: String(it.discountCode || '').trim(),
       discountDesc: String(it.discountDesc || '').trim(),
       evKey: it.evKey,
-      bookBrand: String(it.bookBrand || '')
+      bookBrand: String(it.bookBrand || ''),
+      promos: toPromos(it.promos),
+      promoBrand: (it.promoBrand && typeof it.promoBrand.id === 'string' && it.promoBrand.id && typeof it.promoBrand.name === 'string' && it.promoBrand.name)
+        ? { id: it.promoBrand.id, name: it.promoBrand.name } : null
     };
   }
 

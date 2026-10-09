@@ -45,6 +45,7 @@
     --ix-btn-recipe-hover: #F5A25D;   /* 頁首按鈕：食譜 hover */
     --ix-code-hover-bg: #FFECD9;      /* 折扣碼區塊 hover 背景 */
     --ix-tag-bg: var(--c-pink-deep);  /* 活動標籤背景 */
+    --ix-early-tag-bg: var(--ix-today-badge-bg); /* 早鳥禮小標籤背景（莓果紅，跟「今日截止」同色；2026-10-09） */
     --ix-c0-badge-bg: #FFE7ED;        /* 分類0 徽章背景 */
     --ix-c1-badge-bg: #ffecd9;        /* 分類1 徽章背景 */
     --ix-c3-badge-bg: #DEF5F4;        /* 分類3 徽章背景 */
@@ -466,6 +467,7 @@
   @media (prefers-reduced-motion: reduce) { .gs-today-badge { animation: none; } }
   .gs-frozen-badge { background: var(--ix-frozen-border); }
   .gs-tag-badge { background: var(--ix-tag-bg); }
+  .gs-early-badge { background: var(--ix-early-tag-bg); } /* 早鳥禮：還沒開團且有早鳥禮才出現 */
   .gs-empty {
     text-align: center;
     color: var(--c-muted);
@@ -504,6 +506,8 @@
   /* ===== 團購彈窗 ===== */
   .gc-modal-box {
     text-align: center;
+    max-height: 86vh;
+    overflow-y: auto;
   }
   .gc-title {
     font-family: var(--font-display);
@@ -593,6 +597,64 @@
     margin-top: 10px;
     white-space: pre-line;
   }
+  /* 優惠區塊（2026-10-09）：生效中的本週優惠／整團優惠，沒有時整塊隱藏（由 JS 切換 .show） */
+  .gc-promo { display: none; }
+  .gc-promo.show { display: block; }
+  .gc-btns + .gc-promo.show,
+  .gc-promo + .gc-discount.show {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--c-line);
+  }
+  .gc-promo-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--c-text-soft);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: var(--font-round);
+  }
+  .gc-promo-item + .gc-promo-item { margin-top: 10px; }
+  .gc-promo-when {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--c-primary-dark);
+    margin-bottom: 2px;
+  }
+  .gc-promo-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--c-text);
+    white-space: pre-line;
+    word-break: break-word;
+  }
+  /* 訂閱品牌優惠通知（2026-10-09） */
+  .gc-sub { display: none; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--c-line); }
+  .gc-sub.show { display: block; }
+  .gc-sub-btn {
+    display: block;
+    width: 100%;
+    font-family: var(--font-round);
+    font-weight: 800;
+    font-size: 14px;
+    border-radius: var(--r-pill);
+    padding: 11px 14px;
+    color: var(--c-primary-dark);
+    background: var(--c-bg-bottom);
+    border: none;
+    cursor: pointer;
+  }
+  .gc-sub-btn.on { color: var(--c-text-soft); }
+  .gc-sub-btn:disabled { opacity: .6; cursor: default; }
+  .gc-sub-hint {
+    display: none;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--c-text-soft);
+    margin-top: 8px;
+  }
+  .gc-sub-hint.show { display: block; }
+  .gc-sub-hint a { color: var(--c-primary-dark); font-weight: 700; }
   .gc-remind {
     font-size: 13px;
     font-weight: 700;
@@ -652,6 +714,9 @@
     padding: 1px 6px;
     margin-left: auto;
   }
+  .ev-tag-early { background: var(--ix-early-tag-bg); }
+  .ev-tag-early + .ev-tag { margin-left: 3px; }
+  .ebar-wrap .ev-tag-early + .ev-tag { margin-left: 0; }
 
   .c0 .badge { background: var(--ix-c0-badge-bg); color: var(--c-cat-0); } .c0.ebar { background: var(--c-cat-0); }
   .c1 .badge { background: var(--ix-c1-badge-bg); color: var(--c-cat-1); } .c1.ebar { background: var(--c-cat-1); }
@@ -748,6 +813,7 @@
 <!-- 藕粉奶茶色系（2026-09-19）：必須放在本頁 <style> 之後；拿掉這行＝回到舊配色 -->
 <script src="theme.js?v=2"></script>
 <script src="modalGuard.js?v=1"></script>
+<script src="promoNotice.js?v=1"></script>
 </head>
 <body>
 
@@ -812,6 +878,10 @@
       <a class="gc-btn gc-btn-recipe" id="gcRecipeBtn" target="_blank" rel="noopener noreferrer">🍽 食譜大全</a>
       <a class="gc-btn gc-btn-order" id="gcOrderBtn" target="_blank" rel="noopener noreferrer">🛒 前往下單</a>
     </div>
+    <div class="gc-promo" id="gcPromo">
+      <div class="gc-promo-label">優惠</div>
+      <div class="gc-promo-list" id="gcPromoList"></div>
+    </div>
     <div class="gc-discount" id="gcDiscount">
       <div class="gc-discount-label">專屬折扣碼</div>
       <button type="button" class="gc-code" id="gcCodeBtn">
@@ -820,6 +890,10 @@
       </button>
       <div class="gc-discount-desc" id="gcDiscountDesc"></div>
       <div class="gc-remind">💡 記得輸入折扣碼才能享有折扣</div>
+    </div>
+    <div class="gc-sub" id="gcSub">
+      <button type="button" class="gc-sub-btn" id="gcSubBtn"></button>
+      <div class="gc-sub-hint" id="gcSubHint"><a href="https://member.sheridondon.com.tw/member" target="_blank" rel="noopener noreferrer">登入會員</a>後，換手機、換電腦也會收到</div>
     </div>
   </div>
 </div>
@@ -1276,8 +1350,29 @@ function isLinkUnlocked(ev) {
 }
 
 // 有食譜品牌（食材／食譜入口）、折扣碼、或是繪本團（繪本館介紹入口），點擊時都要先跳小視窗而不是直接開網頁
+// 2026-10-09 起生效中的優惠筆（ev.promos，後端算好）也算
 function needsGroupModal(ev) {
-  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()) || bookTeamBrandOf(ev));
+  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()) || bookTeamBrandOf(ev) || (ev.promos && ev.promos.length));
+}
+
+// scope=calendar c[33] PROMOS（'' 或 JSON 字串 [{kind,label,text}]）／c[34] PROMO_BRAND（'' 或 JSON {id,name}）；壞值一律當空
+function parsePromos(raw) {
+  if (!raw || typeof raw !== 'string') return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter(p => p && typeof p.text === 'string' && p.text.trim() !== '')
+      .map(p => ({ kind: p.kind === 'long' ? 'long' : 'weekly', label: typeof p.label === 'string' ? p.label : '', text: p.text }));
+  } catch (e) { return []; }
+}
+function parsePromoBrand(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  try {
+    const o = JSON.parse(raw);
+    if (o && typeof o.id === 'string' && o.id && typeof o.name === 'string' && o.name) return { id: o.id, name: o.name };
+  } catch (e) { /* 壞值當沒有 */ }
+  return null;
 }
 
 function parseExtendRaw(raw, originalEnd) {
@@ -1368,7 +1463,9 @@ async function loadData() {
       const bookBrand = c[30] ? String(c[30].v || '').trim() : '';   // 繪本團品牌全名（後端判定；空＝非繪本團）
       const thumbResolved = c[31] ? String(c[31].v || '').trim() : '';   // 清單卡小圖（後端已決定：團圖優先、否則品牌小圖）
       const recipeOk = c[26] ? String(c[26].v || '').trim() : '';   // 食譜品牌有沒有食譜（'否'＝不顯示食譜大全鈕；後端依實際匯入的食譜判斷）
-      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc, coldFlag, recipeOk, bookBrand, thumbResolved });
+      const promos = parsePromos(c[33] ? c[33].v : '');   // 生效中的優惠筆（後端算好，開團中才有）
+      const promoBrand = parsePromoBrand(c[34] ? c[34].v : '');   // 團名比對到的主要品牌（訂閱鈕用）
+      events.push({ id, start, end, extend, displayEnd, title, tag, category, url, adminUrl, earlyBird, color, isGroupBuy, recipeBrand, iconIg, iconTiktok, iconFb, iconEmail, thumb, discountCode, discountDesc, coldFlag, recipeOk, bookBrand, thumbResolved, promos, promoBrand });
     });
 
     allEvents = events;
@@ -1692,9 +1789,16 @@ function buildGroupCard(ev, grayOut, srcOverride) {
     card.appendChild(iconsWrap);
   }
 
-  if (ev.tag || frozen || isToday) {
+  const showEarly = getEventStatus(ev) === 'upcoming' && ev.earlyBird.length > 0;   // 還沒開團且有早鳥禮
+  if (ev.tag || frozen || isToday || showEarly) {
     const badges = document.createElement('div');
     badges.className = 'gs-badges';
+    if (showEarly) {
+      const earlyBadge = document.createElement('span');
+      earlyBadge.className = 'gs-tag-badge gs-early-badge';
+      earlyBadge.textContent = '早鳥禮';
+      badges.appendChild(earlyBadge);
+    }
     if (ev.tag) {
       const tagBadge = document.createElement('span');
       tagBadge.className = 'gs-tag-badge';
@@ -1887,6 +1991,12 @@ function renderAllMode() {
       titleSpan.textContent = plainTitle(item.ev.title);
       bar.appendChild(titleSpan);
 
+      if (hasEarlyBird) {
+        const earlySpan = document.createElement('span');
+        earlySpan.className = 'ev-tag ev-tag-early';
+        earlySpan.textContent = '早鳥禮';
+        bar.appendChild(earlySpan);
+      }
       if (item.ev.tag) {
         const tagSpan = document.createElement('span');
         tagSpan.className = 'ev-tag';
@@ -1999,6 +2109,12 @@ function renderSingleDayMode(mode) {
           });
           bar.appendChild(titleSpan);
 
+          if (hasEarlyBird) {
+            const earlySpan = document.createElement('span');
+            earlySpan.className = 'ev-tag ev-tag-early';
+            earlySpan.textContent = '早鳥禮';
+            bar.appendChild(earlySpan);
+          }
           if (ev.tag) {
             const tagSpan = document.createElement('span');
             tagSpan.className = 'ev-tag';
@@ -2059,7 +2175,8 @@ function openGroupChoiceModal(ev, srcCode) {
   const brand = (ev.recipeBrand || '').trim();
   const code = (ev.discountCode || '').trim();
   const bookBrand = bookTeamBrandOf(ev);
-  if (!brand && !code && !bookBrand) return;
+  const promos = ev.promos || [];
+  if (!brand && !code && !bookBrand && !promos.length) return;
 
   const modal = document.getElementById('groupChoiceModal');
   document.getElementById('groupChoiceTitle').textContent = plainTitle(ev.title);
@@ -2094,9 +2211,66 @@ function openGroupChoiceModal(ev, srcCode) {
     if (code) copyToClipboard(code).then(flashGcCopied);
   };
 
+  setupPromoBlock(promos);
   setupDiscountBlock(ev, code, baseKey);
+  setupSubscribeBlock(ev, baseKey);
 
   modal.classList.add('show');
+}
+
+// 優惠區塊（2026-10-09）：生效中的優惠筆各一列，label（本週六日 10/11–10/12／今天…）小字＋內文（保留換行）；沒優惠整塊隱藏
+function setupPromoBlock(promos) {
+  const wrap = document.getElementById('gcPromo');
+  const list = document.getElementById('gcPromoList');
+  list.textContent = '';
+  if (!promos.length) { wrap.classList.remove('show'); return; }
+  promos.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'gc-promo-item';
+    if (p.label) {
+      const when = document.createElement('div');
+      when.className = 'gc-promo-when';
+      when.textContent = p.label;
+      row.appendChild(when);
+    }
+    const text = document.createElement('div');
+    text.className = 'gc-promo-text';
+    text.textContent = p.text;
+    row.appendChild(text);
+    list.appendChild(row);
+  });
+  wrap.classList.add('show');
+}
+
+// 訂閱「XX 優惠通知」（2026-10-09）：狀態與橋接都在 promoNotice.js 的 window.DDPromo
+// 已登入＝寫帳號；沒登入＝先記在這個瀏覽器，鈕下方提示登入後會跟著帳號（不擋）
+let gcSubCurrent = null;
+function setupSubscribeBlock(ev, baseKey) {
+  const wrap = document.getElementById('gcSub');
+  const btn = document.getElementById('gcSubBtn');
+  const hint = document.getElementById('gcSubHint');
+  const pb = ev.promoBrand;
+  gcSubCurrent = null;
+  if (!pb || !window.DDPromo) { wrap.classList.remove('show'); return; }
+  gcSubCurrent = pb;
+  const paint = () => {
+    if (gcSubCurrent !== pb) return;   // 視窗已換成別團
+    const on = window.DDPromo.isSubscribed(pb.id);
+    btn.textContent = on ? '已訂閱，點此取消' : '訂閱 ' + pb.name + ' 優惠通知';
+    btn.classList.toggle('on', on);
+    hint.classList.toggle('show', on && !window.DDPromo.loggedIn());
+  };
+  paint();
+  window.DDPromo.onReady(paint);   // 查到登入／帳號訂閱狀態後再畫一次
+  btn.disabled = false;
+  btn.onclick = () => {
+    const want = !window.DDPromo.isSubscribed(pb.id);
+    btn.disabled = true;
+    window.DDPromo.subscribe(pb.id, pb.name, want).then(r => {
+      if (r && r.subscribed && want) sendStat(baseKey + '_subscribe', 'click');
+    }).catch(() => {}).then(() => { btn.disabled = false; paint(); });
+  };
+  wrap.classList.add('show');
 }
 
 // 折扣碼複製後的提示回饋（點折扣碼本身、或點前往下單都會用到）
