@@ -1321,3 +1321,158 @@ document.getElementById('postGenCopyBtn').addEventListener('click', async () => 
 function closePostGenModal() {
   document.getElementById('postGenModal').classList.remove('show');
 }
+
+// ===== 客人常見問題（品牌層級 Q&A，2026-10-10 雪莉定）=====
+// 原本「客人問題備忘錄」是每一團一份，下次同品牌開團就看不到；改成跟著品牌存（brands.customer_qa），
+// 活動檢視視窗依團名比對品牌（bvBrandsInTitle_，同開團前檢查清單）列出各品牌 Q&A，可一直累積。
+// 存檔＝一次只送一條（op upsert/delete）給 POST brand-qa-set（登入即可、唯讀檢視擋）；欄位未 push 時後台包 customerQaReady=false。
+const BQA_ICONS = {
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+};
+let bqaEditing = null; // { brandId, itemId }：itemId 空字串＝新增中
+let bqaBusy = false;
+let bqaEv = null;      // 目前畫的是哪一團
+
+function bqaCanEdit_() {
+  return !(typeof isViewOnlyMode !== 'undefined' && isViewOnlyMode);
+}
+function bqaReady_() {
+  return !(typeof customerQaReady !== 'undefined' && customerQaReady === false);
+}
+// 跳脫後把網址轉成可點連結（答案常貼官網／表單連結）
+function bqaLinkify_(text) {
+  // 網址遇到空白、中文全形字、或跳脫後的 &quot;／&lt;／&gt; 就結束（避免引號或緊接的中文被吃進連結）
+  return escHtml(text).replace(/https?:\/\/(?:(?!&quot;|&lt;|&gt;)[^\s<>"　-鿿＀-￯])+/g, (u) => {
+    const clean = u.replace(/[)\]）】，。、！？,.!?]+$/, '');
+    const rest = u.slice(clean.length);
+    return '<a href="' + clean + '" target="_blank" rel="noopener noreferrer">' + clean + '</a>' + rest;
+  });
+}
+
+// openAdminModal 呼叫 bvRenderBrandQa(ev, true)：reset＝剛打開視窗，清掉編輯狀態；不帶參數＝重畫目前這團
+function bvRenderBrandQa(ev, reset) {
+  const box = document.getElementById('brandQaBox');
+  if (!box) return;
+  if (reset) { bqaEditing = null; bqaEv = ev; }
+  ev = ev || bqaEv;
+  if (!ev) { box.innerHTML = ''; return; }
+  const brands = bvBrandsInTitle_(ev.title || '');
+  if (!brands.length) {
+    box.innerHTML = '<div class="bqa-empty">團名對不到品牌，常見問題無法顯示（品牌廠商資料庫的品牌名稱要出現在團名裡）</div>';
+    return;
+  }
+  const ready = bqaReady_();
+  const canEdit = ready && bqaCanEdit_();
+  let html = '';
+  if (!ready) html += '<div class="bqa-warn">客人常見問題待 db push 後才能新增（請雪莉先執行 npx supabase db push）</div>';
+  brands.forEach(b => {
+    const list = Array.isArray(b.customerQa) ? b.customerQa : [];
+    const addingHere = canEdit && bqaEditing && bqaEditing.brandId === b.id && !bqaEditing.itemId;
+    html += '<div class="bqa-group" data-brand="' + escHtml(b.id) + '">';
+    html += '<div class="bqa-group-title">' + escHtml(b.name) + ' 常見問題</div>';
+    if (!list.length && !addingHere) {
+      html += '<div class="bqa-empty">還沒有常見問題，客人問過的可以加進來，下次同品牌開團都看得到</div>';
+    }
+    list.forEach(item => {
+      if (canEdit && bqaEditing && bqaEditing.brandId === b.id && bqaEditing.itemId === item.id) {
+        html += bqaFormHtml_(item.q, item.a, item.id);
+        return;
+      }
+      const iid = escHtml(item.id);
+      const meta = [item.updatedBy, String(item.updatedAt || '').slice(0, 10)].filter(Boolean).join(' · ');
+      html += '<div class="bqa-item">' +
+        '<div class="bqa-body"><div class="bqa-q">' + escHtml(item.q) + '</div>' +
+        (item.a ? '<div class="bqa-a">' + bqaLinkify_(item.a) + '</div>' : '') +
+        (meta ? '<div class="bqa-meta">' + escHtml(meta) + '</div>' : '') +
+        '</div><div class="bqa-tools">' +
+        (item.a ? '<button type="button" class="bqa-ico-btn" data-act="copy" data-id="' + iid + '" title="複製答案">' + BQA_ICONS.copy + '</button>' : '') +
+        (canEdit ? '<button type="button" class="bqa-ico-btn" data-act="edit" data-id="' + iid + '" title="編輯">' + BQA_ICONS.edit + '</button>' +
+          '<button type="button" class="bqa-ico-btn" data-act="del" data-id="' + iid + '" title="刪除">' + BQA_ICONS.trash + '</button>' : '') +
+        '</div></div>';
+    });
+    if (canEdit) {
+      html += addingHere ? bqaFormHtml_('', '', '')
+        : '<button type="button" class="bqa-add-btn" data-act="add">' + BQA_ICONS.plus + '新增問題</button>';
+    }
+    html += '</div>';
+  });
+  box.innerHTML = html;
+  const qIn = box.querySelector('.bqa-form .bqa-in-q');
+  if (qIn) qIn.focus();
+}
+
+function bqaFormHtml_(q, a, id) {
+  return '<div class="bqa-form" data-id="' + escHtml(id) + '">' +
+    '<input type="text" class="bqa-in-q" maxlength="200" placeholder="客人問的問題" value="' + escHtml(q) + '">' +
+    '<textarea class="bqa-in-a" rows="4" maxlength="3000" placeholder="回覆內容（可貼網址）">' + escHtml(a) + '</textarea>' +
+    '<div class="bqa-form-actions"><button type="button" class="save-btn" data-act="save">儲存</button>' +
+    '<button type="button" class="bqa-cancel-btn" data-act="cancel">取消</button>' +
+    '<span class="memo-status bqa-status"></span></div></div>';
+}
+
+// 一次只送一條（op='upsert'|'delete'），伺服器拿當下最新清單去改＝兩人同時編輯不會互蓋；
+// 成功後把伺服器回傳的最新清單寫回本機品牌快取（brandDb 同一個物件）
+async function bqaSave_(brand, op, item, statusEl) {
+  if (bqaBusy) return false;
+  bqaBusy = true;
+  if (statusEl) { statusEl.textContent = '儲存中…'; statusEl.style.color = '#A3948A'; }
+  try {
+    const res = await postTask({
+      type: 'brand-qa-set',
+      brandId: brand.id,
+      op,
+      item: { id: item.id || '', q: item.q || '', a: item.a || '' },
+    });
+    brand.customerQa = Array.isArray(res.customerQa) ? res.customerQa : [];
+    return true;
+  } catch (err) {
+    alert('常見問題儲存失敗：' + err.message);
+    if (statusEl) statusEl.textContent = '';
+    return false;
+  } finally {
+    bqaBusy = false;
+  }
+}
+
+document.getElementById('brandQaBox').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const group = btn.closest('.bqa-group');
+  if (!group) return;
+  const brand = brandDb.find(b => String(b.id) === group.getAttribute('data-brand'));
+  if (!brand) return;
+  const list = Array.isArray(brand.customerQa) ? brand.customerQa.slice() : [];
+  const act = btn.getAttribute('data-act');
+  const id = btn.getAttribute('data-id') || '';
+
+  if (act === 'copy') {
+    const item = list.find(x => x.id === id);
+    if (item && item.a) copyText(item.a, btn);
+    return;
+  }
+  if (!bqaReady_() || !bqaCanEdit_()) return;
+  if (act === 'add') { bqaEditing = { brandId: brand.id, itemId: '' }; bvRenderBrandQa(); return; }
+  if (act === 'edit') { bqaEditing = { brandId: brand.id, itemId: id }; bvRenderBrandQa(); return; }
+  if (act === 'cancel') { bqaEditing = null; bvRenderBrandQa(); return; }
+  if (act === 'del') {
+    const item = list.find(x => x.id === id);
+    if (!item || !confirm('確定刪除這個常見問題？\n\n' + item.q)) return;
+    if (await bqaSave_(brand, 'delete', { id }, null)) { bqaEditing = null; bvRenderBrandQa(); }
+    return;
+  }
+  if (act === 'save') {
+    const form = btn.closest('.bqa-form');
+    const q = form.querySelector('.bqa-in-q').value.trim();
+    const a = form.querySelector('.bqa-in-a').value.trim();
+    const statusEl = form.querySelector('.bqa-status');
+    if (!q) { alert('請輸入客人問的問題'); return; }
+    const editId = form.getAttribute('data-id') || '';
+    btn.disabled = true;
+    const ok = await bqaSave_(brand, 'upsert', { id: editId, q, a }, statusEl);
+    btn.disabled = false;
+    if (ok) { bqaEditing = null; bvRenderBrandQa(); }
+  }
+});

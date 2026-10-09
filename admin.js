@@ -68,6 +68,7 @@ let vendorDb = [];  // 【新】團購廠商資料庫（廠商/行銷公司）
 let brandDb = [];   // 【新】團購品牌資料庫（掛在廠商底下）
 let eventCustomerService = {};  // 【新】各事件的客服文字 { 事件id: "客服" }（只含有填的；空白＝沿用品牌）
 let customerServiceReady = true; // 客服欄位 migration 未 push 時後台包回 false
+let customerQaReady = true; // 品牌客人常見問題欄位（migration 20261010120000）未 push 時後台包回 false
 let eventChecklistStates = {};  // 【新】各事件的開團前檢查清單勾選狀態 { 事件id: { "品牌名::項目": true } }
 
 // 公關品狀態的六種狀態，用色塊底色區分（class 對應下方 CSS）
@@ -1207,6 +1208,9 @@ function openAdminModal(ev) {
   // 產生貼文文案按鈕（公關品面板已搬到編輯彈窗，這裡換成放這顆按鈕）
   syncPostGenBtnForEvent_(ev);
 
+  // 客人常見問題（跟著品牌存，同品牌每次開團都看得到；brandVendor.js）
+  if (typeof bvRenderBrandQa === 'function') bvRenderBrandQa(ev, true);
+
   document.getElementById('adminModal').classList.add('show');
 }
 
@@ -1524,6 +1528,7 @@ async function fetchMemos() {
     eventChecklistStates = (data.eventChecklistStates && typeof data.eventChecklistStates === 'object') ? data.eventChecklistStates : {};
     eventCustomerService = (data.eventCustomerService && typeof data.eventCustomerService === 'object') ? data.eventCustomerService : {};
     customerServiceReady = data.customerServiceReady !== false;
+    customerQaReady = data.customerQaReady !== false;
     if (isViewShown('brandVendor')) renderBrandVendorView();
 
     renderGroupStatusList('calGroupList');
