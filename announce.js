@@ -6,7 +6,7 @@
 
   var css = [
     '.ann-badge{display:none;margin-left:auto;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:#B5485A;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;}',
-    '.ann-item{background:var(--c-surface,#fff);border:1px solid var(--c-line);border-radius:12px;padding:12px 14px;margin-bottom:10px;}',
+    '.ann-item{background:#fff;border:1px solid #E6DCD2;border-radius:12px;padding:12px 14px;margin-bottom:10px;}', /* 白底：公告文字在奶茶底上不夠清楚（雪莉 10-10） */
     '.ann-item-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px;}',
     '.ann-item-title{font-weight:700;font-size:15px;color:var(--c-text);}',
     '.ann-item-meta{font-size:12px;color:var(--c-muted,#a89888);}',
