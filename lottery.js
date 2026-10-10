@@ -3817,6 +3817,13 @@ function lotBindAnnounceEvents(box) {
       const c = cardOf(el); if (!c) return;
       const done = el.dataset.done === '1';
       const ids = c.card.list.filter(w => !!lotAnnDoneAt(w, c.kind) !== done).map(w => w.id);
+      if (!ids.length) return;
+      // 10-11 雪莉：按整場全勾沒確認、卡片直接移走像不見了 → 先確認，並說明會移到哪裡
+      const kindLabel = c.kind === 'ship' ? '寄出公告' : '中獎公告';
+      const msg = done
+        ? '「' + lotAnnTitle(c.card.draw) + '」這場 ' + ids.length + ' 位全部標成「已' + kindLabel + '」？\n\n標完這張卡片會移到下方「已公告」區（可以再展開取消）。'
+        : '「' + lotAnnTitle(c.card.draw) + '」這場 ' + ids.length + ' 位全部取消「已' + kindLabel + '」？';
+      if (!confirm(msg)) return;
       lotAnnounceSet(ids, c.kind, done);
     });
   });
