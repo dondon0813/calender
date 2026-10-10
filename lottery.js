@@ -1689,6 +1689,149 @@ function lotTeamCardHtml(team, draws) {
   '</div>';
 }
 
+// ----- 第 4 期 4c：系統抽籤（特殊活動小活動有設資格規則才出現）-----
+function lotRunOn(draw) {
+  return LOTTERY_CAMPAIGN_READY && draw && draw.section === 'special' && !!draw.ruleMode;
+}
+function lotFmtRunAt(s) {
+  const t = new Date(s);
+  if (isNaN(t.getTime())) return '';
+  const p = n => (n < 10 ? '0' : '') + n;
+  return (t.getMonth() + 1) + '/' + t.getDate() + ' ' + p(t.getHours()) + ':' + p(t.getMinutes());
+}
+function lotActiveRun(draw) {
+  const runs = Array.isArray(draw && draw.runs) ? draw.runs : [];
+  return runs.find(r => !r.voidedAt) || null;
+}
+function lotRunSummaryHtml(draw) {
+  if (!lotRunOn(draw)) return '';
+  const runs = Array.isArray(draw.runs) ? draw.runs : [];
+  if (!runs.length) return '';
+  const act = lotActiveRun(draw);
+  const idAttr = ' data-draw-id="' + lotEscapeHtml(draw.id) + '"';
+  let h = '<div class="lot-meta" style="margin:8px 0 0;">';
+  h += act
+    ? '<span>已系統抽籤 ' + lotEscapeHtml(lotFmtRunAt(act.runAt)) + '（' + (Number(act.winners) || 0) + ' 位）</span>'
+    : '<span>系統抽籤紀錄都已作廢</span>';
+  h += '<button type="button" class="task-mini-btn" data-role="run-history"' + idAttr + '>抽籤紀錄</button>';
+  if (act && LOTTERY_CAN_EDIT) h += '<button type="button" class="task-mini-btn" data-role="run-void"' + idAttr + ' data-run-id="' + lotEscapeHtml(act.id) + '">作廢這次抽籤</button>';
+  return h + '</div>';
+}
+let LOT_RUN = null; // {draw, preview, busy, result}
+function closeLotteryDrawRunModal() {
+  const m = document.getElementById('lotteryDrawRunModal');
+  if (m) m.classList.remove('show');
+  LOT_RUN = null;
+}
+async function openLotteryDrawRunModal(draw) {
+  if (!draw) return;
+  const st = { draw, preview: null, busy: false, result: null, error: '' };
+  LOT_RUN = st;
+  document.getElementById('lotRunTitle').textContent = '系統抽籤：' + (draw.title || '');
+  document.getElementById('lotRunBody').innerHTML = '<div class="task-empty">讀取中…</div>';
+  document.getElementById('lotRunActions').innerHTML = '';
+  document.getElementById('lotteryDrawRunModal').classList.add('show');
+  try {
+    const res = await lotApiPost('lottery-draw-run-preview', { drawId: draw.id });
+    if (LOT_RUN !== st) return;
+    if (!res || !res.success) throw new Error((res && res.error) || '讀取失敗');
+    st.preview = res;
+  } catch (err) {
+    if (LOT_RUN !== st) return;
+    st.error = err.message || '讀取失敗';
+  }
+  lotRenderDrawRun();
+}
+function lotRenderDrawRun() {
+  const st = LOT_RUN;
+  if (!st) return;
+  const body = document.getElementById('lotRunBody');
+  const acts = document.getElementById('lotRunActions');
+  acts.innerHTML = '';
+  if (st.result) {
+    const run = st.result.run || {};
+    const results = Array.isArray(run.results) ? run.results : [];
+    const undrawn = Number(run.undrawnPrizes) || 0;
+    body.innerHTML = '<div class="lot-elig-sum-row">抽籤完成，共抽出 ' + results.length + ' 位得獎人</div>' +
+      (undrawn > 0 ? '<div class="lot-warn" style="margin:6px 0;">還有 ' + undrawn + ' 份沒抽出（符合資格的人不夠）</div>' : '') +
+      (results.length
+        ? '<div class="lot-tbl-wrap"><table class="lot-elig-tbl"><thead><tr><th>會員編號</th><th>獎品</th><th>用來對獎的訂單編號</th></tr></thead><tbody>' +
+          results.map(r => '<tr><td>' + lotEscapeHtml(r.memberNo || '') + '</td><td>' + lotEscapeHtml(r.prizeName || '') + '</td><td>' + lotEscapeHtml(r.orderNo || '') + '</td></tr>').join('') +
+          '</tbody></table></div>'
+        : '') +
+      '<p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:8px 0 0;">得獎人已進入「待回填資料」，客人可在會員中心訂單填收件資料。</p>';
+    acts.innerHTML = '<button type="button" class="task-mini-btn" id="lotRunCloseBtn">關閉</button>';
+    document.getElementById('lotRunCloseBtn').addEventListener('click', closeLotteryDrawRunModal);
+    return;
+  }
+  if (st.error || !st.preview) {
+    body.innerHTML = '<div class="task-empty">' + lotEscapeHtml(st.error || '讀取失敗') + '</div>';
+    return;
+  }
+  const p = st.preview;
+  const prizes = Array.isArray(p.prizes) ? p.prizes : [];
+  let h = '<div class="lot-elig-sum-row">符合資格 ' + (Number(p.entrants) || 0) + ' 人・共 ' + (Number(p.totalTickets) || 0) + ' 張籤</div>' +
+    '<div class="lot-elig-sum-row">獎品 ' + (Number(p.totalPrizes) || 0) + ' 份：' + (prizes.length ? lotEscapeHtml(prizes.map(x => x.name + ' x' + x.qty).join('、')) : '（尚未設定）') + '</div>';
+  if (Number(p.pendingRegistrations) > 0) h += '<div class="lot-warn" style="margin:6px 0;">還有 ' + Number(p.pendingRegistrations) + ' 筆登記待核對，建議先到會員管理 → 認領回報核對完再抽</div>';
+  if (p.beforeDeadline) h += '<div class="lot-warn" style="margin:6px 0;">還沒到登記截止日</div>';
+  if (p.hasActiveRun) h += '<div class="lot-warn" style="margin:6px 0;">這場已經有一次有效的系統抽籤</div>';
+  if (!p.canRun) h += '<div class="task-empty">' + lotEscapeHtml(p.reason || '目前不能抽籤') + '</div>';
+  body.innerHTML = h;
+  if (p.canRun) {
+    acts.innerHTML = '<button type="button" class="task-mini-btn" id="lotRunGoBtn"' + (st.busy ? ' disabled' : '') + '>' + lotIcon('redo') + ' 開始抽籤</button>';
+    document.getElementById('lotRunGoBtn').addEventListener('click', lotDoDrawRun);
+  }
+}
+async function lotDoDrawRun() {
+  const st = LOT_RUN;
+  if (!st || st.busy) return;
+  const p = st.preview || {};
+  let force = false;
+  if (p.beforeDeadline) {
+    if (!confirm('還沒到登記截止日，確定現在就抽？')) return;
+    force = true;
+  }
+  st.busy = true;
+  lotRenderDrawRun();
+  try {
+    let res = await lotApiPost('lottery-draw-run', force ? { drawId: st.draw.id, force: true } : { drawId: st.draw.id });
+    if (res && res.success === false && res.needForce && !force) {
+      if (!confirm((res.error || '還沒到登記截止日') + '\n\n確定現在就抽？')) { st.busy = false; if (LOT_RUN === st) lotRenderDrawRun(); return; }
+      res = await lotApiPost('lottery-draw-run', { drawId: st.draw.id, force: true });
+    }
+    if (!res || !res.success) throw new Error((res && res.error) || '抽籤失敗');
+    st.busy = false;
+    if (LOT_RUN === st) { st.result = res; lotRenderDrawRun(); }
+    loadLotteryView(true);
+  } catch (err) {
+    st.busy = false;
+    alert('抽籤失敗：' + err.message);
+    if (LOT_RUN === st) lotRenderDrawRun();
+  }
+}
+function openLotteryRunHistoryModal(draw) {
+  if (!draw) return;
+  const runs = Array.isArray(draw.runs) ? draw.runs : [];
+  document.getElementById('lotRunHistTitle').textContent = '抽籤紀錄：' + (draw.title || '');
+  document.getElementById('lotRunHistBody').innerHTML = runs.length
+    ? '<div class="lot-tbl-wrap"><table class="lot-elig-tbl"><thead><tr><th>時間</th><th>操作者</th><th>人數</th><th>籤數</th><th>中獎數</th><th></th></tr></thead><tbody>' +
+      runs.map(r => '<tr><td>' + lotEscapeHtml(lotFmtRunAt(r.runAt)) + '</td><td>' + lotEscapeHtml(r.runBy || '') + '</td><td>' + (Number(r.entrants) || 0) + '</td><td>' + (Number(r.totalTickets) || 0) + '</td><td>' + (Number(r.winners) || 0) + '</td><td>' +
+        (r.voidedAt ? lotPill('已作廢', 'muted') : '') + '</td></tr>').join('') + '</tbody></table></div>'
+    : '<div class="task-empty">還沒有抽籤紀錄</div>';
+  document.getElementById('lotteryRunHistoryModal').classList.add('show');
+}
+function closeLotteryRunHistoryModal() {
+  const m = document.getElementById('lotteryRunHistoryModal');
+  if (m) m.classList.remove('show');
+}
+async function lotVoidRun(drawId, runId) {
+  if (!confirm('確定要作廢這次系統抽籤嗎？\n\n會刪掉這次抽出的得獎人；只有大家都還沒填資料時可以作廢。')) return;
+  try {
+    const res = await lotApiPost('lottery-draw-run-void', { runId });
+    if (!res || !res.success) { alert((res && res.error) || '作廢失敗'); return; }
+    loadLotteryView(true);
+  } catch (err) { alert('作廢失敗：' + err.message); }
+}
 // 一場抽獎（一個 draw）的區塊：標題列＋meta＋得獎人表格＋（可選）小工具列。
 // 團卡（正抽＋加碼可能多場）跟②③區（一區一場）都共用這個渲染，只差外層包裝。
 function lotDrawBlockHtml(draw, opts) {
@@ -1724,8 +1867,10 @@ function lotDrawBlockHtml(draw, opts) {
       '<div class="lot-wl-head"><span>獎品</span><span>得獎人</span><span>狀態</span><span>姓名</span><span>備註</span><span></span></div>' +
       (rowsHtml || '<div class="lot-wl-empty">還沒有得獎人</div>') +
     '</div>' +
+    lotRunSummaryHtml(draw) +
     '<div class="lot-draw-block-foot">' +
       (LOTTERY_CAN_EDIT ? '<button class="task-mini-btn" data-role="add-winner" data-draw-id="' + lotEscapeHtml(draw.id) + '">＋ 加一位得獎人</button>' : '') +
+      (lotRunOn(draw) && LOTTERY_CAN_EDIT ? '<button class="task-mini-btn" data-role="run-draw" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('redo') + ' 系統抽籤</button>' : '') +
       '<button class="task-mini-btn" data-role="copy-notify" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('copy') + ' 複製通知文</button>' +
       '<span class="lot-spacer"></span>' +
       (LOTTERY_CAN_EDIT ? '<button class="task-mini-btn" data-role="edit-draw" data-draw-id="' + lotEscapeHtml(draw.id) + '">' + lotIcon('edit') + ' 編輯這場</button>' : '') +
@@ -2224,6 +2369,15 @@ function lotBindSectionEvents(box) {
       openLotteryDrawModal(draw || null);
     });
   });
+  box.querySelectorAll('[data-role="run-draw"]').forEach(el => el.addEventListener('click', ev => {
+    ev.stopPropagation(); openLotteryDrawRunModal(LOTTERY_DRAWS.find(d => d.id === el.dataset.drawId));
+  }));
+  box.querySelectorAll('[data-role="run-history"]').forEach(el => el.addEventListener('click', ev => {
+    ev.stopPropagation(); openLotteryRunHistoryModal(LOTTERY_DRAWS.find(d => d.id === el.dataset.drawId));
+  }));
+  box.querySelectorAll('[data-role="run-void"]').forEach(el => el.addEventListener('click', ev => {
+    ev.stopPropagation(); lotVoidRun(el.dataset.drawId, el.dataset.runId);
+  }));
   box.querySelectorAll('[data-role="delete-draw"]').forEach(el => {
     el.addEventListener('click', ev => { ev.stopPropagation(); lotDeleteDraw(el.dataset.drawId); });
   });

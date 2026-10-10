@@ -7151,6 +7151,23 @@
   </div>
 </div>
 
+<!-- ===== 抽獎管理：系統抽籤／抽籤紀錄 modal（lottery.js openLotteryDrawRunModal；docs/16 §9.6）===== -->
+<div class="modal-backdrop" id="lotteryDrawRunModal" onclick="if(event.target===this) closeLotteryDrawRunModal()" style="z-index:1150;">
+  <div class="modal-box" style="width:min(640px, 96vw); max-height:90vh; overflow-y:auto;">
+    <button class="modal-close x-btn" onclick="closeLotteryDrawRunModal()">✕</button>
+    <h3 id="lotRunTitle">系統抽籤</h3>
+    <div id="lotRunBody"></div>
+    <div id="lotRunActions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;"></div>
+  </div>
+</div>
+<div class="modal-backdrop" id="lotteryRunHistoryModal" onclick="if(event.target===this) closeLotteryRunHistoryModal()" style="z-index:1150;">
+  <div class="modal-box" style="width:min(640px, 96vw); max-height:90vh; overflow-y:auto;">
+    <button class="modal-close x-btn" onclick="closeLotteryRunHistoryModal()">✕</button>
+    <h3 id="lotRunHistTitle">抽籤紀錄</h3>
+    <div id="lotRunHistBody"></div>
+  </div>
+</div>
+
 <!-- ===== 抽獎管理：新增／編輯特殊活動 modal（lottery.js openLotteryActivityModal；docs/16 §8）===== -->
 <div class="modal-backdrop" id="lotteryActivityModal" onclick="if(event.target===this) closeLotteryActivityModal()" style="z-index:1150;">
   <div class="modal-box" style="width:min(560px, 94vw); max-height:90vh; overflow-y:auto;">
@@ -7973,7 +7990,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=34"></script>
+<script src="lottery.js?v=35"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
