@@ -6280,8 +6280,6 @@
     .lot-ann-zone-title span{ font-size:12px; font-weight:700; color:var(--c-text-soft); }
     .lot-ann-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:8px; }
     .lot-ann-barinfo{ font-size:12px; color:var(--c-text-soft); }
-    .lot-ann-gtitle{ display:flex; align-items:baseline; gap:8px; font-size:13px; font-weight:800; color:var(--c-text); padding:10px 6px 4px; }
-    .lot-ann-gtitle span{ font-size:11.5px; font-weight:600; color:var(--c-text-soft); }
     .lot-ann-card{ background:#F5EFE9; border-radius:14px; padding:12px 14px; margin-bottom:12px; }
     .lot-ann-bhead{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; cursor:pointer; user-select:none; }
     .lot-ann-btitle{ font-size:14px; font-weight:800; color:var(--c-text); }
@@ -6289,21 +6287,17 @@
     .lot-ann-bcaret{ margin-left:auto; font-size:12px; color:var(--c-text-soft); }
     .lot-ann-bcaret svg{ width:12px; height:12px; vertical-align:-2px; }
     .lot-ann-card .lot-ann-list{ margin-top:8px; }
-    .lot-ann-list{ background:var(--c-surface); border-radius:10px; padding:2px 10px; }
-    .lot-ann-rowl{ display:block; cursor:pointer; }
-    .lot-ann-main{ grid-template-columns:auto minmax(120px,1.4fr) minmax(100px,1fr) minmax(70px,.6fr) !important; }
-    .lot-ann-main input{ margin:0; }
-    .lot-ann-rowl.on{ background:rgba(201,154,155,.12); }
+    .lot-ann-list{ }
+    .lot-ann-tbl .lot-ann-td-cb{ width:28px; padding-right:0; }
+    .lot-ann-tbl tr.lot-ann-rowl{ cursor:pointer; }
+    .lot-ann-tbl tr.lot-ann-rowl.on td{ background:rgba(201,154,155,.12); }
+    .lot-ann-tbl input[type=checkbox]{ margin:0; }
     .lot-ann-ops{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .lot-ann-ops .task-mini-btn:disabled, .lot-ann-bar .task-mini-btn:disabled{ opacity:.45; cursor:not-allowed; }
     .lot-ann-imgs{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
     .lot-ann-img{ position:relative; width:110px; }
     .lot-ann-img img{ width:110px; height:110px; object-fit:cover; border-radius:10px; display:block; background:var(--c-surface); }
     .lot-ann-img-ops{ position:absolute; top:4px; right:4px; display:flex; gap:4px; }
-    @media (max-width:700px){
-      .lot-ann-main{ grid-template-columns:auto 1fr !important; }
-      .lot-ann-main > span{ grid-column:auto !important; }
-    }
     .lot-ic-btn.x-btn{ color:var(--c-muted); }
     .lot-ic-btn.x-btn:hover{ color:var(--c-brown); }
     .lot-status-sel.lot-s-done{ background-color:var(--c-cat-2); color:#fff; }
@@ -8034,7 +8028,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=43"></script>
+<script src="lottery.js?v=44"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>

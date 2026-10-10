@@ -3653,15 +3653,29 @@ function lotAnnShipVerb(w, draw) {
   const t = lotWinnerType(w, draw);
   return t === 'cash' ? '已匯款' : (t === 'virtual' ? '已發送' : '已寄出');
 }
-// 一位一條：勾選框｜獎品｜得獎人｜（寄出公告）寄出日
-function lotAnnRowHtml(w, kind, checked, role) {
-  const date = kind === 'ship' && w.shippedAt ? w.shippedAt : '';
-  return '<label class="lot-wl-row lot-ann-rowl' + (checked ? ' on' : '') + '"><div class="lot-wl-main lot-ann-main">' +
-    '<input type="checkbox" data-role="' + role + '" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (checked ? ' checked' : '') + '>' +
-    '<span class="lot-wl-prize" title="' + lotEscapeHtml(w.prize || '') + '">' + lotEscapeHtml(w.prize || '') + '</span>' +
-    '<span class="lot-wl-who">' + lotEscapeHtml(lotWinnerWho(w)) + '</span>' +
-    '<span class="lot-wl-memo">' + lotEscapeHtml(date) + '</span>' +
-  '</div></label>';
+// 一位一列（10-11 雪莉：要跟抽獎頁表格一樣清楚）：勾選｜開團日期｜團名｜獎品｜得獎人｜（寄出公告）寄出日
+function lotAnnRowHtml(w, kind, checked, role, draw) {
+  const shipped = kind === 'ship' && w.shippedAt ? lotFmtYMD(w.shippedAt) : '';
+  const title = draw ? lotAnnTitle(draw) : '';
+  return '<tr class="lot-tr lot-ann-rowl' + (checked ? ' on' : '') + '">' +
+    '<td class="lot-ann-td-cb"><input type="checkbox" data-role="' + role + '" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (checked ? ' checked' : '') + '></td>' +
+    '<td class="lot-td-date">' + lotEscapeHtml(lotAnnDateTxt(draw)) + '</td>' +
+    '<td class="lot-td-title" title="' + lotEscapeHtml(title) + '">' + lotEscapeHtml(title) + '</td>' +
+    '<td class="lot-td-prize">' + lotEscapeHtml(w.prize || '') + '</td>' +
+    '<td class="lot-td-winners">' + lotEscapeHtml(lotWinnerWho(w)) + '</td>' +
+    (kind === 'ship' ? '<td class="lot-td-date">' + lotEscapeHtml(shipped) + '</td>' : '') +
+  '</tr>';
+}
+// 開團日期欄：跟抽獎頁一樣只寫日期（綁團取開團日，沒有就用這場的日期；估算只到月）
+function lotAnnDateTxt(draw) {
+  if (!draw) return '';
+  if (draw.eventStartDate || draw.teamDate) return lotFmtYMD(draw.eventStartDate || draw.teamDate);
+  if (!draw.drawDate) return '（無日期）';
+  return draw.dateUncertain ? '約 ' + lotFmtYM(draw.drawDate) : lotFmtYMD(draw.drawDate);
+}
+function lotAnnTableHtml(rowsHtml, kind) {
+  return '<div class="lot-tbl-wrap"><table class="lot-tbl lot-ann-tbl"><thead><tr><th class="lot-ann-td-cb"></th><th>開團日期</th><th>團名</th><th>獎品</th><th>得獎人</th>' +
+    (kind === 'ship' ? '<th>寄出日</th>' : '') + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
 }
 function lotAnnFmtMD(iso) {
   const d = new Date(iso);
@@ -3679,7 +3693,7 @@ function lotAnnBatchHtml(b, idx, wIndex) {
   if (!open) return '<div class="lot-ann-batch lot-ann-card">' + head + '</div>';
   const bid = lotEscapeHtml(b.id);
   const rows = people.length
-    ? people.map(p => lotAnnRowHtml(p.w, b.kind, LOT_ANN_BSEL.has(p.w.id), 'ann-bcheck')).join('')
+    ? lotAnnTableHtml(people.map(p => lotAnnRowHtml(p.w, b.kind, LOT_ANN_BSEL.has(p.w.id), 'ann-bcheck', p.draw)).join(''), b.kind)
     : '<div class="task-empty">這包的人資料已不在清單中</div>';
   const nSel = people.filter(p => LOT_ANN_BSEL.has(p.w.id)).length;
   const imgs = (b.images || []).map(im =>
@@ -3730,8 +3744,7 @@ function renderLotteryAnnounce() {
   const note = (!LOTTERY_ANNOUNCE_BATCH_READY && canEdit)
     ? '<div class="lot-ann-note" style="margin-bottom:10px">打包公告待 db push（20261011140000_lottery_announce_batches），push 前「一起公告」無法使用；待公告名單照常顯示。</div>' : '';
   const todoHtml = groups.length
-    ? groups.map(g => '<div class="lot-ann-group"><div class="lot-ann-gtitle">' + lotEscapeHtml(lotAnnTitle(g.draw)) + '<span>' + g.list.length + ' 位</span></div>' +
-        g.list.map(w => lotAnnRowHtml(w, kind, LOT_ANN_SEL.has(w.id), 'ann-check')).join('') + '</div>').join('')
+    ? lotAnnTableHtml(groups.map(g => g.list.map(w => lotAnnRowHtml(w, kind, LOT_ANN_SEL.has(w.id), 'ann-check', g.draw)).join('')).join(''), kind)
     : '<div class="task-empty">目前沒有待公告' + kindLabel + '的人</div>';
   const doneHtml = batches.length
     ? batches.map((b, i) => lotAnnBatchHtml(b, i, wIndex)).join('')
@@ -3862,6 +3875,13 @@ function lotBindAnnounceEvents(box) {
       try { localStorage.setItem('lottery_announce_kind', k); } catch (e) {}
       LOT_ANN_SEL.clear(); LOT_ANN_BSEL.clear();
       renderLotteryAnnounce();
+    });
+  });
+  // 點整列任何地方＝切換勾選（點到勾選框本身照原生行為）
+  box.querySelectorAll('tr.lot-ann-rowl').forEach(tr => {
+    tr.addEventListener('click', e => {
+      if (e.target.closest('input')) return;
+      const cb = tr.querySelector('input[type="checkbox"]'); if (cb) cb.click();
     });
   });
   box.querySelectorAll('[data-role="ann-check"]').forEach(el => {
