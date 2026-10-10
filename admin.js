@@ -1211,6 +1211,11 @@ function openAdminModal(ev) {
   // 客人常見問題（跟著品牌存，同品牌每次開團都看得到；brandVendor.js）
   if (typeof bvRenderBrandQa === 'function') bvRenderBrandQa(ev, true);
 
+  // 這團的抽獎（lottery.js；沒有 lotteryEdit 權限整塊隱藏）
+  if (typeof lotRenderEventLotteryBox === 'function') {
+    lotRenderEventLotteryBox(document.getElementById('evViewLotteryBox'), ev.id, { sectionEl: document.getElementById('evViewLotterySection') });
+  }
+
   document.getElementById('adminModal').classList.add('show');
 }
 
@@ -2088,6 +2093,10 @@ function openEventEditModal(ev, prefillDate, duplicateMode) {
   if (!isNew) setTimeout(renderEvBrandMatchInfo, 0);
   // 開團前檢查清單：reset=true 清掉上一個活動殘留的勾選畫面，只看這個活動已存的狀態
   if (typeof bvRenderEvChecklist === 'function') setTimeout(() => bvRenderEvChecklist(true), 0);
+  // 這團的抽獎：新團／複製中（尚未存檔）傳 ''＝顯示「存檔後才能加抽獎」
+  if (typeof lotRenderEventLotteryBox === 'function') {
+    lotRenderEventLotteryBox(document.getElementById('evEditLotteryBox'), (!isNew && ev) ? ev.id : '', { sectionEl: document.getElementById('evEditLotterySection') });
+  }
 
   // 公關品狀態面板：要有活動 id 才存得了，新增活動（還沒存檔）時整塊藏起來
   document.getElementById('prPanel').style.display = isNew ? 'none' : '';

@@ -39,6 +39,8 @@ let LOTTERY_EVENT_NL_READY = true;      // 後端 eventNoLotteryReady===false（
 let LOTTERY_PENDING_EVENTS_READY = true; // 後端 pendingEventsReady===false＝行事曆查詢失敗，待抽暫時算不出來
 let LOTTERY_PENDING_EVENTS = [];        // data.pendingEvents（舊後端沒有時＝[]）
 let LOTTERY_NO_LOTTERY_EVENTS = [];     // data.noLotteryEvents（舊後端沒有時＝[]）
+let LOTTERY_QUOTA_READY = true;         // 後端 quotaReady===false（lottery_draws.quota 未 db push）才 false；舊後端沒這個 key＝視同 true
+let LOT_DATA_CHANGED_CBS = [];          // 每次 loadLotteryView 成功後呼叫（行事曆視窗的抽獎區塊重畫用）
 let LOTTERY_CAN_EDIT = true;       // hasEditPerm('lotteryEdit') 的快取，每次載入/渲染時重算
 let LOTTERY_VIEW = 'cards';        // 'cards'｜'todo'
 let LOTTERY_FILTER = { status: 'all', brand: '', year: null, q: '', subtype: lotLoadSubtypeFilter() }; // year=null＝還沒套「預設今年」；subtype ''＝全部｜'none'＝未分類｜其餘＝小類代碼
@@ -299,11 +301,11 @@ function lotFmtYM(dateStr) {
   const m = String(dateStr).match(/^(\d{4})-(\d{2})/);
   return m ? (m[1] + '年' + Number(m[2]) + '月') : dateStr;
 }
-// 卡頭抽獎日顯示：日期確定＝完整「抽獎日 YYYY-MM-DD」；不確定（估算值）＝只到月「約 YYYY年M月 ⚠」
+// 卡頭日期顯示（欄位名 drawDate，但實際多是開團日／月份估算，畫面一律叫「日期」）：日期確定＝完整「日期 YYYY-MM-DD」；不確定（估算值）＝只到月「約 YYYY年M月 ⚠」
 function lotFmtDrawDate(draw) {
   if (!draw.drawDate) return '';
   if (draw.dateUncertain) return '約 ' + lotFmtYM(draw.drawDate) + '（估）';
-  return '抽獎日 ' + draw.drawDate;
+  return '日期 ' + draw.drawDate; // 2026-10-10 改名：這欄實際多是開團日或月份估算，不一定是抽獎日
 }
 // 依 eventId 查 eventChoices（行事曆團購但帳務還沒建的清單）；查無回 null（=「未知」，未發布徽章跳過不顯示）
 function lotEventChoiceById(eventId) {
@@ -485,6 +487,7 @@ function loadLotteryView(forceReload) {
     LOTTERY_PENDING_EVENTS_READY = data.pendingEventsReady !== false;
     LOTTERY_PENDING_EVENTS = Array.isArray(data.pendingEvents) ? data.pendingEvents : [];
     LOTTERY_NO_LOTTERY_EVENTS = Array.isArray(data.noLotteryEvents) ? data.noLotteryEvents : [];
+    LOTTERY_QUOTA_READY = data.quotaReady !== false;
     // 小類篩選若記著的值在欄位未 push 時沒意義，重置
     if (!LOTTERY_SUBTYPE_READY) LOTTERY_FILTER.subtype = '';
     // 帳務年份篩選預設今年，只套用一次（之後使用者自己改就不要再洗掉）
@@ -493,6 +496,8 @@ function loadLotteryView(forceReload) {
     const addBtn = document.getElementById('lotAddDrawBtn');
     if (addBtn) addBtn.style.display = (LOTTERY_CAN_EDIT && LOTTERY_TABLE_READY) ? '' : 'none';
 
+    // 行事曆檢視／編輯視窗裡的抽獎區塊跟著新資料重畫（各 callback 自己 try/catch，不影響抽獎頁）
+    LOT_DATA_CHANGED_CBS.forEach(cb => { try { cb(); } catch (e) {} });
     renderLotteryBanner();
     if (!LOTTERY_TABLE_READY) {
       if (document.getElementById('lotTiles')) document.getElementById('lotTiles').innerHTML = '';
@@ -931,6 +936,13 @@ function lotProgressOf(draws) {
   const done = all.filter(w => w.status === 'done').length;
   return { done, total: all.length, pending: all.length - done };
 }
+// 已抽幾位（排除已重抽／已放棄）；名額（null＝沒填；欄位未 push 當沒填）
+function lotDrawnCount(d) { return ((d && d.winners) || []).filter(w => !lotIsClosed(w)).length; }
+function lotDrawQuota(d) {
+  if (!LOTTERY_QUOTA_READY || !d || d.quota === null || d.quota === undefined || d.quota === '') return null;
+  const q = Number(d.quota);
+  return Number.isFinite(q) && q > 0 ? q : null;
+}
 function lotPill(label, cls) { return '<span class="lot-pill lot-pill-' + cls + '">' + lotEscapeHtml(label) + '</span>'; }
 function lotDrawStatusPill(draws) {
   const p = lotProgressOf(draws);
@@ -1168,6 +1180,10 @@ function lotDrawBlockHtml(draw, opts) {
   metaParts.push(chip(LOT_PRIZE_TYPE_LABEL[prizeType] || '', 'lot-ptype lot-ptype-' + lotEscapeHtml(prizeType)));
   if (draw.prize) metaParts.push(chip('獎品：' + lotEscapeHtml(draw.prize)));
   if (prizeType === 'cash' && (draw.cashAmount || draw.cashAmount === 0)) metaParts.push(chip('$' + lotEscapeHtml(draw.cashAmount)));
+  { // 名額：有填才顯示「已抽 n／名額」，沒抽滿用提示色
+    const quota = lotDrawQuota(draw);
+    if (quota !== null) { const n = lotDrawnCount(draw); metaParts.push(chip('已抽 ' + n + '／' + quota, n < quota ? 'lot-warn' : '')); }
+  }
   if (draw.lineKeyword) metaParts.push(chip('L關鍵字：' + lotEscapeHtml(draw.lineKeyword)));
   metaParts.push(chip('贊助：' + (LOT_SHIP_BY_LABEL[draw.shipBy] || '團購主')));
   if (draw.note) metaParts.push(chip(lotIcon('note') + ' 有備註', '', ' title="' + lotEscapeHtml(draw.note) + '"'));
@@ -1913,6 +1929,109 @@ function lotSetEventNoLottery(eventId, noLottery) {
     if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
   }).catch(err => alert('操作失敗：' + (err.message || err)));
 }
+// ===== 行事曆「檢視／編輯視窗」的抽獎區塊（docs/16 §7；兩個視窗共用這一份）=====
+// boxEl＝容器；eventLegacyId＝這團的 legacy id（新團尚未存檔傳 ''）。資料沿用抽獎頁已載入的 LOTTERY_*（沒載入過就先抓一次，不切換畫面）。
+const LOT_EVBOX_REG = new Map(); // boxEl -> eventLegacyId（資料更新時重畫用）
+function lotEvboxNote(txt, warn) { return '<div class="lot-evbox-note' + (warn ? ' lot-evbox-warn' : '') + '">' + lotEscapeHtml(txt) + '</div>'; }
+function lotEvboxBind(boxEl) {
+  if (boxEl._lotBound) return;
+  boxEl._lotBound = true;
+  boxEl.addEventListener('click', e => {
+    const btn = e.target.closest('[data-role]');
+    if (!btn || !boxEl.contains(btn)) return;
+    const role = btn.dataset.role;
+    const legacy = String(LOT_EVBOX_REG.get(boxEl) || '');
+    if (role === 'ev-edit-draw') {
+      const d = LOTTERY_DRAWS.find(x => x.id === btn.dataset.drawId);
+      if (d) openLotteryDrawModal(d);
+    } else if (role === 'ev-add-draw') {
+      const choice = LOTTERY_EVENT_CHOICES.find(c => String(c.legacyId) === legacy);
+      const pe = LOTTERY_PENDING_EVENTS.find(x => String(x.legacyId) === legacy);
+      const sib = LOTTERY_DRAWS.find(x => String(x.eventLegacyId || '') === legacy);
+      const pf = { section: 'groupbuy', drawDate: lotToday(),
+        brandId: (pe && pe.brandId) || (sib && sib.brandId) || '', brandName: (pe && pe.brandName) || (sib && sib.brandName) || '' };
+      if (choice) { pf.eventId = choice.eventId; pf.acctId = choice.acctId || ''; pf.title = choice.title || ''; }
+      else if (pe) { pf.eventId = pe.eventId; pf.acctId = pe.acctId || ''; pf.title = pe.title || ''; } // 開團日超過一年不在選單裡的待抽團
+      openLotteryDrawModal(null, pf);
+    } else if (role === 'ev-nl-set') {
+      const choice = LOTTERY_EVENT_CHOICES.find(c => String(c.legacyId) === legacy);
+      const pe = LOTTERY_PENDING_EVENTS.find(x => String(x.legacyId) === legacy) || LOTTERY_NO_LOTTERY_EVENTS.find(x => String(x.legacyId) === legacy);
+      const eventId = (pe && pe.eventId) || (choice && choice.eventId);
+      if (!eventId) { alert('找不到這團的資料，請重新整理後再試'); return; }
+      const noLottery = btn.dataset.no === '1';
+      if (noLottery && !confirm('確定這團不用抽獎嗎？（之後可在這裡按「還原」）')) return;
+      lotSetEventNoLottery(eventId, noLottery);
+    }
+  });
+}
+// 用已載入的資料同步畫出內容
+function lotEvboxDraw(boxEl) {
+  const legacy = String(LOT_EVBOX_REG.get(boxEl) || '');
+  if (!legacy) { boxEl.innerHTML = lotEvboxNote('存檔後才能加抽獎'); return; }
+  if (!LOTTERY_TABLE_READY) { boxEl.innerHTML = lotEvboxNote('抽獎資料表尚未建立，暫時不能使用。', true); return; }
+  const canEdit = typeof hasEditPerm !== 'function' || hasEditPerm('lotteryEdit');
+  const draws = LOTTERY_DRAWS.filter(d => String(d.eventLegacyId || '') === legacy && !d.archived);
+  const pe = LOTTERY_PENDING_EVENTS.find(x => String(x.legacyId) === legacy);
+  const nl = LOTTERY_NO_LOTTERY_EVENTS.find(x => String(x.legacyId) === legacy);
+  const choice = LOTTERY_EVENT_CHOICES.find(c => String(c.legacyId) === legacy);
+  let html = '';
+  if (pe && !draws.length) html += lotEvboxNote('這團已結團 14 天，還沒建抽獎', true);
+  if (nl && !draws.length) {
+    html += lotEvboxNote('已標記這團不抽');
+    if (canEdit && LOTTERY_EVENT_NL_READY) html += '<div class="lot-evbox-actions"><button type="button" class="task-mini-btn" data-role="ev-nl-set" data-no="0">還原</button></div>';
+  } else {
+    draws.forEach(d => {
+      const n = lotDrawnCount(d), quota = lotDrawQuota(d);
+      const p = lotProgressOf([d]);
+      const prog = !p.total ? '尚未抽出' : (p.pending ? '待處理 ' + p.pending : '已完成');
+      html += '<div class="lot-evbox-row">' +
+        '<span class="lot-evbox-title">' + lotEscapeHtml(d.title || d.prize || '(未命名活動)') + '</span>' + lotSubtypePillHtml(d) +
+        '<span class="lot-evbox-meta' + ((quota !== null && n < quota) ? ' lot-quota-short' : '') + '">' + (quota !== null ? '已抽 ' + n + '／' + quota : '已抽 ' + n + ' 位') + '</span>' +
+        '<span class="lot-evbox-meta">' + lotEscapeHtml(prog) + '</span>' +
+        (canEdit ? '<button type="button" class="task-mini-btn" data-role="ev-edit-draw" data-draw-id="' + lotEscapeHtml(d.id) + '">編輯</button>' : '') +
+      '</div>';
+    });
+    if (!draws.length && !pe) html += lotEvboxNote('還沒有抽獎');
+    if (canEdit) {
+      if (!choice && !pe) html += lotEvboxNote('找不到這團的團購資料，新增時請在視窗裡自己選團', true);
+      html += '<div class="lot-evbox-actions">' +
+        (LOTTERY_TABLE_READY ? '<button type="button" class="task-mini-btn" data-role="ev-add-draw">＋ 新增抽獎</button>' : '') +
+        ((!draws.length && LOTTERY_EVENT_NL_READY) ? '<button type="button" class="task-mini-btn" data-role="ev-nl-set" data-no="1">這團不抽</button>' : '') +
+      '</div>';
+    }
+  }
+  boxEl.innerHTML = html;
+}
+async function lotRenderEventLotteryBox(boxEl, eventLegacyId, opts) {
+  if (!boxEl) return;
+  opts = opts || {};
+  const section = opts.sectionEl || boxEl.parentElement;
+  const canView = typeof hasPerm !== 'function' || hasPerm('lotteryEdit');
+  if (!canView) {
+    boxEl.innerHTML = '';
+    LOT_EVBOX_REG.delete(boxEl);
+    if (section) section.style.display = 'none';
+    return;
+  }
+  if (section) section.style.display = '';
+  lotEvboxBind(boxEl);
+  const legacy = String(eventLegacyId === null || eventLegacyId === undefined ? '' : eventLegacyId);
+  const seq = (boxEl._lotSeq = (boxEl._lotSeq || 0) + 1);
+  LOT_EVBOX_REG.set(boxEl, legacy);
+  if (legacy && !LOTTERY_LOADED) {
+    boxEl.innerHTML = lotEvboxNote('讀取中…');
+    try { await loadLotteryView(false); } catch (e) { /* 下面統一判斷 */ }
+    if (seq !== boxEl._lotSeq) return; // 期間視窗已換成別團
+    if (!LOTTERY_LOADED) { boxEl.innerHTML = lotEvboxNote('抽獎資料讀取失敗，請稍後再開一次視窗。', true); return; }
+  }
+  lotEvboxDraw(boxEl);
+}
+LOT_DATA_CHANGED_CBS.push(() => {
+  LOT_EVBOX_REG.forEach((legacy, el) => {
+    if (legacy && el.isConnected && el.parentElement && el.parentElement.style.display !== 'none') lotEvboxDraw(el);
+  });
+});
+
 function lotSetNoLottery(acctId, noLottery) {
   lotApiPost('lottery-acct-no-lottery-set', { acctId, noLottery }).then(res => {
     if (res && res.success) loadLotteryView(true); else alert('操作失敗：' + ((res && res.error) || '未知錯誤'));
@@ -2010,6 +2129,12 @@ function openLotteryDrawModal(draw, prefill) {
   LOT_DRAW_ORIG_SUBTYPE = draw ? lotDrawSubtype(draw) : '';
   LOT_DRAW_ORIG_SECTION = draw ? section : '';
   lotRenderSubtypeOptions(section, draw ? lotDrawSubtype(draw) : ((pf && pf.subtype) || ''));
+
+  // 名額（選填）：欄位未 push 時整欄隱藏
+  const quotaGroup = document.getElementById('lotDrawQuotaGroup');
+  if (quotaGroup) quotaGroup.style.display = LOTTERY_QUOTA_READY ? '' : 'none';
+  const quotaInput = document.getElementById('lotDrawQuotaInput');
+  if (quotaInput) quotaInput.value = (draw && draw.quota !== null && draw.quota !== undefined && draw.quota !== '') ? draw.quota : '';
 
   const brandSel = document.getElementById('lotDrawBrandSelect');
   brandSel.innerHTML = '<option value="">（不指定）</option>' + LOTTERY_BRAND_CHOICES.map(b =>
@@ -2338,6 +2463,16 @@ document.getElementById('lotDrawSaveBtn').addEventListener('click', async () => 
   if (section === 'groupbuy' && !teamVal && !LOTTERY_EDIT_DRAW_ID) { lotSetStatus('lotDrawFormStatus', '請選擇團購', 'error'); return; }
   const cashAmountRaw = document.getElementById('lotDrawCashAmountInput').value;
 
+  // 名額（選填）：空＝清空；有值須為 1–999 整數
+  let quotaVal = '';
+  if (LOTTERY_QUOTA_READY) {
+    const qRaw = (document.getElementById('lotDrawQuotaInput').value || '').trim();
+    if (qRaw !== '') {
+      if (!/^\d+$/.test(qRaw) || Number(qRaw) < 1 || Number(qRaw) > 999) { lotSetStatus('lotDrawFormStatus', '名額只能填 1～999 的整數', 'error'); return; }
+      quotaVal = String(Number(qRaw));
+    }
+  }
+
   // 小類：欄位已 push 且不是特殊活動時，新增必選（編輯時原本就未分類的舊資料可維持未分類）
   let subtypeVal = '';
   if (LOTTERY_SUBTYPE_READY && section !== 'special') {
@@ -2369,6 +2504,7 @@ document.getElementById('lotDrawSaveBtn').addEventListener('click', async () => 
     cashAmount: cashAmountRaw.trim() === '' ? null : cashAmountRaw.trim()
   };
   if (LOTTERY_SUBTYPE_READY) payload.subtype = section === 'special' ? '' : subtypeVal; // 欄位未 push 時不送，免得後端回「待 db push」
+  if (LOTTERY_QUOTA_READY) payload.quota = quotaVal; // 欄位未 push 時不送，免得後端回「待 db push」
   if (titleTouched) payload.title = title;
   if (LOTTERY_EDIT_DRAW_ID) payload.id = LOTTERY_EDIT_DRAW_ID;
 
