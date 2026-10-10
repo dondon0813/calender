@@ -701,7 +701,7 @@ function renderLotteryFilters() {
     (LOTTERY_SUBTYPE_READY ? '<select id="lotSubtypeSelect">' + subtypeOptions + '</select>' : '') +
     ((LOTTERY_VIEW === 'cards' && !actTab) ? '<select id="lotYearSelect">' + yearOptions + '</select>' : '') +
     '<input type="text" id="lotSearchInput" placeholder="搜尋 R號／團名／獎品／得獎人／姓名／訂單編號" value="' + lotEscapeHtml(LOTTERY_FILTER.q) + '">' +
-    (actTab ? '' : '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依分區</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>') +
+    // 10-11 雪莉：「依分區｜待辦清單」切換整個拿掉，只留分區表格
     '<button class="task-mini-btn" id="lotSortDirBtn" type="button">' + lotSortDirLabel() + '</button>' +
     showToggleHtml +
     hideDoneToggleHtml;
@@ -800,7 +800,6 @@ function lotRenderMain() {
 function renderLotteryBody() {
   if (lotAnnounceTabOn()) renderLotteryAnnounce();
   else if (lotActivitiesTabOn()) renderLotteryActivities();
-  else if (LOTTERY_VIEW === 'todo') renderLotteryTodo();
   else renderLotterySections();
 }
 
