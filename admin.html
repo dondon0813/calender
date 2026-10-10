@@ -6288,10 +6288,16 @@
     .lot-ann-bcaret svg{ width:12px; height:12px; vertical-align:-2px; }
     .lot-ann-card .lot-ann-list{ margin-top:8px; }
     .lot-ann-list{ }
+    .lot-ann-tbl{ width:max-content; max-width:100%; }   /* 10-11 雪莉：獎品跟得獎人隔太遠 → 表格寬度跟著內容，不撐滿整頁 */
+    .lot-ann-tbl th, .lot-ann-tbl td{ padding-right:28px; }
+    .lot-ann-tbl .lot-td-prize{ min-width:160px; }
+    .lot-ann-tbl .lot-td-winners{ width:auto; }
     .lot-ann-tbl .lot-ann-td-cb{ width:28px; padding-right:0; }
     .lot-ann-tbl tr.lot-ann-rowl{ cursor:pointer; }
     .lot-ann-tbl tr.lot-ann-rowl.on td{ background:rgba(201,154,155,.12); }
     .lot-ann-tbl input[type=checkbox]{ margin:0; }
+    .lot-ann-selall{ display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--c-text); cursor:pointer; padding:0 10px 0 11px; user-select:none; }
+    .lot-ann-selall input{ margin:0; }
     .lot-ann-ops{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .lot-ann-ops .task-mini-btn:disabled, .lot-ann-bar .task-mini-btn:disabled{ opacity:.45; cursor:not-allowed; }
     .lot-ann-imgs{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
@@ -8028,7 +8034,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=44"></script>
+<script src="lottery.js?v=45"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>

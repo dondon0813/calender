@@ -3738,7 +3738,7 @@ function renderLotteryAnnounce() {
     '<span data-ann-kind="ship" class="lot-status-chip' + (kind === 'ship' ? ' on' : '') + '">寄出公告 ' + cnt.ship + '</span></div>';
   const canEdit = LOTTERY_CAN_EDIT;
   const bar = '<div class="lot-ann-bar">' +
-    '<button type="button" class="task-mini-btn" data-role="ann-selall"' + (pendingIds.size ? '' : ' disabled') + '></button>' +
+    '<label class="lot-ann-selall"><input type="checkbox" data-role="ann-selall"' + (pendingIds.size ? '' : ' disabled') + '>全選</label>' +
     (canEdit ? '<button type="button" class="task-mini-btn" data-role="ann-batch-create" disabled>' + lotIcon('check') + ' 一起公告</button>' : '') +
     '<span class="lot-ann-barinfo" data-role="ann-barinfo"></span></div>';
   const note = (!LOTTERY_ANNOUNCE_BATCH_READY && canEdit)
@@ -3763,7 +3763,7 @@ function lotAnnRefreshBar(box) {
   const go = box.querySelector('[data-role="ann-batch-create"]');
   const info = box.querySelector('[data-role="ann-barinfo"]');
   const n = LOT_ANN_SEL.size;
-  if (all) all.innerHTML = lotIcon('check') + ' ' + (total && n >= total ? '取消全選' : '全選');
+  if (all) { all.checked = !!total && n >= total; all.indeterminate = n > 0 && n < total; }
   if (go) {
     go.disabled = !n || !LOTTERY_ANNOUNCE_BATCH_READY;
     go.title = LOTTERY_ANNOUNCE_BATCH_READY ? '' : '待 db push';
@@ -3892,9 +3892,9 @@ function lotBindAnnounceEvents(box) {
     });
   });
   const all = box.querySelector('[data-role="ann-selall"]');
-  if (all) all.addEventListener('click', () => {
+  if (all) all.addEventListener('change', () => {
     const cbs = Array.from(box.querySelectorAll('[data-role="ann-check"]'));
-    const allOn = cbs.length && cbs.every(c => c.checked);
+    const allOn = !all.checked;
     cbs.forEach(c => {
       c.checked = !allOn;
       if (!allOn) LOT_ANN_SEL.add(c.dataset.winnerId); else LOT_ANN_SEL.delete(c.dataset.winnerId);
