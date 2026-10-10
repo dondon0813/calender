@@ -152,6 +152,21 @@
   // ---------- 對外介面 ----------
   var DDPromo = {
     MEMBER_LOGIN_URL: MEMBER_LOGIN_URL,
+    // 「登入會員」連結怎麼開（10-11，雪莉在會員 App 裡點了跳出帶網址列的新視窗、登入後又跳到行事曆）：
+    //   被會員 App 首頁分頁內嵌（iframe）→ 整個 App 換到會員中心（_top、不帶 back，登入完就留在 App 裡）
+    //   官網被加到主畫面當 App 開 → 同一個視窗開、登入後跳回這頁
+    //   一般瀏覽器 → 照舊開新分頁、登入後跳回這頁
+    setLoginLink: function (a) {
+      if (!a) return;
+      var embedded = false;
+      try { embedded = window.self !== window.top; } catch (e) { embedded = true; }
+      var standalone = false;
+      try { standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch (e) { /* 忽略 */ }
+      var back = MEMBER_LOGIN_URL + '?back=' + encodeURIComponent(location.href.split('#')[0]);
+      if (embedded) { a.href = MEMBER_LOGIN_URL; a.target = '_top'; a.removeAttribute('rel'); }
+      else if (standalone) { a.href = back; a.target = '_self'; a.removeAttribute('rel'); }
+      else { a.href = back; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    },
     _rpc: realRpc, // 測試時可替換
     loggedIn: function () { return state.loggedIn; },
     isSubscribed: function (brandId) {
