@@ -327,6 +327,120 @@ async function convertRunWordToPdf(file) {
   }
 }
 
+// ===== 轉檔小工具「轉音檔」分頁（2026-10-10）=====
+// YouTube 擋雲端主機下載，所以這裡只排隊：網址存進後端 → 雪莉家裡電腦（dondon-platform scripts/music-worker.mjs）
+// 每 15 秒來拿、抓好 mp3 上傳 → 這裡每 5 秒刷新，出現「下載 mp3」鈕。後端 lib/legacy/musicqueue.ts。
+let convertAudioTimer = null;
+let convertAudioLoading = false;
+
+document.addEventListener('click', (e) => {
+  const seg = e.target.closest('#convertSeg [data-convert-seg]');
+  if (!seg) return;
+  const mode = seg.getAttribute('data-convert-seg');
+  document.querySelectorAll('#convertSeg [data-convert-seg]').forEach((s) => s.classList.toggle('on', s === seg));
+  document.getElementById('convertImagePane').style.display = mode === 'image' ? '' : 'none';
+  document.getElementById('convertAudioPane').style.display = mode === 'audio' ? '' : 'none';
+  if (mode === 'audio') convertAudioRefresh();
+});
+
+function convertAudioEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// 分頁還看得到才繼續輪詢（換頁或切回轉圖片就停）
+function convertAudioVisible() {
+  const pane = document.getElementById('convertAudioPane');
+  return !!(pane && pane.offsetParent);
+}
+
+function convertAudioSchedule(ms) {
+  clearTimeout(convertAudioTimer);
+  convertAudioTimer = setTimeout(() => { if (convertAudioVisible()) convertAudioRefresh(); }, ms);
+}
+
+async function convertAudioRefresh() {
+  if (convertAudioLoading) return;
+  convertAudioLoading = true;
+  try {
+    const r = await postTask({ type: 'music-list' });
+    convertAudioRender(r);
+    const pending = (r.jobs || []).some((j) => j.status === 'queued' || j.status === 'working');
+    convertAudioSchedule(pending ? 5000 : 30000);
+  } catch (err) {
+    document.getElementById('convertAudioWorker').textContent = '讀取失敗：' + err.message;
+    convertAudioSchedule(30000);
+  } finally {
+    convertAudioLoading = false;
+  }
+}
+
+function convertAudioRender(r) {
+  const w = document.getElementById('convertAudioWorker');
+  w.style.color = r.workerAlive ? 'var(--c-text-soft)' : 'var(--c-danger, #B5485A)';
+  w.textContent = r.workerAlive ? '家裡電腦在線，可以下載' : '家裡電腦目前沒開（或下載程式沒在跑），網址會先排隊，電腦開了就會自動抓';
+  const jobs = r.jobs || [];
+  const box = document.getElementById('convertAudioList');
+  if (!jobs.length) { box.innerHTML = ''; return; }
+  const label = { queued: '排隊中', working: '抓取中…', done: '完成', error: '失敗' };
+  box.innerHTML = jobs.map((j) => {
+    const name = j.title || j.url;
+    const sub = j.status === 'done'
+      ? (j.size ? (j.size / 1048576).toFixed(1) + ' MB' : '')
+      : j.status === 'error' ? convertAudioEsc(j.error) : '';
+    const ops = (j.status === 'done' ? '<button class="task-mini-btn" data-audio-dl="' + j.id + '">下載 mp3</button>' : '') +
+      (j.status !== 'working' ? '<button class="task-mini-btn x-btn" data-audio-del="' + j.id + '" title="移除">✕</button>' : '');
+    return '<div style="display:flex; align-items:center; gap:8px; padding:9px 0; border-top:1px solid var(--c-line);">' +
+      '<div style="flex:1; min-width:0;">' +
+        '<div style="font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + convertAudioEsc(name) + '</div>' +
+        '<div style="font-size:12px; color:var(--c-text-soft);">' + label[j.status] + (sub ? '｜' + sub : '') + '</div>' +
+      '</div>' + ops + '</div>';
+  }).join('');
+}
+
+async function convertAudioSubmit() {
+  const input = document.getElementById('convertAudioUrl');
+  const url = input.value.trim();
+  if (!url) { setFormStatus('convertAudioStatus', '請先貼上 YouTube 網址', 'error'); return; }
+  const btn = document.getElementById('convertAudioBtn');
+  btn.disabled = true;
+  try {
+    const r = await postTask({ type: 'music-request', url });
+    setFormStatus('convertAudioStatus', r.duplicate ? '這支已經在清單裡了' : '已加入，抓好後下面會出現「下載 mp3」', 'ok');
+    input.value = '';
+    convertAudioRefresh();
+  } catch (err) {
+    setFormStatus('convertAudioStatus', err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  const dl = e.target.closest('[data-audio-dl]');
+  const del = e.target.closest('[data-audio-del]');
+  if (!dl && !del) return;
+  const btn = dl || del;
+  btn.disabled = true;
+  try {
+    if (dl) {
+      const r = await postTask({ type: 'music-download-url', id: dl.getAttribute('data-audio-dl') });
+      const a = document.createElement('a');
+      a.href = r.url;
+      a.download = r.fileName || 'music.mp3';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      await postTask({ type: 'music-delete', id: del.getAttribute('data-audio-del') });
+      convertAudioRefresh();
+    }
+  } catch (err) {
+    setFormStatus('convertAudioStatus', err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ===== 食譜貼文產生器 =====
 // 讀取跟 recipes.html 同一組食譜資料庫（透過同一個 APPS_SCRIPT_URL，scope=public）
 // 這裡的變數都加 pg 前綴，避免跟其他功能的變數重複

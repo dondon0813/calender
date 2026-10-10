@@ -5027,7 +5027,8 @@
   <div class="view" id="viewConvertTool">
     <button class="task-mini-btn" style="margin-bottom:10px;" onclick="switchView('tools')">⬅ 回工具選單</button>
     <h2 class="view-title">轉檔小工具</h2>
-    <div class="task-form">
+    <div style="margin:0 0 12px;"><div class="lot-seg" id="convertSeg" style="margin-left:0; display:inline-flex;"><span class="on" data-convert-seg="image">轉圖片</span><span data-convert-seg="audio">轉音檔</span></div></div>
+    <div class="task-form" id="convertImagePane">
       <label for="convertFileInput">選擇檔案（Word／PDF／Excel／JPG）</label>
       <input type="file" id="convertFileInput" accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png" onchange="convertOnFileChange()">
       <label for="convertTargetSelect">要轉成的格式</label>
@@ -5039,6 +5040,17 @@
       <button class="task-submit-btn" onclick="runConvertTool()">開始轉換</button>
       <div class="form-status" id="convertStatus"></div>
       <p style="text-align:center; font-size:12.5px; font-weight:800; color:#B07F83; margin:10px 0 0;" id="convertComingSoonHint">🚧 Word 轉 PDF 已可使用；其餘格式即將推出，敬請期待</p>
+    </div>
+
+    <!-- 轉音檔：YouTube 網址排隊 → 雪莉家裡電腦（dondon-platform scripts/music-worker.mjs）抓 mp3 → 這裡出現下載鈕；邏輯在 tools.js convertAudio* -->
+    <div class="task-form" id="convertAudioPane" style="display:none;">
+      <label for="convertAudioUrl">YouTube 網址（一次一支）</label>
+      <input type="url" id="convertAudioUrl" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+      <button class="task-submit-btn" id="convertAudioBtn" onclick="convertAudioSubmit()">加入下載</button>
+      <div class="form-status" id="convertAudioStatus"></div>
+      <div id="convertAudioWorker" style="font-size:12.5px; margin:8px 0 0;"></div>
+      <div id="convertAudioList" style="margin-top:12px;"></div>
+      <p style="font-size:12px; color:var(--c-muted); margin:12px 0 0; line-height:1.6;">網址會先排隊，由雪莉家裡的電腦抓好 mp3，大約 30 秒到 1 分鐘（電腦要開著）。抓好的檔案保留 3 天後自動清除。請只下載自己頻道或有授權的內容。</p>
     </div>
   </div>
 
@@ -7899,7 +7911,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=19"></script>
+<script src="tools.js?v=20"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=19"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
