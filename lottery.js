@@ -3719,9 +3719,9 @@ function renderLotteryAnnounce() {
   Array.from(LOT_ANN_SEL).forEach(id => { if (!pendingIds.has(id)) LOT_ANN_SEL.delete(id); });
   const batches = LOTTERY_ANNOUNCE_BATCHES.filter(b => b.kind === kind)
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-  const seg = '<div class="lot-seg lot-ann-seg" data-role="ann-kind-seg">' +
-    '<span data-ann-kind="win" class="' + (kind === 'win' ? 'on' : '') + '">中獎公告 ' + cnt.win + '</span>' +
-    '<span data-ann-kind="ship" class="' + (kind === 'ship' ? 'on' : '') + '">寄出公告 ' + cnt.ship + '</span></div>';
+  const seg = '<div class="lot-ann-seg" data-role="ann-kind-seg">' +
+    '<span data-ann-kind="win" class="lot-status-chip' + (kind === 'win' ? ' on' : '') + '">中獎公告 ' + cnt.win + '</span>' +
+    '<span data-ann-kind="ship" class="lot-status-chip' + (kind === 'ship' ? ' on' : '') + '">寄出公告 ' + cnt.ship + '</span></div>';
   const canEdit = LOTTERY_CAN_EDIT;
   const bar = '<div class="lot-ann-bar">' +
     '<button type="button" class="task-mini-btn" data-role="ann-selall"' + (pendingIds.size ? '' : ' disabled') + '></button>' +

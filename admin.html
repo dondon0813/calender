@@ -6274,7 +6274,7 @@
     .lot-ship-tag.vendor.handed{ background:var(--c-blue-bg); color:var(--c-blue-text); cursor:pointer; }
     .lot-ship-seg{ margin-left:0; }
     .lot-ann-note{ padding:14px 16px; border-radius:12px; background:#F5EFE9; color:var(--c-text-soft); font-size:13px; line-height:1.7; }
-    .lot-ann-seg{ margin:0 0 14px; display:inline-flex; }
+    .lot-ann-seg{ margin:0 0 14px; display:flex; flex-wrap:nowrap; gap:6px; overflow-x:auto; scrollbar-width:none; }
     .lot-ann-zone{ margin-bottom:22px; }
     .lot-ann-zone-title{ display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; color:var(--c-text); margin-bottom:10px; }
     .lot-ann-zone-title span{ font-size:12px; font-weight:700; color:var(--c-text-soft); }
@@ -8034,7 +8034,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=42"></script>
+<script src="lottery.js?v=43"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
