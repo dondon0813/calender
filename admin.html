@@ -5332,7 +5332,7 @@
       <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
       <button class="task-mini-btn" id="lotRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
-    <div style="margin:0 0 12px;"><div class="lot-seg" id="lotMainSeg" style="margin-left:0; display:inline-flex;"><span class="on" data-main-seg="draws">抽獎</span><span data-main-seg="activities">特殊活動</span><span data-main-seg="announce">公告</span></div></div>
+    <div class="pba-tabs" id="lotMainSeg"><button type="button" class="pba-tab on" data-main-seg="draws"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9.5" width="17" height="11" rx="2"/><path d="M3.5 13.5h17"/><path d="M12 9.5v11"/><path d="M12 9.5c-1.2-2.8-4.3-4.4-5.3-2.8S9.2 9.5 12 9.5z"/><path d="M12 9.5c1.2-2.8 4.3-4.4 5.3-2.8S14.8 9.5 12 9.5z"/></svg>抽獎</button><button type="button" class="pba-tab" data-main-seg="activities"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>特殊活動</button><button type="button" class="pba-tab" data-main-seg="announce"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h3l6 4V6L7 10z"/><path d="M16.5 9a4 4 0 0 1 0 6"/><path d="M19 6.5a7.5 7.5 0 0 1 0 11"/></svg>公告</button></div>
     <div id="lotBanner"></div>
     <div id="lotTiles" class="lot-tiles"></div>
     <div id="lotFilters" class="lot-filters"></div>
@@ -8021,7 +8021,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=37"></script>
+<script src="lottery.js?v=38"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
