@@ -1217,7 +1217,8 @@ function lotActivityCardHtml(a, draws) {
     const dl = [a.registerDeadline ? '登記截止 ' + md(a.registerDeadline) : '', a.drawDate ? '抽獎 ' + md(a.drawDate) : ''].filter(Boolean).join('・');
     const teamTxt = a.allTeams === false ? '指定 ' + (Array.isArray(a.teams) ? a.teams.length : 0) + ' 團' : '全部團';
     const pub = a.publishDate ? '活動頁 ' + md(a.publishDate) + ' 上線' : '';
-    campaignMeta = '<div class="lot-meta">' + (dl ? '<span>' + lotEscapeHtml(dl) + '</span>' : '') + (pub ? '<span>' + lotEscapeHtml(pub) + '</span>' : '') + '<span>' + teamTxt + '</span></div>';
+    const owTxt = a.orderWinOnce === false ? '一筆訂單可重複中獎' : '一筆訂單只中一次';
+    campaignMeta = '<div class="lot-meta">' + (dl ? '<span>' + lotEscapeHtml(dl) + '</span>' : '') + '<span>' + owTxt + '</span>' + (pub ? '<span>' + lotEscapeHtml(pub) + '</span>' : '') + '<span>' + teamTxt + '</span></div>';
     if (a.slug) {
       const url = 'https://member.sheridondon.com.tw/campaign/' + a.slug;
       campaignMeta += '<div class="lot-meta"><span>活動頁：' + lotEscapeHtml(url) + '</span>' +
@@ -1490,6 +1491,7 @@ function lotInitActCampaignFields(act) {
   document.getElementById('lotActPublishDateInput').value = act ? (act.publishDate || '') : '';
   document.getElementById('lotActCoverUrlInput').value = act ? (act.coverUrl || '') : '';
   document.getElementById('lotActMaxWinsInput').value = (act && act.maxWins !== null && act.maxWins !== undefined && act.maxWins !== '') ? act.maxWins : '';
+  document.getElementById('lotActOrderWinOnceInput').checked = !(act && act.orderWinOnce === false);
   const picked = !!(act && act.allTeams === false);
   document.querySelector('input[name="lotActTeamsMode"][value="' + (picked ? 'picked' : 'all') + '"]').checked = true;
   LOT_ACT_TEAMS = []; LOT_ACT_TEAM_TITLES = {};
@@ -1584,6 +1586,7 @@ document.getElementById('lotActSaveBtn').addEventListener('click', async () => {
     payload.publishDate = pubDate || null;
     payload.coverUrl = coverUrl;
     payload.maxWins = mwRaw === '' ? null : Number(mwRaw);
+    payload.orderWinOnce = !!document.getElementById('lotActOrderWinOnceInput').checked;
     payload.allTeams = !picked;
     payload.teams = picked ? LOT_ACT_TEAMS.slice() : [];
   }
@@ -1771,6 +1774,12 @@ function lotRenderDrawRun() {
   const p = st.preview;
   const prizes = Array.isArray(p.prizes) ? p.prizes : [];
   let h = '<div class="lot-elig-sum-row">符合資格 ' + (Number(p.entrants) || 0) + ' 人・共 ' + (Number(p.totalTickets) || 0) + ' 張籤</div>' +
+    (function () {
+      const ra = LOTTERY_ACTIVITIES.find(x => x.id === st.draw.activityId);
+      if (!ra) return '';
+      const t = ra.orderWinOnce === false ? '一筆訂單可重複中獎' : '一筆訂單只能中一次（已在本活動中獎的訂單不會再進池）';
+      return '<div class="hint" style="font-size:12px; color:var(--c-text-soft); margin:2px 0 6px;">' + lotEscapeHtml(t) + '</div>';
+    })() +
     '<div class="lot-elig-sum-row">獎品 ' + (Number(p.totalPrizes) || 0) + ' 份：' + (prizes.length ? lotEscapeHtml(prizes.map(x => x.name + ' x' + x.qty).join('、')) : '（尚未設定）') + '</div>';
   if (Number(p.pendingRegistrations) > 0) h += '<div class="lot-warn" style="margin:6px 0;">還有 ' + Number(p.pendingRegistrations) + ' 筆登記待核對，建議先到會員管理 → 認領回報核對完再抽</div>';
   if (p.beforeDeadline) h += '<div class="lot-warn" style="margin:6px 0;">還沒到登記截止日</div>';
