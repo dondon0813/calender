@@ -6217,7 +6217,7 @@
     .lot-ic-btn.danger{ color:var(--c-danger); }
     .lot-eye svg{ width:13px; height:13px; vertical-align:-2px; }
     /* 抽獎區所有小按鈕裡的線條圖示（含待配對／未開團卡的「結案」、綁定列按鈕）統一尺寸，不然沒吃到規則的會撐成大圖 */
-    .lot-zone .task-mini-btn svg, .lot-card .task-mini-btn svg, .lot-nolottery-row .task-mini-btn svg{ width:13px; height:13px; vertical-align:-2px; margin-right:2px; }
+    .lot-zone .task-mini-btn svg, .lot-card .task-mini-btn svg, .lot-nolottery-row .task-mini-btn svg, .lot-ann-card .task-mini-btn svg{ width:13px; height:13px; vertical-align:-2px; margin-right:2px; }
     @media (max-width:700px){
       .lot-wl-head{ display:none; }
       .lot-wl-main{ grid-template-columns:1fr auto; }
@@ -8021,7 +8021,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=39"></script>
+<script src="lottery.js?v=40"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
