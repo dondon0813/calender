@@ -74,6 +74,30 @@ function lotSaveArchivedCollapsed(v) {
   try { localStorage.setItem('lottery_archived_collapsed', v ? '1' : '0'); } catch (e) {}
 }
 let LOTTERY_SECTION_COLLAPSED = { groupbuy: false, non_groupbuy: false, special: false, unpaired: false, unopened: lotLoadUnopenedCollapsed(), archived: lotLoadArchivedCollapsed() };
+// ===== 抽獎管理頂端切換「抽獎｜特殊活動」（docs/16 §8）=====
+// activitiesReady 缺 key 或 false＝後端還沒部署／表未 push：特殊活動分頁只顯示提示＋扁平清單，抽獎分頁保留原本的特殊活動分區（完全退回現況）。
+let LOTTERY_ACTIVITIES_READY = false;
+let LOTTERY_ACTIVITIES = [];
+function lotLoadMainTab() {
+  try { return localStorage.getItem('lottery_main_tab') === 'activities' ? 'activities' : 'draws'; } catch (e) { return 'draws'; }
+}
+function lotSaveMainTab(v) {
+  try { localStorage.setItem('lottery_main_tab', v); } catch (e) {}
+}
+let LOTTERY_MAIN_TAB = lotLoadMainTab();   // 'draws'｜'activities'
+function lotActivitiesTabOn() { return LOTTERY_MAIN_TAB === 'activities'; }
+// 活動卡展開狀態（預設收合），key lottery_activity_open：{ <activityId>: true }
+function lotLoadActivityOpen() {
+  try {
+    const o = JSON.parse(localStorage.getItem('lottery_activity_open') || '{}');
+    return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+  } catch (e) { return {}; }
+}
+function lotSaveActivityOpen() {
+  try { localStorage.setItem('lottery_activity_open', JSON.stringify(LOTTERY_ACTIVITY_OPEN)); } catch (e) {}
+}
+let LOTTERY_ACTIVITY_OPEN = lotLoadActivityOpen();
+let LOTTERY_ACTIVITY_TEXT_OPEN = {};       // 介紹／規則「展開」狀態（不存 localStorage）
 let LOTTERY_EDIT_DRAW_ID = null;   // 目前 lotteryDrawModal 編輯中的活動 id；null＝新增
 let LOTTERY_WINNER_EDIT = null;    // { drawId, winnerId }；winnerId=null＝新增
 const LOTTERY_EXPANDED_OVERRIDE = {}; // 使用者手動展開/收合過的團卡／抽獎卡，key -> true/false，蓋過自動展開規則
@@ -488,6 +512,9 @@ function loadLotteryView(forceReload) {
     LOTTERY_PENDING_EVENTS = Array.isArray(data.pendingEvents) ? data.pendingEvents : [];
     LOTTERY_NO_LOTTERY_EVENTS = Array.isArray(data.noLotteryEvents) ? data.noLotteryEvents : [];
     LOTTERY_QUOTA_READY = data.quotaReady !== false;
+    LOTTERY_ACTIVITIES_READY = data.activitiesReady === true && Array.isArray(data.activities); // 缺 key＝視同 false（退回現況）
+    LOTTERY_ACTIVITIES = LOTTERY_ACTIVITIES_READY ? data.activities : [];
+    lotSyncMainTabUI();
     // 小類篩選若記著的值在欄位未 push 時沒意義，重置
     if (!LOTTERY_SUBTYPE_READY) LOTTERY_FILTER.subtype = '';
     // 帳務年份篩選預設今年，只套用一次（之後使用者自己改就不要再洗掉）
@@ -549,7 +576,16 @@ function renderLotteryBanner() {
 function renderLotteryTiles() {
   const box = document.getElementById('lotTiles');
   if (!box) return;
-  const s = LOTTERY_STATS || {};
+  const s = Object.assign({}, LOTTERY_STATS || {});
+  const actTab = lotActivitiesTabOn();
+  // 特殊活動有自己的分頁後（2026-10-10 第 3 期）：得獎人狀態磚只算「目前分頁看得到的抽獎」，
+  // 否則抽獎分頁的磚會含特殊活動得獎人、點下去卻看不到（驗收抓到）。未就緒時照舊用後端全量統計。
+  if (LOTTERY_ACTIVITIES_READY) {
+    const inTab = d => !d.archived && (actTab ? d.section === 'special' : d.section !== 'special');
+    const cnt = st => LOTTERY_DRAWS.filter(inTab).reduce((n, d) => n + (d.winners || []).filter(w => w.status === st).length, 0);
+    s.awaitingInfo = cnt('awaiting_info'); s.infoReady = cnt('info_ready');
+    s.handedToVendor = cnt('handed_to_vendor'); s.awaitingAnnounce = cnt('awaiting_announce');
+  }
   const tile = (key, cls, n, label) =>
     '<div class="lot-tile ' + cls + (LOTTERY_FILTER.status === key ? ' on' : '') + '" data-tile="' + key + '">' +
     '<div class="lot-tile-n">' + (n || 0) + '</div><div class="lot-tile-l">' + label + '</div></div>';
@@ -559,8 +595,9 @@ function renderLotteryTiles() {
       tile('info_ready', 'ready', s.infoReady, '待寄出') +
       tile('handed_to_vendor', 'vendor', s.handedToVendor, '廠商寄送中') +
       tile('awaiting_announce', 'announce', s.awaitingAnnounce, '待公告') +
-      tile('pending_draw', 'pending', s.awaitingDraw, '待抽') +
-      tile('unpaired', 'unpaired', s.unpaired, '待配對') +
+      (actTab ? '' : // 待抽／待配對只跟綁團有關，特殊活動分頁不顯示
+        tile('pending_draw', 'pending', s.awaitingDraw, '待抽') +
+        tile('unpaired', 'unpaired', s.unpaired, '待配對')) +
     '</div>';
   box.querySelectorAll('.lot-tile').forEach(el => {
     el.addEventListener('click', () => {
@@ -578,7 +615,8 @@ function renderLotteryFilters() {
   const box = document.getElementById('lotFilters');
   if (!box) return;
   const chipKeys = LOTTERY_VIEW === 'todo' ? LOT_TODO_CHIPS : LOT_FILTER_CHIPS.map(c => c.key);
-  const chipsHtml = LOT_FILTER_CHIPS.filter(c => chipKeys.indexOf(c.key) !== -1).map(c =>
+  const actTab = lotActivitiesTabOn();
+  const chipsHtml = LOT_FILTER_CHIPS.filter(c => chipKeys.indexOf(c.key) !== -1 && !(actTab && ['pending_draw', 'unpaired', 'unopened'].indexOf(c.key) !== -1)).map(c =>
     '<span class="lot-status-chip' + (LOTTERY_FILTER.status === c.key ? ' on' : '') + '" data-chip="' + c.key + '">' + c.label + '</span>'
   ).join('');
 
@@ -599,11 +637,11 @@ function renderLotteryFilters() {
   ).join('');
 
   const noLotteryCount = LOTTERY_ACCT_TEAMS.filter(t => t.noLottery && !lotDrawsForAcct(t.acctId).length).length + LOTTERY_NO_LOTTERY_EVENTS.length;
-  const showToggleHtml = LOTTERY_VIEW === 'cards'
+  const showToggleHtml = (LOTTERY_VIEW === 'cards' && !actTab)
     ? '<span class="lot-toggle-chip' + (LOTTERY_SHOW_NO_LOTTERY ? ' on' : '') + '" id="lotShowNoLotteryToggle">已標不抽（' + noLotteryCount + '）</span>'
     : '';
-  const hideDoneCount = LOTTERY_VIEW === 'cards' ? lotComputeHideDoneCount() : 0;
-  const hideDoneToggleHtml = LOTTERY_VIEW === 'cards'
+  const hideDoneCount = (LOTTERY_VIEW === 'cards' || actTab) ? lotComputeHideDoneCount() : 0;
+  const hideDoneToggleHtml = (LOTTERY_VIEW === 'cards' || actTab)
     ? '<span class="lot-toggle-chip' + (LOTTERY_HIDE_DONE ? ' on' : '') + '" id="lotHideDoneToggle">隱藏已完成（' + hideDoneCount + '）</span>'
     : '';
 
@@ -611,9 +649,9 @@ function renderLotteryFilters() {
     chipsHtml +
     '<select id="lotBrandSelect">' + brandOptions + '</select>' +
     (LOTTERY_SUBTYPE_READY ? '<select id="lotSubtypeSelect">' + subtypeOptions + '</select>' : '') +
-    (LOTTERY_VIEW === 'cards' ? '<select id="lotYearSelect">' + yearOptions + '</select>' : '') +
+    ((LOTTERY_VIEW === 'cards' && !actTab) ? '<select id="lotYearSelect">' + yearOptions + '</select>' : '') +
     '<input type="text" id="lotSearchInput" placeholder="搜尋 R號／團名／獎品／得獎人／姓名／訂單編號" value="' + lotEscapeHtml(LOTTERY_FILTER.q) + '">' +
-    '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依分區</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>' +
+    (actTab ? '' : '<div class="lot-seg"><span class="' + (LOTTERY_VIEW === 'cards' ? 'on' : '') + '" data-seg="cards">依分區</span><span class="' + (LOTTERY_VIEW === 'todo' ? 'on' : '') + '" data-seg="todo">待辦清單</span></div>') +
     '<button class="task-mini-btn" id="lotSortDirBtn" type="button">' + lotSortDirLabel() + '</button>' +
     showToggleHtml +
     hideDoneToggleHtml;
@@ -673,8 +711,37 @@ function renderLotteryFilters() {
 }
 
 // ===== 主體渲染 =====
+// 頂端「抽獎｜特殊活動」切換：同步按鈕外觀並綁一次點擊
+function lotSyncMainTabUI() {
+  const seg = document.getElementById('lotMainSeg');
+  if (!seg) return;
+  seg.querySelectorAll('[data-main-seg]').forEach(el => el.classList.toggle('on', el.dataset.mainSeg === LOTTERY_MAIN_TAB));
+}
+(function lotBindMainTab() {
+  const seg = document.getElementById('lotMainSeg');
+  if (!seg) return;
+  seg.querySelectorAll('[data-main-seg]').forEach(el => {
+    el.addEventListener('click', () => {
+      LOTTERY_MAIN_TAB = el.dataset.mainSeg === 'activities' ? 'activities' : 'draws';
+      lotSaveMainTab(LOTTERY_MAIN_TAB);
+      lotSyncMainTabUI();
+      if (!LOTTERY_LOADED || !LOTTERY_TABLE_READY) return;
+      // 「待配對」「待抽」是抽獎分頁專屬；切到特殊活動時先重置，免得篩到空
+      if (lotActivitiesTabOn() && (LOTTERY_FILTER.status === 'pending_draw' || LOTTERY_FILTER.status === 'unpaired' || LOTTERY_FILTER.status === 'unopened')) LOTTERY_FILTER.status = 'all';
+      renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
+    });
+  });
+  lotSyncMainTabUI();
+})();
+// 目前這個畫面該重畫哪一個（分區清單 or 特殊活動頁）；展開／收合列、收合區塊用
+function lotRenderMain() {
+  if (lotActivitiesTabOn()) renderLotteryActivities();
+  else renderLotterySections();
+}
+
 function renderLotteryBody() {
-  if (LOTTERY_VIEW === 'todo') renderLotteryTodo();
+  if (lotActivitiesTabOn()) renderLotteryActivities();
+  else if (LOTTERY_VIEW === 'todo') renderLotteryTodo();
   else renderLotterySections();
 }
 
@@ -869,11 +936,15 @@ function lotFilterUnopenedDraws(draws, opts) {
 // 「隱藏已完成」篩選列 chip 的數字：①②③區在套用其他篩選條件（品牌/年份/狀態/搜尋）之後、
 // 套用隱藏已完成規則「前」vs「後」的項目數差＝目前被這條規則藏起來的數量（④待配對不受規則影響，不計入）
 function lotComputeHideDoneCount() {
+  if (lotActivitiesTabOn()) { // 特殊活動分頁：只算特殊活動的抽獎
+    const sp = LOTTERY_DRAWS.filter(d => d.section === 'special' && !d.archived);
+    return lotFilterSimpleZoneDraws(sp, { hideDone: false }).length - lotFilterSimpleZoneDraws(sp, { hideDone: true }).length;
+  }
   const zone1Items = lotZoneGroupbuyItems();
   const zone1Without = lotFilterGroupbuyItems(zone1Items, { hideDone: false }).length;
   const zone1With = lotFilterGroupbuyItems(zone1Items, { hideDone: true }).length;
   const nonGroupbuyDraws = LOTTERY_DRAWS.filter(d => d.section === 'non_groupbuy' && !d.archived);
-  const specialDraws = LOTTERY_DRAWS.filter(d => d.section === 'special' && !d.archived);
+  const specialDraws = LOTTERY_ACTIVITIES_READY ? [] : LOTTERY_DRAWS.filter(d => d.section === 'special' && !d.archived); // 活動表就緒後特殊活動只在「特殊活動」分頁
   const zone23Without = lotFilterSimpleZoneDraws(nonGroupbuyDraws, { hideDone: false }).length + lotFilterSimpleZoneDraws(specialDraws, { hideDone: false }).length;
   const zone23With = lotFilterSimpleZoneDraws(nonGroupbuyDraws, { hideDone: true }).length + lotFilterSimpleZoneDraws(specialDraws, { hideDone: true }).length;
   return (zone1Without - zone1With) + (zone23Without - zone23With);
@@ -1084,6 +1155,214 @@ function lotRenderZone(key, label, items, itemRenderer) {
   '</div>';
 }
 
+// ===== 特殊活動分頁（docs/16 §8.1）=====
+const LOT_ACT_STATUS_LABEL = { draft: '準備中', open: '報名中', drawn: '已抽籤', ended: '已結束' };
+const LOT_ACT_STATUS_PILL = { draft: 'muted', open: 'info', drawn: 'draw', ended: 'done' };
+function lotParseYMD(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) } : null;
+}
+// 活動期間 M/D–M/D；兩端不同年份才帶年
+function lotFmtActivityRange(startDate, endDate) {
+  const ps = lotParseYMD(startDate), pe = lotParseYMD(endDate);
+  if (!ps && !pe) return '';
+  const md = p => p.m + '/' + p.d;
+  const full = p => p.y + '/' + p.m + '/' + p.d;
+  if (ps && !pe) return md(ps) + ' 起';
+  if (!ps && pe) return md(pe) + ' 止';
+  return ps.y === pe.y ? md(ps) + '–' + md(pe) : full(ps) + '–' + full(pe);
+}
+function lotActivityById(id) { return LOTTERY_ACTIVITIES.find(a => a.id === id) || null; }
+function lotActivityOptionLabel(a) {
+  const r = lotFmtActivityRange(a.startDate, a.endDate);
+  return (a.title || '(未命名)') + (r ? '（' + r + '）' : '');
+}
+function lotActivityTextBlockHtml(a, label, txt, key) {
+  txt = String(txt || '');
+  if (!txt.trim()) return '';
+  const long = txt.length > 90 || (txt.match(/\n/g) || []).length >= 3;
+  const exp = !!LOTTERY_ACTIVITY_TEXT_OPEN[a.id + ':' + key];
+  return '<div class="lot-act-block"><div class="lot-act-label">' + lotEscapeHtml(label) + '</div>' +
+    '<div class="lot-act-text' + (long && !exp ? ' clamp' : '') + '">' + lotEscapeHtml(txt) + '</div>' +
+    (long ? '<button type="button" class="lot-act-more" data-role="act-text-toggle" data-act-id="' + lotEscapeHtml(a.id) + '" data-key="' + key + '">' + (exp ? '收合' : '展開') + '</button>' : '') +
+    '</div>';
+}
+function lotActivityCardHtml(a, draws) {
+  const open = !!LOTTERY_ACTIVITY_OPEN[a.id];
+  const range = lotFmtActivityRange(a.startDate, a.endDate);
+  const nDraw = Number(a.drawCount) || 0, nWin = Number(a.winnerCount) || 0;
+  const idAttr = ' data-act-id="' + lotEscapeHtml(a.id) + '"';
+  const meta = [range ? '<span>' + lotEscapeHtml(range) + '</span>' : '', '<span>' + nDraw + ' 場抽獎・' + nWin + ' 位得獎人</span>'].filter(Boolean).join('');
+  let body = '';
+  if (open) {
+    body = '<div class="lot-card-body">' + (draws.length
+      ? lotTableWrap(draws.map(d => lotSimpleDrawRowHtml(d)).join(''))
+      : (nDraw > 0 && lotHideDoneActive()
+          // 底下抽獎全部已完成、被「隱藏已完成」藏起來：講清楚，並給一顆直接關掉隱藏的鈕（10-10 實測：已結束的生日慶整張卡看起來是空的）
+          ? '<div class="task-empty lot-zone-empty">' + nDraw + ' 場都已完成，已隱藏 <button type="button" class="lot-act-more" data-role="act-show-done">顯示</button></div>'
+          : '<div class="task-empty lot-zone-empty">（沒有符合條件的抽獎）</div>')) + '</div>' +
+      (LOTTERY_CAN_EDIT ? '<div class="lot-card-foot">' +
+        '<button class="task-mini-btn" data-role="act-add-draw"' + idAttr + '>＋ 新增小活動</button>' +
+        '<span class="lot-spacer"></span>' +
+        '<button class="task-mini-btn" data-role="act-edit"' + idAttr + '>' + lotIcon('edit') + ' 編輯活動</button>' +
+        '<button class="task-mini-btn danger" data-role="act-delete"' + idAttr + '>' + lotIcon('trash') + ' 刪除活動</button>' +
+      '</div>' : '');
+  }
+  return '<div class="lot-card lot-act-card"' + idAttr + '>' +
+    '<div class="lot-card-head" data-role="act-toggle"' + idAttr + '>' +
+      '<div class="lot-head-main">' +
+        '<div class="lot-head-title"><span>' + lotEscapeHtml(a.title || '(未命名活動)') + '</span>' +
+          lotPill(LOT_ACT_STATUS_LABEL[a.status] || a.status || '', LOT_ACT_STATUS_PILL[a.status] || 'muted') + '</div>' +
+        '<div class="lot-meta">' + meta + '</div>' +
+      '</div>' +
+      '<div class="lot-progress"><span class="lot-caret">' + lotCaretHtml(open, '收合', '展開') + '</span></div>' +
+    '</div>' +
+    lotActivityTextBlockHtml(a, '活動介紹', a.intro, 'intro') +
+    lotActivityTextBlockHtml(a, '規則說明', a.rules, 'rules') +
+    body +
+  '</div>';
+}
+function renderLotteryActivities() {
+  const box = document.getElementById('lotBody');
+  if (!box) return;
+  const byCreated = arr => arr.slice().sort((x, y) => String(x.createdAt || '').localeCompare(String(y.createdAt || '')));
+  const specialAll = LOTTERY_DRAWS.filter(d => d.section === 'special' && !d.archived);
+  const note = txt => '<div class="lot-act-note">' + txt + '</div>';
+  const parts = [];
+
+  if (!LOTTERY_ACTIVITIES_READY) {
+    // 退回現況：沒有活動表，特殊活動抽獎照舊用扁平清單
+    parts.push(note('特殊活動功能還沒準備好（系統更新中或資料表待 db push）：目前先照舊列出特殊活動的抽獎，暫時不能新增活動。'));
+    const flat = lotApplyDir(lotFilterSimpleZoneDraws(byCreated(specialAll)));
+    parts.push(lotRenderZone('special', LOT_SECTION_LABEL.special, flat, d => lotSimpleDrawRowHtml(d)));
+    box.innerHTML = parts.join('');
+    lotBindSectionEvents(box);
+    return;
+  }
+
+  if (LOTTERY_CAN_EDIT) parts.push('<div class="lot-act-toolbar"><button class="task-mini-btn" data-role="act-new">＋ 新增特殊活動</button></div>');
+  const q = lotSearchQuery();
+  const filtersActive = !!(q || LOTTERY_FILTER.brand || LOTTERY_FILTER.status !== 'all' || LOTTERY_FILTER.subtype);
+  const knownIds = new Set(LOTTERY_ACTIVITIES.map(a => a.id));
+  const cards = [];
+  LOTTERY_ACTIVITIES.forEach(a => {
+    const mine = specialAll.filter(d => d.activityId === a.id);
+    const shown = lotApplyDir(lotFilterSimpleZoneDraws(byCreated(mine)));
+    if (filtersActive && !shown.length) {
+      const titleHit = q && [a.title, a.intro, a.rules].map(x => String(x || '')).join(' ').toLowerCase().indexOf(q) !== -1;
+      if (!titleHit || LOTTERY_FILTER.brand || LOTTERY_FILTER.status !== 'all') return;
+    }
+    cards.push(lotActivityCardHtml(a, shown));
+  });
+  if (cards.length) parts.push('<div class="lot-act-list">' + cards.join('') + '</div>');
+  else if (!LOTTERY_ACTIVITIES.length) parts.push('<div class="task-empty">還沒有特殊活動</div>');
+  else parts.push('<div class="task-empty">沒有符合條件的特殊活動</div>');
+
+  // 不屬於任何活動的特殊活動抽獎
+  const orphan = lotApplyDir(lotFilterSimpleZoneDraws(byCreated(specialAll.filter(d => !d.activityId || !knownIds.has(d.activityId)))));
+  if (orphan.length) parts.push(lotRenderZone('act_none', '未歸類的特殊活動抽獎', orphan, d => lotSimpleDrawRowHtml(d)));
+
+  box.innerHTML = parts.join('');
+  lotBindSectionEvents(box);
+  lotBindActivityEvents(box);
+}
+function lotBindActivityEvents(box) {
+  const stop = (el, fn) => el.addEventListener('click', ev => { ev.stopPropagation(); fn(el); });
+  box.querySelectorAll('[data-role="act-new"]').forEach(el => stop(el, () => openLotteryActivityModal(null)));
+  box.querySelectorAll('[data-role="act-toggle"]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.actId;
+      if (LOTTERY_ACTIVITY_OPEN[id]) delete LOTTERY_ACTIVITY_OPEN[id]; else LOTTERY_ACTIVITY_OPEN[id] = true;
+      lotSaveActivityOpen();
+      renderLotteryActivities();
+    });
+  });
+  box.querySelectorAll('[data-role="act-text-toggle"]').forEach(el => stop(el, () => {
+    const k = el.dataset.actId + ':' + el.dataset.key;
+    LOTTERY_ACTIVITY_TEXT_OPEN[k] = !LOTTERY_ACTIVITY_TEXT_OPEN[k];
+    renderLotteryActivities();
+  }));
+  box.querySelectorAll('[data-role="act-add-draw"]').forEach(el => stop(el, () => {
+    openLotteryDrawModal(null, { section: 'special', activityId: el.dataset.actId, drawDate: lotToday() });
+  }));
+  box.querySelectorAll('[data-role="act-edit"]').forEach(el => stop(el, () => openLotteryActivityModal(lotActivityById(el.dataset.actId))));
+  box.querySelectorAll('[data-role="act-delete"]').forEach(el => stop(el, () => lotDeleteActivity(el.dataset.actId)));
+  box.querySelectorAll('[data-role="act-show-done"]').forEach(el => stop(el, () => {
+    LOTTERY_HIDE_DONE = false; lotSaveHideDone(false);
+    renderLotteryFilters(); renderLotteryBody();
+  }));
+}
+async function lotDeleteActivity(id) {
+  const a = lotActivityById(id);
+  if (!a) return;
+  if (!confirm('確定要刪除活動「' + (a.title || '') + '」嗎？\n\n活動底下如果還有抽獎，系統會擋下來，要先移走或刪除那些抽獎。')) return;
+  try {
+    const res = await lotApiPost('lottery-activity-delete', { id });
+    if (!res || !res.success) { alert((res && res.error) || '刪除失敗'); return; }
+    delete LOTTERY_ACTIVITY_OPEN[id]; lotSaveActivityOpen();
+    closeLotteryActivityModal();
+    loadLotteryView(true);
+  } catch (err) { alert('刪除失敗：' + err.message); }
+}
+
+// ===== 新增／編輯特殊活動 modal =====
+let LOTTERY_EDIT_ACTIVITY_ID = null;
+let LOT_ACT_ORIG_SLUG = '';
+function openLotteryActivityModal(act) {
+  LOTTERY_EDIT_ACTIVITY_ID = act ? act.id : null;
+  LOT_ACT_ORIG_SLUG = act ? (act.slug || '') : '';
+  document.getElementById('lotActModalTitle').textContent = act ? '編輯特殊活動' : '新增特殊活動';
+  document.getElementById('lotActTitleInput').value = act ? (act.title || '') : '';
+  document.getElementById('lotActStartInput').value = act ? (act.startDate || '') : '';
+  document.getElementById('lotActEndInput').value = act ? (act.endDate || '') : '';
+  document.getElementById('lotActStatusSelect').value = act ? (act.status || 'draft') : 'draft';
+  document.getElementById('lotActIntroInput').value = act ? (act.intro || '') : '';
+  document.getElementById('lotActRulesInput').value = act ? (act.rules || '') : '';
+  document.getElementById('lotActSlugInput').value = act ? (act.slug || '') : '';
+  document.getElementById('lotActDeleteBtn').style.display = act ? 'inline-block' : 'none';
+  lotSetStatus('lotActFormStatus', '', '');
+  document.getElementById('lotteryActivityModal').classList.add('show');
+}
+function closeLotteryActivityModal() {
+  const m = document.getElementById('lotteryActivityModal');
+  if (m) m.classList.remove('show');
+  LOTTERY_EDIT_ACTIVITY_ID = null;
+}
+document.getElementById('lotActSaveBtn').addEventListener('click', async () => {
+  const title = document.getElementById('lotActTitleInput').value.trim();
+  const startDate = document.getElementById('lotActStartInput').value || '';
+  const endDate = document.getElementById('lotActEndInput').value || '';
+  const slug = document.getElementById('lotActSlugInput').value.trim();
+  if (!title) { lotSetStatus('lotActFormStatus', '請填寫活動名稱', 'error'); return; }
+  if (startDate && endDate && endDate < startDate) { lotSetStatus('lotActFormStatus', '結束日不能早於開始日', 'error'); return; }
+  if (slug && !/^[a-z0-9-]{2,60}$/.test(slug)) { lotSetStatus('lotActFormStatus', '網址代號只能用小寫英文、數字和 -（2～60 字）', 'error'); return; }
+  const payload = {
+    title,
+    startDate: startDate || null,
+    endDate: endDate || null,
+    status: document.getElementById('lotActStatusSelect').value || 'draft',
+    intro: document.getElementById('lotActIntroInput').value,
+    rules: document.getElementById('lotActRulesInput').value
+  };
+  if (slug || LOT_ACT_ORIG_SLUG) payload.slug = slug; // 新增且沒填＝不送（免得空字串撞唯一鍵）；原本有代號、現在清空＝送空字串
+  if (LOTTERY_EDIT_ACTIVITY_ID) payload.id = LOTTERY_EDIT_ACTIVITY_ID;
+  const btn = document.getElementById('lotActSaveBtn');
+  btn.disabled = true;
+  lotSetStatus('lotActFormStatus', '儲存中…', '');
+  try {
+    const res = await lotApiPost('lottery-activity-upsert', payload);
+    if (!res || !res.success) throw new Error((res && res.error) || '儲存失敗');
+    closeLotteryActivityModal();
+    loadLotteryView(true);
+  } catch (err) {
+    lotSetStatus('lotActFormStatus', '儲存失敗：' + err.message, 'error');
+  }
+  btn.disabled = false;
+});
+document.getElementById('lotActDeleteBtn').addEventListener('click', () => {
+  if (LOTTERY_EDIT_ACTIVITY_ID) lotDeleteActivity(LOTTERY_EDIT_ACTIVITY_ID);
+});
+
 function renderLotterySections() {
   const box = document.getElementById('lotBody');
   if (!box) return;
@@ -1098,7 +1377,7 @@ function renderLotterySections() {
   const parts = [];
   if (lotZoneVisible('groupbuy')) parts.push(lotRenderZone('groupbuy', LOT_SECTION_LABEL.groupbuy, groupbuyItems, lotGroupbuyItemRowHtml));
   if (lotZoneVisible('non_groupbuy')) parts.push(lotRenderZone('non_groupbuy', LOT_SECTION_LABEL.non_groupbuy, nonGroupbuyDraws, d => lotSimpleDrawRowHtml(d)));
-  if (lotZoneVisible('special')) parts.push(lotRenderZone('special', LOT_SECTION_LABEL.special, specialDraws, d => lotSimpleDrawRowHtml(d)));
+  if (lotZoneVisible('special') && !LOTTERY_ACTIVITIES_READY) parts.push(lotRenderZone('special', LOT_SECTION_LABEL.special, specialDraws, d => lotSimpleDrawRowHtml(d)));
   if (lotZoneVisible('unpaired')) parts.push(lotRenderZone('unpaired', '待配對（綁團但還沒連到團）', unpairedDraws, d => lotUnpairedRowHtml(d)));
   if (lotZoneVisible('archived')) parts.push(lotRenderZone('archived', '舊資料（已結案）', archivedDraws, d => lotArchivedRowHtml(d)));
 
@@ -1631,7 +1910,7 @@ function lotBindSectionEvents(box) {
       LOTTERY_SECTION_COLLAPSED[key] = !LOTTERY_SECTION_COLLAPSED[key];
       if (key === 'unopened') lotSaveUnopenedCollapsed(LOTTERY_SECTION_COLLAPSED[key]);
       if (key === 'archived') lotSaveArchivedCollapsed(LOTTERY_SECTION_COLLAPSED[key]);
-      renderLotterySections();
+      lotRenderMain();
     });
   });
   // 複製鈕（表格電話／地址欄）：複製後圖示變綠 1.2 秒；stopPropagation 免得觸發同一列的展開
@@ -1650,7 +1929,7 @@ function lotBindSectionEvents(box) {
       const key = el.dataset.cardKey;
       const cur = Object.prototype.hasOwnProperty.call(LOTTERY_EXPANDED_OVERRIDE, key) ? LOTTERY_EXPANDED_OVERRIDE[key] : false;
       LOTTERY_EXPANDED_OVERRIDE[key] = !cur;
-      renderLotterySections();
+      lotRenderMain();
     });
   });
   box.querySelectorAll('[data-role="toggle-mask"]').forEach(el => {
@@ -2075,6 +2354,10 @@ function lotBadgeForAcctRow(legacyId, contFromLegacyId) {
 // 找不到就停在分頁頂端；第一次找不到時暫時放寬篩選（不寫入 localStorage）再找一次，免得被預設年份／隱藏已完成擋住。
 function lotJumpToAcctTeamCard(legacyId) {
   if (typeof switchView === 'function') switchView('lottery');
+  if (LOTTERY_MAIN_TAB !== 'draws') { // 團的抽獎在「抽獎」分頁
+    LOTTERY_MAIN_TAB = 'draws'; lotSaveMainTab('draws'); lotSyncMainTabUI();
+    if (LOTTERY_LOADED) { renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody(); }
+  }
   const scrollTo = retried => {
     const team = lotTeamByLegacyId(legacyId);
     if (!team) return;
@@ -2175,6 +2458,8 @@ function openLotteryDrawModal(draw, prefill) {
 
   // 依分區顯示/隱藏團購欄位＋標題自動產生 UI（讀取上面剛設好的 lotDrawTitleInput 值）
   lotSyncDrawSectionUI();
+  // 特殊活動下拉：編輯預選 draw.activityId、新增預選 prefill.activityId
+  lotRenderActivityOptions(draw ? (draw.activityId || '') : ((pf && pf.activityId) || ''));
 
   const readyWarn = document.getElementById('lotDrawAcctReadyWarn');
   readyWarn.style.display = LOTTERY_ACCT_READY ? 'none' : '';
@@ -2215,9 +2500,22 @@ function lotSyncDrawSubtypeUI() {
   const sel = document.getElementById('lotDrawSubtypeSelect');
   lotRenderSubtypeOptions(document.getElementById('lotDrawSectionSelect').value, sel ? sel.value : '');
 }
+// 特殊活動下拉：只在大類＝特殊活動且活動表就緒時顯示；選項＝activities（名稱＋期間）
+function lotRenderActivityOptions(selected) {
+  const group = document.getElementById('lotDrawActivityGroup');
+  const sel = document.getElementById('lotDrawActivitySelect');
+  if (!group || !sel) return;
+  const show = LOTTERY_ACTIVITIES_READY && document.getElementById('lotDrawSectionSelect').value === 'special';
+  group.style.display = show ? '' : 'none';
+  if (!show) { sel.innerHTML = ''; return; }
+  sel.innerHTML = '<option value="">（請選擇）</option>' + LOTTERY_ACTIVITIES.map(a =>
+    '<option value="' + lotEscapeHtml(a.id) + '">' + lotEscapeHtml(lotActivityOptionLabel(a)) + '</option>').join('');
+  sel.value = LOTTERY_ACTIVITIES.some(a => a.id === selected) ? selected : '';
+}
 function lotSyncDrawSectionUI() {
   const groupbuy = document.getElementById('lotDrawSectionSelect').value === 'groupbuy';
   lotSyncDrawSubtypeUI();
+  { const aSel = document.getElementById('lotDrawActivitySelect'); lotRenderActivityOptions(aSel ? aSel.value : ''); }
   document.getElementById('lotDrawAcctGroup').style.display = groupbuy ? '' : 'none';
   if (!groupbuy) {
     document.getElementById('lotDrawAcctSelect').value = '';
@@ -2479,6 +2777,12 @@ document.getElementById('lotDrawSaveBtn').addEventListener('click', async () => 
     subtypeVal = document.getElementById('lotDrawSubtypeSelect').value || '';
     if (!subtypeVal && (!LOTTERY_EDIT_DRAW_ID || LOT_DRAW_ORIG_SUBTYPE !== '' || LOT_DRAW_ORIG_SECTION !== section)) { lotSetStatus('lotDrawFormStatus', '請選擇小類', 'error'); return; }
   }
+  // 特殊活動：新增（或從別的大類改成特殊活動）必選
+  let activityVal = '';
+  if (LOTTERY_ACTIVITIES_READY && section === 'special') {
+    activityVal = document.getElementById('lotDrawActivitySelect').value || '';
+    if (!activityVal && (!LOTTERY_EDIT_DRAW_ID || LOT_DRAW_ORIG_SECTION !== 'special')) { lotSetStatus('lotDrawFormStatus', '請選擇特殊活動', 'error'); return; }
+  }
   // 連團：選行事曆團 → eventId＝它、acctId＝該團 choice 的 acctId（沒有就沿用開視窗時同一團的 acctId，否則 ''）；
   // 選舊團 → acctId＝它、eventId ''
   let payloadAcctId = null, payloadEventId = '';
@@ -2505,6 +2809,7 @@ document.getElementById('lotDrawSaveBtn').addEventListener('click', async () => 
   };
   if (LOTTERY_SUBTYPE_READY) payload.subtype = section === 'special' ? '' : subtypeVal; // 欄位未 push 時不送，免得後端回「待 db push」
   if (LOTTERY_QUOTA_READY) payload.quota = quotaVal; // 欄位未 push 時不送，免得後端回「待 db push」
+  if (LOTTERY_ACTIVITIES_READY) payload.activityId = section === 'special' ? activityVal : ''; // 活動表未就緒時不送
   if (titleTouched) payload.title = title;
   if (LOTTERY_EDIT_DRAW_ID) payload.id = LOTTERY_EDIT_DRAW_ID;
 

@@ -5320,6 +5320,7 @@
       <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
       <button class="task-mini-btn" id="lotRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
+    <div style="margin:0 0 12px;"><div class="lot-seg" id="lotMainSeg" style="margin-left:0; display:inline-flex;"><span class="on" data-main-seg="draws">抽獎</span><span data-main-seg="activities">特殊活動</span></div></div>
     <div id="lotBanner"></div>
     <div id="lotTiles" class="lot-tiles"></div>
     <div id="lotFilters" class="lot-filters"></div>
@@ -6060,6 +6061,15 @@
     .lot-seg{ margin-left:auto; display:flex; border:1px solid var(--c-border); border-radius:999px; overflow:hidden; }
     .lot-seg span{ padding:5px 14px; font-size:12.5px; color:var(--c-text-soft); cursor:pointer; }
     .lot-seg span.on{ background:var(--c-primary); color:#fff; font-weight:700; }
+    /* 特殊活動分頁（lottery.js renderLotteryActivities） */
+    .lot-act-toolbar{ margin-bottom:12px; }
+    .lot-act-list{ display:flex; flex-direction:column; gap:14px; margin-bottom:18px; }
+    .lot-act-note{ background:var(--c-surface); color:var(--c-text-soft); border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:13px; }
+    .lot-act-block{ padding:0 18px 10px; display:flex; flex-direction:column; gap:4px; }
+    .lot-act-label{ font-size:12px; font-weight:700; color:var(--c-text-soft); }
+    .lot-act-text{ font-size:13px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+    .lot-act-text.clamp{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .lot-act-more{ align-self:flex-start; background:none; border:none; padding:0; font-size:12px; color:var(--c-primary); cursor:pointer; text-decoration:underline; font-family:inherit; }
     /* 四個分區（團購／非團購／特殊／待配對），每區可收合 */
     .lot-zone{ margin-bottom:18px; }
     /* 表格模式（雪莉 09-25，同會員總覽）：一列一團、點列展開 */
@@ -6981,6 +6991,11 @@
       </div>
       <p id="lotDrawSubtypeReadyWarn" class="hint" style="display:none; font-size:12px; color:#8B6E5E; margin:4px 0 8px;">小類欄位待 db push，儲存時會先略過小類。</p>
 
+      <div id="lotDrawActivityGroup" style="display:none;">
+        <label for="lotDrawActivitySelect">特殊活動 *</label>
+        <select id="lotDrawActivitySelect"></select>
+      </div>
+
       <div id="lotDrawQuotaGroup">
         <label for="lotDrawQuotaInput">名額（抽幾位，選填）</label>
         <input type="number" id="lotDrawQuotaInput" min="1" max="999" step="1" placeholder="例如：3">
@@ -7061,6 +7076,47 @@
         <button class="task-mini-btn danger" id="lotDrawDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除活動</button>
       </div>
       <div class="form-status" id="lotDrawFormStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 抽獎管理：新增／編輯特殊活動 modal（lottery.js openLotteryActivityModal；docs/16 §8）===== -->
+<div class="modal-backdrop" id="lotteryActivityModal" onclick="if(event.target===this) closeLotteryActivityModal()" style="z-index:1150;">
+  <div class="modal-box" style="width:min(560px, 94vw); max-height:90vh; overflow-y:auto;">
+    <button class="modal-close" onclick="closeLotteryActivityModal()">✕</button>
+    <h3 id="lotActModalTitle">新增特殊活動</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <label for="lotActTitleInput">活動名稱 *</label>
+      <input type="text" id="lotActTitleInput" placeholder="例如：2026 生日慶">
+
+      <label for="lotActStartInput">開始日</label>
+      <input type="date" id="lotActStartInput">
+      <label for="lotActEndInput">結束日</label>
+      <input type="date" id="lotActEndInput">
+
+      <label for="lotActStatusSelect">狀態</label>
+      <select id="lotActStatusSelect">
+        <option value="draft">準備中</option>
+        <option value="open">報名中</option>
+        <option value="drawn">已抽籤</option>
+        <option value="ended">已結束</option>
+      </select>
+
+      <label for="lotActIntroInput">活動介紹</label>
+      <textarea id="lotActIntroInput" rows="3" placeholder="活動內容簡介（純文字，換行會保留）"></textarea>
+      <label for="lotActRulesInput">規則說明</label>
+      <textarea id="lotActRulesInput" rows="4" placeholder="參加條件、抽籤方式、注意事項…（純文字，換行會保留）"></textarea>
+
+      <label for="lotActSlugInput">網址代號（選填）</label>
+      <input type="text" id="lotActSlugInput" placeholder="例如：birthday-2026" autocomplete="off">
+      <p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:4px 0 0;">之後公開活動頁用，只能小寫英文、數字和 -</p>
+
+      <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
+        <button class="task-submit-btn" id="lotActSaveBtn" style="margin-top:0;">儲存</button>
+        <button class="task-mini-btn" type="button" onclick="closeLotteryActivityModal()" style="padding:0 18px;">取消</button>
+        <button class="task-mini-btn danger" id="lotActDeleteBtn" type="button" style="display:none; padding:0 18px;">刪除活動</button>
+      </div>
+      <div class="form-status" id="lotActFormStatus"></div>
     </div>
   </div>
 </div>
@@ -7819,7 +7875,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=31"></script>
+<script src="lottery.js?v=32"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
