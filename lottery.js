@@ -1216,7 +1216,13 @@ function lotActivityCardHtml(a, draws) {
     const md = s => { const m = String(s || '').match(/^\d{4}-(\d{2})-(\d{2})/); return m ? Number(m[1]) + '/' + Number(m[2]) : ''; };
     const dl = [a.registerDeadline ? '登記截止 ' + md(a.registerDeadline) : '', a.drawDate ? '抽獎 ' + md(a.drawDate) : ''].filter(Boolean).join('・');
     const teamTxt = a.allTeams === false ? '指定 ' + (Array.isArray(a.teams) ? a.teams.length : 0) + ' 團' : '全部團';
-    campaignMeta = '<div class="lot-meta">' + (dl ? '<span>' + lotEscapeHtml(dl) + '</span>' : '') + '<span>' + teamTxt + '</span></div>';
+    const pub = a.publishDate ? '活動頁 ' + md(a.publishDate) + ' 上線' : '';
+    campaignMeta = '<div class="lot-meta">' + (dl ? '<span>' + lotEscapeHtml(dl) + '</span>' : '') + (pub ? '<span>' + lotEscapeHtml(pub) + '</span>' : '') + '<span>' + teamTxt + '</span></div>';
+    if (a.slug) {
+      const url = 'https://member.sheridondon.com.tw/campaign/' + a.slug;
+      campaignMeta += '<div class="lot-meta"><span>活動頁：' + lotEscapeHtml(url) + '</span>' +
+        '<button type="button" class="task-mini-btn" data-role="act-copy-link" data-url="' + lotEscapeHtml(url) + '">複製連結</button></div>';
+    }
   }
   let body = '';
   if (open) {
@@ -1321,6 +1327,15 @@ function lotBindActivityEvents(box) {
   box.querySelectorAll('[data-role="act-elig"]').forEach(el => stop(el, () => openLotteryEligibilityModal(lotActivityById(el.dataset.actId))));
   box.querySelectorAll('[data-role="act-edit"]').forEach(el => stop(el, () => openLotteryActivityModal(lotActivityById(el.dataset.actId))));
   box.querySelectorAll('[data-role="act-delete"]').forEach(el => stop(el, () => lotDeleteActivity(el.dataset.actId)));
+  box.querySelectorAll('[data-role="act-copy-link"]').forEach(el => stop(el, () => {
+    const url = el.dataset.url || '';
+    const fallback = () => { try { window.prompt('複製這個連結', url); } catch (e) {} };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => { el.textContent = '已複製'; setTimeout(() => { el.textContent = '複製連結'; }, 1500); }, fallback);
+      } else fallback();
+    } catch (e) { fallback(); }
+  }));
   box.querySelectorAll('[data-role="act-show-done"]').forEach(el => stop(el, () => {
     LOTTERY_HIDE_DONE = false; lotSaveHideDone(false);
     renderLotteryFilters(); renderLotteryBody();
@@ -1472,6 +1487,8 @@ function lotInitActCampaignFields(act) {
   if (!on) return;
   document.getElementById('lotActRegDeadlineInput').value = act ? (act.registerDeadline || '') : '';
   document.getElementById('lotActDrawDateInput').value = act ? (act.drawDate || '') : '';
+  document.getElementById('lotActPublishDateInput').value = act ? (act.publishDate || '') : '';
+  document.getElementById('lotActCoverUrlInput').value = act ? (act.coverUrl || '') : '';
   document.getElementById('lotActMaxWinsInput').value = (act && act.maxWins !== null && act.maxWins !== undefined && act.maxWins !== '') ? act.maxWins : '';
   const picked = !!(act && act.allTeams === false);
   document.querySelector('input[name="lotActTeamsMode"][value="' + (picked ? 'picked' : 'all') + '"]').checked = true;
@@ -1561,6 +1578,11 @@ document.getElementById('lotActSaveBtn').addEventListener('click', async () => {
     if (picked && !LOT_ACT_TEAMS.length) { lotSetStatus('lotActFormStatus', '選了「指定團」請至少勾一個團，或改選「全部團」', 'error'); return; }
     payload.registerDeadline = reg || null;
     payload.drawDate = dd || null;
+    const pubDate = document.getElementById('lotActPublishDateInput').value || '';
+    const coverUrl = document.getElementById('lotActCoverUrlInput').value.trim();
+    if (coverUrl && !/^https?:\/\//i.test(coverUrl)) { lotSetStatus('lotActFormStatus', '頂圖網址要以 http 開頭', 'error'); return; }
+    payload.publishDate = pubDate || null;
+    payload.coverUrl = coverUrl;
     payload.maxWins = mwRaw === '' ? null : Number(mwRaw);
     payload.allTeams = !picked;
     payload.teams = picked ? LOT_ACT_TEAMS.slice() : [];

@@ -7159,6 +7159,11 @@
         <input type="date" id="lotActRegDeadlineInput">
         <label for="lotActDrawDateInput">抽獎日</label>
         <input type="date" id="lotActDrawDateInput">
+        <label for="lotActPublishDateInput">活動頁上線日期</label>
+        <input type="date" id="lotActPublishDateInput">
+        <p class="hint" style="font-size:12px; color:var(--c-text-soft); margin:4px 0 0;">到這天自動公開活動頁；留空＝依狀態，準備中不公開</p>
+        <label for="lotActCoverUrlInput">活動頁頂圖網址（選填）</label>
+        <input type="text" id="lotActCoverUrlInput" placeholder="https://…" autocomplete="off">
 
         <label>算哪些團</label>
         <div class="lot-act-teams-mode">
@@ -7910,7 +7915,7 @@
 <script src="promos.js?v=2"></script>
 <script src="announce.js?v=2"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
-<script src="fans.js?v=21"></script>
+<script src="fans.js?v=22"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
 <script src="sheetdb.js?v=4"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
@@ -7956,7 +7961,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=33"></script>
+<script src="lottery.js?v=34"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>

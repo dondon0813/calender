@@ -788,6 +788,8 @@ let FAN_CLAIMS_STATS = { pending: 0, matched: 0, rejected: 0 };
 let FAN_CLAIMS_FILTER = 'pending';
 let FAN_CLAIMS_LOADED = false;
 let FAN_CLAIMS_BUSY = false;
+let FAN_CLAIMS_ACT_ONLY = false;
+try { FAN_CLAIMS_ACT_ONLY = localStorage.getItem('fan_claims_act_only') === '1'; } catch (e) {}
 
 const FAN_CLAIMS_FILTER_DEFS = [['pending', '待核對'], ['matched', '已加入'], ['rejected', '已駁回'], ['all', '全部']];
 const FAN_CLAIMS_PLATFORM_LABELS = { gbf: '跟團買', shopline: 'Shopline', oneshop: '1shop', vendor: '廠商名單', manual: '人工建立' };
@@ -831,18 +833,27 @@ function renderFanClaimsFilters() {
   box.innerHTML = FAN_CLAIMS_FILTER_DEFS.map(([key, label]) =>
     '<button type="button" class="task-mini-btn fa-claims-filter" data-key="' + key + '"' +
     (FAN_CLAIMS_FILTER === key ? ' style="background:var(--c-primary); color:#fff;"' : '') + '>' + label + ' ' + counts[key] + '</button>'
-  ).join('');
+  ).join('') +
+    '<button type="button" class="task-mini-btn" id="fanClaimsActOnly" title="只看活動登記（有填活動的回報）"' +
+    (FAN_CLAIMS_ACT_ONLY ? ' style="background:var(--c-primary); color:#fff;"' : '') + '>只看活動登記</button>';
   box.querySelectorAll('.fa-claims-filter').forEach(btn => btn.addEventListener('click', () => {
     FAN_CLAIMS_FILTER = btn.dataset.key;
     renderFanClaimsFilters();
     renderFanClaimsList();
   }));
+  document.getElementById('fanClaimsActOnly').addEventListener('click', () => {
+    FAN_CLAIMS_ACT_ONLY = !FAN_CLAIMS_ACT_ONLY;
+    try { localStorage.setItem('fan_claims_act_only', FAN_CLAIMS_ACT_ONLY ? '1' : '0'); } catch (e) {}
+    renderFanClaimsFilters();
+    renderFanClaimsList();
+  });
 }
 
 function faClaimsVisibleList() {
   const q = (document.getElementById('fanClaimsSearch').value || '').trim().toLowerCase();
   return FAN_CLAIMS_LIST.filter(r => {
     if (FAN_CLAIMS_FILTER !== 'all' && r.status !== FAN_CLAIMS_FILTER) return false;
+    if (FAN_CLAIMS_ACT_ONLY && !r.activityId && !r.activityTitle) return false;
     if (!q) return true;
     return [r.orderNo, r.buyerName, r.buyerEmail, r.member, r.eventTitle].some(v => String(v || '').toLowerCase().includes(q));
   });
@@ -912,9 +923,10 @@ function faClaimsCardHtml(r) {
   return '<div style="border:1px solid var(--c-border-light); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fff;">' +
     '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">' +
       faClaimsStatusBadge(r) +
+      (r.activityTitle ? '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:var(--c-surface); color:var(--c-text-soft); font-size:11px;">活動登記：' + faEscapeHtml(r.activityTitle) + '</span>' : '') +
       '<b style="font-size:14px;">' + faEscapeHtml(r.orderNo) + '</b>' +
       '<span style="font-size:12px; color:var(--c-text-light);">會員 ' + faEscapeHtml(r.member) + '｜' + faEscapeHtml(faDate(r.createdAt)) + ' 回報</span>' +
-      '<span style="margin-left:auto;">' + actions + '</span>' +
+      '<span style="margin-left:auto;">' + (/^https?:\/\//i.test(r.screenshotUrl || '') ? '<button type="button" class="task-mini-btn fa-claims-shot" data-url="' + faEscapeHtml(r.screenshotUrl) + '" title="網址 10 分鐘內有效，過期請重新整理">看截圖</button> ' : '') + actions + '</span>' +
     '</div>' +
     '<div style="font-size:13px; margin-bottom:6px;">客人填的：<b>' + faEscapeHtml(faMoney(r.amount)) + '</b>｜' + faEscapeHtml(r.buyerName) + '｜' + faEscapeHtml(r.buyerEmail) + '</div>' +
     (r.hint ? '<div style="font-size:12px; color:#8B6E5E; margin-bottom:6px;">系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
@@ -944,6 +956,7 @@ function renderFanClaimsList() {
     g.items.map(faClaimsCardHtml).join('')
   ).join('');
 
+  area.querySelectorAll('.fa-claims-shot').forEach(btn => btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank', 'noopener')));
   area.querySelectorAll('.fa-claims-match').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'match', btn.dataset.order)));
   area.querySelectorAll('.fa-claims-create').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'create')));
   area.querySelectorAll('.fa-claims-reject').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reject')));
