@@ -5332,7 +5332,7 @@
       <button class="task-mini-btn" id="lotAddDrawBtn">＋ 新增抽獎</button>
       <button class="task-mini-btn" id="lotRefreshBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8.6"/><path d="M20 4v4.6h-4.6"/><path d="M20 12a8 8 0 0 1-13.6 5.7L4 15.4"/><path d="M4 20v-4.6h4.6"/></svg>重新整理</button>
     </div>
-    <div style="margin:0 0 12px;"><div class="lot-seg" id="lotMainSeg" style="margin-left:0; display:inline-flex;"><span class="on" data-main-seg="draws">抽獎</span><span data-main-seg="activities">特殊活動</span></div></div>
+    <div style="margin:0 0 12px;"><div class="lot-seg" id="lotMainSeg" style="margin-left:0; display:inline-flex;"><span class="on" data-main-seg="draws">抽獎</span><span data-main-seg="activities">特殊活動</span><span data-main-seg="announce">公告</span></div></div>
     <div id="lotBanner"></div>
     <div id="lotTiles" class="lot-tiles"></div>
     <div id="lotFilters" class="lot-filters"></div>
@@ -6261,8 +6261,38 @@
     .lot-status-sel.lot-s-pending{ background-color:#F5EFE9; color:#7a7166; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%237d6b5d'/></svg>"); }
     .lot-status-sel.lot-s-awaiting_info{ background-color:var(--c-cat-1); color:#fff; }
     .lot-status-sel.lot-s-info_ready{ background-color:var(--c-cat-4); color:#fff; }
-    .lot-status-sel.lot-s-handed_to_vendor{ background-color:var(--c-cat-3); color:#fff; }
-    .lot-status-sel.lot-s-awaiting_announce{ background-color:var(--c-gold-text); color:#fff; }   /* 已完成（待公告）：金色，介於廠商寄送中與已完成之間 */
+    .lot-status-sel.lot-s-handed_to_vendor{ background-color:var(--c-cat-3); color:#fff; }   /* 第 5 期後不再是狀態，舊值防呆用 */
+    .lot-status-sel.lot-s-awaiting_announce{ background-color:var(--c-gold-text); color:#fff; }   /* 同上（舊值防呆） */
+    /* 第 5 期：廠商寄／團主寄小標籤、待寄出切換、公告分頁（docs/16 §10） */
+    .lot-ship-tag{ display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; background:#F5EFE9; color:var(--c-text-soft); white-space:nowrap; vertical-align:middle; }
+    .lot-ship-tag.vendor{ background:var(--c-gold-badge-bg); color:var(--c-gold-text); }
+    .lot-ship-tag.vendor.handed{ background:var(--c-blue-bg); color:var(--c-blue-text); cursor:pointer; }
+    .lot-ship-seg{ margin-left:0; }
+    .lot-ann-note{ padding:14px 16px; border-radius:12px; background:#F5EFE9; color:var(--c-text-soft); font-size:13px; line-height:1.7; }
+    .lot-ann-zone{ margin-bottom:22px; }
+    .lot-ann-zone-title{ display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; color:var(--c-text); margin-bottom:10px; }
+    .lot-ann-zone-title span{ font-size:12px; font-weight:700; color:var(--c-text-soft); }
+    .lot-ann-fold{ cursor:pointer; user-select:none; }
+    .lot-ann-sub{ font-size:12.5px; font-weight:700; color:var(--c-text-soft); margin:10px 0 6px; }
+    .lot-ann-card{ background:#F5EFE9; border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+    .lot-ann-head{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+    .lot-ann-title{ font-size:14px; font-weight:800; color:var(--c-text); }
+    .lot-ann-count{ font-size:12px; color:var(--c-text-soft); }
+    .lot-ann-list{ background:var(--c-surface); border-radius:10px; padding:2px 10px; }
+    .lot-ann-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--c-line); font-size:13px; cursor:pointer; }
+    .lot-ann-row:last-child{ border-bottom:none; }
+    .lot-ann-row input{ flex:none; margin:0; }
+    .lot-ann-who{ font-weight:700; color:var(--c-text); min-width:0; word-break:break-all; }
+    .lot-ann-prize{ flex:1; min-width:0; color:var(--c-text-soft); }
+    .lot-ann-meta{ flex:none; font-size:11.5px; color:var(--c-muted); }
+    .lot-ann-row.on .lot-ann-who, .lot-ann-row.on .lot-ann-prize{ color:var(--c-muted); }
+    .lot-ann-ops{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .lot-ann-imgs{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .lot-ann-img{ position:relative; width:110px; }
+    .lot-ann-img img{ width:110px; height:110px; object-fit:cover; border-radius:10px; display:block; background:var(--c-surface); }
+    .lot-ann-img-ops{ position:absolute; top:4px; right:4px; display:flex; gap:4px; }
+    .lot-ic-btn.x-btn{ color:var(--c-muted); }
+    .lot-ic-btn.x-btn:hover{ color:var(--c-brown); }
     .lot-status-sel.lot-s-done{ background-color:var(--c-cat-2); color:#fff; }
     .lot-status-sel.lot-s-redrawn{ background-color:var(--c-cat-5); color:#fff; opacity:.65; }
     .lot-status-sel.lot-s-forfeited{ background-color:#B9ACA2; color:#fff; opacity:.8; }   /* 已放棄：灰，同重抽淡化 */
@@ -7266,7 +7296,6 @@
         <option value="pending">待聯絡</option>
         <option value="awaiting_info">待回填資料</option>
         <option value="info_ready">待寄出</option>
-        <option value="handed_to_vendor">廠商寄送中</option>
         <option value="done">已完成</option>
         <option value="redrawn">已重抽</option>
         <option value="forfeited">已放棄</option>
@@ -7992,7 +8021,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=36"></script>
+<script src="lottery.js?v=37"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
