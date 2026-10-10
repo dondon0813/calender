@@ -2688,6 +2688,15 @@ function lotChangeStatus(winnerId, status) {
 }
 function lotMarkShipped(winnerId) {
   // 第 5 期：匯款／寄出／發送直接 → 已完成（公告另在「公告」分頁處理，不卡流程）
+  // 10-11 雪莉：誤按一下就跳走 → 先確認（寫明誰、哪個動作）
+  let who = '', verb = '已寄出';
+  LOTTERY_DRAWS.some(d => (d.winners || []).some(w => {
+    if (w.id !== winnerId) return false;
+    who = lotWinnerWho(w) + (w.prize ? '（' + w.prize + '）' : '');
+    const wt = lotWinnerType(w, d); verb = wt === 'cash' ? '已匯款' : (wt === 'virtual' ? '已發送' : '已寄出');
+    return true;
+  }));
+  if (!confirm('把 ' + (who || '這位得獎人') + ' 標記為「' + verb + '」？\n\n標記後會變成「已完成」，並列入公告分頁的待公告寄出。')) return;
   lotApiPost('lottery-winner-upsert', { id: winnerId, status: 'done', shippedAt: lotToday() }).then(res => {
     if (res && res.success) loadLotteryView(true); else alert('更新失敗：' + ((res && res.error) || '未知錯誤'));
   });

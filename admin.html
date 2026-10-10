@@ -6311,8 +6311,10 @@
     .lot-status-sel.lot-s-forfeited{ background-color:#B9ACA2; color:#fff; opacity:.8; }   /* 已放棄：灰，同重抽淡化 */
     .lot-bar-done{ background:var(--c-cat-2); } .lot-bar-vendor{ background:var(--c-cat-3); } .lot-bar-ready{ background:var(--c-cat-4); } .lot-bar-await{ background:var(--c-cat-1); } .lot-bar-pending{ background:#DCCBBE; }
     .lot-todo-stuck{ font-variant-numeric:tabular-nums; color:var(--c-cat-1); font-weight:700; }
-    .lot-next-btn{ font-size:12px; color:var(--c-primary); font-weight:700; cursor:pointer; background:none; border:none; padding:0; margin-right:8px; }
+    .lot-next-btn{ font:inherit; font-size:12px; color:var(--c-text); font-weight:700; cursor:pointer; background:#fff; border:1px solid #E6DCD2; border-radius:999px; padding:4px 12px; margin:2px 6px 2px 0; white-space:nowrap; }   /* 10-11 雪莉：原本純文字看不出是按鈕 → 改成有框的小按鈕 */
+    .lot-next-btn:hover{ border-color:#C99A9B; background:#FBF6F2; }
     .lot-next-btn.danger{ color:#B5485A; }
+    .lot-next-btn.danger:hover{ border-color:#B5485A; }
     .lot-winner-row{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
     .lot-winner-row input{ flex:1; min-width:0; }
     .lot-winner-row input.lot-row-order{ flex:1.7; min-width:150px; }
@@ -8034,7 +8036,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=45"></script>
+<script src="lottery.js?v=46"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=119"></script>
 <script src="memo.js?v=8"></script>
