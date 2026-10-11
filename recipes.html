@@ -1743,12 +1743,12 @@ function ingCutoutUrl(item) {
   if (!hasNew) return item['圖片網址'] || '';
   return item['去背圖片網址'] || item['一般圖片網址'] || '';
 }
-// 介紹視窗大圖：一般 || 去背
+// 介紹視窗（食材小卡）大圖：只用一般圖片，不退回去背圖（雪莉 10-11：小卡點開不要顯示去背圖）
 function ingPhotoUrl(item) {
   if (!item) return '';
   const hasNew = Object.prototype.hasOwnProperty.call(item, '去背圖片網址') || Object.prototype.hasOwnProperty.call(item, '一般圖片網址');
   if (!hasNew) return item['圖片網址'] || '';
-  return item['一般圖片網址'] || item['去背圖片網址'] || '';
+  return item['一般圖片網址'] || '';
 }
 function isOwnIngredientPhoto(item) {
   if (Object.prototype.hasOwnProperty.call(item, '去背圖片網址')) return !!item['去背圖片網址'];
@@ -2439,7 +2439,10 @@ function ingGalleryList(item) {
 function renderIngGallery(urls) {
   const wrap = document.getElementById('ingModalGallery');
   wrap.innerHTML = '';
-  const list = urls.length ? urls : [BLANK_PLACEHOLDER_IMG];
+  // 沒有一般圖片也沒有介紹圖＝整塊圖片區不顯示（不放空白占位圖）
+  wrap.style.display = urls.length ? '' : 'none';
+  if (!urls.length) return;
+  const list = urls;
   const track = document.createElement('div');
   track.className = 'ing-slides';
   list.forEach(u => {
@@ -2628,9 +2631,9 @@ function openIngredientGroupModal(group) {
     }
     // 顯示全部
     const items = members.map(m => m.item);
-    const main = isValidUrl(group['合併圖片網址']) ? group['合併圖片網址'] : ingPhotoUrl(items.find(i => isValidUrl(ingPhotoUrl(i))) || items[0]);
+    // 共同圖（去背）只用在食材牆卡片；小卡從組介紹圖開始，沒有組介紹圖就用各口味的一般圖片
     const gal = (Array.isArray(group['介紹圖片']) ? group['介紹圖片'] : []).filter(isValidUrl);
-    renderIngGallery([main].filter(isValidUrl).concat(gal));
+    renderIngGallery(gal.length ? gal : items.map(ingPhotoUrl).filter(isValidUrl));
     document.getElementById('ingModalName').textContent = group['名稱'] || '';
 
     const brands = Array.from(new Set(items.map(i => i['品牌']).filter(Boolean)));
