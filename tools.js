@@ -853,6 +853,23 @@ function pgBuildPosterHtml(r) {
   `;
 }
 
+// 食材圖視覺大小統一（10-12 雪莉：吐司直式又沒留白，撐滿整格看起來特別大）：
+// 不再單純「塞進正方形」，改成每張圖佔的面積一樣（格子的 70%），長寬各自不超過格子。
+// 方形約 84%、直式吐司約 76%×92%、橫式起司約 95%×74%。圖片沒載入成功（讀不到原始尺寸）就維持原本 contain。
+function pgNormalizeIngPhotos(root) {
+  root.querySelectorAll('.pgp-ing-photo-wrap').forEach(wrap => {
+    const img = wrap.querySelector('.pgp-ing-photo');
+    const box = wrap.clientWidth;
+    if (!img || !img.naturalWidth || !img.naturalHeight || !box) return;
+    const r = img.naturalWidth / img.naturalHeight;
+    let w = box * Math.sqrt(0.7 * r);
+    let h = box * Math.sqrt(0.7 / r);
+    const k = Math.min(1, box / w, box / h);
+    w *= k; h *= k;
+    wrap.style.backgroundSize = `${Math.round(w)}px ${Math.round(h)}px`;
+  });
+}
+
 async function pgGeneratePoster() {
   const r = pgSelectedRecipe;
   if (!r) return;
@@ -872,6 +889,7 @@ async function pgGeneratePoster() {
     img.addEventListener('load', resolve);
     img.addEventListener('error', resolve);
   })));
+  pgNormalizeIngPhotos(stage);
 
   // 標題用的自訂字體檔案較大，沒等載入完成就截圖會先拍到系統預設字體
   try {
