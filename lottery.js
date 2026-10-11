@@ -3795,7 +3795,27 @@ function lotAnnBatchSections(b) {
   });
   return secs;
 }
+// 圈號 ①～㊿，超過 50 用 (51)
+function lotCircledNum(n) {
+  if (n >= 1 && n <= 20) return String.fromCharCode(0x2460 + n - 1);
+  if (n >= 21 && n <= 35) return String.fromCharCode(0x3251 + n - 21);
+  if (n >= 36 && n <= 50) return String.fromCharCode(0x32B1 + n - 36);
+  return '(' + n + ')';
+}
+// 公告用團名：去掉開頭的「6/12-6/18 」日期區間
+function lotAnnShortTitle(d) {
+  return lotAnnTitle(d).replace(/^\s*\d{1,2}\/\d{1,2}\s*[-－~～–]\s*\d{1,2}\/\d{1,2}\s*/, '').trim() || lotAnnTitle(d);
+}
 function lotBuildBatchText(b) {
+  if (b.kind !== 'win') {
+    // 寄出公告（10-11 雪莉定）：一個標題＋全部人一行一位編號
+    let n = 0;
+    const lines = [];
+    lotAnnBatchSections(b).forEach(s => s.list.forEach(w => {
+      lines.push(lotCircledNum(++n) + ' ' + lotAnnShortTitle(s.draw) + ' ' + (w.prize || '') + ' ' + lotWinnerWho(w));
+    }));
+    return '抽獎寄出公告！以下獎品已寄出&匯款囉！\n' + lines.join('\n');
+  }
   return lotAnnBatchSections(b).map(s => {
     const lines = s.list.map(w => b.kind === 'win'
       ? lotWinnerWho(w) + ' 恭喜抽中「' + (w.prize || '') + '」'
