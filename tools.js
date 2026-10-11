@@ -772,8 +772,13 @@ function pgBuildPosterHtml(r) {
   }).join('');
   // 食材數量少（≤4個）時清單看起來太空，插入一張小插圖填補空間，
   // 跟其他食材列一起參與 .pgp-ing-list 的 space-between 排版
+  // 10-12 雪莉：食材圖放大後 4 樣時貓咪下半被切掉 → 貓咪可往下超出食材欄，最低到步驟框虛線
+  // （食材欄底 padding 6 + 步驟框 margin-top 20 = 26px）；剩餘空間不夠時貓咪等比例縮小，不壓到最後一樣食材。
+  // 食材欄內容高 566（620 − 上 48 − 下 6），貓咪原圖 440×401、最大顯示 240 寬＝219 高。
+  const ingSize = ingList.length <= 4 ? 110 : ingList.length === 5 ? 104 : 92;
+  const catH = Math.min(219, 566 - ingList.length * ingSize - 8 + 26);
   const ingFillerHtml = (ingList.length >= 1 && ingList.length <= 4)
-    ? `<div class="pgp-ing-filler"><img crossorigin="anonymous" src="images/recipes/ing-filler-cat.webp" alt=""></div>`
+    ? `<div class="pgp-ing-filler" style="height:${Math.max(0, catH - 26)}px"><img crossorigin="anonymous" src="images/recipes/ing-filler-cat.webp" alt="" style="height:${catH}px"></div>`
     : '';
 
   const stepCards = steps.map((s, idx) => {
@@ -830,7 +835,7 @@ function pgBuildPosterHtml(r) {
         </div>
         <div class="pgp-side-card">
           <img class="pgp-ing-badge-img" crossorigin="anonymous" src="images/recipes/ingredients.png" alt="準備食材">
-          <div class="pgp-ing-list" style="--pgp-ing-size:${ingList.length <= 4 ? 110 : ingList.length === 5 ? 104 : 92}px">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}${ingFillerHtml}</div>
+          <div class="pgp-ing-list" style="--pgp-ing-size:${ingSize}px">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}${ingFillerHtml}</div>
         </div>
       </div>
 

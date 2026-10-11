@@ -2434,20 +2434,23 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    overflow: hidden;
+    overflow: visible; /* 貓咪插圖要能往下超出到步驟框虛線（10-12） */
   }
   /* 食材數量少時補的小插圖：margin-top:auto 讓它把上面所有食材列跟自己之間
      的剩餘空間吃光，貼齊清單最下緣，不受 .pgp-ing-list 的 space-between 影響
      （auto margin 在 flex 版面裡優先權比 justify-content 高，其他食材列還是
      照常用 space-between 平均分配剩下的空間）。 */
   .pgp-ing-filler {
-    display: flex;
-    justify-content: center;
+    position: relative;
     margin-top: auto;
   }
+  /* 高度由 tools.js 算（剩餘空間＋往下 26px 到步驟框虛線），貼底置中、寬度等比例 */
   .pgp-ing-filler img {
-    width: 240px;
-    height: auto;
+    position: absolute;
+    left: 50%;
+    bottom: -26px;
+    transform: translateX(-50%);
+    width: auto;
     display: block;
   }
   .pgp-ing-row {
@@ -8030,7 +8033,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=25"></script>
+<script src="tools.js?v=26"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=19"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
