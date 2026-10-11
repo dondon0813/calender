@@ -821,7 +821,7 @@ function pgBuildPosterHtml(r) {
         </div>
         <div class="pgp-side-card">
           <img class="pgp-ing-badge-img" crossorigin="anonymous" src="images/recipes/ingredients.png" alt="準備食材">
-          <div class="pgp-ing-list">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}${ingFillerHtml}</div>
+          <div class="pgp-ing-list" style="--pgp-ing-size:${ingList.length <= 4 ? 110 : ingList.length === 5 ? 104 : 92}px">${ingHtml || '<div class="pgp-empty">（尚未提供食材）</div>'}${ingFillerHtml}</div>
         </div>
       </div>
 
