@@ -2642,7 +2642,8 @@
     background: #FFF7EE;
     border: 2px dashed #FFC79A;
     border-radius: 20px;
-    padding: 40px 240px 12px 18px;
+    /* 右側 345px 讓給貓咪耳朵（10-12 雪莉：原 240 最後一字會碰到貓咪），一行約 18 個中文字；改這裡要同步改 tools.js 的 tipTextWidth */
+    padding: 40px 345px 12px 18px;
     box-sizing: border-box;
     overflow: visible;
   }
@@ -2667,14 +2668,15 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    font-size: 34px;
+    font-size: var(--pgp-tip-size, 34px);
     color: var(--c-text-soft);
-    line-height: 1;
+    line-height: 1.15;
   }
-  .pgp-tip-item img { width: 26px; height: 26px; margin-top: 7px; flex: none; }
+  .pgp-tip-item img { width: 26px; height: 26px; margin-top: calc((var(--pgp-tip-size, 34px) * 1.15 - 26px) / 2); flex: none; }
+  /* 太長換第二行（同一條最多 2 行）；換行後框塞不下時 tools.js 會把 --pgp-tip-size 縮小 */
   .pgp-tip-item span {
     display: -webkit-box;
-    -webkit-line-clamp: 1;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     min-width: 0;
@@ -8028,7 +8030,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=22"></script>
+<script src="tools.js?v=23"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=19"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->

@@ -802,8 +802,17 @@ function pgBuildPosterHtml(r) {
     `<span class="pgp-step-arrow" style="left:${(100 / n * (i + 1)).toFixed(2)}%"></span>`).join('');
   const stepHtml = stepCards.join('') + arrowsHtml;
 
+  // 小提醒字級：估算每條換成幾行（中文字算 1、英數算 0.55），框內可用高度約 148px，
+  // 依序試 34／30／27／24px，挑第一個放得下的（10-12 雪莉：太長換行、不碰貓咪）
+  const tipTextWidth = 645; // 1080 − 海報左右邊 36 − 框左 18 − 框右 345 − 愛心 36
+  const tipUnits = s => [...s].reduce((n, ch) => n + (ch.charCodeAt(0) < 256 ? 0.55 : 1), 0);
+  const tipSize = [34, 30, 27, 24].find(fs => {
+    const perLine = Math.floor(tipTextWidth / fs);
+    const lines = tips.reduce((n, s) => n + Math.min(2, Math.max(1, Math.ceil(tipUnits(s) / perLine))), 0);
+    return lines * fs * 1.15 + 8 * Math.max(tips.length - 1, 0) <= 148;
+  }) || 24;
   const tipsHtml = tips.length ? `
-    <div class="pgp-tip-bar">
+    <div class="pgp-tip-bar" style="--pgp-tip-size:${tipSize}px">
       <img class="pgp-tip-badge" crossorigin="anonymous" src="images/recipes/reminder.png" alt="小提醒">
       <div class="pgp-tip-grid">
         ${tips.map(t => `<div class="pgp-tip-item"><img crossorigin="anonymous" src="images/recipes/heart.png" alt=""><span>${escHtml(t)}</span></div>`).join('')}
