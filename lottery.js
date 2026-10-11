@@ -3803,7 +3803,18 @@ function lotCircledNum(n) {
   return '(' + n + ')';
 }
 // 公告用團名：去掉開頭的「6/12-6/18 」日期區間
+// 每個月都開的品牌：公告團名前保留「N月」，否則會搞混（10-11 雪莉定）
+const LOT_ANN_KEEP_MONTH = ['雪坊'];
 function lotAnnShortTitle(d) {
+  const short = lotAnnStripDate(d);
+  if (!LOT_ANN_KEEP_MONTH.some(k => short.includes(k))) return short;
+  // 月份來源：抽獎標題開頭的 M/D 或 N月 → 綁定團開團日 → 抽獎日期
+  const t = String(d.title || '');
+  let m = (t.match(/^\s*(?:\d{4}\s*年\s*)?(\d{1,2})\s*(?:\/|月)/) || [])[1];
+  if (!m) { const ds = d.eventStartDate || d.drawDate || ''; if (/^\d{4}-\d{2}/.test(ds)) m = String(Number(ds.slice(5, 7))); }
+  return m ? Number(m) + '月 ' + short : short;
+}
+function lotAnnStripDate(d) {
   // 開頭的「6/12-6/18」「6/12」「6/12(一)」「1月」「2026年1月」都拿掉
   return lotAnnTitle(d)
     .replace(/^\s*\d{1,2}\/\d{1,2}(?:\s*[-－~～–]\s*\d{1,2}\/\d{1,2})?(?:\s*[（(][^)）]{0,3}[)）])?\s*/, '')
