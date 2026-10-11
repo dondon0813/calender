@@ -532,6 +532,8 @@
     border-bottom: 2px dashed var(--c-title-rule);
     margin: 8px auto 0;
   }
+  .ing-group-intro { text-align: center; font-size: 14px; color: var(--c-text); line-height: 1.7; margin: 0 0 14px; }
+  .ing-group-intro > div { white-space: pre-wrap; }
   .rc-subtitle {
     text-align: center;
     font-size: 12.5px;
@@ -1277,11 +1279,10 @@
 
     <h2 class="rc-title" id="ingModalName"></h2>
     <div class="rc-subtitle" id="ingModalBrandLine" style="display:none;"></div>
+    <!-- 合併組共用介紹：標題下方一般文字（雪莉 10-11：不要粉色大框） -->
+    <div class="ing-group-intro" id="ingModalGroupIntro" style="display:none;"><div id="ingModalGroupIntroText"></div></div>
     <div class="filter-chips chips-scroll" id="ingModalFlavors" style="display:none;"></div>
 
-    <div class="rc-tip-box" id="ingModalGroupIntro" style="display:none; margin-bottom:10px; white-space:pre-wrap;">
-      <div class="rc-tip-text" id="ingModalGroupIntroText"></div>
-    </div>
 
     <div class="rc-info-row" id="ingModalInfoRow"></div>
 
@@ -2441,6 +2442,7 @@ function renderIngGallery(urls) {
   wrap.innerHTML = '';
   // 沒有一般圖片也沒有介紹圖＝整塊圖片區不顯示（不放空白占位圖）
   wrap.style.display = urls.length ? '' : 'none';
+  if (wrap.parentElement) wrap.parentElement.style.display = urls.length ? '' : 'none'; // .rc-photo-wrap 有下邊距，沒圖時一起藏
   if (!urls.length) return;
   const list = urls;
   const track = document.createElement('div');
