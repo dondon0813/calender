@@ -506,6 +506,13 @@ function pgIngredientFilterKeys(ing) {
   return raw.split('/').map(s => s.trim()).filter(Boolean);
 }
 
+// 食材圖：去背小圖 || 一般圖片；新 key 不存在（後端未上線）時退回舊的 '圖片網址'
+function pgIngCutoutUrl(i) {
+  if (!i) return '';
+  if (!('去背圖片網址' in i) && !('一般圖片網址' in i)) return i['圖片網址'] || '';
+  return i['去背圖片網址'] || i['一般圖片網址'] || '';
+}
+
 // 依「使用食材ID」欄位（格式 ing001:50g/ing003:1包，也可以直接打簡稱例如「優格」）
 // 比對出完整食材資料＋分量。跟 recipes.html 的 getRecipeIngredients 同一套規則：
 // 食材ID → 食材名稱 → 簡稱，一層一層往下比對；原本這裡少了「簡稱」這一層，導致
@@ -530,7 +537,9 @@ function pgGetRecipeIngredients(recipe) {
       if (nameMatches.length === 1) {
         ing = nameMatches[0];
       } else if (nameMatches.length > 1) {
-        ing = nameMatches.find(i => pgIsValidUrl(pgToSameOriginUrl(i['圖片網址']))) || nameMatches[0];
+        ing = nameMatches.find(i => i['去背圖片網址'] && pgIsValidUrl(pgToSameOriginUrl(i['去背圖片網址'])))
+          || nameMatches.find(i => pgIsValidUrl(pgToSameOriginUrl(pgIngCutoutUrl(i))))
+          || nameMatches[0];
       }
     }
     if (ing) {
@@ -753,7 +762,7 @@ function pgBuildPosterHtml(r) {
   const ingHtml = ingList.map(i => {
     const name = escHtml(i._displayKey || pgIngredientFilterKey(i) || i['食材名稱'] || '');
     const qty = escHtml(i._quantity || '');
-    const imgRaw = pgToSameOriginUrl(i['圖片網址']);
+    const imgRaw = pgToSameOriginUrl(pgIngCutoutUrl(i));
     const img = pgIsValidUrl(imgRaw) ? imgRaw : PG_PLACEHOLDER_IMG;
     return `
       <div class="pgp-ing-row">

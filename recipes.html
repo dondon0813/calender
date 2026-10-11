@@ -1701,7 +1701,23 @@ function sellableIngredientsPool() {
 // 同一簡稱有多個品牌版本時，自動挑「開團中」優先，其次挑「下一團日期最近」的那個
 // 同一層（開團中／即將開團同一天／都沒開團）裡，優先挑雪莉自己拍的去背圖（官網 images/Ingredients/）；
 // 開團狀態仍是第一優先，所以購買連結的選擇不受影響（雪莉 10-09：兔比只拍了香菇肉燥，要優先用這張）
+// 食材/成品有兩張圖：去背小圖（'去背圖片網址'）＋一般圖片（'一般圖片網址'，正方形）。
+// 新 key 不存在（後端未上線）時退回舊的 '圖片網址'（＝去背||一般）。
+function ingCutoutUrl(item) {
+  if (!item) return '';
+  const hasNew = Object.prototype.hasOwnProperty.call(item, '去背圖片網址') || Object.prototype.hasOwnProperty.call(item, '一般圖片網址');
+  if (!hasNew) return item['圖片網址'] || '';
+  return item['去背圖片網址'] || item['一般圖片網址'] || '';
+}
+// 介紹視窗大圖：一般 || 去背
+function ingPhotoUrl(item) {
+  if (!item) return '';
+  const hasNew = Object.prototype.hasOwnProperty.call(item, '去背圖片網址') || Object.prototype.hasOwnProperty.call(item, '一般圖片網址');
+  if (!hasNew) return item['圖片網址'] || '';
+  return item['一般圖片網址'] || item['去背圖片網址'] || '';
+}
 function isOwnIngredientPhoto(item) {
+  if (Object.prototype.hasOwnProperty.call(item, '去背圖片網址')) return !!item['去背圖片網址'];
   return /\/images\/Ingredients\//.test(String(item['圖片網址'] || ''));
 }
 function preferOwnPhoto(list) {
@@ -2015,11 +2031,11 @@ function renderIngredientFilterTiles() {
     tile.className = 'ing-tile' + (recSelectedIngredients.includes(key) ? ' active' : '');
     tile.title = key;
 
-    const hasImg = representative && isValidUrl(representative['圖片網址']);
+    const hasImg = representative && isValidUrl(ingCutoutUrl(representative));
     if (hasImg) {
       const img = document.createElement('img');
       img.className = 'ing-tile-icon';
-      img.src = representative['圖片網址'];
+      img.src = ingCutoutUrl(representative);
       fitPortraitImage(img);
       img.onerror = function() {
         this.replaceWith(makeEmojiIconFallback(representative));
@@ -2201,7 +2217,7 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
     card.addEventListener('click', () => openIngredientModal(item));
 
     const img = document.createElement('img');
-    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+    img.src = isValidUrl(ingCutoutUrl(item)) ? ingCutoutUrl(item) : ingredientPlaceholderImg(item);
     fitPortraitImage(img);
     img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     card.appendChild(img);
@@ -2332,7 +2348,7 @@ function openIngredientBrandChoice(group) {
       openIngredientModal(item);
     });
     const img = document.createElement('img');
-    img.src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : ingredientPlaceholderImg(item);
+    img.src = isValidUrl(ingCutoutUrl(item)) ? ingCutoutUrl(item) : ingredientPlaceholderImg(item);
     fitPortraitImage(img);
     img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     row.appendChild(img);
@@ -2346,7 +2362,7 @@ function openIngredientBrandChoice(group) {
 }
 
 function openIngredientModal(item) {
-  document.getElementById('ingModalImg').src = isValidUrl(item['圖片網址']) ? item['圖片網址'] : BLANK_PLACEHOLDER_IMG;
+  document.getElementById('ingModalImg').src = isValidUrl(ingPhotoUrl(item)) ? ingPhotoUrl(item) : BLANK_PLACEHOLDER_IMG;
   fitPortraitImage(document.getElementById('ingModalImg'));
   document.getElementById('ingModalImg').onerror = function() { this.src = BLANK_PLACEHOLDER_IMG; };
   document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
@@ -2552,7 +2568,7 @@ function openRecipeModal(recipe) {
   Object.keys(groups).forEach(key => {
     const group = groups[key];
     const first = group[0];
-    ingGridEl.appendChild(buildPrepTile(key, first._quantity, first['圖片網址'], () => {
+    ingGridEl.appendChild(buildPrepTile(key, first._quantity, ingCutoutUrl(first), () => {
       // 這裡故意用「整個食材資料庫」裡同名/同簡稱的所有品項來判斷，
       // 不是只看這道食譜用到的那幾筆——因為即使食譜只掛了一筆ID，
       // 只要資料庫裡還有其他品項共用同一個簡稱（例如品牌商品跟一般食材同名），

@@ -19,6 +19,7 @@ let RECIPE_DB_TAB = 'recipe';       // recipe | ingredient | product
 let RECIPE_DB_BRAND = '';           // 品牌篩選；''＝全部
 let SCHOOL_DB_LOADED = false;
 let SCHOOL_DB_LIST = [];
+let RECIPE_DB_PHOTO_READY = false;  // 後端 recipe-db-list 回 photoReady===true 才可用一般圖片欄（false＝資料庫欄位待 db push）
 let SHEETDB_EDIT = null;            // 目前 modal 編輯中的 { kind, id }；id=null＝新增
 
 function sdEscapeHtml(s) {
@@ -97,7 +98,8 @@ const SHEETDB_SPECS = {
       { key: 'composition', label: '成分' },
       { key: 'origin', label: '產地' },
       { key: 'intro', label: '簡短介紹', type: 'textarea', rows: 2 },
-      { key: 'imageUrl', label: '圖片網址', ph: 'https://…' },
+      { key: 'imageUrl', label: '去背小圖（網址）', ph: 'https://…', hint: '去背後的小圖；食材牆、食譜裡的食材格、貼文圖用這張' },
+      { key: 'photoUrl', label: '一般圖片（正方形）', type: 'photo', ph: 'https://…', hint: '介紹視窗的大圖用這張；也可直接上傳，會自動置中裁成正方形' },
       { key: 'shopeeUrl', label: '蝦皮連結', ph: 'https://…', hint: '留空＝前台退回用品牌層的連結' },
     ],
   },
@@ -115,7 +117,8 @@ const SHEETDB_SPECS = {
       { key: 'intro', label: '簡短介紹', type: 'textarea', rows: 2 },
       { key: 'relatedIngredientIds', label: '相關食材ID', ph: 'ing001/ing002', hint: '用 / 分隔' },
       { key: 'usableAsIngredient', label: '可作食材（食譜可以引用它）', type: 'checkbox' },
-      { key: 'imageUrl', label: '圖片網址', ph: 'https://…' },
+      { key: 'imageUrl', label: '去背小圖（網址）', ph: 'https://…', hint: '去背後的小圖；食材牆、食譜裡的食材格、貼文圖用這張' },
+      { key: 'photoUrl', label: '一般圖片（正方形）', type: 'photo', ph: 'https://…', hint: '介紹視窗的大圖用這張；也可直接上傳，會自動置中裁成正方形' },
       { key: 'shopeeUrl', label: '蝦皮連結', ph: 'https://…' },
     ],
   },
@@ -180,6 +183,7 @@ function loadRecipeDbView(forceReload) {
   sdApiPost('recipe-db-list').then(data => {
     if (!data || !data.success) throw new Error((data && data.error) || '未知錯誤');
     RECIPE_DB_LOADED = true;
+    RECIPE_DB_PHOTO_READY = data.photoReady === true;
     RECIPE_DB = {
       recipes: data.recipes || [],
       ingredients: data.ingredients || [],
@@ -315,6 +319,96 @@ function renderRecipeDbList() {
 }
 
 // ===================================================================
+// 一般圖片（正方形）欄位：貼網址或上傳檔案。上傳＝瀏覽器端 canvas 置中裁成正方形
+// （長邊 >=1080 輸出 1080x1080，否則用短邊）→ webp（不支援退 jpeg）→ 沿用圖庫的
+// image-upload（admin.js postTask；存 Supabase images bucket 的 ingredient-photos/，需「圖片庫」權限）。
+// 不可放 Ingredients/：那個資料夾名稱＝雪莉自拍去背圖（recipes.html isOwnIngredientPhoto 舊路徑判斷）。
+// ===================================================================
+const SD_PHOTO_FOLDER = 'ingredient-photos';
+
+function sdPhotoFieldHtml(id, f) {
+  return '<input type="text" id="' + id + '" placeholder="' + sdEscapeHtml(f.ph || '') + '">' +
+    '<div style="display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap;">' +
+    '<img id="' + id + '_prev" alt="" style="width:64px; height:64px; object-fit:cover; border-radius:8px; background:var(--c-surface); display:none;">' +
+    '<input type="file" id="' + id + '_file" accept="image/*" style="flex:1; min-width:0;">' +
+    '</div>' +
+    '<div id="' + id + '_msg" style="font-size:12px; color:var(--c-text-light); margin-top:2px;"></div>';
+}
+
+function sdInitPhotoField(id) {
+  const txt = document.getElementById(id);
+  const file = document.getElementById(id + '_file');
+  const prev = document.getElementById(id + '_prev');
+  const msg = document.getElementById(id + '_msg');
+  const refresh = () => {
+    const v = txt.value.trim();
+    if (v) { prev.src = v; prev.style.display = 'block'; } else { prev.removeAttribute('src'); prev.style.display = 'none'; }
+  };
+  prev.onerror = () => { prev.style.display = 'none'; };
+  txt.addEventListener('input', refresh);
+  refresh();
+  if (!RECIPE_DB_PHOTO_READY) {
+    txt.disabled = true; file.disabled = true;
+    msg.textContent = '一般圖片欄位尚未啟用（待 db push），目前無法儲存。';
+    return;
+  }
+  file.addEventListener('change', async () => {
+    const f = file.files && file.files[0];
+    if (!f) return;
+    if (typeof hasPerm === 'function' && !hasPerm('imageLibrary')) {
+      msg.textContent = '上傳需要「圖片庫」權限；也可直接貼圖片網址。';
+      file.value = '';
+      return;
+    }
+    msg.textContent = '處理中…';
+    file.disabled = true;
+    try {
+      const enc = await sdSquareEncode(f);
+      const no = (SHEETDB_EDIT && SHEETDB_EDIT.id) ? 'edit' : 'new';
+      const filename = 'photo-' + no + '-' + Date.now().toString(36) + enc.ext;
+      const res = await postTask({ type: 'image-upload', folder: SD_PHOTO_FOLDER, filename: filename, dataBase64: enc.base64 });
+      const url = res && (res.download_url || res.url);
+      if (!url) throw new Error('上傳回應沒有網址');
+      txt.value = url;
+      refresh();
+      msg.textContent = '上傳完成，按「儲存」後才會寫入這筆資料。';
+    } catch (err) {
+      msg.textContent = '上傳失敗：' + (err && err.message || err);
+    }
+    file.value = '';
+    file.disabled = false;
+  });
+}
+
+// 讀檔 → 置中裁正方形 → webp/jpeg base64
+function sdSquareEncode(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth, h = img.naturalHeight;
+        const side = Math.min(w, h);
+        const out = Math.max(w, h) >= 1080 ? 1080 : side;
+        const canvas = document.createElement('canvas');
+        canvas.width = out; canvas.height = out;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, out, out);
+        ctx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, out, out);
+        let dataUrl = canvas.toDataURL('image/webp', 0.85);
+        let ext = '.webp';
+        if (dataUrl.indexOf('data:image/webp') !== 0) { dataUrl = canvas.toDataURL('image/jpeg', 0.88); ext = '.jpg'; }
+        URL.revokeObjectURL(url);
+        resolve({ base64: dataUrl.split(',')[1], ext: ext });
+      } catch (e) { URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('無法讀取這張圖片')); };
+    img.src = url;
+  });
+}
+
+// ===================================================================
 // 共用編輯 modal（表單欄位依 SHEETDB_SPECS 動態產生）
 // ===================================================================
 function openSheetDbEditModal(kind, rec) {
@@ -337,6 +431,8 @@ function openSheetDbEditModal(kind, rec) {
     } else if (f.type === 'select') {
       input = '<select id="' + id + '">' + f.options.map(([v, t]) =>
         '<option value="' + sdEscapeHtml(v) + '">' + sdEscapeHtml(t) + '</option>').join('') + '</select>';
+    } else if (f.type === 'photo') {
+      input = sdPhotoFieldHtml(id, f);
     } else {
       input = '<input type="' + (f.type === 'number' ? 'number' : 'text') + '" id="' + id + '" placeholder="' + sdEscapeHtml(f.ph || '') + '">';
     }
@@ -352,6 +448,8 @@ function openSheetDbEditModal(kind, rec) {
     const val = rec ? rec[f.key] : undefined;
     el.value = val === undefined || val === null ? '' : String(val);
   });
+
+  spec.fields.forEach(f => { if (f.type === 'photo') sdInitPhotoField('sd_f_' + f.key); });
 
   const statusEl = document.getElementById('sheetDbEditStatus');
   statusEl.textContent = '';
@@ -374,6 +472,7 @@ document.getElementById('sheetDbSaveBtn').addEventListener('click', async () => 
   for (const f of spec.fields) {
     const el = document.getElementById('sd_f_' + f.key);
     if (f.type === 'checkbox') { payload[f.key] = el.checked; continue; }
+    if (f.type === 'photo' && !RECIPE_DB_PHOTO_READY) continue; // 欄位未建立：不送，避免後端報錯
     const v = el.value.trim();
     if (f.required && !v) {
       statusEl.textContent = '請填寫「' + f.label.replace(' *', '') + '」';
