@@ -3804,8 +3804,11 @@ function lotCircledNum(n) {
 }
 // 公告用團名：去掉開頭的「6/12-6/18 」日期區間
 function lotAnnShortTitle(d) {
-  // 開頭的「6/12-6/18」「6/12」「6/12(一)」都拿掉
-  return lotAnnTitle(d).replace(/^\s*\d{1,2}\/\d{1,2}(?:\s*[-－~～–]\s*\d{1,2}\/\d{1,2})?(?:\s*[（(][^)）]{0,3}[)）])?\s*/, '').trim() || lotAnnTitle(d);
+  // 開頭的「6/12-6/18」「6/12」「6/12(一)」「1月」「2026年1月」都拿掉
+  return lotAnnTitle(d)
+    .replace(/^\s*\d{1,2}\/\d{1,2}(?:\s*[-－~～–]\s*\d{1,2}\/\d{1,2})?(?:\s*[（(][^)）]{0,3}[)）])?\s*/, '')
+    .replace(/^\s*(?:\d{4}\s*年\s*)?\d{1,2}\s*月(?:份)?\s*/, '')
+    .trim() || lotAnnTitle(d);
 }
 function lotBuildBatchText(b) {
   if (b.kind !== 'win') {
