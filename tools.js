@@ -871,7 +871,27 @@ function pgNormalizeIngPhotos(root) {
     let h = box * Math.sqrt(0.7 / r);
     const k = Math.min(1, box / w, box * 0.9 / h); // 高度上限 90%（10-12 雪莉定）
     w *= k; h *= k;
-    wrap.style.backgroundSize = `${Math.round(w)}px ${Math.round(h)}px`;
+    const W = Math.round(w), H = Math.round(h);
+    wrap.style.backgroundSize = `${W}px ${H}px`;
+    // 10-12 雪莉：去背食材在成品圖邊緣一格一格（html2canvas 一次把 600px 原圖縮到 100px，鋸齒）。
+    // 先用畫布一半一半縮到剛好的尺寸再當背景圖，截圖時就是 1:1 不再縮。跨網域圖片（讀不到像素）維持原圖。
+    try {
+      let src = img, sw = img.naturalWidth, sh = img.naturalHeight;
+      while (sw / 2 >= W && sh / 2 >= H) {
+        const c = document.createElement('canvas');
+        c.width = Math.round(sw / 2); c.height = Math.round(sh / 2);
+        const cx = c.getContext('2d');
+        cx.imageSmoothingQuality = 'high';
+        cx.drawImage(src, 0, 0, c.width, c.height);
+        src = c; sw = c.width; sh = c.height;
+      }
+      const out = document.createElement('canvas');
+      out.width = W; out.height = H;
+      const ox = out.getContext('2d');
+      ox.imageSmoothingQuality = 'high';
+      ox.drawImage(src, 0, 0, W, H);
+      wrap.style.backgroundImage = `url('${out.toDataURL('image/png')}')`;
+    } catch (err) { /* 畫布被跨網域圖片污染就不處理，沿用原圖 */ }
   });
 }
 
