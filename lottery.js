@@ -3804,7 +3804,8 @@ function lotCircledNum(n) {
 }
 // 公告用團名：去掉開頭的「6/12-6/18 」日期區間
 function lotAnnShortTitle(d) {
-  return lotAnnTitle(d).replace(/^\s*\d{1,2}\/\d{1,2}\s*[-－~～–]\s*\d{1,2}\/\d{1,2}\s*/, '').trim() || lotAnnTitle(d);
+  // 開頭的「6/12-6/18」「6/12」「6/12(一)」都拿掉
+  return lotAnnTitle(d).replace(/^\s*\d{1,2}\/\d{1,2}(?:\s*[-－~～–]\s*\d{1,2}\/\d{1,2})?(?:\s*[（(][^)）]{0,3}[)）])?\s*/, '').trim() || lotAnnTitle(d);
 }
 function lotBuildBatchText(b) {
   if (b.kind !== 'win') {
@@ -3825,11 +3826,15 @@ function lotBuildBatchText(b) {
   }).join('\n\n');
 }
 function lotBuildBatchAiText(b) {
-  const parts = lotAnnBatchSections(b).map(s =>
-    '「' + lotAnnTitle(s.draw) + '」：' + s.list.map(w => lotWinnerWho(w) + '（' + (w.prize || '') + '）').join('、'));
+  // 名單一行一位：團名 得獎者 獎品（不放日期）
+  const lines = [];
+  lotAnnBatchSections(b).forEach(s => s.list.forEach(w => {
+    lines.push(lotAnnShortTitle(s.draw) + ' ' + lotWinnerWho(w) + ' ' + (w.prize || ''));
+  }));
   return '請幫我製作一張 Instagram 限時動態公告圖（9:16 直式）：主題是抽獎' + (b.kind === 'win' ? '中獎' : '寄出') +
-    '公告。標題寫「' + (b.kind === 'win' ? '恭喜得獎' : '獎品已寄出') + '」，下方依活動分段、清楚排列名單與獎品：' + parts.join('；') +
-    '。風格溫暖可愛，色調用藕粉與奶茶色，文字要清楚好讀。' +
+    '公告。標題寫「' + (b.kind === 'win' ? '恭喜得獎' : '獎品已寄出') + '」，下方一行一位清楚排列名單，每行依序是「團名 得獎者 獎品」，圖上不要出現任何日期：\n' +
+    lines.join('\n') +
+    '\n風格溫暖可愛，色調用藕粉與奶茶色，文字要清楚好讀。' +
     '重要：得獎名單只用文字呈現，不要在得獎者旁邊放任何商品圖、獎品圖或品牌圖，也不要自己模擬或畫出商品、獎品的樣子；' +
     '如果需要裝飾，只能用和商品無關的可愛插圖（例如星星、愛心、禮物盒、彩帶），放在標題或邊角，不要跟名單一一對應。';
 }
