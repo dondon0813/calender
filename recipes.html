@@ -534,13 +534,15 @@
   }
   .ing-group-intro { text-align: center; font-size: 14px; color: var(--c-text); line-height: 1.7; margin: 0 0 14px; }
   .ing-group-intro > div { white-space: pre-wrap; }
-  .heat-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 16px; margin: 0 0 14px; }
-  .heat-cell { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 52px; }
-  .heat-cell svg { display: block; }
-  .heat-name { font-size: 12px; color: #8A6E62; margin-top: 2px; line-height: 1.4; }
-  .heat-time { font-size: 11.5px; color: var(--c-muted); line-height: 1.4; }
-  .heat-row.heat-sm { justify-content: flex-start; gap: 8px 12px; margin: 6px 0 4px; }
-  .heat-row.heat-sm .heat-cell { min-width: 44px; }
+  /* 加熱方式＝清單式（雪莉 10-11 選 A）：一種一行，圖示＋名稱靠左、說明在右，長說明也不擠 */
+  .heat-row { text-align: left; margin: 0 0 14px; }
+  .heat-label { font-size: 12px; font-weight: 800; color: #8A6E62; margin-bottom: 2px; }
+  .heat-cell { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px dashed var(--c-line); }
+  .heat-cell svg { display: block; flex: none; }
+  .heat-name { flex: none; width: 3.8em; font-size: 12.5px; font-weight: 700; color: var(--c-text); line-height: 1.4; }
+  .heat-time { flex: 1; min-width: 0; font-size: 12px; color: var(--c-muted); line-height: 1.45; }
+  .heat-row.heat-sm { margin: 6px 0 4px; }
+  .heat-row.heat-sm .heat-cell { padding: 4px 0; }
   .rc-subtitle {
     text-align: center;
     font-size: 12.5px;
@@ -2602,17 +2604,17 @@ function heatingRowHtml(item, size, extraCls) {
   const list = heatingOfItem(item);
   if (!list.length) return '';
   const cells = list.map(h => `<div class="heat-cell">${heatingIconHtml(h.method, size)}<div class="heat-name">${ingEsc(h.method)}</div>${h.time ? `<div class="heat-time">${ingEsc(h.time)}</div>` : ''}</div>`).join('');
-  return `<div class="heat-row${extraCls ? ' ' + extraCls : ''}">${cells}</div>`;
+  return `<div class="heat-row${extraCls ? ' ' + extraCls : ''}"><div class="heat-label">加熱方式</div>${cells}</div>`;
 }
 function setIngHeating(item) {
   const el = document.getElementById('ingModalHeating');
-  const html = item ? heatingRowHtml(item, 36, '') : '';
+  const html = item ? heatingRowHtml(item, 28, '') : '';
   // 取出內層 cells，沿用固定容器（避免殘留）
   if (html) {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     el.innerHTML = tmp.firstChild.innerHTML;
-    el.style.display = 'flex';
+    el.style.display = 'block';
   } else {
     el.innerHTML = '';
     el.style.display = 'none';
@@ -2711,7 +2713,7 @@ function openIngredientGroupModal(group) {
     const blocks = members.map(m => {
       const rows = ingSpecRowsHtml(m.item);
       const desc = m.item['簡短介紹'] ? `<div class="spec-flavor-desc">${ingEsc(m.item['簡短介紹'])}</div>` : '';
-      const heat = sameHeat ? '' : heatingRowHtml(m.item, 28, 'heat-sm');
+      const heat = sameHeat ? '' : heatingRowHtml(m.item, 24, 'heat-sm');
       if (!rows && !desc && !heat) return '';
       return `<div class="spec-flavor"><div class="spec-flavor-title">${ingEsc(ingFlavorHeading(m.flavor, m.item))}</div>${heat}${rows}${desc}</div>`;
     }).filter(Boolean);
