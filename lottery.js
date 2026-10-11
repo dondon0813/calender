@@ -3695,14 +3695,26 @@ function lotAnnFmtMD(iso) {
   if (isNaN(d.getTime())) return '';
   return (d.getMonth() + 1) + '月' + d.getDate() + '日';
 }
+// 三個公告管道（10-11 雪莉定）：公告完按一下，一眼看出哪裡還沒公告；再按一下＝取消
+const LOT_ANN_CHANNELS = [['igPost', 'IG專區'], ['line', 'LINE群'], ['igStory', 'IG限動']];
+function lotAnnChannelBtns(b) {
+  const ch = b.channels || {};
+  return '<span class="lot-ann-chs">' + LOT_ANN_CHANNELS.map(([k, label]) => {
+    const c = ch[k];
+    const tip = c ? (c.by ? c.by + ' ' : '') + lotAnnFmtMD(c.at) + ' 已公告，再按一下取消' : '公告完按一下';
+    return '<button type="button" class="lot-ann-ch' + (c ? ' on' : '') + '" data-role="ann-channel" data-batch-id="' + lotEscapeHtml(b.id) +
+      '" data-channel="' + k + '" title="' + lotEscapeHtml(tip) + '"' + (LOTTERY_CAN_EDIT ? '' : ' disabled') + '>' +
+      (c ? lotIcon('check') + ' ' : '') + label + '</button>';
+  }).join('') + '</span>';
+}
 function lotAnnBatchHtml(b, idx, wIndex) {
   const people = (b.winnerIds || []).map(id => wIndex.get(id)).filter(Boolean);
   const open = (b.id in LOT_ANN_OPEN) ? LOT_ANN_OPEN[b.id] : idx === 0;
   const canEdit = LOTTERY_CAN_EDIT;
   const head = '<div class="lot-ann-bhead" data-role="ann-batch-toggle" data-batch-id="' + lotEscapeHtml(b.id) + '">' +
     '<span class="lot-ann-btitle">' + lotEscapeHtml(lotAnnFmtMD(b.createdAt)) + ' 已公告</span>' +
-    '<span class="lot-ann-bmeta">' + (b.createdBy ? lotEscapeHtml(b.createdBy) + ' 標的・' : '') + people.length + ' 位</span>' +
-    '<span class="lot-ann-bcaret">' + lotCaretHtml(open, '收合', '展開') + '</span></div>';
+    lotAnnChannelBtns(b) +
+    '<span class="lot-ann-bcaret" title="' + (open ? '收合' : '展開') + '">' + lotChevron(open ? 'up' : 'down') + '</span></div>';
   if (!open) return '<div class="lot-ann-batch lot-ann-card">' + head + '</div>';
   const bid = lotEscapeHtml(b.id);
   const rows = people.length
@@ -3970,6 +3982,18 @@ function lotBindAnnounceEvents(box) {
       } else alert('一起公告失敗：' + ((res && res.error) || '未知錯誤'));
       loadLotteryView(true);
     }).catch(err => { alert('一起公告失敗：' + (err.message || err)); loadLotteryView(true); });
+  });
+  box.querySelectorAll('[data-role="ann-channel"]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const b = batchOf(el); if (!b || el.disabled) return;
+      const k = el.getAttribute('data-channel');
+      const label = (LOT_ANN_CHANNELS.find(c => c[0] === k) || [k, k])[1];
+      const done = !(b.channels && b.channels[k]);
+      if (!done && !confirm('取消「' + label + '」已公告的標記？')) return;
+      el.disabled = true;
+      lotAnnCall('lottery-announce-batch-channel', { batchId: b.id, channel: k, done }, '更新公告管道失敗');
+    });
   });
   box.querySelectorAll('[data-role="ann-batch-toggle"]').forEach(el => {
     el.addEventListener('click', () => {
