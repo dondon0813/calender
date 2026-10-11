@@ -1286,10 +1286,6 @@
 
     <div class="rc-info-row" id="ingModalInfoRow"></div>
 
-    <div class="rc-tip-box" id="ingModalDescBox" style="display:none;">
-      <div class="rc-tip-title">食材介紹</div>
-      <div class="rc-tip-text" id="ingModalDesc"></div>
-    </div>
 
     <div class="modal-actions" style="margin-bottom: 6px;">
       <button class="action-btn" id="ingBuyBtn">前往購買</button>
@@ -2590,15 +2586,10 @@ function fillIngModalForItem(item) {
   } else {
     infoRowEl.style.display = 'none';
   }
-  document.getElementById('ingModalGroupIntro').style.display = 'none';
-  const descBox = document.getElementById('ingModalDescBox');
-  const desc = item['簡短介紹'] || '';
-  if (desc) {
-    document.getElementById('ingModalDesc').textContent = desc;
-    descBox.style.display = 'block';
-  } else {
-    descBox.style.display = 'none';
-  }
+  // 介紹直接寫在標題下方（雪莉 10-11：不要粉色「食材介紹」框；與合併組共用介紹同一個位置）
+  const desc = String(item['簡短介紹'] || '').trim();
+  document.getElementById('ingModalGroupIntroText').textContent = desc;
+  document.getElementById('ingModalGroupIntro').style.display = desc ? 'block' : 'none';
   bindIngBuy([{ brand: item['品牌'], name: item['食材名稱'], ownShopee: String(item['蝦皮連結'] || '').trim() }]);
   renderIngRelated([item]);
 }
@@ -2671,7 +2662,6 @@ function openIngredientGroupModal(group) {
     } else {
       infoRowEl.style.display = 'none';
     }
-    document.getElementById('ingModalDescBox').style.display = 'none';
 
     const seenBrand = new Set();
     const entries = [];
