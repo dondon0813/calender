@@ -3814,7 +3814,7 @@ function lotBuildBatchText(b) {
     lotAnnBatchSections(b).forEach(s => s.list.forEach(w => {
       lines.push(lotCircledNum(++n) + ' ' + lotAnnShortTitle(s.draw) + ' ' + (w.prize || '') + ' ' + lotWinnerWho(w));
     }));
-    return '抽獎寄出公告！以下獎品已寄出&匯款囉！\n' + lines.join('\n') +
+    return '抽獎寄出公告！以下獎品已寄出&匯款囉！\n\n' + lines.join('\n') +
       '\n\n再請大家近期留意收件唷！\n還沒註冊官網會員的可以註冊\n得獎通知更不容易漏接！\nhttps://member.sheridondon.com.tw/member';
   }
   return lotAnnBatchSections(b).map(s => {
