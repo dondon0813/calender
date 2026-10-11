@@ -534,6 +534,13 @@
   }
   .ing-group-intro { text-align: center; font-size: 14px; color: var(--c-text); line-height: 1.7; margin: 0 0 14px; }
   .ing-group-intro > div { white-space: pre-wrap; }
+  .heat-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 16px; margin: 0 0 14px; }
+  .heat-cell { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 52px; }
+  .heat-cell svg { display: block; }
+  .heat-name { font-size: 12px; color: #8A6E62; margin-top: 2px; line-height: 1.4; }
+  .heat-time { font-size: 11.5px; color: var(--c-muted); line-height: 1.4; }
+  .heat-row.heat-sm { justify-content: flex-start; gap: 8px 12px; margin: 6px 0 4px; }
+  .heat-row.heat-sm .heat-cell { min-width: 44px; }
   .rc-subtitle {
     text-align: center;
     font-size: 12.5px;
@@ -1281,6 +1288,7 @@
     <div class="rc-subtitle" id="ingModalBrandLine" style="display:none;"></div>
     <!-- 合併組共用介紹：標題下方一般文字（雪莉 10-11：不要粉色大框） -->
     <div class="ing-group-intro" id="ingModalGroupIntro" style="display:none;"><div id="ingModalGroupIntroText"></div></div>
+    <div class="heat-row" id="ingModalHeating" style="display:none;"></div>
     <div class="filter-chips chips-scroll" id="ingModalFlavors" style="display:none;"></div>
 
 
@@ -2565,8 +2573,55 @@ function renderIngRelated(items) {
   relatedBox.style.display = 'block';
 }
 
+// ===== 加熱方式（食材／成品）=====
+// 正本在 dondon-platform lib/shared/heating-icons.mjs，兩份一起改
+const HEATING_METHODS = ['電鍋', '平底鍋', '烤箱', '氣炸鍋', '微波爐', '隔水加熱'];
+const HEATING_ICON_SVG = {
+  電鍋: '<path d="M10 21 C4.5 21 4.5 28 10 28" fill="none"/><path d="M38 21 C43.5 21 43.5 28 38 28" fill="none"/><path d="M10 18 V35 Q10 41 16 41 H32 Q38 41 38 35 V18 Z" fill="{F}"/><path d="M10 23.5 H38" stroke-width="1.6"/><path d="M8 18 H40"/><path d="M11.5 18 Q24 7.5 36.5 18" fill="{F}"/><circle cx="24" cy="10" r="2.6" fill="{W}"/><rect x="20.5" y="32" width="7" height="5" rx="1.6" fill="{W}"/>',
+  平底鍋: '<path d="M5 24 H33 V26 A7 7 0 0 1 26 33 H12 A7 7 0 0 1 5 26 Z" fill="{F}"/><path d="M33 25.5 H44" stroke-width="3.2"/><ellipse cx="17" cy="21" rx="5" ry="2.2" fill="none"/><path d="M13 15 q1.5 -2 0 -4 M19 14 q1.5 -2 0 -4" stroke-width="1.6"/>',
+  烤箱: '<rect x="6" y="8" width="36" height="32" rx="4" fill="{F}"/><path d="M6 15 H42" stroke-width="1.8"/><circle cx="12" cy="11.5" r="1.4"/><circle cx="18" cy="11.5" r="1.4"/><path d="M30 11.5 H37" stroke-width="1.6"/><path d="M14 19 H34" stroke-width="2.6"/><rect x="10" y="22" width="28" height="14" rx="2.5" fill="{W}"/><path d="M13 32 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3" stroke-width="1.5" fill="none"/><path d="M11 40 v2.5 M37 40 v2.5"/>',
+  氣炸鍋: '<path d="M12 40 V18 A12 12 0 0 1 36 18 V40 Z" fill="{F}"/><circle cx="24" cy="16" r="3"/><rect x="15" y="24" width="18" height="12" rx="3" fill="{W}"/><rect x="20" y="28.5" width="8" height="3" rx="1.5"/><path d="M14 40 v2 M34 40 v2"/>',
+  微波爐: '<rect x="4" y="13" width="40" height="23" rx="4" fill="{F}"/><rect x="8" y="17" width="23" height="15" rx="2.5" fill="{W}"/><ellipse cx="19.5" cy="28" rx="7" ry="1.8" fill="none" stroke-width="1.6"/><path d="M16 24 h7 v4" stroke-width="1.4" fill="none"/><path d="M35 16.5 V33"/><rect x="37.5" y="17.5" width="4" height="3" rx="0.8" stroke-width="1.4"/><circle cx="38.5" cy="24" r="0.6"/><circle cx="40.5" cy="24" r="0.6"/><circle cx="38.5" cy="27" r="0.6"/><circle cx="40.5" cy="27" r="0.6"/><circle cx="38.5" cy="30" r="0.6"/><circle cx="40.5" cy="30" r="0.6"/><path d="M9 36 v2.5 M39 36 v2.5"/>',
+  隔水加熱: '<path d="M7 20 H41 V33 A7 7 0 0 1 34 40 H14 A7 7 0 0 1 7 33 Z" fill="{F}"/><path d="M7 23 H3.5 M41 23 H44.5"/><path d="M16 22 H32 V27 A4 4 0 0 1 28 31 H20 A4 4 0 0 1 16 27 Z" fill="{W}"/><path d="M10 35 q2.5 -2 5 0 t5 0 t5 0 t5 0 t5 0" stroke-width="1.6" fill="none"/><path d="M19 15 q1.5 -2 0 -4 M25 14 q1.5 -2 0 -4 M31 15 q1.5 -2 0 -4" stroke-width="1.6"/>',
+};
+function heatingIconHtml(method, size) {
+  const inner = HEATING_ICON_SVG[method];
+  if (!inner) return '';
+  return `<svg viewBox="0 0 48 48" width="${size}" height="${size}" fill="none" stroke="#B07F83" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner.replace(/\{F\}/g, '#F6E6E3').replace(/\{W\}/g, '#ffffff')}</svg>`;
+}
+// 該品項的加熱方式（依固定順序；只收六種已知方式）
+function heatingOfItem(item) {
+  const raw = item && Array.isArray(item['加熱方式']) ? item['加熱方式'] : [];
+  const map = {};
+  raw.forEach(h => {
+    if (h && HEATING_ICON_SVG[h['方式']] && !map[h['方式']]) map[h['方式']] = String(h['時間'] || '').trim();
+  });
+  return HEATING_METHODS.filter(m => m in map).map(m => ({ method: m, time: map[m] }));
+}
+function heatingRowHtml(item, size, extraCls) {
+  const list = heatingOfItem(item);
+  if (!list.length) return '';
+  const cells = list.map(h => `<div class="heat-cell">${heatingIconHtml(h.method, size)}<div class="heat-name">${ingEsc(h.method)}</div>${h.time ? `<div class="heat-time">${ingEsc(h.time)}</div>` : ''}</div>`).join('');
+  return `<div class="heat-row${extraCls ? ' ' + extraCls : ''}">${cells}</div>`;
+}
+function setIngHeating(item) {
+  const el = document.getElementById('ingModalHeating');
+  const html = item ? heatingRowHtml(item, 36, '') : '';
+  // 取出內層 cells，沿用固定容器（避免殘留）
+  if (html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    el.innerHTML = tmp.firstChild.innerHTML;
+    el.style.display = 'flex';
+  } else {
+    el.innerHTML = '';
+    el.style.display = 'none';
+  }
+}
+
 // 單一品項（單品，或合併卡選了某口味）的介紹內容
 function fillIngModalForItem(item) {
+  setIngHeating(item);
   renderIngGallery([ingPhotoUrl(item)].filter(isValidUrl).concat(ingGalleryList(item)));
   document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
   const isProduct = ingTypeOf(item) === '成品';
@@ -2639,6 +2694,7 @@ function openIngredientGroupModal(group) {
       brandLineEl.style.display = 'none';
     }
 
+    setIngHeating(null);
     const groupIntro = String(group['簡短介紹'] || '').trim();
     const groupIntroEl = document.getElementById('ingModalGroupIntro');
     if (groupIntro) {
@@ -2652,8 +2708,9 @@ function openIngredientGroupModal(group) {
     const blocks = members.map(m => {
       const rows = ingSpecRowsHtml(m.item);
       const desc = m.item['簡短介紹'] ? `<div class="spec-flavor-desc">${ingEsc(m.item['簡短介紹'])}</div>` : '';
-      if (!rows && !desc) return '';
-      return `<div class="spec-flavor"><div class="spec-flavor-title">${ingEsc(ingFlavorHeading(m.flavor, m.item))}</div>${rows}${desc}</div>`;
+      const heat = heatingRowHtml(m.item, 28, 'heat-sm');
+      if (!rows && !desc && !heat) return '';
+      return `<div class="spec-flavor"><div class="spec-flavor-title">${ingEsc(ingFlavorHeading(m.flavor, m.item))}</div>${heat}${rows}${desc}</div>`;
     }).filter(Boolean);
     if (blocks.length) {
       infoRowEl.className = 'spec-flavor-wrap';

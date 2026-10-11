@@ -21,7 +21,8 @@ let SCHOOL_DB_LOADED = false;
 let SCHOOL_DB_LIST = [];
 let RECIPE_DB_PHOTO_READY = false;  // 後端 recipe-db-list 回 photoReady===true 才可用一般圖片欄（false＝資料庫欄位待 db push）
 let RECIPE_DB_GALLERY_READY = false; // recipe-db-list 回 galleryReady===true 才可編輯介紹圖（false＝待 db push）
-let ING_GROUPS = [];                // 合併顯示群組（ingredient-group-list）
+let RECIPE_DB_HEATING_READY = false; // recipe-db-list 回 heatingReady===true 才可編輯加熱方式（false＝待 db push）
+let ING_GROUPS = [];              // 合併顯示群組（ingredient-group-list）
 let ING_GROUP_READY = false;        // ingredient-group-list 回 ready===true 才可新增／編輯合併組
 let ING_GROUP_EDIT = null;          // 目前編輯中的組 { id|null, members:[{kind,itemId,label,name}] }
 let SHEETDB_EDIT = null;            // 目前 modal 編輯中的 { kind, id }；id=null＝新增
@@ -105,6 +106,7 @@ const SHEETDB_SPECS = {
       { key: 'imageUrl', label: '去背小圖（網址）', ph: 'https://…', hint: '去背後的小圖；食材牆、食譜裡的食材格、貼文圖用這張' },
       { key: 'photoUrl', label: '一般圖片（正方形）', type: 'photo', ph: 'https://…', hint: '介紹視窗的大圖用這張；也可直接上傳，會自動置中裁成正方形' },
       { key: 'galleryUrls', label: '介紹圖（可多張，自動裁正方形）', type: 'gallery', hint: '介紹視窗主圖之後左右滑看的圖；第一張在最前面，可拖曳或按箭頭調順序' },
+      { key: 'heating', label: '加熱方式', type: 'heating' },
       { key: 'shopeeUrl', label: '蝦皮連結', ph: 'https://…', hint: '留空＝前台退回用品牌層的連結' },
     ],
   },
@@ -125,10 +127,66 @@ const SHEETDB_SPECS = {
       { key: 'imageUrl', label: '去背小圖（網址）', ph: 'https://…', hint: '去背後的小圖；食材牆、食譜裡的食材格、貼文圖用這張' },
       { key: 'photoUrl', label: '一般圖片（正方形）', type: 'photo', ph: 'https://…', hint: '介紹視窗的大圖用這張；也可直接上傳，會自動置中裁成正方形' },
       { key: 'galleryUrls', label: '介紹圖（可多張，自動裁正方形）', type: 'gallery', hint: '介紹視窗主圖之後左右滑看的圖；第一張在最前面，可拖曳或按箭頭調順序' },
+      { key: 'heating', label: '加熱方式', type: 'heating' },
       { key: 'shopeeUrl', label: '蝦皮連結', ph: 'https://…' },
     ],
   },
 };
+
+// ===== 加熱方式（食材／成品）=====
+// 圖示正本在 dondon-platform lib/shared/heating-icons.mjs，recipes.html 與本檔各一份複本，三處一起改
+const HEATING_METHODS = ['電鍋', '平底鍋', '烤箱', '氣炸鍋', '微波爐', '隔水加熱'];
+const HEATING_ICON_SVG = {
+  電鍋: '<path d="M10 21 C4.5 21 4.5 28 10 28" fill="none"/><path d="M38 21 C43.5 21 43.5 28 38 28" fill="none"/><path d="M10 18 V35 Q10 41 16 41 H32 Q38 41 38 35 V18 Z" fill="{F}"/><path d="M10 23.5 H38" stroke-width="1.6"/><path d="M8 18 H40"/><path d="M11.5 18 Q24 7.5 36.5 18" fill="{F}"/><circle cx="24" cy="10" r="2.6" fill="{W}"/><rect x="20.5" y="32" width="7" height="5" rx="1.6" fill="{W}"/>',
+  平底鍋: '<path d="M5 24 H33 V26 A7 7 0 0 1 26 33 H12 A7 7 0 0 1 5 26 Z" fill="{F}"/><path d="M33 25.5 H44" stroke-width="3.2"/><ellipse cx="17" cy="21" rx="5" ry="2.2" fill="none"/><path d="M13 15 q1.5 -2 0 -4 M19 14 q1.5 -2 0 -4" stroke-width="1.6"/>',
+  烤箱: '<rect x="6" y="8" width="36" height="32" rx="4" fill="{F}"/><path d="M6 15 H42" stroke-width="1.8"/><circle cx="12" cy="11.5" r="1.4"/><circle cx="18" cy="11.5" r="1.4"/><path d="M30 11.5 H37" stroke-width="1.6"/><path d="M14 19 H34" stroke-width="2.6"/><rect x="10" y="22" width="28" height="14" rx="2.5" fill="{W}"/><path d="M13 32 l3 -3 l3 3 l3 -3 l3 3 l3 -3 l3 3 l3 -3" stroke-width="1.5" fill="none"/><path d="M11 40 v2.5 M37 40 v2.5"/>',
+  氣炸鍋: '<path d="M12 40 V18 A12 12 0 0 1 36 18 V40 Z" fill="{F}"/><circle cx="24" cy="16" r="3"/><rect x="15" y="24" width="18" height="12" rx="3" fill="{W}"/><rect x="20" y="28.5" width="8" height="3" rx="1.5"/><path d="M14 40 v2 M34 40 v2"/>',
+  微波爐: '<rect x="4" y="13" width="40" height="23" rx="4" fill="{F}"/><rect x="8" y="17" width="23" height="15" rx="2.5" fill="{W}"/><ellipse cx="19.5" cy="28" rx="7" ry="1.8" fill="none" stroke-width="1.6"/><path d="M16 24 h7 v4" stroke-width="1.4" fill="none"/><path d="M35 16.5 V33"/><rect x="37.5" y="17.5" width="4" height="3" rx="0.8" stroke-width="1.4"/><circle cx="38.5" cy="24" r="0.6"/><circle cx="40.5" cy="24" r="0.6"/><circle cx="38.5" cy="27" r="0.6"/><circle cx="40.5" cy="27" r="0.6"/><circle cx="38.5" cy="30" r="0.6"/><circle cx="40.5" cy="30" r="0.6"/><path d="M9 36 v2.5 M39 36 v2.5"/>',
+  隔水加熱: '<path d="M7 20 H41 V33 A7 7 0 0 1 34 40 H14 A7 7 0 0 1 7 33 Z" fill="{F}"/><path d="M7 23 H3.5 M41 23 H44.5"/><path d="M16 22 H32 V27 A4 4 0 0 1 28 31 H20 A4 4 0 0 1 16 27 Z" fill="{W}"/><path d="M10 35 q2.5 -2 5 0 t5 0 t5 0 t5 0 t5 0" stroke-width="1.6" fill="none"/><path d="M19 15 q1.5 -2 0 -4 M25 14 q1.5 -2 0 -4 M31 15 q1.5 -2 0 -4" stroke-width="1.6"/>',
+};
+function sdHeatingIcon(method, size) {
+  const inner = HEATING_ICON_SVG[method] || '';
+  return '<svg viewBox="0 0 48 48" width="' + size + '" height="' + size + '" fill="none" stroke="#B07F83" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    inner.replace(/\{F\}/g, '#F6E6E3').replace(/\{W\}/g, '#ffffff') + '</svg>';
+}
+function sdHeatingFieldHtml(id, rec) {
+  const ready = RECIPE_DB_HEATING_READY;
+  const cur = {};
+  (rec && Array.isArray(rec.heating) ? rec.heating : []).forEach(h => { if (h && HEATING_METHODS.indexOf(h.method) >= 0) cur[h.method] = String(h.time || ''); });
+  const rows = HEATING_METHODS.map((m, i) => {
+    const on = Object.prototype.hasOwnProperty.call(cur, m);
+    return '<div class="sd-heat-row" style="display:flex; align-items:center; gap:8px; margin-top:6px;">' +
+      '<label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; min-width:112px;">' +
+      '<input type="checkbox" class="sd-heat-chk" data-method="' + sdEscapeHtml(m) + '"' + (on ? ' checked' : '') + (ready ? '' : ' disabled') + ' style="width:auto; margin:0;">' +
+      sdHeatingIcon(m, 24) + '<span>' + sdEscapeHtml(m) + '</span></label>' +
+      '<input type="text" class="sd-heat-time" data-method="' + sdEscapeHtml(m) + '" maxlength="30" placeholder="時間（選填）例：10 分鐘" value="' + sdEscapeHtml(cur[m] || '') + '"' +
+      (on && ready ? '' : ' disabled') + ' style="flex:1; min-width:0; border:1px solid #E6DCD2; border-radius:8px; padding:6px 10px; background:#fff;"></div>';
+  }).join('');
+  const note = ready ? '' : '<div style="font-size:12px; color:var(--c-text-light); margin-top:4px;">待 db push 後才能編輯加熱方式</div>';
+  return '<div id="' + id + '" class="sd-heat-wrap">' + rows + '</div>' + note;
+}
+function sdInitHeatingField(id) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  wrap.querySelectorAll('.sd-heat-chk').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const t = wrap.querySelector('.sd-heat-time[data-method="' + chk.dataset.method + '"]');
+      t.disabled = !chk.checked;
+      if (chk.checked) t.focus();
+    });
+  });
+}
+function sdHeatingValue(id) {
+  const wrap = document.getElementById(id);
+  const out = [];
+  if (!wrap) return out;
+  wrap.querySelectorAll('.sd-heat-chk').forEach(chk => {
+    if (!chk.checked) return;
+    const t = wrap.querySelector('.sd-heat-time[data-method="' + chk.dataset.method + '"]');
+    out.push({ method: chk.dataset.method, time: (t.value || '').trim().slice(0, 30) });
+  });
+  return out;
+}
 
 // ===================================================================
 // 開學清單分頁
@@ -191,6 +249,7 @@ function loadRecipeDbView(forceReload) {
     RECIPE_DB_LOADED = true;
     RECIPE_DB_PHOTO_READY = data.photoReady === true;
     RECIPE_DB_GALLERY_READY = data.galleryReady === true;
+    RECIPE_DB_HEATING_READY = data.heatingReady === true;
     RECIPE_DB = {
       recipes: data.recipes || [],
       ingredients: data.ingredients || [],
@@ -541,6 +600,8 @@ function openSheetDbEditModal(kind, rec) {
       input = sdPhotoFieldHtml(id, f);
     } else if (f.type === 'gallery') {
       input = sdGalleryHtml(id);
+    } else if (f.type === 'heating') {
+      input = sdHeatingFieldHtml(id, rec);
     } else {
       input = '<input type="' + (f.type === 'number' ? 'number' : 'text') + '" id="' + id + '" placeholder="' + sdEscapeHtml(f.ph || '') + '">';
     }
@@ -551,7 +612,7 @@ function openSheetDbEditModal(kind, rec) {
 
   // 填值（textarea/select/input；checkbox 已在產生 HTML 時處理）
   spec.fields.forEach(f => {
-    if (f.type === 'checkbox' || f.type === 'gallery') return;
+    if (f.type === 'checkbox' || f.type === 'gallery' || f.type === 'heating') return;
     const el = document.getElementById('sd_f_' + f.key);
     const val = rec ? rec[f.key] : undefined;
     el.value = val === undefined || val === null ? '' : String(val);
@@ -559,6 +620,7 @@ function openSheetDbEditModal(kind, rec) {
 
   spec.fields.forEach(f => {
     if (f.type === 'photo') sdInitPhotoField('sd_f_' + f.key);
+    if (f.type === 'heating') sdInitHeatingField('sd_f_' + f.key);
     if (f.type === 'gallery') sdInitGallery('sd_f_' + f.key, rec && Array.isArray(rec[f.key]) ? rec[f.key] : [], RECIPE_DB_GALLERY_READY);
   });
 
@@ -583,6 +645,10 @@ document.getElementById('sheetDbSaveBtn').addEventListener('click', async () => 
   for (const f of spec.fields) {
     if (f.type === 'gallery') {
       if (RECIPE_DB_GALLERY_READY && SD_GALLERY['sd_f_' + f.key]) payload[f.key] = SD_GALLERY['sd_f_' + f.key].get();
+      continue;
+    }
+    if (f.type === 'heating') {
+      if (RECIPE_DB_HEATING_READY) payload[f.key] = sdHeatingValue('sd_f_' + f.key);
       continue;
     }
     const el = document.getElementById('sd_f_' + f.key);
