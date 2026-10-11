@@ -7414,6 +7414,22 @@
   </div>
 </div>
 
+<!-- ===== 食材／成品「合併顯示」編輯 modal（sheetdb.js 動態產生表單） ===== -->
+<div class="modal-backdrop" id="ingGroupModal" onclick="if(event.target===this) closeIngGroupModal()">
+  <div class="modal-box" style="width:min(560px, 94vw); max-height:88vh; overflow-y:auto;">
+    <button class="modal-close x-btn" onclick="closeIngGroupModal()">✕</button>
+    <h3 id="ingGroupTitle">新增合併組</h3>
+    <div class="task-form" style="margin:0; padding:0; background:none;">
+      <div id="ingGroupForm"></div>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="task-submit-btn" id="ingGroupSaveBtn" style="margin-top:0;">儲存</button>
+        <button class="task-mini-btn danger" id="ingGroupDeleteBtn" style="display:none; padding:0 18px;">刪除</button>
+      </div>
+      <div class="form-status" id="ingGroupStatus"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 權限設定浮動視窗（只有管理員雪莉看得到入口） ===== -->
 <div class="modal-backdrop" id="permissionsModal" onclick="if(event.target===this) closePermissionsModal()">
   <div class="modal-box" style="width:min(680px, 94vw);">
@@ -8024,7 +8040,7 @@
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=22"></script>
 <!-- sheetdb.js（食譜資料庫＋開學清單）必須排在 admin.js 之前：理由同上（開機還原分頁會同步呼叫 loadRecipeDbView/loadSchoolListView） -->
-<script src="sheetdb.js?v=5"></script>
+<script src="sheetdb.js?v=6"></script>
 <!-- blog.js（文章管理）同樣必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadBlogView -->
 <script src="blog.js?v=4"></script>
 <!-- hall.js（教材館）：本次任務刻意不掛進 admin.js 的 VIEW_ID_MAP/switchView（範圍鎖定

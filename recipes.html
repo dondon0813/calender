@@ -497,6 +497,23 @@
     display: block;
     background: var(--c-bg-bottom);
   }
+  /* 食材介紹視窗主圖輪播（主圖＋介紹圖，可觸控左右滑；只有一張時不出箭頭圓點） */
+  .ing-gallery { position: relative; }
+  .ing-slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .ing-slides::-webkit-scrollbar { display: none; }
+  .ing-slides .rc-photo { flex: 0 0 100%; scroll-snap-align: center; }
+  .ing-arrow { display: none; position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.88); color: var(--c-brown); align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .ing-arrow-prev { left: 8px; }
+  .ing-arrow-next { right: 8px; }
+  @media (hover: hover) { .ing-arrow { display: flex; } }
+  .ing-dots { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+  .ing-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.6); }
+  .ing-dots span.on { background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
+  /* 合併卡「顯示全部」：資訊依口味分段 */
+  .spec-flavor-wrap { margin-bottom: 16px; }
+  .spec-flavor { background: var(--c-orange-bg); border-radius: 16px; padding: 4px 14px 8px; margin-bottom: 10px; }
+  .spec-flavor-title { font-size: 13px; font-weight: 800; color: var(--c-brown); padding: 9px 0 2px; }
+  .spec-flavor-desc { font-size: 12.5px; color: var(--c-text); line-height: 1.6; padding-top: 8px; white-space: pre-wrap; word-break: break-word; }
   .rc-title {
     text-align: center;
     font-family: var(--font-round);
@@ -1255,11 +1272,12 @@
     </div>
 
     <div class="rc-photo-wrap">
-      <img class="rc-photo" id="ingModalImg" src="" alt="">
+      <div id="ingModalGallery" class="ing-gallery"></div>
     </div>
 
     <h2 class="rc-title" id="ingModalName"></h2>
     <div class="rc-subtitle" id="ingModalBrandLine" style="display:none;"></div>
+    <div class="filter-chips chips-scroll" id="ingModalFlavors" style="display:none;"></div>
 
     <div class="rc-info-row" id="ingModalInfoRow"></div>
 
@@ -1443,6 +1461,8 @@ let BRANDS = [];
 let BRAND_INTRO = {}; // 品牌名稱 -> 品牌介紹文字
 let BRAND_SHOPEE = {}; // 品牌名稱 -> 蝦皮連結（後台「團購品牌資料庫」的蝦皮連結欄；沒開團時導流用，沒填就不顯示按鈕）
 let INGREDIENTS = [];
+let INGREDIENT_GROUPS = []; // 合併顯示群組（公開包 ingredientGroups，沒有就是空陣列）
+let ING_GROUP_BY_ITEM = {}; // '類型|食材ID' -> group
 let RECIPES = [];
 let CALENDAR_EVENTS = [];
 
@@ -1552,6 +1572,16 @@ async function loadRecipeDb() {
     if (name && t['去背小圖']) BRAND_THUMBS[name] = String(t['去背小圖']);
   });
   INGREDIENTS = (data.ingredients || []).filter(i => i['食材ID']);
+  INGREDIENT_GROUPS = (Array.isArray(data.ingredientGroups) ? data.ingredientGroups : [])
+    .filter(g => g && Array.isArray(g['成員']) && g['成員'].length)
+    .sort((x, y) => (Number(x['排序']) || 0) - (Number(y['排序']) || 0));
+  ING_GROUP_BY_ITEM = {};
+  INGREDIENT_GROUPS.forEach(g => {
+    g['成員'].forEach(m => {
+      const k = String(m['類型'] || '食材').trim() + '|' + String(m['食材ID']);
+      if (!ING_GROUP_BY_ITEM[k]) ING_GROUP_BY_ITEM[k] = g;
+    });
+  });
   RECIPES = (data.recipes || []).filter(r => r['食譜ID']);
 }
 
@@ -2211,20 +2241,33 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
   emptyEl.style.display = 'none';
   gridEl.style.display = 'grid';
 
+  // 合併顯示：同組只出一張卡，放在組內第一個出現的成員位置（任一成員符合目前篩選就會出卡）
+  const emittedGroups = new Set();
   items.forEach(item => {
+    const group = ingGroupOf(item);
+    if (group) {
+      if (emittedGroups.has(group)) return;
+      emittedGroups.add(group);
+    }
     const card = document.createElement('div');
     card.className = 'item-card';
-    card.addEventListener('click', () => openIngredientModal(item));
+    card.addEventListener('click', () => group ? openIngredientGroupModal(group) : openIngredientModal(item));
 
+    const groupMembers = group ? ingGroupMemberItems(group).map(m => m.item) : [];
+    const cardUrl = group
+      ? (isValidUrl(group['合併圖片網址']) ? group['合併圖片網址'] : ingCutoutUrl(groupMembers.find(i => isValidUrl(ingCutoutUrl(i))) || item))
+      : ingCutoutUrl(item);
     const img = document.createElement('img');
-    img.src = isValidUrl(ingCutoutUrl(item)) ? ingCutoutUrl(item) : ingredientPlaceholderImg(item);
+    img.src = isValidUrl(cardUrl) ? cardUrl : ingredientPlaceholderImg(item);
     fitPortraitImage(img);
     img.onerror = () => { img.src = ingredientPlaceholderImg(item); };
     card.appendChild(img);
 
     // 縮圖右上角：成分裡有用到油品的話，疊上有底色的小標籤，兩個以上就直向往下排
     // 開關關閉時（showOilBadges = false）就完全不顯示，避免遮擋圖片
-    const oilTags = showOilBadges ? getOilTags(item) : [];
+    const oilTags = showOilBadges
+      ? (group ? Array.from(new Set(groupMembers.reduce((acc, m) => acc.concat(getOilTags(m)), []))) : getOilTags(item))
+      : [];
     if (oilTags.length) {
       const oilWrap = document.createElement('div');
       oilWrap.className = 'oil-badge-wrap';
@@ -2241,7 +2284,7 @@ function renderIngredientGrid(items, gridEl, emptyEl) {
     body.className = 'card-body';
     const name = document.createElement('div');
     name.className = 'card-name';
-    name.textContent = item['食材名稱'] || '';
+    name.textContent = group ? (group['名稱'] || item['食材名稱'] || '') : (item['食材名稱'] || '');
     body.appendChild(name);
 
     card.appendChild(body);
@@ -2361,72 +2404,110 @@ function openIngredientBrandChoice(group) {
   document.getElementById('brandChoiceModal').classList.add('show');
 }
 
-function openIngredientModal(item) {
-  document.getElementById('ingModalImg').src = isValidUrl(ingPhotoUrl(item)) ? ingPhotoUrl(item) : BLANK_PLACEHOLDER_IMG;
-  fitPortraitImage(document.getElementById('ingModalImg'));
-  document.getElementById('ingModalImg').onerror = function() { this.src = BLANK_PLACEHOLDER_IMG; };
-  document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
+// ===== 食材／成品「合併顯示」群組（雪莉手動併組，後台食材＆成品資料庫「合併顯示」）=====
+// 只影響食材牆與食材介紹視窗；食譜視窗的準備食材格、食譜篩選食材磚、同簡稱品牌選擇清單都不合併。
+function ingTypeOf(item) { return String((item && item['類型']) || '食材').trim(); }
+function ingGroupKey(type, id) { return type + '|' + id; }
+function ingGroupOf(item) {
+  return ING_GROUP_BY_ITEM[ingGroupKey(ingTypeOf(item), String(item['食材ID']))] || null;
+}
+function ingGroupMemberItems(group) {
+  const out = [];
+  (group['成員'] || []).forEach(m => {
+    const it = INGREDIENTS.find(i => ingTypeOf(i) === String(m['類型'] || '食材').trim() && String(i['食材ID']) === String(m['食材ID']));
+    if (it) out.push({ item: it, flavor: String(m['口味'] || '').trim() });
+  });
+  return out;
+}
+function ingEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function ingFlavorHeading(flavor, item) {
+  if (!flavor) return String(item['食材名稱'] || '');
+  return /口味$/.test(flavor) ? flavor : flavor + '口味';
+}
+function ingGalleryList(item) {
+  const arr = Array.isArray(item && item['介紹圖片']) ? item['介紹圖片'] : [];
+  return arr.filter(isValidUrl);
+}
 
-  const isProduct = (item['類型'] || '食材') === '成品';
-  const brandLineEl = document.getElementById('ingModalBrandLine');
-  if (item['品牌']) {
-    brandLineEl.textContent = (isProduct ? '副食品・' : '生鮮食材・') + item['品牌'];
-    brandLineEl.style.display = 'block';
-  } else {
-    brandLineEl.style.display = 'none';
-  }
+// 介紹視窗主圖輪播：第一張是主圖，後面接介紹圖；只有一張就不顯示箭頭／圓點
+function renderIngGallery(urls) {
+  const wrap = document.getElementById('ingModalGallery');
+  wrap.innerHTML = '';
+  const list = urls.length ? urls : [BLANK_PLACEHOLDER_IMG];
+  const track = document.createElement('div');
+  track.className = 'ing-slides';
+  list.forEach(u => {
+    const img = document.createElement('img');
+    img.className = 'rc-photo';
+    img.alt = '';
+    img.src = u;
+    img.onerror = function() { this.onerror = null; this.src = BLANK_PLACEHOLDER_IMG; };
+    fitPortraitImage(img);
+    track.appendChild(img);
+  });
+  wrap.appendChild(track);
+  if (list.length < 2) return;
+  const svgL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+  const svgR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>';
+  const prev = document.createElement('button');
+  prev.type = 'button'; prev.className = 'ing-arrow ing-arrow-prev'; prev.setAttribute('aria-label', '上一張');
+  prev.innerHTML = svgL;
+  const next = document.createElement('button');
+  next.type = 'button'; next.className = 'ing-arrow ing-arrow-next'; next.setAttribute('aria-label', '下一張');
+  next.innerHTML = svgR;
+  const dots = document.createElement('div');
+  dots.className = 'ing-dots';
+  list.forEach(() => dots.appendChild(document.createElement('span')));
+  wrap.appendChild(prev); wrap.appendChild(next); wrap.appendChild(dots);
+  const cur = () => Math.max(0, Math.min(list.length - 1, Math.round(track.scrollLeft / (track.clientWidth || 1))));
+  const paint = () => { const c = cur(); Array.from(dots.children).forEach((d, i) => d.classList.toggle('on', i === c)); };
+  track.addEventListener('scroll', paint, { passive: true });
+  prev.addEventListener('click', () => track.scrollTo({ left: (cur() - 1) * track.clientWidth, behavior: 'smooth' }));
+  next.addEventListener('click', () => track.scrollTo({ left: (cur() + 1) * track.clientWidth, behavior: 'smooth' }));
+  paint();
+}
 
-  const infoRowEl = document.getElementById('ingModalInfoRow');
-  const specs = [
+function ingSpecRowsHtml(item) {
+  return [
     ['保存期限', item['保存期限']],
     ['成分', item['成分']],
     ['產地', item['產地']],
     ['規格', item['內容物規格']]
-  ].filter(([, val]) => val);
-  if (specs.length) {
-    infoRowEl.className = 'spec-list';
-    infoRowEl.innerHTML = specs.map(([label, val]) => `
+  ].filter(([, val]) => val).map(([label, val]) => `
       <div class="spec-list-item">
         <div class="spec-list-label">${label}</div>
         <div class="spec-list-value">${val}</div>
       </div>
     `).join('');
-    infoRowEl.style.display = 'block';
-  } else {
-    infoRowEl.style.display = 'none';
-  }
+}
 
-  const descBox = document.getElementById('ingModalDescBox');
-  const desc = item['簡短介紹'] || '';
-  if (desc) {
-    document.getElementById('ingModalDesc').textContent = desc;
-    descBox.style.display = 'block';
-  } else {
-    descBox.style.display = 'none';
-  }
-
+// 購買按鈕：entries = [{brand, name, ownShopee}]（已去重）。只有一個品牌且開團中＝直接開團購；其餘列出各品牌狀態
+function bindIngBuy(entries) {
   const ingBuyBtn = document.getElementById('ingBuyBtn');
   const ingBuyStatusEl = document.getElementById('ingBuyStatusList');
   ingBuyStatusEl.style.display = 'none';
   ingBuyStatusEl.innerHTML = '';
   ingBuyBtn.onclick = () => {
-    const brand = item['品牌'];
-    // 這個食材/成品自己填的蝦皮連結（食材資料庫、成品資料庫的「蝦皮連結」欄）。
-    // 有些團品項不多但品項之間差很多，適合各自導到自己的商品頁，所以食材填了就蓋掉品牌那條。
-    const ownShopee = String(item['蝦皮連結'] || '').trim();
-    if (!brand) {
-      // 沒設品牌就沒有開團狀態可查；但如果這個食材自己填了蝦皮連結，還是要讓客人買得到
-      if (isValidUrl(ownShopee)) {
-        renderBuyStatusList([{ brand: item['食材名稱'] || '', status: 'nobrand', shopeeUrl: ownShopee }], ingBuyStatusEl);
+    const rows = [];
+    entries.forEach(e => {
+      if (!e.brand) {
+        // 沒設品牌就沒有開團狀態可查；但如果這個食材自己填了蝦皮連結，還是要讓客人買得到
+        if (isValidUrl(e.ownShopee)) rows.push({ brand: e.name || '', status: 'nobrand', shopeeUrl: e.ownShopee });
         return;
       }
+      const st = getBrandStatus(e.brand);
+      if (isValidUrl(e.ownShopee)) st.shopeeUrl = e.ownShopee; // 食材自己的優先，空白才用品牌預設
+      rows.push(st);
+    });
+    if (!rows.length) {
       ingBuyStatusEl.innerHTML = `<div class="buy-status-item"><span class="bsi-text">尚未設定這個食材的品牌資訊</span></div>`;
       ingBuyStatusEl.style.display = 'block';
       return;
     }
-    const status = getBrandStatus(brand);
-    if (isValidUrl(ownShopee)) status.shopeeUrl = ownShopee; // 食材自己的優先，空白才用品牌預設
-    if (status.status === 'open') {
+    const status = rows[0];
+    if (rows.length === 1 && status.status === 'open') {
       if (status.evKey) sendStat(status.evKey + '_src_recipesing', 'click');
       if (status.evKey) sendStat(status.evKey + '_buy_recipesing', 'click');
       // 有折扣碼：順手複製＋把折扣碼區塊留在按鈕下方（客人從團購頁回來還看得到）
@@ -2439,41 +2520,155 @@ function openIngredientModal(item) {
       }
       window.open(status.url, '_blank', 'noopener,noreferrer');
     } else {
-      renderBuyStatusList([status], ingBuyStatusEl);
+      renderBuyStatusList(rows, ingBuyStatusEl);
     }
   };
+}
 
+function renderIngRelated(items) {
   const relatedBox = document.getElementById('ingModalRelated');
   const relatedList = document.getElementById('ingModalRelatedList');
-  if (!isProduct) {
-    const relatedRecipes = getRecipesUsingIngredientId(item['食材ID']);
-    if (relatedRecipes.length) {
-      relatedList.innerHTML = '';
-      relatedRecipes.forEach(r => {
-        const row = document.createElement('div');
-        row.className = 'rr-item';
-        row.addEventListener('click', () => {
-          closeModal('ingredientModal');
-          openRecipeModal(r);
-        });
-        const img = document.createElement('img');
-        img.src = isValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PLACEHOLDER_IMG;
-        img.onerror = () => { img.src = PLACEHOLDER_IMG; };
-        row.appendChild(img);
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'rr-name';
-        nameSpan.textContent = r['食譜名稱'] || '';
-        row.appendChild(nameSpan);
-        relatedList.appendChild(row);
-      });
-      relatedBox.style.display = 'block';
-    } else {
-      relatedBox.style.display = 'none';
-    }
-  } else {
-    relatedBox.style.display = 'none';
-  }
+  const seen = new Set();
+  const relatedRecipes = [];
+  items.forEach(it => {
+    if (ingTypeOf(it) === '成品') return;
+    getRecipesUsingIngredientId(it['食材ID']).forEach(r => {
+      if (seen.has(r['食譜ID'])) return;
+      seen.add(r['食譜ID']);
+      relatedRecipes.push(r);
+    });
+  });
+  if (!relatedRecipes.length) { relatedBox.style.display = 'none'; return; }
+  relatedList.innerHTML = '';
+  relatedRecipes.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'rr-item';
+    row.addEventListener('click', () => {
+      closeModal('ingredientModal');
+      openRecipeModal(r);
+    });
+    const img = document.createElement('img');
+    img.src = isValidUrl(r['成品圖片網址']) ? r['成品圖片網址'] : PLACEHOLDER_IMG;
+    img.onerror = () => { img.src = PLACEHOLDER_IMG; };
+    row.appendChild(img);
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'rr-name';
+    nameSpan.textContent = r['食譜名稱'] || '';
+    row.appendChild(nameSpan);
+    relatedList.appendChild(row);
+  });
+  relatedBox.style.display = 'block';
+}
 
+// 單一品項（單品，或合併卡選了某口味）的介紹內容
+function fillIngModalForItem(item) {
+  renderIngGallery([ingPhotoUrl(item)].filter(isValidUrl).concat(ingGalleryList(item)));
+  document.getElementById('ingModalName').textContent = item['食材名稱'] || '';
+  const isProduct = ingTypeOf(item) === '成品';
+  const brandLineEl = document.getElementById('ingModalBrandLine');
+  if (item['品牌']) {
+    brandLineEl.textContent = (isProduct ? '副食品・' : '生鮮食材・') + item['品牌'];
+    brandLineEl.style.display = 'block';
+  } else {
+    brandLineEl.style.display = 'none';
+  }
+  const infoRowEl = document.getElementById('ingModalInfoRow');
+  const rows = ingSpecRowsHtml(item);
+  if (rows) {
+    infoRowEl.className = 'spec-list';
+    infoRowEl.innerHTML = rows;
+    infoRowEl.style.display = 'block';
+  } else {
+    infoRowEl.style.display = 'none';
+  }
+  const descBox = document.getElementById('ingModalDescBox');
+  const desc = item['簡短介紹'] || '';
+  if (desc) {
+    document.getElementById('ingModalDesc').textContent = desc;
+    descBox.style.display = 'block';
+  } else {
+    descBox.style.display = 'none';
+  }
+  bindIngBuy([{ brand: item['品牌'], name: item['食材名稱'], ownShopee: String(item['蝦皮連結'] || '').trim() }]);
+  renderIngRelated([item]);
+}
+
+function openIngredientModal(item) {
+  document.getElementById('ingModalFlavors').style.display = 'none';
+  fillIngModalForItem(item);
+  document.getElementById('ingredientModal').classList.add('show');
+}
+
+// 合併卡：預設不選口味＝顯示全部；點口味膠囊切成該品項單品顯示，再點同一顆取消
+function openIngredientGroupModal(group) {
+  const members = ingGroupMemberItems(group);
+  if (!members.length) return;
+  let selected = -1;
+  const flavorsEl = document.getElementById('ingModalFlavors');
+
+  function paint() {
+    flavorsEl.innerHTML = '';
+    members.forEach((m, idx) => {
+      const label = m.flavor || m.item['食材名稱'] || '';
+      flavorsEl.appendChild(makeChip(label, idx === selected, () => {
+        selected = (selected === idx) ? -1 : idx;
+        paint();
+      }));
+    });
+    flavorsEl.style.display = 'flex';
+
+    if (selected >= 0) {
+      fillIngModalForItem(members[selected].item);
+      return;
+    }
+    // 顯示全部
+    const items = members.map(m => m.item);
+    const main = isValidUrl(group['合併圖片網址']) ? group['合併圖片網址'] : ingPhotoUrl(items.find(i => isValidUrl(ingPhotoUrl(i))) || items[0]);
+    const gal = (Array.isArray(group['介紹圖片']) ? group['介紹圖片'] : []).filter(isValidUrl);
+    renderIngGallery([main].filter(isValidUrl).concat(gal));
+    document.getElementById('ingModalName').textContent = group['名稱'] || '';
+
+    const brands = Array.from(new Set(items.map(i => i['品牌']).filter(Boolean)));
+    const types = Array.from(new Set(items.map(ingTypeOf)));
+    const brandLineEl = document.getElementById('ingModalBrandLine');
+    if (brands.length) {
+      brandLineEl.textContent = (types.length === 1 ? (types[0] === '成品' ? '副食品・' : '生鮮食材・') : '') + brands.join('、');
+      brandLineEl.style.display = 'block';
+    } else {
+      brandLineEl.style.display = 'none';
+    }
+
+    const infoRowEl = document.getElementById('ingModalInfoRow');
+    const blocks = members.map(m => {
+      const rows = ingSpecRowsHtml(m.item);
+      const desc = m.item['簡短介紹'] ? `<div class="spec-flavor-desc">${ingEsc(m.item['簡短介紹'])}</div>` : '';
+      if (!rows && !desc) return '';
+      return `<div class="spec-flavor"><div class="spec-flavor-title">${ingEsc(ingFlavorHeading(m.flavor, m.item))}</div>${rows}${desc}</div>`;
+    }).filter(Boolean);
+    if (blocks.length) {
+      infoRowEl.className = 'spec-flavor-wrap';
+      infoRowEl.innerHTML = blocks.join('');
+      infoRowEl.style.display = 'block';
+    } else {
+      infoRowEl.style.display = 'none';
+    }
+    document.getElementById('ingModalDescBox').style.display = 'none';
+
+    const seenBrand = new Set();
+    const entries = [];
+    items.forEach(it => {
+      const b = it['品牌'] || '';
+      const own = String(it['蝦皮連結'] || '').trim();
+      if (b) {
+        if (seenBrand.has(b)) return;
+        seenBrand.add(b);
+      }
+      entries.push({ brand: b, name: it['食材名稱'], ownShopee: own });
+    });
+    bindIngBuy(entries);
+    renderIngRelated(items);
+  }
+  paint();
   document.getElementById('ingredientModal').classList.add('show');
 }
 

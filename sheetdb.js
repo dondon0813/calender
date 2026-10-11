@@ -20,6 +20,10 @@ let RECIPE_DB_BRAND = '';           // 品牌篩選；''＝全部
 let SCHOOL_DB_LOADED = false;
 let SCHOOL_DB_LIST = [];
 let RECIPE_DB_PHOTO_READY = false;  // 後端 recipe-db-list 回 photoReady===true 才可用一般圖片欄（false＝資料庫欄位待 db push）
+let RECIPE_DB_GALLERY_READY = false; // recipe-db-list 回 galleryReady===true 才可編輯介紹圖（false＝待 db push）
+let ING_GROUPS = [];                // 合併顯示群組（ingredient-group-list）
+let ING_GROUP_READY = false;        // ingredient-group-list 回 ready===true 才可新增／編輯合併組
+let ING_GROUP_EDIT = null;          // 目前編輯中的組 { id|null, members:[{kind,itemId,label,name}] }
 let SHEETDB_EDIT = null;            // 目前 modal 編輯中的 { kind, id }；id=null＝新增
 
 function sdEscapeHtml(s) {
@@ -100,6 +104,7 @@ const SHEETDB_SPECS = {
       { key: 'intro', label: '簡短介紹', type: 'textarea', rows: 2 },
       { key: 'imageUrl', label: '去背小圖（網址）', ph: 'https://…', hint: '去背後的小圖；食材牆、食譜裡的食材格、貼文圖用這張' },
       { key: 'photoUrl', label: '一般圖片（正方形）', type: 'photo', ph: 'https://…', hint: '介紹視窗的大圖用這張；也可直接上傳，會自動置中裁成正方形' },
+      { key: 'galleryUrls', label: '介紹圖（可多張，自動裁正方形）', type: 'gallery', hint: '介紹視窗主圖之後左右滑看的圖；第一張在最前面，可拖曳或按箭頭調順序' },
       { key: 'shopeeUrl', label: '蝦皮連結', ph: 'https://…', hint: '留空＝前台退回用品牌層的連結' },
     ],
   },
@@ -119,6 +124,7 @@ const SHEETDB_SPECS = {
       { key: 'usableAsIngredient', label: '可作食材（食譜可以引用它）', type: 'checkbox' },
       { key: 'imageUrl', label: '去背小圖（網址）', ph: 'https://…', hint: '去背後的小圖；食材牆、食譜裡的食材格、貼文圖用這張' },
       { key: 'photoUrl', label: '一般圖片（正方形）', type: 'photo', ph: 'https://…', hint: '介紹視窗的大圖用這張；也可直接上傳，會自動置中裁成正方形' },
+      { key: 'galleryUrls', label: '介紹圖（可多張，自動裁正方形）', type: 'gallery', hint: '介紹視窗主圖之後左右滑看的圖；第一張在最前面，可拖曳或按箭頭調順序' },
       { key: 'shopeeUrl', label: '蝦皮連結', ph: 'https://…' },
     ],
   },
@@ -184,16 +190,27 @@ function loadRecipeDbView(forceReload) {
     if (!data || !data.success) throw new Error((data && data.error) || '未知錯誤');
     RECIPE_DB_LOADED = true;
     RECIPE_DB_PHOTO_READY = data.photoReady === true;
+    RECIPE_DB_GALLERY_READY = data.galleryReady === true;
     RECIPE_DB = {
       recipes: data.recipes || [],
       ingredients: data.ingredients || [],
       products: data.products || [],
     };
-    renderRecipeDbTabs();
-    renderRecipeDbList();
+    return sdLoadGroups().then(() => {
+      renderRecipeDbTabs();
+      renderRecipeDbList();
+    });
   }).catch(err => {
     area.innerHTML = '<div class="task-empty">讀取失敗：' + sdEscapeHtml(err.message || '') + '</div>';
   });
+}
+
+// 合併顯示群組：讀不到（後端未上線／待 db push）不影響其他分頁，只是合併功能停用
+function sdLoadGroups() {
+  return sdApiPost('ingredient-group-list').then(data => {
+    ING_GROUP_READY = !!(data && data.success && data.ready === true);
+    ING_GROUPS = ING_GROUP_READY && Array.isArray(data.groups) ? data.groups : [];
+  }).catch(() => { ING_GROUP_READY = false; ING_GROUPS = []; });
 }
 
 function renderRecipeDbTabs() {
@@ -202,6 +219,7 @@ function renderRecipeDbTabs() {
     ['recipe', '🍲 食譜', RECIPE_DB.recipes.length],
     ['ingredient', '🥕 食材', RECIPE_DB.ingredients.length],
     ['product', '📦 成品', RECIPE_DB.products.length],
+    ['group', '🔗 合併顯示', ING_GROUPS.length],
   ];
   box.innerHTML = tabs.map(([k, label, n]) => {
     const on = RECIPE_DB_TAB === k;
@@ -243,6 +261,7 @@ function sdRecipeBrandsOf(recipe) {
 // 換分頁時若原選擇不在新清單裡就退回「全部」。
 function renderRecipeDbBrandFilter() {
   const sel = document.getElementById('recipeDbBrandFilter');
+  sel.style.display = RECIPE_DB_TAB === 'group' ? 'none' : '';
   let brands;
   if (RECIPE_DB_TAB === 'recipe') {
     const used = new Set();
@@ -277,6 +296,7 @@ function sdRecipeDbRows() {
 function renderRecipeDbList() {
   const area = document.getElementById('recipeDbListArea');
   const kind = RECIPE_DB_TAB;
+  if (kind === 'group') { renderIngGroupList(area); return; }
   const list = sdRecipeDbRows();
   if (!list.length) {
     area.innerHTML = '<div class="task-empty">沒有符合的資料</div>';
@@ -335,7 +355,8 @@ function sdPhotoFieldHtml(id, f) {
     '<div id="' + id + '_msg" style="font-size:12px; color:var(--c-text-light); margin-top:2px;"></div>';
 }
 
-function sdInitPhotoField(id) {
+function sdInitPhotoField(id, ready) {
+  if (ready === undefined) ready = RECIPE_DB_PHOTO_READY;
   const txt = document.getElementById(id);
   const file = document.getElementById(id + '_file');
   const prev = document.getElementById(id + '_prev');
@@ -347,33 +368,118 @@ function sdInitPhotoField(id) {
   prev.onerror = () => { prev.style.display = 'none'; };
   txt.addEventListener('input', refresh);
   refresh();
-  if (!RECIPE_DB_PHOTO_READY) {
+  if (!ready) {
     txt.disabled = true; file.disabled = true;
-    msg.textContent = '一般圖片欄位尚未啟用（待 db push），目前無法儲存。';
+    msg.textContent = '這個圖片欄位尚未啟用（待 db push），目前無法儲存。';
     return;
   }
   file.addEventListener('change', async () => {
     const f = file.files && file.files[0];
     if (!f) return;
-    if (typeof hasPerm === 'function' && !hasPerm('imageLibrary')) {
-      msg.textContent = '上傳需要「圖片庫」權限；也可直接貼圖片網址。';
-      file.value = '';
-      return;
-    }
     msg.textContent = '處理中…';
     file.disabled = true;
     try {
-      const enc = await sdSquareEncode(f);
-      const no = (SHEETDB_EDIT && SHEETDB_EDIT.id) ? 'edit' : 'new';
-      const filename = 'photo-' + no + '-' + Date.now().toString(36) + enc.ext;
-      const res = await postTask({ type: 'image-upload', folder: SD_PHOTO_FOLDER, filename: filename, dataBase64: enc.base64 });
-      const url = res && (res.download_url || res.url);
-      if (!url) throw new Error('上傳回應沒有網址');
+      const url = await sdUploadSquare(f, 'photo');
       txt.value = url;
       refresh();
       msg.textContent = '上傳完成，按「儲存」後才會寫入這筆資料。';
     } catch (err) {
       msg.textContent = '上傳失敗：' + (err && err.message || err);
+    }
+    file.value = '';
+    file.disabled = false;
+  });
+}
+
+// 共用：一張圖 → 置中裁正方形 → 上傳圖庫（ingredient-photos/）→ 回傳網址。需「圖片庫」權限
+async function sdUploadSquare(file, tag) {
+  if (typeof hasPerm === 'function' && !hasPerm('imageLibrary')) {
+    throw new Error('上傳需要「圖片庫」權限；也可直接貼圖片網址');
+  }
+  const enc = await sdSquareEncode(file);
+  const filename = (tag || 'photo') + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6) + enc.ext;
+  const res = await postTask({ type: 'image-upload', folder: SD_PHOTO_FOLDER, filename: filename, dataBase64: enc.base64 });
+  const url = res && (res.download_url || res.url);
+  if (!url) throw new Error('上傳回應沒有網址');
+  return url;
+}
+
+// ===================================================================
+// 介紹圖（多張）編輯器：多檔上傳、縮圖列可刪除、可拖曳或按箭頭調順序。
+// 食材／成品表單與合併組視窗共用。controller：{ get() }
+// ===================================================================
+const SD_GALLERY = {};
+
+function sdGalleryHtml(id) {
+  return '<div id="' + id + '_list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;"></div>' +
+    '<input type="file" id="' + id + '_file" accept="image/*" multiple>' +
+    '<div id="' + id + '_msg" style="font-size:12px; color:var(--c-text-light); margin-top:2px;"></div>';
+}
+
+function sdInitGallery(id, urls, ready) {
+  const listEl = document.getElementById(id + '_list');
+  const file = document.getElementById(id + '_file');
+  const msg = document.getElementById(id + '_msg');
+  const state = { urls: (urls || []).filter(Boolean).slice() };
+  SD_GALLERY[id] = { get: () => state.urls.slice() };
+  let dragIdx = -1;
+
+  function move(i, j) {
+    if (j < 0 || j >= state.urls.length) return;
+    const u = state.urls.splice(i, 1)[0];
+    state.urls.splice(j, 0, u);
+    draw();
+  }
+  function draw() {
+    listEl.innerHTML = '';
+    state.urls.forEach((u, i) => {
+      const cell = document.createElement('div');
+      cell.draggable = true;
+      cell.style.cssText = 'width:76px; text-align:center; cursor:grab;';
+      const img = document.createElement('img');
+      img.src = u; img.alt = '';
+      img.style.cssText = 'width:76px; height:76px; object-fit:cover; border-radius:8px; background:var(--c-surface); display:block;';
+      const bar = document.createElement('div');
+      bar.style.cssText = 'display:flex; justify-content:space-between; margin-top:3px; gap:2px;';
+      const mk = (label, aria, fn, extra) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'task-mini-btn' + (extra || ''); b.textContent = label;
+        b.setAttribute('aria-label', aria);
+        b.style.cssText = 'padding:0 6px; min-width:0;';
+        b.addEventListener('click', fn);
+        return b;
+      };
+      bar.appendChild(mk('‹', '往前', () => move(i, i - 1)));
+      bar.appendChild(mk('✕', '移除', () => { state.urls.splice(i, 1); draw(); }, ' x-btn'));
+      bar.appendChild(mk('›', '往後', () => move(i, i + 1)));
+      cell.appendChild(img); cell.appendChild(bar);
+      cell.addEventListener('dragstart', e => { dragIdx = i; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (_) {} });
+      cell.addEventListener('dragover', e => { e.preventDefault(); });
+      cell.addEventListener('drop', e => { e.preventDefault(); if (dragIdx >= 0 && dragIdx !== i) move(dragIdx, i); dragIdx = -1; });
+      listEl.appendChild(cell);
+    });
+  }
+  draw();
+  if (!ready) {
+    file.disabled = true;
+    msg.textContent = '介紹圖欄位尚未啟用（待 db push），目前無法儲存。';
+    return;
+  }
+  file.addEventListener('change', async () => {
+    const files = Array.from(file.files || []);
+    if (!files.length) return;
+    file.disabled = true;
+    let done = 0;
+    try {
+      for (const f of files) {
+        msg.textContent = '上傳中 ' + (done + 1) + '/' + files.length + '…';
+        state.urls.push(await sdUploadSquare(f, 'gallery'));
+        done++;
+        draw();
+      }
+      msg.textContent = '上傳完成，按「儲存」後才會寫入。';
+    } catch (err) {
+      msg.textContent = '上傳失敗（已完成 ' + done + ' 張）：' + (err && err.message || err);
     }
     file.value = '';
     file.disabled = false;
@@ -433,6 +539,8 @@ function openSheetDbEditModal(kind, rec) {
         '<option value="' + sdEscapeHtml(v) + '">' + sdEscapeHtml(t) + '</option>').join('') + '</select>';
     } else if (f.type === 'photo') {
       input = sdPhotoFieldHtml(id, f);
+    } else if (f.type === 'gallery') {
+      input = sdGalleryHtml(id);
     } else {
       input = '<input type="' + (f.type === 'number' ? 'number' : 'text') + '" id="' + id + '" placeholder="' + sdEscapeHtml(f.ph || '') + '">';
     }
@@ -443,13 +551,16 @@ function openSheetDbEditModal(kind, rec) {
 
   // 填值（textarea/select/input；checkbox 已在產生 HTML 時處理）
   spec.fields.forEach(f => {
-    if (f.type === 'checkbox') return;
+    if (f.type === 'checkbox' || f.type === 'gallery') return;
     const el = document.getElementById('sd_f_' + f.key);
     const val = rec ? rec[f.key] : undefined;
     el.value = val === undefined || val === null ? '' : String(val);
   });
 
-  spec.fields.forEach(f => { if (f.type === 'photo') sdInitPhotoField('sd_f_' + f.key); });
+  spec.fields.forEach(f => {
+    if (f.type === 'photo') sdInitPhotoField('sd_f_' + f.key);
+    if (f.type === 'gallery') sdInitGallery('sd_f_' + f.key, rec && Array.isArray(rec[f.key]) ? rec[f.key] : [], RECIPE_DB_GALLERY_READY);
+  });
 
   const statusEl = document.getElementById('sheetDbEditStatus');
   statusEl.textContent = '';
@@ -470,6 +581,10 @@ document.getElementById('sheetDbSaveBtn').addEventListener('click', async () => 
 
   const payload = {};
   for (const f of spec.fields) {
+    if (f.type === 'gallery') {
+      if (RECIPE_DB_GALLERY_READY && SD_GALLERY['sd_f_' + f.key]) payload[f.key] = SD_GALLERY['sd_f_' + f.key].get();
+      continue;
+    }
     const el = document.getElementById('sd_f_' + f.key);
     if (f.type === 'checkbox') { payload[f.key] = el.checked; continue; }
     if (f.type === 'photo' && !RECIPE_DB_PHOTO_READY) continue; // 欄位未建立：不送，避免後端報錯
@@ -538,10 +653,202 @@ document.getElementById('sheetDbDeleteBtn').addEventListener('click', async () =
 
 document.getElementById('schoolListAddBtn').addEventListener('click', () => openSheetDbEditModal('school', null));
 document.getElementById('schoolListRefreshBtn').addEventListener('click', () => loadSchoolListView(true));
-document.getElementById('recipeDbAddBtn').addEventListener('click', () => openSheetDbEditModal(RECIPE_DB_TAB, null));
+document.getElementById('recipeDbAddBtn').addEventListener('click', () => {
+  if (RECIPE_DB_TAB === 'group') openIngGroupModal(null); else openSheetDbEditModal(RECIPE_DB_TAB, null);
+});
 document.getElementById('recipeDbRefreshBtn').addEventListener('click', () => loadRecipeDbView(true));
 document.getElementById('recipeDbSearch').addEventListener('input', () => { if (RECIPE_DB_LOADED) renderRecipeDbList(); });
 document.getElementById('recipeDbBrandFilter').addEventListener('change', function () {
   RECIPE_DB_BRAND = this.value;
   if (RECIPE_DB_LOADED) renderRecipeDbList();
+});
+
+
+// ===================================================================
+// 合併顯示：把幾個食材／成品併成一組，食材牆只出一張共同圖卡，介紹視窗內用口味切換。
+// 後端 ingredient-group-list / -upsert / -delete；同一品項只能在一組（衝突由後端回錯誤訊息）。
+// ===================================================================
+function renderIngGroupList(area) {
+  if (!ING_GROUP_READY) {
+    area.innerHTML = '<div class="task-empty">合併顯示功能尚未啟用（待 db push），目前無法新增或編輯。</div>';
+    return;
+  }
+  const q = (document.getElementById('recipeDbSearch').value || '').trim().toLowerCase();
+  const list = ING_GROUPS.filter(g => !q ||
+    String(g.name || '').toLowerCase().indexOf(q) !== -1 ||
+    (g.members || []).some(m => String(m.name || '').toLowerCase().indexOf(q) !== -1 || String(m.label || '').toLowerCase().indexOf(q) !== -1));
+  if (!list.length) {
+    area.innerHTML = '<div class="task-empty">' + (ING_GROUPS.length ? '沒有符合的組' : '還沒有任何合併組，按右上「＋ 新增」建立') + '</div>';
+    return;
+  }
+  area.innerHTML = '<div style="display:flex; flex-direction:column; gap:8px;">' + list.map(g => {
+    const n = (g.members || []).length;
+    const thumb = g.imageUrl
+      ? '<img src="' + sdEscapeHtml(g.imageUrl) + '" alt="" style="width:56px; height:56px; object-fit:cover; border-radius:10px; background:var(--c-surface); flex:none;">'
+      : '<div style="width:56px; height:56px; border-radius:10px; background:var(--c-surface); flex:none;"></div>';
+    return '<div style="display:flex; align-items:center; gap:12px; padding:8px 10px; border-bottom:1px solid var(--c-line);">' + thumb +
+      '<div style="flex:1; min-width:0;"><div style="font-weight:800;">' + sdEscapeHtml(g.name) + '</div>' +
+      '<div style="font-size:12px; color:var(--c-text-light);">' + n + ' 個口味　' +
+      sdEscapeHtml((g.members || []).map(m => m.label || m.name).filter(Boolean).join('、')) + '</div></div>' +
+      '<button type="button" class="task-mini-btn sd-grp-edit" data-id="' + sdEscapeHtml(g.id) + '">編輯</button></div>';
+  }).join('') + '</div>';
+  area.querySelectorAll('.sd-grp-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const g = ING_GROUPS.find(x => x.id === btn.dataset.id);
+      if (g) openIngGroupModal(g);
+    });
+  });
+}
+
+function openIngGroupModal(group) {
+  if (!ING_GROUP_READY) { alert('合併顯示功能尚未啟用（待 db push）'); return; }
+  ING_GROUP_EDIT = {
+    id: group ? group.id : null,
+    members: group ? (group.members || []).map(m => ({ kind: m.kind, itemId: m.itemId, name: m.name || '', no: m.no || '', label: m.label || '' })) : [],
+  };
+  document.getElementById('ingGroupTitle').textContent = group ? '編輯合併組' : '新增合併組';
+  document.getElementById('ingGroupDeleteBtn').style.display = group ? 'inline-block' : 'none';
+  document.getElementById('ingGroupForm').innerHTML =
+    '<label for="ig_name">組名 *</label><input type="text" id="ig_name" placeholder="例如：餐包">' +
+    '<label for="ig_image">共同圖（食材牆上這組的那張卡）</label>' + sdPhotoFieldHtml('ig_image', { ph: 'https://…' }) +
+    '<label>組介紹圖（可多張，自動裁正方形）</label>' + sdGalleryHtml('ig_gallery') +
+    '<label>成員（口味）</label><div id="ig_members"></div>' +
+    '<div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">' +
+    '<input type="text" id="ig_search" placeholder="搜尋食材／成品名稱…" style="flex:1; min-width:140px;">' +
+    '<select id="ig_pick" style="flex:2; min-width:160px;"></select>' +
+    '<button type="button" class="task-mini-btn" id="ig_addMember">加入</button></div>' +
+    '<label for="ig_sort">排序（數字小的排前面）</label><input type="number" id="ig_sort" placeholder="留空＝新增時排最後、編輯時維持原值">';
+  document.getElementById('ig_name').value = group ? (group.name || '') : '';
+  document.getElementById('ig_image').value = group ? (group.imageUrl || '') : '';
+  document.getElementById('ig_sort').value = group && group.sort != null ? String(group.sort) : '';
+  sdInitPhotoField('ig_image', true);
+  sdInitGallery('ig_gallery', group && Array.isArray(group.galleryUrls) ? group.galleryUrls : [], true);
+  renderIngGroupMembers();
+  renderIngGroupPick();
+  document.getElementById('ig_search').addEventListener('input', renderIngGroupPick);
+  document.getElementById('ig_addMember').addEventListener('click', () => {
+    const v = document.getElementById('ig_pick').value;
+    if (!v) return;
+    const parts = v.split('|');
+    const kind = parts[0], itemId = parts.slice(1).join('|');
+    const src = kind === 'product' ? RECIPE_DB.products : RECIPE_DB.ingredients;
+    const it = src.find(x => x.id === itemId);
+    if (!it) return;
+    ING_GROUP_EDIT.members.push({ kind, itemId, name: it.name || '', no: it.no || '', label: '' });
+    renderIngGroupMembers();
+    renderIngGroupPick();
+  });
+  const st = document.getElementById('ingGroupStatus');
+  st.textContent = ''; st.className = 'form-status';
+  document.getElementById('ingGroupModal').classList.add('show');
+}
+
+function closeIngGroupModal() {
+  document.getElementById('ingGroupModal').classList.remove('show');
+  ING_GROUP_EDIT = null;
+}
+
+function renderIngGroupMembers() {
+  const box = document.getElementById('ig_members');
+  const ms = ING_GROUP_EDIT.members;
+  if (!ms.length) { box.innerHTML = '<div style="font-size:12px; color:var(--c-text-light);">還沒有成員，從下方搜尋挑選加入</div>'; return; }
+  box.innerHTML = '';
+  ms.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:6px; margin-bottom:6px;';
+    const tag = document.createElement('span');
+    tag.style.cssText = 'font-size:11px; padding:1px 7px; border-radius:999px; background:var(--c-surface); white-space:nowrap; flex:none;';
+    tag.textContent = m.kind === 'product' ? '成品' : '食材';
+    const nm = document.createElement('span');
+    nm.style.cssText = 'flex:1; min-width:0; font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+    nm.textContent = m.name || m.no;
+    nm.title = m.name || '';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = '口味名（例如：黑糖）'; inp.value = m.label || '';
+    inp.style.cssText = 'width:130px; flex:none;';
+    inp.addEventListener('input', () => { m.label = inp.value; });
+    const mk = (label, aria, fn, extra) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'task-mini-btn' + (extra || ''); b.textContent = label;
+      b.setAttribute('aria-label', aria); b.style.cssText = 'padding:0 8px; min-width:0;';
+      b.addEventListener('click', fn);
+      return b;
+    };
+    const swap = (j) => { if (j < 0 || j >= ms.length) return; const x = ms.splice(i, 1)[0]; ms.splice(j, 0, x); renderIngGroupMembers(); };
+    row.appendChild(tag); row.appendChild(nm); row.appendChild(inp);
+    row.appendChild(mk('↑', '上移', () => swap(i - 1)));
+    row.appendChild(mk('↓', '下移', () => swap(i + 1)));
+    row.appendChild(mk('✕', '移除', () => { ms.splice(i, 1); renderIngGroupMembers(); renderIngGroupPick(); }, ' x-btn'));
+    box.appendChild(row);
+  });
+}
+
+function renderIngGroupPick() {
+  const sel = document.getElementById('ig_pick');
+  const q = (document.getElementById('ig_search').value || '').trim().toLowerCase();
+  const inThis = new Set(ING_GROUP_EDIT.members.map(m => m.kind + '|' + m.itemId));
+  const otherGroupOf = {};
+  ING_GROUPS.forEach(g => {
+    if (g.id === ING_GROUP_EDIT.id) return;
+    (g.members || []).forEach(m => { otherGroupOf[m.kind + '|' + m.itemId] = g.name; });
+  });
+  const opts = [];
+  [['ingredient', RECIPE_DB.ingredients], ['product', RECIPE_DB.products]].forEach(([kind, list]) => {
+    list.forEach(it => {
+      const key = kind + '|' + it.id;
+      if (inThis.has(key)) return;
+      const text = [it.name, it.brand, it.no].join(' ').toLowerCase();
+      if (q && text.indexOf(q) === -1) return;
+      const other = otherGroupOf[key];
+      opts.push('<option value="' + sdEscapeHtml(key) + '"' + (other ? ' disabled' : '') + '>' +
+        sdEscapeHtml((kind === 'product' ? '成品' : '食材') + '・' + (it.name || '') + (it.brand ? '（' + it.brand + '）' : '') + (other ? ' ── 已在「' + other + '」組' : '')) + '</option>');
+    });
+  });
+  sel.innerHTML = '<option value="">' + (opts.length ? '選擇要加入的食材／成品（' + opts.length + '）' : '沒有符合的品項') + '</option>' + opts.slice(0, 300).join('');
+}
+
+document.getElementById('ingGroupSaveBtn').addEventListener('click', async () => {
+  if (!ING_GROUP_EDIT) return;
+  const st = document.getElementById('ingGroupStatus');
+  const name = document.getElementById('ig_name').value.trim();
+  if (!name) { st.textContent = '請填寫組名'; st.className = 'form-status error'; return; }
+  if (!ING_GROUP_EDIT.members.length) { st.textContent = '至少要有一個成員'; st.className = 'form-status error'; return; }
+  const payload = {
+    name,
+    imageUrl: document.getElementById('ig_image').value.trim(),
+    galleryUrls: SD_GALLERY['ig_gallery'].get(),
+    members: ING_GROUP_EDIT.members.map(m => ({ kind: m.kind, itemId: m.itemId, label: String(m.label || '').trim() })),
+  };
+  const sortV = document.getElementById('ig_sort').value.trim();
+  if (sortV !== '') payload.sort = Number(sortV);
+  if (ING_GROUP_EDIT.id) payload.id = ING_GROUP_EDIT.id;
+  const btn = document.getElementById('ingGroupSaveBtn');
+  btn.disabled = true; st.textContent = '儲存中…'; st.className = 'form-status';
+  try {
+    const res = await sdApiPost('ingredient-group-upsert', payload);
+    if (!res || !res.success) throw new Error((res && res.error) || '儲存失敗');
+    closeIngGroupModal();
+    await sdLoadGroups();
+    renderRecipeDbTabs(); renderRecipeDbList();
+  } catch (err) {
+    alert(err.message || '儲存失敗');
+    st.textContent = '儲存失敗：' + err.message; st.className = 'form-status error';
+  }
+  btn.disabled = false;
+});
+
+document.getElementById('ingGroupDeleteBtn').addEventListener('click', async () => {
+  if (!ING_GROUP_EDIT || !ING_GROUP_EDIT.id) return;
+  if (!confirm('確定要刪除這個合併組嗎？成員品項不會被刪，前台會恢復各自一張卡。')) return;
+  const st = document.getElementById('ingGroupStatus');
+  try {
+    const res = await sdApiPost('ingredient-group-delete', { id: ING_GROUP_EDIT.id });
+    if (!res || !res.success) throw new Error((res && res.error) || '刪除失敗');
+    closeIngGroupModal();
+    await sdLoadGroups();
+    renderRecipeDbTabs(); renderRecipeDbList();
+  } catch (err) {
+    alert(err.message || '刪除失敗');
+    st.textContent = '刪除失敗：' + err.message; st.className = 'form-status error';
+  }
 });
