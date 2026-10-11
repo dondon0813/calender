@@ -710,6 +710,7 @@ function openIngGroupModal(group) {
   document.getElementById('ingGroupDeleteBtn').style.display = group ? 'inline-block' : 'none';
   document.getElementById('ingGroupForm').innerHTML =
     '<label for="ig_name">組名 *</label><input type="text" id="ig_name" placeholder="例如：餐包">' +
+    '<label for="ig_intro">共用介紹（選「全部」時顯示在口味下方；選了口味則顯示該品項自己的介紹）</label><textarea id="ig_intro" rows="3" maxlength="1000" placeholder="例如：寶寶餐包，無添加…"></textarea>' +
     '<label for="ig_image">共同圖（食材牆上這組的那張卡）</label>' + sdPhotoFieldHtml('ig_image', { ph: 'https://…' }) +
     '<label>組介紹圖（可多張，自動裁正方形）</label>' + sdGalleryHtml('ig_gallery') +
     '<label>成員（口味）</label><div id="ig_members"></div>' +
@@ -719,6 +720,7 @@ function openIngGroupModal(group) {
     '<button type="button" class="task-mini-btn" id="ig_addMember">加入</button></div>' +
     '<label for="ig_sort">排序（數字小的排前面）</label><input type="number" id="ig_sort" placeholder="留空＝新增時排最後、編輯時維持原值">';
   document.getElementById('ig_name').value = group ? (group.name || '') : '';
+  document.getElementById('ig_intro').value = group ? (group.intro || '') : '';
   document.getElementById('ig_image').value = group ? (group.imageUrl || '') : '';
   document.getElementById('ig_sort').value = group && group.sort != null ? String(group.sort) : '';
   sdInitPhotoField('ig_image', true);
@@ -815,6 +817,7 @@ document.getElementById('ingGroupSaveBtn').addEventListener('click', async () =>
   if (!ING_GROUP_EDIT.members.length) { st.textContent = '至少要有一個成員'; st.className = 'form-status error'; return; }
   const payload = {
     name,
+    intro: document.getElementById('ig_intro').value.trim(),
     imageUrl: document.getElementById('ig_image').value.trim(),
     galleryUrls: SD_GALLERY['ig_gallery'].get(),
     members: ING_GROUP_EDIT.members.map(m => ({ kind: m.kind, itemId: m.itemId, label: String(m.label || '').trim() })),

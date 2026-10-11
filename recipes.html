@@ -1279,6 +1279,10 @@
     <div class="rc-subtitle" id="ingModalBrandLine" style="display:none;"></div>
     <div class="filter-chips chips-scroll" id="ingModalFlavors" style="display:none;"></div>
 
+    <div class="rc-tip-box" id="ingModalGroupIntro" style="display:none; margin-bottom:10px; white-space:pre-wrap;">
+      <div class="rc-tip-text" id="ingModalGroupIntroText"></div>
+    </div>
+
     <div class="rc-info-row" id="ingModalInfoRow"></div>
 
     <div class="rc-tip-box" id="ingModalDescBox" style="display:none;">
@@ -2581,6 +2585,7 @@ function fillIngModalForItem(item) {
   } else {
     infoRowEl.style.display = 'none';
   }
+  document.getElementById('ingModalGroupIntro').style.display = 'none';
   const descBox = document.getElementById('ingModalDescBox');
   const desc = item['簡短介紹'] || '';
   if (desc) {
@@ -2636,6 +2641,15 @@ function openIngredientGroupModal(group) {
       brandLineEl.style.display = 'block';
     } else {
       brandLineEl.style.display = 'none';
+    }
+
+    const groupIntro = String(group['簡短介紹'] || '').trim();
+    const groupIntroEl = document.getElementById('ingModalGroupIntro');
+    if (groupIntro) {
+      document.getElementById('ingModalGroupIntroText').textContent = groupIntro;
+      groupIntroEl.style.display = 'block';
+    } else {
+      groupIntroEl.style.display = 'none';
     }
 
     const infoRowEl = document.getElementById('ingModalInfoRow');
