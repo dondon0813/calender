@@ -3828,7 +3828,9 @@ function lotBuildBatchAiText(b) {
     '「' + lotAnnTitle(s.draw) + '」：' + s.list.map(w => lotWinnerWho(w) + '（' + (w.prize || '') + '）').join('、'));
   return '請幫我製作一張 Instagram 限時動態公告圖（9:16 直式）：主題是抽獎' + (b.kind === 'win' ? '中獎' : '寄出') +
     '公告。標題寫「' + (b.kind === 'win' ? '恭喜得獎' : '獎品已寄出') + '」，下方依活動分段、清楚排列名單與獎品：' + parts.join('；') +
-    '。風格溫暖可愛，色調用藕粉與奶茶色，文字要清楚好讀。';
+    '。風格溫暖可愛，色調用藕粉與奶茶色，文字要清楚好讀。' +
+    '重要：得獎名單只用文字呈現，不要在得獎者旁邊放任何商品圖、獎品圖或品牌圖，也不要自己模擬或畫出商品、獎品的樣子；' +
+    '如果需要裝飾，只能用和商品無關的可愛插圖（例如星星、愛心、禮物盒、彩帶），放在標題或邊角，不要跟名單一一對應。';
 }
 function lotCopyPlain(text, el) {
   if (typeof copyText === 'function') { copyText(text, el); return; }
