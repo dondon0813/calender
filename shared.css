@@ -68,6 +68,7 @@
   --c-mint-text: #5C9147;        /* 綠系標題文字 */
   --c-mint-bg: #E4F5DF;          /* 綠淡底 */
   --c-mint-border: #B9E3AC;      /* 綠邊框 */
+  --c-done-green: #74A85E;       /* 完成綠（實心底配白字）：已完成／已公告打勾的按鈕底色（10-11 雪莉定，起點＝抽獎公告管道按鈕） */
   --c-ibon-green: #72A576;       /* ibon 教學圖上的按鈕綠（取樣自圖片，按鈕要跟圖一致） */
   --c-ibon-green-dark: #5F9163;  /* 同上 hover */
   --c-pink-deep: #FF6F91;        /* 粉紅重點文字 */
