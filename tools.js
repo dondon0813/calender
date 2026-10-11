@@ -855,7 +855,7 @@ function pgBuildPosterHtml(r) {
 
 // 食材圖視覺大小統一（10-12 雪莉：吐司直式又沒留白，撐滿整格看起來特別大）：
 // 不再單純「塞進正方形」，改成每張圖佔的面積一樣（格子的 70%），長寬各自不超過格子。
-// 方形約 84%、直式吐司約 76%×92%、橫式起司約 95%×74%。圖片沒載入成功（讀不到原始尺寸）就維持原本 contain。
+// 高度最多到格子 90%（10-12 雪莉定）。方形約 84%、直式吐司約 73%×90%、橫式起司約 95%×74%。圖片沒載入成功（讀不到原始尺寸）就維持原本 contain。
 function pgNormalizeIngPhotos(root) {
   root.querySelectorAll('.pgp-ing-photo-wrap').forEach(wrap => {
     const img = wrap.querySelector('.pgp-ing-photo');
@@ -864,7 +864,7 @@ function pgNormalizeIngPhotos(root) {
     const r = img.naturalWidth / img.naturalHeight;
     let w = box * Math.sqrt(0.7 * r);
     let h = box * Math.sqrt(0.7 / r);
-    const k = Math.min(1, box / w, box / h);
+    const k = Math.min(1, box / w, box * 0.9 / h); // 高度上限 90%（10-12 雪莉定）
     w *= k; h *= k;
     wrap.style.backgroundSize = `${Math.round(w)}px ${Math.round(h)}px`;
   });
