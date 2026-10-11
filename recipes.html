@@ -2694,7 +2694,10 @@ function openIngredientGroupModal(group) {
       brandLineEl.style.display = 'none';
     }
 
-    setIngHeating(null);
+    // 各口味加熱方式完全相同（含時間）＝只在介紹下方顯示一次，口味段落不重複（雪莉 10-11）；不同才各段落分開列
+    const heatKeys = members.map(m => JSON.stringify(heatingOfItem(m.item)));
+    const sameHeat = heatKeys[0] !== '[]' && heatKeys.every(k => k === heatKeys[0]);
+    setIngHeating(sameHeat ? members[0].item : null);
     const groupIntro = String(group['簡短介紹'] || '').trim();
     const groupIntroEl = document.getElementById('ingModalGroupIntro');
     if (groupIntro) {
@@ -2708,7 +2711,7 @@ function openIngredientGroupModal(group) {
     const blocks = members.map(m => {
       const rows = ingSpecRowsHtml(m.item);
       const desc = m.item['簡短介紹'] ? `<div class="spec-flavor-desc">${ingEsc(m.item['簡短介紹'])}</div>` : '';
-      const heat = heatingRowHtml(m.item, 28, 'heat-sm');
+      const heat = sameHeat ? '' : heatingRowHtml(m.item, 28, 'heat-sm');
       if (!rows && !desc && !heat) return '';
       return `<div class="spec-flavor"><div class="spec-flavor-title">${ingEsc(ingFlavorHeading(m.flavor, m.item))}</div>${heat}${rows}${desc}</div>`;
     }).filter(Boolean);
