@@ -996,11 +996,13 @@ function pgHslToRgb(h, s, l) {
   const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
 }
-async function pgRecolorImg(img, colors, withCircle) {
+// textFix：把圖裡的咖啡色字改成「簡單步驟」那張的深咖啡 #53220a（10-12 雪莉：準備食材／小提醒字色跟步驟一樣）
+// { base: 這張圖原本字色, maxX: 只改左邊到這個比例（小提醒右邊的燈泡不動） }
+async function pgRecolorImg(img, colors, withCircle, textFix) {
   if (!img || !img.naturalWidth) return;
   const needLabel = colors.label.toLowerCase() !== PG_COLOR_DEFAULTS.label;
   const needCircle = withCircle && colors.circle.toLowerCase() !== PG_COLOR_DEFAULTS.circle;
-  if (!needLabel && !needCircle) return;
+  if (!needLabel && !needCircle && !textFix) return;
   try {
     const W = img.naturalWidth, H = img.naturalHeight;
     const c = document.createElement('canvas');
@@ -1011,12 +1013,15 @@ async function pgRecolorImg(img, colors, withCircle) {
     const d = im.data;
     const baseLabelL = pgHexToHsl(PG_COLOR_DEFAULTS.label)[2], tLabel = pgHexToHsl(colors.label);
     const baseCircleL = pgHexToHsl(PG_COLOR_DEFAULTS.circle)[2], tCircle = pgHexToHsl(colors.circle);
+    const tText = pgHexToHsl('#53220a'), baseTextL = textFix ? pgHexToHsl(textFix.base)[2] : 0;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i + 3] < 8) continue;
       const [h, s, l] = pgRgbToHsl(d[i], d[i + 1], d[i + 2]);
       let t = null, baseL = 0;
       // 粉色底：色相 340°～12°、亮度 > 0.62
       if (needLabel && (h >= 340 || h <= 12) && l > 0.62 && s > 0.25) { t = tLabel; baseL = baseLabelL; }
+      // 咖啡色字（含反鋸齒邊緣）：色相 15°～45°、亮度 < 0.6
+      else if (textFix && h >= 15 && h <= 45 && l < 0.6 && s > 0.2 && ((i / 4) % W) < W * textFix.maxX) { t = tText; baseL = baseTextL; }
       // 橘圈：色相 12°～28°、飽和 > 0.6、亮度 0.55～0.82，只看圖片中間 30%～70%（避開左邊星星裝飾）
       else if (needCircle && h > 12 && h < 28 && s > 0.6 && l > 0.55 && l < 0.82) {
         const x = (i / 4) % W;
@@ -1037,9 +1042,9 @@ async function pgApplyColors(root) {
   const badge = root.querySelector('.pgp-age-badge');
   if (badge) badge.style.background = colors.badge;
   root.querySelectorAll('.pgp-step-badge').forEach(b => { b.style.background = colors.circle; });
-  await pgRecolorImg(root.querySelector('.pgp-ing-badge-img'), colors, false);
+  await pgRecolorImg(root.querySelector('.pgp-ing-badge-img'), colors, false, { base: '#7f5528', maxX: 1 });
   await pgRecolorImg(root.querySelector('.pgp-step-badge-img'), colors, true);
-  await pgRecolorImg(root.querySelector('.pgp-tip-badge'), colors, false);
+  await pgRecolorImg(root.querySelector('.pgp-tip-badge'), colors, false, { base: '#7a4d16', maxX: 0.72 });
 }
 // 配色選擇器：開視窗時帶入目前值；改色存本機，已經有產生的圖就自動重畫（0.6 秒內連續調整只畫最後一次）
 var pgColorTimer = null, pgColorBound = false;
