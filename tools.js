@@ -806,7 +806,7 @@ function pgBuildPosterHtml(r) {
   // 不再穿插進 flex 排版裡佔位，用百分比 left 對齊每個交界點。
   const n = stepCards.length;
   const arrowsHtml = Array.from({ length: Math.max(n - 1, 0) }, (_, i) =>
-    `<span class="pgp-step-arrow" style="left:${(100 / n * (i + 1)).toFixed(2)}%"></span>`).join('');
+    `<span class="pgp-step-arrow" style="left:${(100 / n * (i + 1)).toFixed(2)}%">${pgArrowSvg(PG_COLOR_DEFAULTS.circle)}</span>`).join('');
   const stepHtml = stepCards.join('') + arrowsHtml;
 
   // 小提醒字級：估算每條換成幾行（中文字算 1、英數算 0.55），框內可用高度約 148px，
@@ -921,7 +921,8 @@ function pgLayoutSteps(root) {
     // 數字圓圈放進步驟圖左上角（10-12 雪莉）：圖片上緣往下 12px、往右 12px，圓圈 40px
     if (badge) { badge.style.bottom = (photoH - 12 - 40) + 'px'; badge.style.left = '12px'; }
   });
-  grid.querySelectorAll('.pgp-step-arrow').forEach(a => { a.style.bottom = Math.round(photoH / 2 - 20) + 'px'; });
+  // 箭頭中心對準圖片中線（transform 往下 50%，所以 bottom 就是中心點高度）
+  grid.querySelectorAll('.pgp-step-arrow').forEach(a => { a.style.bottom = Math.round(photoH / 2) + 'px'; });
 }
 
 // 標題微微彎曲（10-12 雪莉）：每個字拆成一格，依「離那一行中心多遠」往下移＋旋轉，排成中間高、兩邊低的拱形。
@@ -969,6 +970,11 @@ function pgArcTitle(root) {
 // badge＝月齡標籤底色；title＝標題字色。標籤是 PNG 圖，換色＝在畫布上把粉色底（或橘圈）的像素改色相／飽和、保留明暗。
 var PG_COLOR_DEFAULTS = { label: '#fdc4bc', circle: '#fc9474', badge: '#8fb035', title: '#ee8e36' };
 var PG_COLOR_KEY = 'pg_poster_colors';
+// 步驟箭頭：一整個箭頭外形，先畫一層粗白線（外框）再填色，白框沿外圍完整繞一圈、轉角圓角
+function pgArrowSvg(color) {
+  const d = 'M6 15 H30 V6 L52 22 L30 38 V29 H6 Z';
+  return `<svg viewBox="0 0 58 44" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="#fff" stroke="#fff" stroke-width="9" stroke-linejoin="round"/><path d="${d}" fill="${color}" stroke="${color}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+}
 function pgGetColors() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(PG_COLOR_KEY) || '{}') || {}; } catch (e) { saved = {}; }
@@ -1043,7 +1049,7 @@ async function pgApplyColors(root) {
   if (badge) badge.style.background = colors.badge;
   root.querySelectorAll('.pgp-step-badge').forEach(b => { b.style.background = colors.circle; });
   const poster = root.querySelector('.pgp-poster');
-  if (poster) poster.style.setProperty('--pgp-arrow-color', colors.circle); // 箭頭跟圈圈同色
+  if (poster) poster.querySelectorAll('.pgp-step-arrow').forEach(el => { el.innerHTML = pgArrowSvg(colors.circle); }); // 箭頭跟圈圈同色
   await pgRecolorImg(root.querySelector('.pgp-ing-badge-img'), colors, false, { base: '#7f5528', maxX: 1 });
   await pgRecolorImg(root.querySelector('.pgp-step-badge-img'), colors, true);
   await pgRecolorImg(root.querySelector('.pgp-tip-badge'), colors, false, { base: '#7a4d16', maxX: 0.72 });
