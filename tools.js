@@ -1178,7 +1178,7 @@ async function pgOpenTextEditor() {
       <span style="flex:1"></span>
       <button class="task-mini-btn" data-ed="smaller" title="字變小">A−</button>
       <button class="task-mini-btn" data-ed="bigger" title="字變大">A+</button>
-      <label style="font-size:12px;color:#7D6A5F;display:flex;align-items:center;gap:4px;">顏色<input type="color" id="pgEdColor" style="width:36px;height:28px;padding:0;border:1px solid #E6DCD2;border-radius:6px;"></label>
+      <span style="font-size:12px;color:#7D6A5F;display:flex;align-items:center;gap:4px;">顏色<input type="color" id="pgEdColor" tabindex="-1" style="width:36px;height:28px;padding:0;border:1px solid #E6DCD2;border-radius:6px;"></span>
       <button class="task-mini-btn" data-ed="reset" title="這一段回到原本">重置這段</button>
       <button class="task-mini-btn" data-ed="resetAll">全部重置</button>
       <button class="task-submit-btn" data-ed="done" style="width:auto;margin:0;padding:8px 18px;">完成</button>
@@ -1198,6 +1198,7 @@ async function pgOpenTextEditor() {
   pgApplyEdits(stage, edits);
   pgNormalizeIngPhotos(stage);
   pgLayoutSteps(stage);
+  pgPlaceMascot(stage);
   // 縮放到視窗高度（編輯畫面不做標題拱形，方便直接打字；產圖時才彎）
   const scaler = ov.querySelector('#pgEdScaler');
   const fit = () => {
@@ -1243,6 +1244,8 @@ async function pgOpenTextEditor() {
     tg.el.style.outlineOffset = '4px';
     ov.querySelector('#pgEdTarget').textContent = '正在編輯：' + tg.label;
     ov.querySelector('#pgEdColor').value = /^#[0-9a-f]{6}$/i.test((edits[tg.key] || {}).color || '') ? edits[tg.key].color : '#5a4a3f';
+    // 10-12 雪莉回報：點文字後按 Enter 跳出選色器 → 選取時一定把游標放回這段文字，不讓焦點留在選色框
+    if (document.activeElement !== tg.el) tg.el.focus();
     placeHandle();
   };
   targets.forEach(tg => {
@@ -1251,7 +1254,7 @@ async function pgOpenTextEditor() {
     if (tg.el.style.webkitLineClamp !== undefined) tg.el.style.webkitLineClamp = 'unset';
     tg.el.addEventListener('focus', () => select(tg));
     tg.el.addEventListener('pointerdown', () => select(tg));
-    tg.el.addEventListener('input', () => { if (pgEditor.current !== tg) select(tg); saveText(tg); placeHandle(); });
+    tg.el.addEventListener('input', () => { if (pgEditor.current !== tg) select(tg); saveText(tg); pgLayoutSteps(stage); pgPlaceMascot(stage); placeHandle(); });
     // 貼上只收純文字，避免帶進別處的格式
     tg.el.addEventListener('paste', ev => {
       ev.preventDefault();
@@ -1264,6 +1267,7 @@ async function pgOpenTextEditor() {
     els.forEach(el => { ['fontSize', 'color', 'marginLeft', 'marginTop', 'left', 'top'].forEach(p => { el.style[p] = ''; }); delete el.dataset.fixedFs; });
     pgApplyOneEdit(tg, edits[tg.key]);
     pgLayoutSteps(stage);
+    pgPlaceMascot(stage);
     placeHandle();
   };
   const curFs = tg => parseFloat(getComputedStyle(tg.spans ? (tg.el.querySelector('span') || tg.el) : tg.el).fontSize) || 32;
@@ -1295,6 +1299,9 @@ async function pgOpenTextEditor() {
       pgOpenTextEditor();
     }
   });
+  // 選色框：Enter 不打開選色器；選完顏色游標回到正在編輯的文字
+  ov.querySelector('#pgEdColor').addEventListener('keydown', ev => { if (ev.key === 'Enter') ev.preventDefault(); });
+  ov.querySelector('#pgEdColor').addEventListener('change', () => { if (pgEditor && pgEditor.current) pgEditor.current.el.focus(); });
   ov.querySelector('#pgEdColor').addEventListener('input', ev => {
     const tg = pgEditor.current;
     if (!tg) return;
@@ -1335,6 +1342,16 @@ function pgCloseTextEditor(regenerate) {
   if (regenerate) pgGeneratePoster();
 }
 
+// 右下角大貓咪（10-12 雪莉選 A＋B）：縮到 300px，並跟著小提醒框上下移動——頭頂比框上緣高 40px，
+// 框變矮時貓咪一起往下（身體超出海報底部的部分自然被裁掉），不再蓋住步驟圖。沒有小提醒就維持貼底。
+function pgPlaceMascot(root) {
+  const m = root.querySelector('.pgp-mascot');
+  const tip = root.querySelector('.pgp-tip-bar');
+  if (!m) return;
+  m.style.width = '300px';
+  if (tip) { m.style.top = (tip.offsetTop - 40) + 'px'; m.style.bottom = 'auto'; }
+}
+
 async function pgGeneratePoster() {
   const r = pgSelectedRecipe;
   if (!r) return;
@@ -1358,6 +1375,7 @@ async function pgGeneratePoster() {
   pgApplyEdits(stage, pgGetEdits());
   pgNormalizeIngPhotos(stage);
   pgLayoutSteps(stage);
+  pgPlaceMascot(stage);
   pgArcTitle(stage);
 
   // 標題用的自訂字體檔案較大，沒等載入完成就截圖會先拍到系統預設字體
