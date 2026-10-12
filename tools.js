@@ -1211,6 +1211,9 @@ async function pgOpenTextEditor() {
   };
   pgEditor = { ov, stage, edits, current: null, scale: 1, fit };
   fit();
+  // 剛插入畫面時版面高度可能還沒算好（量到 0 會變原尺寸顯示），下一個畫面更新後再量一次
+  requestAnimationFrame(() => { if (pgEditor) fit(); });
+  setTimeout(() => { if (pgEditor) fit(); }, 150);
   window.addEventListener('resize', fit);
 
   const targets = pgEditTargets(stage);
