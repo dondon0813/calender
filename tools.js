@@ -907,13 +907,16 @@ function pgLayoutSteps(root) {
   // 文字不截斷（10-12 雪莉）：每格最多 3 行，放不下就整排一起縮字級 32→29→26→24
   const caps = cards.map(card => card.querySelector('.pgp-step-caption')).filter(Boolean);
   let fs = 32, maxLines = 1;
+  // 使用者在編輯模式手動設過字級的格子（data-fixed-fs）不參與自動縮字
+  const capFs = cap => parseFloat(cap.style.fontSize) || fs;
+  const capLines = cap => Math.max(1, Math.round(cap.scrollHeight / (capFs(cap) * 1.4)));
   for (fs of [32, 29, 26, 24]) {
-    caps.forEach(cap => { cap.style.fontSize = fs + 'px'; });
-    maxLines = Math.max(1, ...caps.map(cap => Math.round(cap.scrollHeight / (fs * 1.4))));
+    caps.forEach(cap => { if (!cap.dataset.fixedFs) cap.style.fontSize = fs + 'px'; });
+    maxLines = Math.max(1, ...caps.filter(c => !c.dataset.fixedFs).map(capLines));
     if (maxLines <= 3) break;
   }
-  const textH = maxLines * fs * 1.4 + 8;
-  const photoH = Math.round(Math.max(150, Math.min(grid.clientHeight - textH, cards[0].clientWidth)));
+  const textH = Math.max(...caps.map(cap => capLines(cap) * capFs(cap) * 1.4)) + 8;
+  const photoH = Math.round(Math.max(110, Math.min(grid.clientHeight - textH, cards[0].clientWidth)));
   cards.forEach(card => {
     const wrap = card.querySelector('.pgp-step-photo-wrap');
     const badge = card.querySelector('.pgp-step-badge');
@@ -932,12 +935,16 @@ function pgArcTitle(root) {
   const layers = [root.querySelector('.pgp-title-outline'), root.querySelector('.pgp-title')].filter(Boolean);
   if (layers.length !== 2) return;
   layers.forEach(el => {
-    const text = el.textContent;
+    // 編輯模式可能換過行（<br>）：逐行拆字，行與行之間保留 <br>
+    const tmp = document.createElement('div');
+    const lineTexts = el.innerHTML.split(/<br\s*\/?>/i).map(h => { tmp.innerHTML = h; return tmp.textContent; });
+    const text = lineTexts.join('\n');
     el.textContent = '';
     // html2canvas 遇到「overflow:hidden（三行截斷）＋子元素有 transform」會把左半邊的字裁掉，拱形時改成一般區塊不截斷
     el.style.display = 'block';
     el.style.overflow = 'visible';
     [...text].forEach(ch => {
+      if (ch === '\n') { el.appendChild(document.createElement('br')); return; }
       const sp = document.createElement('span');
       sp.textContent = ch;
       sp.style.display = 'inline-block';
@@ -945,7 +952,8 @@ function pgArcTitle(root) {
       el.appendChild(sp);
     });
   });
-  const spans = [...layers[1].children];
+  const spans = [...layers[1].querySelectorAll('span')];
+  const outlineSpans = [...layers[0].querySelectorAll('span')];
   const lines = {};
   spans.forEach((sp, i) => { (lines[sp.offsetTop] = lines[sp.offsetTop] || []).push(i); });
   const TITLE_ARC_SAG = 26; // 10-12 雪莉：再彎一些（原 14）
@@ -960,7 +968,8 @@ function pgArcTitle(root) {
       const y = TITLE_ARC_SAG * (dx / half) ** 2;
       const deg = Math.atan(2 * TITLE_ARC_SAG * dx / (half * half)) * 180 / Math.PI;
       const t = `translateY(${y.toFixed(1)}px) rotate(${deg.toFixed(2)}deg)`;
-      layers.forEach(el => { el.children[i].style.transform = t; });
+      sp.style.transform = t;
+      if (outlineSpans[i]) outlineSpans[i].style.transform = t;
     });
   });
 }
@@ -1083,6 +1092,249 @@ function pgResetColors() {
   if (pgSelectedRecipe && wrap && wrap.style.display !== 'none') pgGeneratePoster();
 }
 
+// ===== 貼文圖文字編輯（10-12 雪莉：點圖上文字直接改字／換行／字級／顏色／拖曳位置） =====
+// 只改這張圖、不動食譜資料庫；調整依食譜 ID 記在本機瀏覽器，同一道食譜下次產生自動套用。
+// 每段文字一個 key：title、age、ing-0…、step-0…、tip-0…、footer；值 { text, fs, color, dx, dy }（都可省略）。
+var PG_EDIT_KEY = 'pg_poster_edits';
+function pgRecipeKey() { return pgSelectedRecipe ? String(pgSelectedRecipe['食譜ID'] || pgSelectedRecipe['食譜名稱'] || '') : ''; }
+function pgGetAllEdits() {
+  try { return JSON.parse(localStorage.getItem(PG_EDIT_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+function pgGetEdits() { return pgGetAllEdits()[pgRecipeKey()] || {}; }
+function pgSaveEdits(edits) {
+  const all = pgGetAllEdits();
+  const k = pgRecipeKey();
+  if (!k) return;
+  if (Object.keys(edits).length) all[k] = edits; else delete all[k];
+  try { localStorage.setItem(PG_EDIT_KEY, JSON.stringify(all)); } catch (e) { /* 存不了就只用這一次 */ }
+}
+// 可編輯的文字清單（標題有外框層，改字／字級要兩層一起改）
+function pgEditTargets(root) {
+  const list = [];
+  const title = root.querySelector('.pgp-title');
+  if (title) list.push({ key: 'title', el: title, twin: root.querySelector('.pgp-title-outline'), label: '標題' });
+  const age = root.querySelector('.pgp-age-badge');
+  if (age) list.push({ key: 'age', el: age, label: '月齡' });
+  root.querySelectorAll('.pgp-ing-text').forEach((el, i) => list.push({ key: 'ing-' + i, el, label: '食材', spans: true }));
+  root.querySelectorAll('.pgp-step-caption').forEach((el, i) => list.push({ key: 'step-' + i, el, label: '步驟' }));
+  root.querySelectorAll('.pgp-tip-item span').forEach((el, i) => list.push({ key: 'tip-' + i, el, label: '小提醒' }));
+  const footer = root.querySelector('.pgp-footer');
+  if (footer) list.push({ key: 'footer', el: footer, label: '頁尾' });
+  return list;
+}
+function pgTextToHtml(text) { return escHtml(text).replace(/\n/g, '<br>'); }
+// 把某一段的調整套到畫面上（產圖與編輯畫面共用）
+function pgApplyOneEdit(tg, e) {
+  if (!e) return;
+  const els = tg.twin ? [tg.el, tg.twin] : [tg.el];
+  if (typeof e.text === 'string') {
+    els.forEach(el => {
+      el.innerHTML = tg.spans ? `<span class="pgp-ing-name">${pgTextToHtml(e.text)}</span>` : pgTextToHtml(e.text);
+    });
+  }
+  if (e.fs) {
+    els.forEach(el => {
+      el.style.fontSize = e.fs + 'px';
+      el.dataset.fixedFs = '1';
+      if (tg.spans) el.querySelectorAll('span').forEach(s => { s.style.fontSize = e.fs + 'px'; });
+    });
+  }
+  if (e.color) {
+    tg.el.style.color = e.color;
+    if (tg.spans) tg.el.querySelectorAll('span').forEach(s => { s.style.color = e.color; });
+  }
+  if (e.dx || e.dy) {
+    // 絕對定位（標題、月齡）用 margin 位移；其他用 position:relative＋left/top，都不影響旁邊排版
+    els.forEach(el => {
+      if (getComputedStyle(el).position === 'absolute') {
+        el.style.marginLeft = (e.dx || 0) + 'px';
+        el.style.marginTop = (e.dy || 0) + 'px';
+      } else {
+        el.style.position = 'relative';
+        el.style.left = (e.dx || 0) + 'px';
+        el.style.top = (e.dy || 0) + 'px';
+      }
+    });
+  }
+}
+function pgApplyEdits(root, edits) {
+  pgEditTargets(root).forEach(tg => pgApplyOneEdit(tg, edits[tg.key]));
+}
+
+// 編輯畫面：全螢幕蓋一層，海報依視窗縮放顯示；點文字＝直接打字（Enter 換行），上方工具列調字級／顏色／重置，
+// 文字旁的「移動」把手拖曳改位置。按「完成」關掉並重新產圖。
+var pgEditor = null;
+async function pgOpenTextEditor() {
+  const r = pgSelectedRecipe;
+  if (!r) return;
+  if (pgEditor) pgCloseTextEditor(false);
+  const ov = document.createElement('div');
+  ov.id = 'pgEditOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(60,45,35,.55);display:flex;flex-direction:column;align-items:center;';
+  ov.innerHTML = `
+    <div style="width:100%;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);">
+      <strong style="color:#5A4A42;font-size:14px;">編輯貼文圖文字</strong>
+      <span id="pgEdTarget" style="font-size:12px;color:#7D6A5F;">點圖上的文字開始編輯（Enter 換行）</span>
+      <span style="flex:1"></span>
+      <button class="task-mini-btn" data-ed="smaller" title="字變小">A−</button>
+      <button class="task-mini-btn" data-ed="bigger" title="字變大">A+</button>
+      <label style="font-size:12px;color:#7D6A5F;display:flex;align-items:center;gap:4px;">顏色<input type="color" id="pgEdColor" style="width:36px;height:28px;padding:0;border:1px solid #E6DCD2;border-radius:6px;"></label>
+      <button class="task-mini-btn" data-ed="reset" title="這一段回到原本">重置這段</button>
+      <button class="task-mini-btn" data-ed="resetAll">全部重置</button>
+      <button class="task-submit-btn" data-ed="done" style="width:auto;margin:0;padding:8px 18px;">完成</button>
+    </div>
+    <div id="pgEdScroll" style="flex:1;width:100%;overflow:auto;display:flex;justify-content:center;padding:16px 0;">
+      <div id="pgEdScaler" style="transform-origin:top left;">
+        <div id="pgEdStage" style="width:1080px;height:1350px;--c-bg-bottom:#FFF1E6;--c-border-light:#FFE3CC;--c-text:#5a4a3f;--c-text-soft:#8a7462;"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const stage = ov.querySelector('#pgEdStage');
+  stage.innerHTML = pgBuildPosterHtml(r);
+  const imgs = Array.from(stage.querySelectorAll('img'));
+  await Promise.all(imgs.map(img => new Promise(res => { if (img.complete) return res(); img.addEventListener('load', res); img.addEventListener('error', res); })));
+  await pgApplyColors(stage);
+  const edits = Object.assign({}, pgGetEdits());
+  pgApplyEdits(stage, edits);
+  pgNormalizeIngPhotos(stage);
+  pgLayoutSteps(stage);
+  // 縮放到視窗高度（編輯畫面不做標題拱形，方便直接打字；產圖時才彎）
+  const scaler = ov.querySelector('#pgEdScaler');
+  const fit = () => {
+    const avail = ov.querySelector('#pgEdScroll').clientHeight - 32;
+    const s = Math.min(1, Math.max(0.3, avail / 1350), (window.innerWidth - 24) / 1080);
+    scaler.style.transform = `scale(${s})`;
+    scaler.style.width = (1080 * s) + 'px';
+    scaler.style.height = (1350 * s) + 'px';
+    pgEditor.scale = s;
+  };
+  pgEditor = { ov, stage, edits, current: null, scale: 1, fit };
+  fit();
+  window.addEventListener('resize', fit);
+
+  const targets = pgEditTargets(stage);
+  const handle = document.createElement('div');
+  handle.title = '按住拖曳移動位置';
+  handle.textContent = '✥ 移動';
+  handle.style.cssText = 'position:absolute;z-index:20;display:none;padding:4px 10px;background:#5A4A42;color:#fff;border-radius:999px;font-size:22px;cursor:move;user-select:none;touch-action:none;';
+  stage.querySelector('.pgp-poster').appendChild(handle);
+  const placeHandle = () => {
+    const tg = pgEditor.current;
+    if (!tg) { handle.style.display = 'none'; return; }
+    const pr = stage.querySelector('.pgp-poster').getBoundingClientRect();
+    const er = tg.el.getBoundingClientRect();
+    const s = pgEditor.scale;
+    handle.style.display = 'block';
+    handle.style.left = ((er.left - pr.left) / s) + 'px';
+    handle.style.top = Math.max(0, (er.top - pr.top) / s - 44) + 'px';
+  };
+  const saveText = tg => {
+    const text = tg.el.innerText.replace(/\n+$/, '');
+    const e = edits[tg.key] || {};
+    e.text = text;
+    edits[tg.key] = e;
+    if (tg.twin) tg.twin.innerHTML = pgTextToHtml(text);
+    pgSaveEdits(edits);
+  };
+  const select = tg => {
+    if (pgEditor.current && pgEditor.current !== tg) pgEditor.current.el.style.outline = '';
+    pgEditor.current = tg;
+    tg.el.style.outline = '3px dashed #C99A9B';
+    tg.el.style.outlineOffset = '4px';
+    ov.querySelector('#pgEdTarget').textContent = '正在編輯：' + tg.label;
+    ov.querySelector('#pgEdColor').value = /^#[0-9a-f]{6}$/i.test((edits[tg.key] || {}).color || '') ? edits[tg.key].color : '#5a4a3f';
+    placeHandle();
+  };
+  targets.forEach(tg => {
+    tg.el.setAttribute('contenteditable', 'true');
+    tg.el.style.cursor = 'text';
+    if (tg.el.style.webkitLineClamp !== undefined) tg.el.style.webkitLineClamp = 'unset';
+    tg.el.addEventListener('focus', () => select(tg));
+    tg.el.addEventListener('pointerdown', () => select(tg));
+    tg.el.addEventListener('input', () => { if (pgEditor.current !== tg) select(tg); saveText(tg); placeHandle(); });
+    // 貼上只收純文字，避免帶進別處的格式
+    tg.el.addEventListener('paste', ev => {
+      ev.preventDefault();
+      document.execCommand('insertText', false, (ev.clipboardData || window.clipboardData).getData('text'));
+    });
+  });
+  const reapply = tg => {
+    // 重畫這一段：先清掉樣式再套目前的調整
+    const els = tg.twin ? [tg.el, tg.twin] : [tg.el];
+    els.forEach(el => { ['fontSize', 'color', 'marginLeft', 'marginTop', 'left', 'top'].forEach(p => { el.style[p] = ''; }); delete el.dataset.fixedFs; });
+    pgApplyOneEdit(tg, edits[tg.key]);
+    pgLayoutSteps(stage);
+    placeHandle();
+  };
+  const curFs = tg => parseFloat(getComputedStyle(tg.spans ? (tg.el.querySelector('span') || tg.el) : tg.el).fontSize) || 32;
+  ov.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-ed]');
+    if (!btn) return;
+    const act = btn.dataset.ed;
+    const tg = pgEditor.current;
+    if (act === 'done') { pgCloseTextEditor(true); return; }
+    if (act === 'resetAll') {
+      if (!confirm('這道食譜的文字調整全部清掉、回到原本？')) return;
+      Object.keys(edits).forEach(k => delete edits[k]);
+      pgSaveEdits(edits);
+      pgCloseTextEditor(false);
+      pgOpenTextEditor();
+      return;
+    }
+    if (!tg) { ov.querySelector('#pgEdTarget').textContent = '先點一下圖上要調整的文字'; return; }
+    if (act === 'smaller' || act === 'bigger') {
+      const e = edits[tg.key] || {};
+      e.fs = Math.max(12, Math.min(200, Math.round(curFs(tg) + (act === 'bigger' ? 2 : -2))));
+      edits[tg.key] = e;
+      pgSaveEdits(edits);
+      reapply(tg);
+    } else if (act === 'reset') {
+      delete edits[tg.key];
+      pgSaveEdits(edits);
+      pgCloseTextEditor(false);
+      pgOpenTextEditor();
+    }
+  });
+  ov.querySelector('#pgEdColor').addEventListener('input', ev => {
+    const tg = pgEditor.current;
+    if (!tg) return;
+    const e = edits[tg.key] || {};
+    e.color = ev.target.value;
+    edits[tg.key] = e;
+    pgSaveEdits(edits);
+    reapply(tg);
+  });
+  // 拖曳把手：移動量除以縮放比例換回海報實際像素
+  let drag = null;
+  handle.addEventListener('pointerdown', ev => {
+    const tg = pgEditor.current;
+    if (!tg) return;
+    ev.preventDefault();
+    handle.setPointerCapture(ev.pointerId);
+    const e = edits[tg.key] || {};
+    drag = { x: ev.clientX, y: ev.clientY, dx: e.dx || 0, dy: e.dy || 0, tg };
+  });
+  handle.addEventListener('pointermove', ev => {
+    if (!drag) return;
+    const s = pgEditor.scale;
+    const e = edits[drag.tg.key] || {};
+    e.dx = Math.round(drag.dx + (ev.clientX - drag.x) / s);
+    e.dy = Math.round(drag.dy + (ev.clientY - drag.y) / s);
+    edits[drag.tg.key] = e;
+    reapply(drag.tg);
+  });
+  const endDrag = () => { if (drag) { pgSaveEdits(edits); drag = null; } };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+}
+function pgCloseTextEditor(regenerate) {
+  if (!pgEditor) return;
+  window.removeEventListener('resize', pgEditor.fit);
+  pgEditor.ov.remove();
+  pgEditor = null;
+  if (regenerate) pgGeneratePoster();
+}
+
 async function pgGeneratePoster() {
   const r = pgSelectedRecipe;
   if (!r) return;
@@ -1103,6 +1355,7 @@ async function pgGeneratePoster() {
     img.addEventListener('error', resolve);
   })));
   await pgApplyColors(stage);
+  pgApplyEdits(stage, pgGetEdits());
   pgNormalizeIngPhotos(stage);
   pgLayoutSteps(stage);
   pgArcTitle(stage);

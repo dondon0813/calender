@@ -2492,7 +2492,8 @@
      圖裡的空白圓圈疊上步驟數字（做法邏輯跟食譜頁面一致） -- */
   .pgp-step-section {
     position: relative;
-    flex: 1 1 auto;
+    flex: 1 1 0; /* 10-12：高度只吃剩餘空間，不被文字撐高（字放大時改縮步驟圖，不把小提醒和頁尾擠出圖外） */
+    min-height: 0;
     margin-top: 20px;
     background: #FFFBF5;
     border: 2px dashed #FFC79A;
@@ -6856,6 +6857,7 @@
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px;" onclick="pgGeneratePoster()">🖼 產生4:5貼文圖</button>
+        <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px; background:#C99A9B;" onclick="pgOpenTextEditor()">✏️ 編輯圖上文字</button>
         <button class="task-submit-btn" style="width:auto; margin:0; padding:10px 18px; background:#8FA9C7;" onclick="pgGenerateText()">📝 產生貼文文案</button>
       </div>
       <div class="form-status" id="pgStatus"></div>
@@ -8027,7 +8029,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=32"></script>
+<script src="tools.js?v=34"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=19"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
