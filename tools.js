@@ -1255,6 +1255,9 @@ async function pgOpenTextEditor() {
     tg.el.setAttribute('contenteditable', 'true');
     tg.el.style.cursor = 'text';
     if (tg.el.style.webkitLineClamp !== undefined) tg.el.style.webkitLineClamp = 'unset';
+    // 10-12 雪莉回報：點步驟文字游標卻跑到最下面頁尾。步驟文字／標題是 display:-webkit-box（多行截斷用），
+    // 放在縮放過的畫面裡，Chrome 點擊定位游標可能算錯、跑到別的可編輯區 → 編輯畫面一律改成一般區塊
+    if (getComputedStyle(tg.el).display === '-webkit-box') tg.el.style.display = 'block';
     tg.el.addEventListener('focus', () => select(tg));
     tg.el.addEventListener('pointerdown', () => select(tg));
     tg.el.addEventListener('input', () => { if (pgEditor.current !== tg) select(tg); saveText(tg); pgLayoutSteps(stage); pgPlaceMascot(stage); placeHandle(); });
@@ -1263,6 +1266,42 @@ async function pgOpenTextEditor() {
       ev.preventDefault();
       document.execCommand('insertText', false, (ev.clipboardData || window.clipboardData).getData('text'));
     });
+  });
+  // 10-12 雪莉回報「點步驟文字游標跑到頁尾」實測原因：點在文字旁的空白（不是剛好點在字上）時，
+  // 瀏覽器會把游標塞進附近另一個可編輯區。改成：點在步驟格／食材列／小提醒列的空白＝選那一格的文字；
+  // 點在其他非文字地方＝攔下預設行為，游標不動。
+  const caretToEnd = el => {
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+  stage.addEventListener('mousedown', ev => {
+    if (ev.target === handle || ev.target.closest('[contenteditable="true"]')) return;
+    ev.preventDefault();
+    const owner = ev.target.closest('.pgp-step-card, .pgp-ing-row, .pgp-tip-item');
+    const ed = owner && owner.querySelector('.pgp-step-caption, .pgp-ing-text, .pgp-tip-item span');
+    const tg = ed && targets.find(x => x.el === ed);
+    if (tg) { caretToEnd(tg.el); select(tg); }
+  }, true);
+  // 保險：點完之後游標如果不在被點的那段文字裡（瀏覽器定位算錯），強制把游標放到那段文字最後面
+  stage.addEventListener('click', ev => {
+    const hit = ev.target.closest('[contenteditable="true"]');
+    if (!hit) return;
+    const sel = window.getSelection();
+    const inHit = sel && sel.anchorNode && hit.contains(sel.anchorNode);
+    if (document.activeElement === hit && inHit) return;
+    hit.focus();
+    const range = document.createRange();
+    range.selectNodeContents(hit);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const tg = targets.find(x => x.el === hit);
+    if (tg) select(tg);
   });
   const reapply = tg => {
     // 重畫這一段：先清掉樣式再套目前的調整
