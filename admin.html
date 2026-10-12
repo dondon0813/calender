@@ -2361,11 +2361,15 @@
     position: absolute;
     left: 16px;
     bottom: 16px;
-    background: #9FA85C;
+    /* 10-12 雪莉：顏色飽和一點、換清楚的英數字體、上下貼近字、外圈白框 */
+    background: #8FB035; /* 10-12 雪莉：再偏黃綠一點 */
     color: #fff;
+    font-family: 'Baloo 2', var(--font-round);
     font-weight: 800;
-    font-size: 32px;
-    padding: 9px 26px;
+    font-size: 34px;
+    line-height: 1;
+    padding: 6px 16px; /* 實測 Baloo 2 字身偏下，上下等距才會置中 */
+    border: 3px solid #fff;
     border-radius: 999px;
     z-index: 2;
   }
@@ -2395,11 +2399,11 @@
   }
   .pgp-title-outline {
     color: transparent;
-    -webkit-text-stroke: 12px #B27C70;
+    -webkit-text-stroke: 16px #B27C70; /* 10-12 雪莉：白框加粗 8→12，外圈咖啡色同步 12→16 */
   }
   .pgp-title {
-    color: #E0954A;
-    -webkit-text-stroke: 8px #fff;
+    color: #EE8E36; /* 10-12 雪莉：飽和一點（原 #E0954A） */
+    -webkit-text-stroke: 12px #fff;
     paint-order: stroke fill;
   }
 
@@ -2589,10 +2593,10 @@
   .pgp-step-caption {
     width: 100%;
     font-size: 32px;
-    color: var(--c-text-soft);
+    color: #5a4a3f; /* 10-12 雪莉：步驟文字加深，跟食材名稱同色 */
     line-height: 1.4;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3; /* 10-12：不截字，pgLayoutSteps 會縮字級讓每格 ≤3 行 */
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -2672,7 +2676,7 @@
     align-items: flex-start;
     gap: 10px;
     font-size: var(--pgp-tip-size, 34px);
-    color: var(--c-text-soft);
+    color: #5a4a3f; /* 10-12 雪莉：小提醒文字加深 */
     line-height: 1.15;
   }
   .pgp-tip-item img { width: 26px; height: 26px; margin-top: calc((var(--pgp-tip-size, 34px) * 1.15 - 26px) / 2); flex: none; }
@@ -6878,6 +6882,18 @@
       </div>
       <div class="form-status" id="pgStatus"></div>
 
+      <!-- 10-12 雪莉：貼文圖配色自己選（存本機瀏覽器），改了會自動重畫已產生的圖 -->
+      <div id="pgColorBox" style="margin-top:12px; padding:10px 12px; border:1px solid #E6DCD2; border-radius:12px; background:#fff;">
+        <div style="font-weight:800; font-size:13px; color:#5A4A42; margin-bottom:8px;">貼文圖配色</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; font-size:12px; color:#7D6A5F;">
+          <label style="display:flex; flex-direction:column; gap:4px;">標籤底色<input type="color" id="pgColorLabel" style="width:100%; height:34px; padding:0; border:1px solid #E6DCD2; border-radius:8px; background:#fff;"></label>
+          <label style="display:flex; flex-direction:column; gap:4px;">月齡標籤<input type="color" id="pgColorBadge" style="width:100%; height:34px; padding:0; border:1px solid #E6DCD2; border-radius:8px; background:#fff;"></label>
+          <label style="display:flex; flex-direction:column; gap:4px;">步驟圈圈（含 1234）<input type="color" id="pgColorCircle" style="width:100%; height:34px; padding:0; border:1px solid #E6DCD2; border-radius:8px; background:#fff;"></label>
+          <label style="display:flex; flex-direction:column; gap:4px;">標題字色<input type="color" id="pgColorTitle" style="width:100%; height:34px; padding:0; border:1px solid #E6DCD2; border-radius:8px; background:#fff;"></label>
+        </div>
+        <button class="task-mini-btn" style="margin-top:8px;" onclick="pgResetColors()">恢復預設</button>
+      </div>
+
       <div id="pgOutputArea" style="display:none; margin-top:14px;">
         <div id="pgOutputTextWrap" style="display:none;">
           <textarea id="pgOutputText" readonly rows="12" style="width:100%; box-sizing:border-box; padding:10px 12px; border: 1px solid #E6DCD2; border-radius:12px; font-family:inherit; font-size:13px; line-height:1.7; color:#5A4A42; resize:vertical;"></textarea>
@@ -8033,7 +8049,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=27"></script>
+<script src="tools.js?v=29"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=19"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->

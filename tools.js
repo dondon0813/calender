@@ -653,6 +653,7 @@ function pgSelectRecipe(recipe) {
   pgSelectedRecipe = recipe;
   document.getElementById('pgPickerView').style.display = 'none';
   document.getElementById('pgActionView').style.display = 'block';
+  pgInitColorInputs();
   document.getElementById('pgOutputArea').style.display = 'none';
   document.getElementById('pgSelectedName').textContent = recipe['食譜名稱'] || '';
   const imgEl = document.getElementById('pgSelectedImg');
@@ -786,7 +787,8 @@ function pgBuildPosterHtml(r) {
     const manualUrl = pgToSameOriginUrl(manualStepImgs[idx]);
     const autoUrl = pgToSameOriginUrl(pgBuildAutoStepImageUrl(heroRaw, n));
     const imgUrl = pgIsValidUrl(manualUrl) ? manualUrl : (pgIsValidUrl(autoUrl) ? autoUrl : '');
-    const captionRaw = s.length > 22 ? s.slice(0, 22) + '…' : s;
+    // 10-12 雪莉：不再截字加「…」（成品是圖片、點不開），太長由 pgLayoutSteps 縮字級
+    const captionRaw = s;
     // 步驟文字有逗號的話，做成圖片時把逗號刪掉、改成換行（例如「雞蛋南瓜蒸15分，
     // 花椰菜3分鐘」變成兩行），比逗號直接印出來更好讀
     const caption = captionRaw.split(/[,，]/).map(part => escHtml(part.trim())).filter(Boolean).join('<br>');
@@ -895,6 +897,179 @@ function pgNormalizeIngPhotos(root) {
   });
 }
 
+// 步驟圖高度（10-12 雪莉選 B＋C）：文字區只留「最多字那格」的行數（1 或 2 行），
+// 剩下的高度都給圖片，但圖片高不超過卡片寬（4 步驟不會變細長條）；步驟越少卡片越寬、圖可以越高。
+// 數字圓圈貼圖片上緣、箭頭在圖片中線，跟著圖片高度一起移（原本寫死 185px 圖對應的 165／73）。
+function pgLayoutSteps(root) {
+  const grid = root.querySelector('.pgp-step-grid');
+  const cards = grid ? [...grid.querySelectorAll('.pgp-step-card')] : [];
+  if (!cards.length) return;
+  // 文字不截斷（10-12 雪莉）：每格最多 3 行，放不下就整排一起縮字級 32→29→26→24
+  const caps = cards.map(card => card.querySelector('.pgp-step-caption')).filter(Boolean);
+  let fs = 32, maxLines = 1;
+  for (fs of [32, 29, 26, 24]) {
+    caps.forEach(cap => { cap.style.fontSize = fs + 'px'; });
+    maxLines = Math.max(1, ...caps.map(cap => Math.round(cap.scrollHeight / (fs * 1.4))));
+    if (maxLines <= 3) break;
+  }
+  const textH = maxLines * fs * 1.4 + 8;
+  const photoH = Math.round(Math.max(150, Math.min(grid.clientHeight - textH, cards[0].clientWidth)));
+  cards.forEach(card => {
+    const wrap = card.querySelector('.pgp-step-photo-wrap');
+    const badge = card.querySelector('.pgp-step-badge');
+    if (wrap) wrap.style.height = photoH + 'px';
+    // 數字圓圈放進步驟圖左上角（10-12 雪莉）：圖片上緣往下 12px、往右 12px，圓圈 40px
+    if (badge) { badge.style.bottom = (photoH - 12 - 40) + 'px'; badge.style.left = '12px'; }
+  });
+  grid.querySelectorAll('.pgp-step-arrow').forEach(a => { a.style.bottom = Math.round(photoH / 2 - 20) + 'px'; });
+}
+
+// 標題微微彎曲（10-12 雪莉）：每個字拆成一格，依「離那一行中心多遠」往下移＋旋轉，排成中間高、兩邊低的拱形。
+// 外框層與文字層排版完全一樣，用同一組位移才會對齊。每一行頭尾兩字下沉 TITLE_ARC_SAG px。
+
+function pgArcTitle(root) {
+  const layers = [root.querySelector('.pgp-title-outline'), root.querySelector('.pgp-title')].filter(Boolean);
+  if (layers.length !== 2) return;
+  layers.forEach(el => {
+    const text = el.textContent;
+    el.textContent = '';
+    // html2canvas 遇到「overflow:hidden（三行截斷）＋子元素有 transform」會把左半邊的字裁掉，拱形時改成一般區塊不截斷
+    el.style.display = 'block';
+    el.style.overflow = 'visible';
+    [...text].forEach(ch => {
+      const sp = document.createElement('span');
+      sp.textContent = ch;
+      sp.style.display = 'inline-block';
+      if (ch === ' ') sp.style.whiteSpace = 'pre';
+      el.appendChild(sp);
+    });
+  });
+  const spans = [...layers[1].children];
+  const lines = {};
+  spans.forEach((sp, i) => { (lines[sp.offsetTop] = lines[sp.offsetTop] || []).push(i); });
+  const TITLE_ARC_SAG = 26; // 10-12 雪莉：再彎一些（原 14）
+  Object.values(lines).forEach(idxs => {
+    const first = spans[idxs[0]], last = spans[idxs[idxs.length - 1]];
+    const center = (first.offsetLeft + last.offsetLeft + last.offsetWidth) / 2;
+    // 依這一行自己的半寬算：每一行頭尾兩字的中心都下沉 TITLE_ARC_SAG（下限 150 避免兩三個字的短行彎太誇張）
+    const half = Math.max(150, center - first.offsetLeft - first.offsetWidth / 2);
+    idxs.forEach(i => {
+      const sp = spans[i];
+      const dx = sp.offsetLeft + sp.offsetWidth / 2 - center;
+      const y = TITLE_ARC_SAG * (dx / half) ** 2;
+      const deg = Math.atan(2 * TITLE_ARC_SAG * dx / (half * half)) * 180 / Math.PI;
+      const t = `translateY(${y.toFixed(1)}px) rotate(${deg.toFixed(2)}deg)`;
+      layers.forEach(el => { el.children[i].style.transform = t; });
+    });
+  });
+}
+
+// ===== 貼文圖配色（10-12 雪莉：自己選色，存本機瀏覽器） =====
+// label＝三張標籤圖（準備食材／簡單步驟／小提醒）的粉色底；circle＝「簡單○步驟」圈圈＋步驟圖 1234 圓圈；
+// badge＝月齡標籤底色；title＝標題字色。標籤是 PNG 圖，換色＝在畫布上把粉色底（或橘圈）的像素改色相／飽和、保留明暗。
+var PG_COLOR_DEFAULTS = { label: '#fdc4bc', circle: '#fc9474', badge: '#8fb035', title: '#ee8e36' };
+var PG_COLOR_KEY = 'pg_poster_colors';
+function pgGetColors() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(PG_COLOR_KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  return Object.assign({}, PG_COLOR_DEFAULTS, saved);
+}
+function pgRgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const M = Math.max(r, g, b), m = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (M + m) / 2;
+  if (M !== m) {
+    const d = M - m;
+    s = l > 0.5 ? d / (2 - M - m) : d / (M + m);
+    h = M === r ? ((g - b) / d + (g < b ? 6 : 0)) : M === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return [h, s, l];
+}
+function pgHexToHsl(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return pgRgbToHsl((n >> 16) & 255, (n >> 8) & 255, n & 255);
+}
+function pgHslToRgb(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+}
+async function pgRecolorImg(img, colors, withCircle) {
+  if (!img || !img.naturalWidth) return;
+  const needLabel = colors.label.toLowerCase() !== PG_COLOR_DEFAULTS.label;
+  const needCircle = withCircle && colors.circle.toLowerCase() !== PG_COLOR_DEFAULTS.circle;
+  if (!needLabel && !needCircle) return;
+  try {
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const cx = c.getContext('2d');
+    cx.drawImage(img, 0, 0);
+    const im = cx.getImageData(0, 0, W, H);
+    const d = im.data;
+    const baseLabelL = pgHexToHsl(PG_COLOR_DEFAULTS.label)[2], tLabel = pgHexToHsl(colors.label);
+    const baseCircleL = pgHexToHsl(PG_COLOR_DEFAULTS.circle)[2], tCircle = pgHexToHsl(colors.circle);
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 8) continue;
+      const [h, s, l] = pgRgbToHsl(d[i], d[i + 1], d[i + 2]);
+      let t = null, baseL = 0;
+      // 粉色底：色相 340°～12°、亮度 > 0.62
+      if (needLabel && (h >= 340 || h <= 12) && l > 0.62 && s > 0.25) { t = tLabel; baseL = baseLabelL; }
+      // 橘圈：色相 12°～28°、飽和 > 0.6、亮度 0.55～0.82，只看圖片中間 30%～70%（避開左邊星星裝飾）
+      else if (needCircle && h > 12 && h < 28 && s > 0.6 && l > 0.55 && l < 0.82) {
+        const x = (i / 4) % W;
+        if (x > W * 0.3 && x < W * 0.7) { t = tCircle; baseL = baseCircleL; }
+      }
+      if (!t) continue;
+      const [r, g, b] = pgHslToRgb(t[0], t[1], Math.max(0, Math.min(1, l + (t[2] - baseL))));
+      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    }
+    cx.putImageData(im, 0, 0);
+    await new Promise(res => { img.onload = res; img.onerror = res; img.src = c.toDataURL('image/png'); });
+  } catch (err) { /* 讀不到像素（跨網域）就維持原圖 */ }
+}
+async function pgApplyColors(root) {
+  const colors = pgGetColors();
+  const title = root.querySelector('.pgp-title');
+  if (title) title.style.color = colors.title;
+  const badge = root.querySelector('.pgp-age-badge');
+  if (badge) badge.style.background = colors.badge;
+  root.querySelectorAll('.pgp-step-badge').forEach(b => { b.style.background = colors.circle; });
+  await pgRecolorImg(root.querySelector('.pgp-ing-badge-img'), colors, false);
+  await pgRecolorImg(root.querySelector('.pgp-step-badge-img'), colors, true);
+  await pgRecolorImg(root.querySelector('.pgp-tip-badge'), colors, false);
+}
+// 配色選擇器：開視窗時帶入目前值；改色存本機，已經有產生的圖就自動重畫（0.6 秒內連續調整只畫最後一次）
+var pgColorTimer = null, pgColorBound = false;
+function pgInitColorInputs() {
+  const colors = pgGetColors();
+  const map = { label: 'pgColorLabel', circle: 'pgColorCircle', badge: 'pgColorBadge', title: 'pgColorTitle' };
+  Object.entries(map).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = colors[k];
+    if (!pgColorBound) el.addEventListener('input', () => {
+      const cur = pgGetColors();
+      cur[k] = el.value;
+      try { localStorage.setItem(PG_COLOR_KEY, JSON.stringify(cur)); } catch (e) { /* 存不了就只用這一次 */ }
+      clearTimeout(pgColorTimer);
+      pgColorTimer = setTimeout(() => {
+        const wrap = document.getElementById('pgOutputImgWrap');
+        if (pgSelectedRecipe && wrap && wrap.style.display !== 'none') pgGeneratePoster();
+      }, 600);
+    });
+  });
+  pgColorBound = true;
+}
+function pgResetColors() {
+  try { localStorage.removeItem(PG_COLOR_KEY); } catch (e) { /* ignore */ }
+  pgInitColorInputs();
+  const wrap = document.getElementById('pgOutputImgWrap');
+  if (pgSelectedRecipe && wrap && wrap.style.display !== 'none') pgGeneratePoster();
+}
+
 async function pgGeneratePoster() {
   const r = pgSelectedRecipe;
   if (!r) return;
@@ -914,7 +1089,10 @@ async function pgGeneratePoster() {
     img.addEventListener('load', resolve);
     img.addEventListener('error', resolve);
   })));
+  await pgApplyColors(stage);
   pgNormalizeIngPhotos(stage);
+  pgLayoutSteps(stage);
+  pgArcTitle(stage);
 
   // 標題用的自訂字體檔案較大，沒等載入完成就截圖會先拍到系統預設字體
   try {
