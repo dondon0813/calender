@@ -4,7 +4,7 @@
 //   2. 開頁時檢查「我訂閱的品牌有沒有新的本週優惠通知」，有就跳提醒視窗（每則只跳一次）
 // 登入狀態在 member.sheridondon.com.tw（不同網域），官網靠隱藏 iframe /fan-bridge 用 postMessage 代問，
 // token 不離開會員網域。沒登入的人：訂閱清單與看過清單存這個瀏覽器的 localStorage，登入後自動合併進帳號。
-// localStorage 鍵：dd_promo_subs=[{id,name,at}]、dd_promo_seen=[{id,at}]（60 天以上清掉）；
+// localStorage 鍵：dd_promo_subs={brandId:['promo','open']}（10-13 起；舊格式 [{id,name,at}] 讀得進來＝兩種都訂）、dd_promo_seen=[{id,at}]（60 天以上清掉）；
 // sessionStorage 鍵：dd_promo_checked（這個分頁 session 查過提醒就不再查）。
 (function () {
   'use strict';
@@ -38,8 +38,28 @@
   function readArr(key) {
     try { var a = JSON.parse(lsGet(key) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
   }
-  function localSubs() {
-    return readArr(LS_SUBS).filter(function (s) { return s && typeof s.id === 'string' && s.id; });
+  // 品牌訂閱暫存（未登入）。新格式 {brandId: ['promo','open']}；舊格式 [{id,name,at}]（只訂過優惠視窗＝兩種都訂）讀得進來
+  var KINDS_ALL = ['promo', 'open'];
+  function cleanKinds(k) {
+    return Array.isArray(k) ? KINDS_ALL.filter(function (x) { return k.indexOf(x) >= 0; }) : [];
+  }
+  function readSubsMap() {
+    var raw = null;
+    try { raw = JSON.parse(lsGet(LS_SUBS) || 'null'); } catch (e) { raw = null; }
+    var map = {};
+    if (Array.isArray(raw)) {
+      raw.forEach(function (s) { if (s && typeof s.id === 'string' && s.id) map[s.id] = KINDS_ALL.slice(); });
+    } else if (raw && typeof raw === 'object') {
+      Object.keys(raw).forEach(function (id) { var ks = cleanKinds(raw[id]); if (id && ks.length) map[id] = ks; });
+    }
+    return map;
+  }
+  function writeSubsMap(map) {
+    if (!Object.keys(map).length) lsDel(LS_SUBS); else lsSet(LS_SUBS, JSON.stringify(map));
+  }
+  function localSubs() { // [{id, kinds}]
+    var map = readSubsMap();
+    return Object.keys(map).map(function (id) { return { id: id, kinds: map[id] }; });
   }
   function localSeen() {
     var cut = Date.now() - SEEN_TTL_MS;
@@ -109,7 +129,7 @@
   }
 
   // ---------- 狀態 ----------
-  var state = { loaded: false, loggedIn: false, bridgeOk: false, brandIds: [], notices: [] };
+  var state = { loaded: false, loggedIn: false, bridgeOk: false, kinds: {}, notices: [] }; // kinds＝{brandId: ['promo','open']}（登入時帳號的訂閱）
   var loading = null;
   var readyCbs = [];
 
@@ -117,7 +137,13 @@
     var ok = !!res && !res.timeout && typeof res.loggedIn === 'boolean';
     state.bridgeOk = ok;
     state.loggedIn = ok && res.loggedIn;
-    state.brandIds = ok && Array.isArray(res.brandIds) ? res.brandIds.filter(function (x) { return typeof x === 'string'; }) : [];
+    state.kinds = {};
+    if (ok && Array.isArray(res.brands)) {
+      res.brands.forEach(function (b) { if (b && typeof b.id === 'string' && b.id) { var ks = cleanKinds(b.kinds); if (ks.length) state.kinds[b.id] = ks; } });
+    } else if (ok && Array.isArray(res.brandIds)) {
+      // 舊版橋接頁只回 brandIds（訂了優惠的品牌）
+      res.brandIds.forEach(function (x) { if (typeof x === 'string' && x) state.kinds[x] = ['promo']; });
+    }
     state.notices = ok && Array.isArray(res.notices) ? res.notices : [];
   }
 
@@ -127,7 +153,8 @@
     var subs = localSubs();
     var seen = localSeen();
     if (!subs.length && !seen.length) return Promise.resolve();
-    return DDPromo._rpc({ op: 'promo-merge', brandIds: subs.map(function (s) { return s.id; }), noticeIds: seen.map(function (s) { return s.id; }) }, 10000)
+    // 新舊橋接頁都相容：brands（新，帶 kinds）＋brandIds（舊，只有 id）一起送；新橋接頁以 brands 為準
+    return DDPromo._rpc({ op: 'promo-merge', brands: subs.map(function (s) { return { id: s.id, kinds: s.kinds }; }), brandIds: subs.map(function (s) { return s.id; }), noticeIds: seen.map(function (s) { return s.id; }) }, 10000)
       .then(function (res) {
         if (!res || !res.success) return;
         lsDel(LS_SUBS);
@@ -169,10 +196,15 @@
     },
     _rpc: realRpc, // 測試時可替換
     loggedIn: function () { return state.loggedIn; },
-    isSubscribed: function (brandId) {
+    // kind 省略＝'promo'（舊呼叫端：優惠通知）；'open'＝開團提醒
+    isSubscribed: function (brandId, kind) {
       if (!brandId) return false;
-      if (state.loggedIn) return state.brandIds.indexOf(brandId) >= 0;
-      return localSubs().some(function (s) { return s.id === brandId; });
+      return DDPromo.kindsOf(brandId).indexOf(kind || 'promo') >= 0;
+    },
+    kindsOf: function (brandId) {
+      if (!brandId) return [];
+      if (state.loggedIn) return (state.kinds[brandId] || []).slice();
+      return (readSubsMap()[brandId] || []).slice();
     },
     // cb 在登入／訂閱狀態查到之後呼叫（已查到就立刻呼叫）；第一次呼叫才會去問橋
     onReady: function (cb) {
@@ -181,26 +213,46 @@
       readyCbs.push(cb);
       loadState();
     },
-    // want 省略＝切換。回傳 Promise {subscribed, loggedIn}
-    subscribe: function (brandId, name, want) {
+    // want 省略＝切換（以 promo 或給定 kinds 的第一個為準）。
+    // kinds 省略：want=true → 優惠＋開團提醒都訂；want=false → 整個品牌的訂閱都取消。
+    // kinds 有給（例如 ['open']）：只加／只移除那幾種。回傳 Promise {subscribed, kinds, loggedIn}
+    subscribe: function (brandId, name, want, kinds) {
       return loadState().then(function () {
-        var target = typeof want === 'boolean' ? want : !DDPromo.isSubscribed(brandId);
+        var given = Array.isArray(kinds) ? cleanKinds(kinds) : null;
+        var target = typeof want === 'boolean' ? want : !DDPromo.isSubscribed(brandId, given && given.length ? given[0] : 'promo');
+        function result(ks, loggedIn, error) {
+          var o = { subscribed: ks.length > 0, kinds: ks, loggedIn: loggedIn };
+          if (error) o.error = true;
+          return o;
+        }
+        function applyTo(cur) {
+          var base = given && given.length ? given : KINDS_ALL;
+          var set = {};
+          cur.forEach(function (k) { set[k] = 1; });
+          if (target) base.forEach(function (k) { set[k] = 1; });
+          else if (given && given.length) base.forEach(function (k) { delete set[k]; });
+          else set = {};
+          return KINDS_ALL.filter(function (k) { return set[k]; });
+        }
         function viaLocal() {
-          var subs = localSubs().filter(function (s) { return s.id !== brandId; });
-          if (target) subs.push({ id: brandId, name: String(name || ''), at: Date.now() });
-          lsSet(LS_SUBS, JSON.stringify(subs));
-          return { subscribed: target, loggedIn: false };
+          var map = readSubsMap();
+          var next = applyTo(map[brandId] || []);
+          if (next.length) map[brandId] = next; else delete map[brandId];
+          writeSubsMap(map);
+          return result(next, false);
         }
         if (!state.loggedIn) return viaLocal();
-        return DDPromo._rpc({ op: 'promo-subscribe', brandId: brandId, want: target }, 10000).then(function (res) {
+        var msg = { op: 'promo-subscribe', brandId: brandId, want: target };
+        if (given && given.length) msg.kinds = given;
+        return DDPromo._rpc(msg, 10000).then(function (res) {
           if (res && res.needLogin) { state.loggedIn = false; return viaLocal(); } // 登入過期：先存本機，不擋
           if (res && res.success) {
-            var has = state.brandIds.indexOf(brandId) >= 0;
-            if (res.subscribed && !has) state.brandIds.push(brandId);
-            if (!res.subscribed && has) state.brandIds = state.brandIds.filter(function (x) { return x !== brandId; });
-            return { subscribed: !!res.subscribed, loggedIn: true };
+            // 新後端回 kinds；舊後端不回（只認得「訂閱／取消」）→ 訂閱只算優惠、取消算全部取消
+            var ks = Array.isArray(res.kinds) ? cleanKinds(res.kinds) : (res.subscribed ? ['promo'] : []);
+            if (ks.length) state.kinds[brandId] = ks; else delete state.kinds[brandId];
+            return result(ks, true);
           }
-          return { subscribed: DDPromo.isSubscribed(brandId), loggedIn: true, error: true };
+          return result(DDPromo.kindsOf(brandId), true, true);
         });
       });
     },
@@ -359,7 +411,7 @@
     return loadState(force).then(function () {
       if (state.loggedIn) return normalizeNotices(state.notices);
       var subIds = {};
-      localSubs().forEach(function (s) { subIds[s.id] = 1; });
+      localSubs().forEach(function (s) { if (s.kinds.indexOf('promo') >= 0) subIds[s.id] = 1; }); // 只訂開團提醒的不彈優惠通知
       if (!Object.keys(subIds).length) return []; // 沒訂閱任何品牌就不必打 API
       var seenIds = {};
       localSeen().forEach(function (s) { seenIds[s.id] = 1; });

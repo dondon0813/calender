@@ -628,6 +628,11 @@
     white-space: pre-line;
     word-break: break-word;
   }
+  /* 尚未開團視窗（2026-10-13）：沿用團購選擇視窗的版型，只多一行開團日說明 */
+  .up-when { font-size: 14px; font-weight: 700; color: var(--c-primary-dark); margin: -8px 0 4px; }
+  .gc-sub-btn svg { vertical-align: -0.16em; margin-right: 0.35em; }
+  #upEarly.show { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--c-line); text-align: left; }
+  #upSub.show { margin-top: 16px; }
   /* 訂閱品牌優惠通知（2026-10-09） */
   .gc-sub { display: none; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--c-line); }
   .gc-sub.show { display: block; }
@@ -813,7 +818,7 @@
 <!-- 藕粉奶茶色系（2026-09-19）：必須放在本頁 <style> 之後；拿掉這行＝回到舊配色 -->
 <script src="theme.js?v=2"></script>
 <script src="modalGuard.js?v=1"></script>
-<script src="promoNotice.js?v=2"></script>
+<script src="promoNotice.js?v=3"></script>
 </head>
 <body>
 
@@ -861,11 +866,19 @@
   <div class="footer"><a href="https://www.instagram.com/dondon0813/" target="_blank" rel="noopener noreferrer">IG @dondon0813<svg width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.14em; margin-left:0.3em;"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/></svg></a></div>
 </div>
 
-<div class="modal-backdrop" id="earlyBirdModal" onclick="if(event.target===this) closeEarlyBirdModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeEarlyBirdModal()">✕</button>
-    <h3 id="earlyBirdTitle"></h3>
-    <ul id="earlyBirdList"></ul>
+<div class="modal-backdrop" id="upcomingModal" onclick="if(event.target===this) closeUpcomingModal()">
+  <div class="modal-box gc-modal-box">
+    <button class="modal-close" onclick="closeUpcomingModal()">✕</button>
+    <h3 class="gc-title" id="upTitle"></h3>
+    <div class="up-when" id="upWhen"></div>
+    <div class="gc-promo" id="upEarly">
+      <div class="gc-promo-label">早鳥禮</div>
+      <div class="gc-promo-list" id="upEarlyList"></div>
+    </div>
+    <div class="gc-sub" id="upSub">
+      <button type="button" class="gc-sub-btn" id="upSubBtn"></button>
+      <div class="gc-sub-hint" id="upSubHint">登入會員後會同步到通知中心，<a href="https://member.sheridondon.com.tw/member" target="_blank" rel="noopener noreferrer">登入會員</a></div>
+    </div>
   </div>
 </div>
 
@@ -1745,15 +1758,18 @@ function buildGroupCard(ev, grayOut, srcOverride) {
   const frozen = isFrozenEvent(ev);
   const clickable = isLinkUnlocked(ev);
   const advanced = clickable && needsGroupModal(ev);
+  const upcomingClick = !clickable && isUpcomingClickable(ev);
 
   const card = document.createElement((clickable && !advanced) ? 'a' : 'div');
-  card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable ? ' clickable' : '') + (grayOut ? ' gs-card-gray' : '');
+  card.className = 'gs-card' + (isToday ? ' gs-today' : '') + (clickable || upcomingClick ? ' clickable' : '') + (grayOut ? ' gs-card-gray' : '');
   if (clickable && !advanced) {
     card.href = ev.url;
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
   } else if (advanced) {
     card.addEventListener('click', () => openGroupChoiceModal(ev, srcOverride || 'now'));
+  } else if (upcomingClick) {
+    card.addEventListener('click', () => showUpcomingModal(ev, 'upcoming'));
   }
   attachStatTracking(card, ev, clickable, srcOverride || 'now');
   card.title = plainTitle(ev.title) + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (advanced ? '（點擊查看更多選項）' : '');
@@ -1950,8 +1966,9 @@ function renderAllMode() {
       const clickable = isLinkUnlocked(item.ev);
       const advanced = clickable && needsGroupModal(item.ev);
       const hasEarlyBird = !clickable && !isStarted(item.ev) && item.ev.earlyBird.length > 0;
+      const upcomingClick = !clickable && isUpcomingClickable(item.ev);
       const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
-      bar.className = `ebar c${colorIdx}` + (clickable ? ' clickable' : '') + (hasEarlyBird ? ' clickable' : '');
+      bar.className = `ebar c${colorIdx}` + (clickable ? ' clickable' : '') + (upcomingClick ? ' clickable' : '');
       // 【修復】依 colStart / colEnd / lane 設定跨欄位置，長條才會橫向跨天顯示。
       // 少了這兩行，瀏覽器的 grid 自動排版會把每個長條硬塞回單一天欄位、疊在一起（就是壞掉的樣子）。
       bar.style.gridColumn = `${item.colStart + 1} / ${item.colEnd + 2}`;
@@ -1965,11 +1982,11 @@ function renderAllMode() {
         bar.rel = 'noopener noreferrer';
       } else if (advanced) {
         bar.addEventListener('click', () => openGroupChoiceModal(item.ev, currentMode));
-      } else if (hasEarlyBird) {
-        bar.addEventListener('click', () => showEarlyBirdModal(item.ev));
+      } else if (upcomingClick) {
+        bar.addEventListener('click', () => showUpcomingModal(item.ev, 'upcoming'));
       }
       attachStatTracking(bar, item.ev, clickable);
-      bar.title = `${plainTitle(item.ev.title)} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+      bar.title = `${plainTitle(item.ev.title)} (${fmtDateLabel(item.ev.start, item.ev.displayEnd)})` + (item.ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (upcomingClick ? '（點擊查看開團資訊）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
       if (gbNumber) {
         const badge = document.createElement('span');
@@ -2085,23 +2102,24 @@ function renderSingleDayMode(mode) {
           const clickable = isLinkUnlocked(ev);
           const advanced = clickable && needsGroupModal(ev);
           const hasEarlyBird = !clickable && status === 'upcoming' && ev.earlyBird.length > 0;
+          const upcomingClick = !clickable && isUpcomingClickable(ev);
           const bar = document.createElement((clickable && !advanced) ? 'a' : 'div');
           // 已結團的灰色優先於冷凍團藍色：冷凍標示只在團還沒結束時才有意義，
           // 不然冷凍團結團後會永遠掛著藍色，看起來像還在開團
           // 2026-09-19 藕粉奶茶改版：冷凍團改成「疊加屬性」——底色跟著狀態走，另加 is-frozen（雪花浮水印，樣式在 theme-lotus.css）
           const catClass = `cat-${status}` + ((frozen && status !== 'ended') ? ' is-frozen' : '');
-          bar.className = `ebar ebar-wrap ${catClass}` + (clickable || hasEarlyBird ? ' clickable' : '');
+          bar.className = `ebar ebar-wrap ${catClass}` + (clickable || upcomingClick ? ' clickable' : '');
           if (clickable && !advanced) {
             bar.href = ev.url;
             bar.target = '_blank';
             bar.rel = 'noopener noreferrer';
           } else if (advanced) {
             bar.addEventListener('click', () => openGroupChoiceModal(ev, currentMode));
-          } else if (hasEarlyBird) {
-            bar.addEventListener('click', () => showEarlyBirdModal(ev));
+          } else if (upcomingClick) {
+            bar.addEventListener('click', () => showUpcomingModal(ev, 'upcoming'));
           }
           attachStatTracking(bar, ev, clickable);
-          bar.title = `${plainTitle(ev.title)} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (hasEarlyBird ? '（點擊查看早鳥禮）' : '') + (advanced ? '（點擊查看更多選項）' : '');
+          bar.title = `${plainTitle(ev.title)} (${mode === 'start' ? '開團' : '結團'} ${fmtSingleDate(mode === 'start' ? ev.start : ev.displayEnd)})` + (ev.url && !clickable ? '（開團後才能點擊連結）' : '') + (upcomingClick ? '（點擊查看開團資訊）' : '') + (advanced ? '（點擊查看更多選項）' : '');
 
           const titleSpan = document.createElement('span');
           titleSpan.className = 'ev-title ev-title-wrap';
@@ -2156,22 +2174,77 @@ function getEventStatus(ev) {
   return 'active';
 }
 
-function showEarlyBirdModal(ev) {
-  const modal = document.getElementById('earlyBirdModal');
-  const titleEl = document.getElementById('earlyBirdTitle');
-  const listEl = document.getElementById('earlyBirdList');
-  titleEl.textContent = plainTitle(ev.title) + ' 早鳥禮';
-  listEl.innerHTML = '';
-  ev.earlyBird.forEach(item => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    listEl.appendChild(li);
-  });
-  modal.classList.add('show');
+// ===== 尚未開團視窗（2026-10-13，雪莉定）=====
+// 還沒開團的團點下去：團名＋「尚未開團，M/D 開團」＋早鳥禮（有才放）＋「訂閱〔品牌〕開團提醒」。
+// 訂閱走 promoNotice.js 的 window.DDPromo（kinds=['open']）；開團當天會員通知中心收到「〔品牌〕開團了」。
+// 只給團購（isGroupBuy !== false）；已開團的點擊流程（連結／選擇視窗）完全不動。
+function isUpcomingClickable(ev) {
+  return ev.isGroupBuy !== false && getEventStatus(ev) === 'upcoming' && !isLinkUnlocked(ev);
 }
 
-function closeEarlyBirdModal() {
-  document.getElementById('earlyBirdModal').classList.remove('show');
+const UP_CHECK_SVG = '<svg width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+let upSubCurrent = null;
+
+function showUpcomingModal(ev, srcCode) {
+  const baseKey = getStatKey(ev);
+  sendStat(baseKey + '_src_' + (srcCode || 'upcoming'), 'click');
+  document.getElementById('upTitle').textContent = plainTitle(ev.title);
+  document.getElementById('upWhen').textContent = '尚未開團，' + fmtSingleDate(ev.start) + ' 開團';
+
+  // 早鳥禮（取代原本獨立的早鳥禮視窗）
+  const early = document.getElementById('upEarly');
+  const earlyList = document.getElementById('upEarlyList');
+  earlyList.textContent = '';
+  (ev.earlyBird || []).forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'gc-promo-item';
+    const text = document.createElement('div');
+    text.className = 'gc-promo-text';
+    text.textContent = item;
+    row.appendChild(text);
+    earlyList.appendChild(row);
+  });
+  early.classList.toggle('show', (ev.earlyBird || []).length > 0);
+
+  setupUpcomingSub(ev, baseKey);
+  document.getElementById('upcomingModal').classList.add('show');
+}
+
+function setupUpcomingSub(ev, baseKey) {
+  const wrap = document.getElementById('upSub');
+  const btn = document.getElementById('upSubBtn');
+  const hint = document.getElementById('upSubHint');
+  const pb = ev.promoBrand;
+  upSubCurrent = null;
+  if (!pb || !window.DDPromo) { wrap.classList.remove('show'); return; }   // 對不到品牌＝不放按鈕
+  const hintLink = hint.querySelector('a');
+  if (hintLink) { if (window.DDPromo.setLoginLink) window.DDPromo.setLoginLink(hintLink); else hintLink.href = window.DDPromo.MEMBER_LOGIN_URL + '?back=' + encodeURIComponent(location.href.split('#')[0]); }
+  upSubCurrent = pb;
+  const paint = () => {
+    if (upSubCurrent !== pb) return;   // 視窗已換成別團
+    const on = window.DDPromo.isSubscribed(pb.id, 'open');
+    if (on) btn.innerHTML = UP_CHECK_SVG + '已訂閱開團提醒';
+    else btn.textContent = '訂閱 ' + pb.name + ' 開團提醒';
+    btn.classList.toggle('on', on);
+    // 未登入且按了訂閱：小字提醒登入後會同步到通知中心
+    hint.classList.toggle('show', on && !window.DDPromo.loggedIn());
+  };
+  paint();
+  window.DDPromo.onReady(paint);
+  btn.disabled = false;
+  btn.onclick = () => {
+    const want = !window.DDPromo.isSubscribed(pb.id, 'open');
+    btn.disabled = true;
+    window.DDPromo.subscribe(pb.id, pb.name, want, ['open']).then(r => {
+      if (r && r.subscribed && want) sendStat(baseKey + '_subscribe', 'click');
+    }).catch(() => {}).then(() => { btn.disabled = false; paint(); });
+  };
+  wrap.classList.add('show');
+}
+
+function closeUpcomingModal() {
+  upSubCurrent = null;
+  document.getElementById('upcomingModal').classList.remove('show');
 }
 
 function openGroupChoiceModal(ev, srcCode) {
@@ -2262,7 +2335,7 @@ function setupSubscribeBlock(ev, baseKey) {
   const paint = () => {
     if (gcSubCurrent !== pb) return;   // 視窗已換成別團
     const on = window.DDPromo.isSubscribed(pb.id);
-    btn.textContent = on ? '已訂閱，點此取消' : '訂閱 ' + pb.name + ' 優惠通知';
+    btn.textContent = on ? '已訂閱，點此取消' : '訂閱 ' + pb.name + ' 優惠與開團提醒';
     btn.classList.toggle('on', on);
     hint.classList.toggle('show', on && !window.DDPromo.loggedIn());
   };

@@ -288,7 +288,7 @@
     const paint = () => {
       if (subCurrent !== pb) return;   // 視窗已換成別團
       const on = window.DDPromo.isSubscribed(pb.id);
-      gc.subBtn.textContent = on ? '已訂閱，點此取消' : '訂閱 ' + pb.name + ' 優惠通知';
+      gc.subBtn.textContent = on ? '已訂閱，點此取消' : '訂閱 ' + pb.name + ' 優惠與開團提醒';
       gc.subBtn.classList.toggle('on', on);
       gc.subHint.classList.toggle('show', on && !window.DDPromo.loggedIn());
     };
