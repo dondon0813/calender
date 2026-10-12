@@ -53,6 +53,8 @@
   --c-mint-bg: #EAF0E6;            /* 綠淡底 */
   --c-mint-border: transparent;    /* 綠邊框 */
   --c-done-green: #74A85E;         /* 完成綠（實心底配白字）：已完成／已公告打勾的按鈕底色（10-11 雪莉定，起點＝抽獎公告管道按鈕） */
+  --c-line-green: #06C755;         /* LINE 官方綠（實心底配白字）：加入 LINE 好友按鈕（10-12 雪莉定，品牌色兩色系同值） */
+  --c-line-green-dark: #05B04B;    /* 同上 hover */
   --c-ibon-green: #72A576;         /* ibon 教學圖上的按鈕綠（取樣自圖片，按鈕要跟圖一致） */
   --c-ibon-green-dark: #5F9163;    /* 同上 hover */
   --c-pink-deep: #B07F83;          /* 粉紅重點文字 */
