@@ -2085,6 +2085,7 @@ function openEventEditModal(ev, prefillDate, duplicateMode) {
   document.getElementById('evDiscountCodeInput').value = ev ? (ev.discountCode || '') : '';
   document.getElementById('evDiscountDescInput').value = ev ? (ev.discountDesc || '') : '';
   document.getElementById('evCustomerServiceInput').value = (ev && eventCustomerService[String(ev.id)]) || '';
+  if (typeof bvCsSync === 'function') bvCsSync('evCustomerServiceInput');
   if (typeof bvRenderEvCsHint === 'function') setTimeout(bvRenderEvCsHint, 0);
   evThumbSet(ev ? (ev.thumb || '') : '');
   document.getElementById('evPublishedInput').checked = ev ? (ev.published !== false) : false;

@@ -329,6 +329,7 @@ function openVendorEditModal(vendor) {
   bvSyncVendorEndReason_();
   document.getElementById('vendorNoteInput').value = vendor ? vendor.note : '';
   document.getElementById('vendorCustomerServiceInput').value = vendor ? (vendor.customerService || '') : '';
+  bvCsSync('vendorCustomerServiceInput');
   // 訂單名單政策記在品牌上（2026-10-03）；廠商視窗只做「套用到底下所有品牌」批次填寫＋顯示最近一團的收單平台
   document.getElementById('vendorOrderListWrap').style.display = vendor ? '' : 'none';
   document.getElementById('vendorOrderListSelect').value = '';
@@ -481,6 +482,7 @@ function openBrandEditModal(brand) {
   document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
   document.getElementById('brandOpenChecklistInput').value = brand ? (brand.openChecklist || '') : '';
   document.getElementById('brandCustomerServiceInput').value = brand ? (brand.customerService || '') : '';
+  bvCsSync('brandCustomerServiceInput');
   bvRenderCategories_(brand);
   // 訂單名單政策（記在品牌上；migration 20261003150000）＋最近一團的收單平台＋同廠商其他品牌的答案
   const olSel = document.getElementById('brandOrderListSelect');
@@ -1128,6 +1130,99 @@ document.getElementById('evCustomerServiceInput').addEventListener('input', () =
   clearTimeout(window._evCsHintTimer);
   window._evCsHintTimer = setTimeout(bvRenderEvCsHint, 300);
 });
+
+// ===== 客服欄位「LINE 客服 ID／其他」切換（2026-10-12 雪莉：大部分是 LINE）=====
+// textarea 仍是唯一正本（存檔照舊讀 textarea.value，零後端改動）：
+//   LINE 模式＝隱藏 textarea、只填一格 ID，存成「@xxxx」；會員中心看到純 @xxxx 會顯示「加入 LINE 好友」按鈕。
+//   其他＝原本的多行自由文字（電話、信箱、lin.ee 短網址、多段說明）。
+// 開視窗設好 textarea.value 後呼叫 bvCsSync(id) 依內容自動判斷模式（空白預設 LINE）。
+const BV_CS_FIELDS = ['evCustomerServiceInput', 'brandCustomerServiceInput', 'vendorCustomerServiceInput'];
+function bvCsLineIdOf_(text) {
+  const m = /^(?:https?:\/\/line\.me\/R\/ti\/p\/)?(@[A-Za-z0-9._-]+)\/?$/i.exec(String(text || '').trim());
+  return m ? m[1] : null;
+}
+function bvCsNormLineId_(raw) {
+  let v = String(raw || '').trim().replace(/\s+/g, '');
+  const fromUrl = /line\.me\/R\/ti\/p\/(@?[A-Za-z0-9._%-]+)/i.exec(v);
+  if (fromUrl) v = decodeURIComponent(fromUrl[1]);
+  if (v && v[0] !== '@') v = '@' + v;
+  return v;
+}
+function bvCsSetMode_(id, mode) {
+  const ta = document.getElementById(id);
+  const box = document.getElementById(id + '_csType');
+  if (!ta || !box) return;
+  box.dataset.mode = mode;
+  box.querySelectorAll('.bv-cs-seg button').forEach(b => {
+    const on = b.dataset.mode === mode;
+    b.style.background = on ? 'var(--c-primary, #C99A9B)' : 'transparent';
+    b.style.color = on ? '#fff' : 'inherit';
+  });
+  box.querySelector('.bv-cs-line').style.display = mode === 'line' ? '' : 'none';
+  ta.style.display = mode === 'line' ? 'none' : '';
+}
+function bvCsSetup_(id) {
+  const ta = document.getElementById(id);
+  if (!ta || document.getElementById(id + '_csType')) return;
+  const box = document.createElement('div');
+  box.id = id + '_csType';
+  box.style.cssText = 'margin:4px 0 6px;';
+  box.innerHTML =
+    '<div class="bv-cs-seg" style="display:inline-flex; border:1px solid #E6DCD2; border-radius:999px; overflow:hidden; margin-bottom:6px;">' +
+      '<button type="button" data-mode="line" style="border:none; padding:5px 14px; font-size:13px; cursor:pointer;">LINE 客服 ID</button>' +
+      '<button type="button" data-mode="other" style="border:none; padding:5px 14px; font-size:13px; cursor:pointer;">其他</button>' +
+    '</div>' +
+    '<div class="bv-cs-line">' +
+      '<input type="text" class="bv-cs-line-input" placeholder="例如：@acenatural" autocomplete="off" style="width:100%; box-sizing:border-box;">' +
+      '<div class="bv-cs-line-hint" style="font-size:12px; color:#8a7a70; margin-top:3px;">填官方帳號 ID（@ 開頭，沒打 @ 會自動補）。客人在會員中心會看到「加入 LINE 好友」按鈕。要放電話、信箱或 lin.ee 短網址請選「其他」。</div>' +
+    '</div>';
+  ta.parentNode.insertBefore(box, ta);
+  const inp = box.querySelector('.bv-cs-line-input');
+  const hint = box.querySelector('.bv-cs-line-hint');
+  const baseHint = hint.textContent;
+  box.querySelectorAll('.bv-cs-seg button').forEach(b => b.addEventListener('click', () => {
+    const mode = b.dataset.mode;
+    if (mode === box.dataset.mode) return;
+    if (mode === 'line') {
+      const id0 = bvCsLineIdOf_(ta.value);
+      if (ta.value.trim() && !id0 && !confirm('切到「LINE 客服 ID」會清掉目前填的文字，確定嗎？')) return;
+      inp.value = id0 || '';
+      ta.value = id0 || '';
+    } else {
+      ta.value = inp.value.trim() ? bvCsNormLineId_(inp.value) : ta.value;
+    }
+    bvCsSetMode_(id, mode);
+    ta.dispatchEvent(new Event('input'));
+  }));
+  inp.addEventListener('input', () => {
+    const raw = inp.value.trim();
+    if (/lin\.ee\//i.test(raw)) { // 短網址轉不出 ID → 自動改「其他」原樣保留
+      ta.value = raw;
+      inp.value = '';
+      bvCsSetMode_(id, 'other');
+      ta.dispatchEvent(new Event('input'));
+      return;
+    }
+    const v = raw ? bvCsNormLineId_(raw) : '';
+    ta.value = v;
+    const ok = !v || /^@[A-Za-z0-9._-]+$/.test(v);
+    hint.textContent = ok ? baseHint : '⚠ LINE ID 只能有英文、數字和 . _ -，請再確認一次';
+    hint.style.color = ok ? '#8a7a70' : '#B5485A';
+    ta.dispatchEvent(new Event('input'));
+  });
+  bvCsSync(id);
+}
+function bvCsSync(id) {
+  const ta = document.getElementById(id);
+  const box = document.getElementById(id + '_csType');
+  if (!ta || !box) return;
+  const v = ta.value.trim();
+  const lid = bvCsLineIdOf_(v);
+  const inp = box.querySelector('.bv-cs-line-input');
+  if (!v || lid) { inp.value = lid || ''; bvCsSetMode_(id, 'line'); }
+  else { inp.value = ''; bvCsSetMode_(id, 'other'); }
+}
+BV_CS_FIELDS.forEach(bvCsSetup_);
 
 // ===== 開團前檢查清單（2026-09-09）=====
 // 品牌庫每個品牌可存「開團前檢查清單」（openChecklist，一行一條）：這個品牌每次開團
