@@ -1042,6 +1042,8 @@ async function pgApplyColors(root) {
   const badge = root.querySelector('.pgp-age-badge');
   if (badge) badge.style.background = colors.badge;
   root.querySelectorAll('.pgp-step-badge').forEach(b => { b.style.background = colors.circle; });
+  const poster = root.querySelector('.pgp-poster');
+  if (poster) poster.style.setProperty('--pgp-arrow-color', colors.circle); // 箭頭跟圈圈同色
   await pgRecolorImg(root.querySelector('.pgp-ing-badge-img'), colors, false, { base: '#7f5528', maxX: 1 });
   await pgRecolorImg(root.querySelector('.pgp-step-badge-img'), colors, true);
   await pgRecolorImg(root.querySelector('.pgp-tip-badge'), colors, false, { base: '#7a4d16', maxX: 0.72 });

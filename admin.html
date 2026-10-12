@@ -2551,7 +2551,7 @@
     width: 38px;
     height: 20px;
     box-sizing: border-box;
-    background: #FD631C;
+    background: var(--pgp-arrow-color, #FD631C); /* 10-12 雪莉：跟「簡單○步驟」圈圈同色，pgApplyColors 設定 */
     border: 4px solid #fff;
     border-radius: 10px;
     transform: translate(-50%, -50%);
@@ -2577,7 +2577,7 @@
     width: 0; height: 0;
     border-top: 15px solid transparent;
     border-bottom: 15px solid transparent;
-    border-left: 21px solid #FD631C;
+    border-left: 21px solid var(--pgp-arrow-color, #FD631C);
   }
   /* 文字外層負責「吃掉彈性空間」+ 把文字垂直置中；line-clamp 一定要用
      display:-webkit-box，沒辦法跟 flex 同時用在同一個元素上，所以拆成
@@ -8049,7 +8049,7 @@
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>
 <script src="customBlocks.js?v=5"></script>
-<script src="tools.js?v=30"></script>
+<script src="tools.js?v=31"></script>
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=19"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
