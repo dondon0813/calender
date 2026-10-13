@@ -2589,7 +2589,7 @@ function switchView(name, target) {
   // 需要權限才能進的分頁：入口雖然已經藏起來，這裡再擋一次
   // （右欄下拉、記住的上次分頁、直接呼叫 switchView 都會走到這）
   const VIEW_PERM = { imageLibrary: '圖片庫', report: '報表統計', accounting: '開團帳務', lottery: '抽獎管理', contractSign: '線上合約用印', books: '繪本後台', recipeDb: '食譜資料庫', schoolList: '開學清單', blog: '文章管理', fanAdmin: '會員管理', hall: '教材館', changelog: '更新日誌', promos: '優惠總覽' };
-  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon', lottery: 'lotteryEdit', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'bookEdit', changelog: 'changelogEdit', promos: 'calendarEdit' };
+  const VIEW_PERM_KEY = { accounting: 'revenue|commission|acctRecon|expenseEdit', lottery: 'lotteryEdit', books: 'bookEdit', cardSub: 'cardSubEdit', recipeDb: 'recipeEdit', schoolList: 'schoolEdit', blog: 'blogEdit', fanAdmin: 'fanEdit', hall: 'bookEdit', changelog: 'changelogEdit', promos: 'calendarEdit' };
   if (VIEW_PERM[name] && !hasPerm(VIEW_PERM_KEY[name] || name)) {
     alert('你沒有' + VIEW_PERM[name] + '的使用權限，如果需要請跟雪莉申請開通。');
     return;
@@ -2664,9 +2664,14 @@ function switchView(name, target) {
   // 帳務資料在另一份試算表，量也大，進入分頁時才拉（之後切回來就用快取）。
   // 抽獎（lottery.js）是獨立分頁 #viewLottery；帳務頁若使用者有 lotteryEdit，仍背景載入抽獎資料
   // （帳務明細列的 🎁 小標要用）。沒有 revenue/commission/acctRecon 的人進不了帳務頁（上面權限閘門已擋）。
+  // 只有 expenseEdit（公司支出）的人沒有帳務讀取權限：不打 acct-list，直接帶去「公司支出」子分頁。
   if (name === 'accounting') {
-    loadAccounting();
-    if (hasPerm('lotteryEdit') && typeof loadLotteryView === 'function') loadLotteryView();
+    if (hasPerm('revenue|commission|acctRecon')) {
+      loadAccounting();
+      if (hasPerm('lotteryEdit') && typeof loadLotteryView === 'function') loadLotteryView();
+    } else if (hasPerm('expenseEdit') && typeof acctSwitchTab === 'function') {
+      acctSwitchTab('expenses');
+    }
   }
   if (name === 'lottery' && typeof loadLotteryView === 'function') loadLotteryView();
   if (name === 'books') loadBooksView();
@@ -2783,7 +2788,7 @@ function restoreSplitFromStorage() {
   let savedRight = rawRight || '';
   // 2026-10-10 抽獎恢復獨立分頁：右欄記住「開團帳務」但其實只有抽獎權限的人（原本靠帳務頁看抽獎）→ 改還原成抽獎管理；
   // 兩種權限都沒有就不還原，免得每次開頁都跳「沒有權限」
-  if (savedRight === 'accounting' && !hasPerm('revenue|commission|acctRecon')) savedRight = hasPerm('lotteryEdit') ? 'lottery' : '';
+  if (savedRight === 'accounting' && !hasPerm('revenue|commission|acctRecon|expenseEdit')) savedRight = hasPerm('lotteryEdit') ? 'lottery' : '';
   if (savedRight && VIEW_ID_MAP[savedRight] && savedRight !== currentView) {
     setRightPaneOpen(true);
     switchView(savedRight, 'right');
