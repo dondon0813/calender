@@ -342,9 +342,10 @@ async function sdUploadSource(docId, file) {
   if (!(/\.pdf$/i.test(file.name) || file.type === 'application/pdf')) throw new Error('只能上傳 PDF');
   if (file.size > SD_PDF_MAX_BYTES) throw new Error('檔案超過 20MB');
   const init = await sdCall('signdoc-source-upload-url', { id: docId });
+  const srcPath = init.path;
   const put = await fetch(init.signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: file });
   if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
-  const done = await sdCall('signdoc-source-commit', { id: docId });
+  const done = await sdCall('signdoc-source-commit', { id: docId, path: srcPath });
   return done.document;
 }
 async function sdCreateDoc() {
@@ -1013,10 +1014,16 @@ async function sdBuildSignedPdf(assets, doc) {
   const signers = [];
   for (const s of (assets.signers || [])) {
     let png = null, img = null;
-    if (s.signatureUrl) {
-      const bytes = await sdFetchBytes(s.signatureUrl);
-      png = await pdf.embedPng(bytes);
-      img = await sdLoadImg(URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
+    if (s.signedAt) {
+      const failMsg = (s.name || '簽署人') + ' 的簽名圖讀取失敗，請稍後再試或重新產生連結請對方重簽';
+      if (!s.signatureUrl) throw new Error(failMsg);
+      try {
+        const bytes = await sdFetchBytes(s.signatureUrl);
+        png = await pdf.embedPng(bytes);
+        img = await sdLoadImg(URL.createObjectURL(new Blob([bytes], { type: 'image/png' })));
+      } catch (e) {
+        throw new Error(failMsg);
+      }
     }
     signers.push(Object.assign({}, s, { png, sigImg: img }));
   }
