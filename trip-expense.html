@@ -409,6 +409,10 @@
     </div>
     <label for="flNote">備註</label>
     <textarea id="flNote" rows="2" maxlength="300" placeholder="例：出發前 2 天網路報到"></textarea>
+    <label>電子機票（PDF 或圖片，一人一份；成品頁會出現「檢視／下載」）</label>
+    <div id="flTickets"></div>
+    <button type="button" class="btn ghost" id="flTicketBtn" style="margin-top:6px">上傳電子機票</button>
+    <input type="file" id="flTicketInput" accept="application/pdf,image/*" multiple hidden>
     <div class="err" id="flErr"></div>
     <div class="actions">
       <button class="btn danger hidden" id="flDelBtn">刪除</button>
@@ -1261,6 +1265,25 @@ const EXTRA_KEY = 'trip_extra_' + TRIP;
 let EXTRA_FLIGHTS = [];
 let FL_EDITING_ID = null;
 let FL_DIR = 'out';
+let FL_TICKETS = [];      // 視窗裡目前的電子機票 [{name, path}]
+let FL_TICKETS_ORIG = []; // 開視窗時原本的，存檔後比對出拿掉的→刪檔
+const TICKET_PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.(pdf|jpg|jpeg|png|webp)$/;
+function renderFlTickets() {
+  document.getElementById('flTickets').innerHTML = FL_TICKETS.length ? FL_TICKETS.map((t, i) =>
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:6px"><input data-tkname="' + i + '" value="' + esc(t.name) + '" placeholder="誰的機票" maxlength="40" style="flex:1;min-width:0">' +
+    '<button type="button" class="iconbtn" data-tkdel="' + i + '" aria-label="移除">' + X_ICON + '</button></div>').join('') : '<div class="fl-empty">還沒有上傳</div>';
+  document.querySelectorAll('#flTickets [data-tkname]').forEach(inp => inp.addEventListener('input', () => { FL_TICKETS[+inp.dataset.tkname].name = inp.value.trim().slice(0, 40); }));
+  document.querySelectorAll('#flTickets [data-tkdel]').forEach(b => b.addEventListener('click', () => { FL_TICKETS.splice(+b.dataset.tkdel, 1); renderFlTickets(); }));
+}
+async function uploadTicket(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const init = await apiPost('trip-file-upload-url', { trip: TRIP, ext, size: file.size });
+  if (init && init.needLogin) { showLogin(); throw new Error('請重新登入'); }
+  if (!init || init.success !== true) throw new Error((init && init.error) || '取得上傳網址失敗');
+  const put = await fetch(init.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+  if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
+  return init.path;
+}
 const FL_DIR_NAME = { out: '去程', back: '回程', other: '其他' };
 function cleanFlights(arr) {
   return (Array.isArray(arr) ? arr : []).filter(f => f && f.id).map(f => ({
@@ -1270,6 +1293,8 @@ function cleanFlights(arr) {
     to: String(f.to || '').slice(0, 30), toTerm: String(f.toTerm || '').slice(0, 10),
     dep: /^\d{2}:\d{2}$/.test(String(f.dep || '')) ? String(f.dep) : '', arr: /^\d{2}:\d{2}$/.test(String(f.arr || '')) ? String(f.arr) : '',
     note: String(f.note || '').slice(0, 300), at: Number(f.at) || 0, del: !!f.del,
+    tickets: (Array.isArray(f.tickets) ? f.tickets : []).filter(t => t && TICKET_PATH_RE.test(String(t.path || ''))).slice(0, 20)
+      .map(t => ({ name: String(t.name || '').slice(0, 40), path: String(t.path) })),
   }));
 }
 // 讀最新 extra（原始物件，保留 prep 與其他未知欄位）
@@ -1321,6 +1346,9 @@ function openFlight(id) {
   set('flFrom', f ? f.from : ''); set('flFromTerm', f ? f.fromTerm : '');
   set('flTo', f ? f.to : ''); set('flToTerm', f ? f.toTerm : '');
   set('flDep', f ? f.dep : ''); set('flArr', f ? f.arr : ''); set('flNote', f ? f.note : '');
+  FL_TICKETS = f && f.tickets ? f.tickets.map(t => Object.assign({}, t)) : [];
+  FL_TICKETS_ORIG = FL_TICKETS.map(t => t.path);
+  renderFlTickets();
   document.getElementById('flErr').textContent = '';
   document.getElementById('flDelBtn').classList.toggle('hidden', !f);
   openModal('flightModal');
@@ -1345,10 +1373,27 @@ async function saveFlight(rec) {
 async function submitFlight(rec, btn) {
   btn.disabled = true;
   try {
-    if (await saveFlight(rec)) closeModal('flightModal');
+    if (await saveFlight(rec)) {
+      closeModal('flightModal');
+      // 被拿掉的機票檔順手刪掉（盡力，失敗無害）
+      const keep = new Set((rec.tickets || []).map(t => t.path));
+      for (const p of FL_TICKETS_ORIG) if (!keep.has(p)) apiPost('trip-file-delete', { path: p }).catch(() => {});
+    }
   } catch (err) { alert('航班儲存失敗：' + err.message); }
   finally { btn.disabled = false; }
 }
+document.getElementById('flTicketBtn').addEventListener('click', () => document.getElementById('flTicketInput').click());
+document.getElementById('flTicketInput').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  const btn = document.getElementById('flTicketBtn'); const errEl = document.getElementById('flErr');
+  btn.disabled = true; errEl.textContent = '';
+  for (const file of files) {
+    btn.textContent = '上傳中…（' + file.name + '）';
+    try { const path = await uploadTicket(file); FL_TICKETS.push({ name: file.name.replace(/\.[^.]+$/, '').slice(0, 40), path }); renderFlTickets(); }
+    catch (err) { errEl.textContent = file.name + '：' + err.message; }
+  }
+  btn.textContent = '上傳電子機票'; btn.disabled = false;
+});
 document.getElementById('flightAddBtn').addEventListener('click', () => openFlight(null));
 document.getElementById('flCancelBtn').addEventListener('click', () => closeModal('flightModal'));
 document.querySelectorAll('#flDirPick button').forEach(b => b.addEventListener('click', () => { FL_DIR = b.dataset.dir; renderFlDirPick(); }));
@@ -1360,7 +1405,7 @@ document.getElementById('flSaveBtn').addEventListener('click', () => {
   const rec = cleanFlights([{
     id: FL_EDITING_ID || uid(), dir: FL_DIR, date: v('flDate'), flightNo: v('flNo'), airline: v('flAirline'),
     from: v('flFrom'), fromTerm: v('flFromTerm'), to: v('flTo'), toTerm: v('flToTerm'),
-    dep: v('flDep'), arr: v('flArr'), note: v('flNote'), at: Date.now(), del: false,
+    dep: v('flDep'), arr: v('flArr'), note: v('flNote'), at: Date.now(), del: false, tickets: FL_TICKETS,
   }])[0];
   errEl.textContent = '';
   submitFlight(rec, document.getElementById('flSaveBtn'));

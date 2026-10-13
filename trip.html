@@ -68,6 +68,14 @@
   .flight .ap { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; font-size: .95rem; }
   .flight .ap span:last-child { text-align: right; }
   .flight .air { color: var(--soft); font-size: .85rem; margin-top: 10px; }
+  .tix { margin-top: 12px; border-top: 3px dotted var(--ink); padding-top: 10px; }
+  .tix .tl2 { font-size: .85rem; color: var(--soft); margin-bottom: 6px; }
+  .tk { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+  .tk .nm { flex: 1; min-width: 0; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tk button { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border: 2px solid var(--ink); border-radius: 999px; padding: 4px 11px; font-size: .82rem; cursor: pointer; white-space: nowrap; }
+  .tk button.pri { background: var(--pink); }
+  .tk button svg { width: 14px; height: 14px; }
+  .tk button:disabled { opacity: .5; }
   .flight .fn { color: var(--accent); font-size: .92rem; margin-top: 8px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 
   /* 日期軌道（電車沿軌道開到選中的那天；捲動時黏在頂列下方） */
@@ -129,6 +137,10 @@
 
   /* 準備 */
   .panel { background: var(--card); border: var(--line) solid var(--ink); border-radius: 24px; padding: 16px 18px; margin-bottom: 16px; }
+  .who-seg { display: flex; gap: 10px; justify-content: center; margin: 0 0 16px; }
+  .who-seg button { flex: 1; max-width: 180px; background: var(--card); border: var(--line) solid var(--ink); border-radius: 999px; padding: 9px 12px; font-size: 1.05rem; cursor: pointer; }
+  .who-seg button.on { background: var(--pink); }
+  .who-seg small { margin-left: 6px; color: var(--soft); font-size: .78rem; }
   .panel h3 { margin: 0 0 10px; font-weight: 400; font-size: 1.15rem; display: flex; justify-content: space-between; align-items: baseline; }
   .panel h3 small { color: var(--muted); font-size: .82rem; }
   .ck { display: flex; align-items: flex-start; gap: 12px; padding: 7px 0; }
@@ -269,6 +281,9 @@ const ICON = {
   cam: '<svg viewBox="0 0 24 24" ' + S + '><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   plane: '<svg viewBox="0 0 24 24" ' + S + '><path d="M21 3L3 10.5l7 2.5 2.5 7z"/><path d="M10 13l5-5"/></svg>',
   bag: '<svg viewBox="0 0 24 24" ' + S + '><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M4 12h16"/></svg>',
+  ticket: '<svg viewBox="0 0 24 24" ' + S + '><path d="M4 7a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v3a2 2 0 0 0 0 4v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2.5"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" ' + S + '><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  down: '<svg viewBox="0 0 24 24" ' + S + '><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
@@ -310,7 +325,7 @@ const HERO = '<svg viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg" stro
   '</svg>';
 // 當日卡小插圖（輪流）
 const SCENES = [
-  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 54 Q24 46 48 54 T96 54 V74 H0Z" fill="#A9CBE0"/><path d="M10 54 L36 24 Q40 20 44 24 L70 54" fill="#DCEAF2"/><path d="M30 31 L36 24 Q40 20 44 24 L50 31 L44 34 L40 30 L36 34Z" fill="#fff"/><circle cx="78" cy="18" r="8" fill="#EFCB6E"/></svg>',
+  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="80" cy="17" r="7" fill="#EFCB6E"/><path d="M12 56 L40 22 Q44 18 48 22 L76 56 Z" fill="#DCEAF2"/><path d="M31.8 32 L40 22 Q44 18 48 22 L56.2 32 L50 35.5 L44 31.5 L38 35.5 Z" fill="#fff"/><path d="M-2 55 Q22 49 48 55 T98 55 V76 H-2 Z" fill="#A9CBE0"/></svg>',
   '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 58 H96 V74 H0Z" fill="#E1ECD6"/><path d="M48 58 V22 M40 58 L46 22 M56 58 L50 22 M42 40 h12" fill="none"/><rect x="42" y="14" width="12" height="8" rx="2" fill="#E8A49C"/><path d="M48 14 V4" fill="none"/><path d="M14 18 q6 -4 12 0" fill="none" stroke-width="2"/></svg>',
   '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 52 H96 V74 H0Z" fill="#F8EDCB"/><path d="M18 52 V30 M78 52 V30 M12 30 Q48 16 84 30 M16 38 H80" fill="none"/><path d="M12 30 Q48 16 84 30" fill="none" stroke="#B5485A" stroke-width="4"/><path d="M16 38 H80" stroke="#B5485A" stroke-width="3"/><circle cx="48" cy="62" r="4" fill="#E8A49C"/></svg>',
   '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 56 Q24 48 48 56 T96 56 V74 H0Z" fill="#A9CBE0"/><path d="M30 56 h34 l-6 8 h-22z" fill="#E8A49C"/><path d="M48 56 V24 L64 50 H48" fill="#fff"/><path d="M20 18 l3 3 M20 24 l3 -3 M76 14 l2 4 M80 14 l-4 4" fill="none" stroke="#EFCB6E" stroke-width="2.5"/></svg>',
@@ -366,7 +381,7 @@ function cleanExtra(raw) {
     v: 1,
     flights: (Array.isArray(s.flights) ? s.flights : []).filter(f => f && f.id),
     prep: (Array.isArray(s.prep) ? s.prep : []).filter(p => p && p.id).map(p => ({
-      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', text: String(p.text || '').slice(0, 80),
+      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', owner: String(p.owner || '').slice(0, 20), text: String(p.text || '').slice(0, 80),
       done: !!p.done, by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
     })),
   };
@@ -438,9 +453,38 @@ function renderFlights() {
       '<div class="fb"><div class="row"><span class="t">' + esc(f.dep || '--:--') + '</span><span class="mid">' + esc(dur) + '</span><span class="t">' + esc(f.arr || '--:--') + '</span></div>' +
       '<div class="ap"><span>' + term(f.from, f.fromTerm) + '</span><span>' + term(f.to, f.toTerm) + '</span></div>' +
       (f.airline ? '<div class="air">' + esc(f.airline) + '</div>' : '') +
-      (f.note ? '<div class="fn">' + linkify(f.note) + '</div>' : '') + '</div></div>';
+      (f.note ? '<div class="fn">' + linkify(f.note) + '</div>' : '') + ticketsHtml(f) + '</div></div>';
   }).join('');
 }
+
+// 電子機票：存私有儲存區，點了才用登入換 10 分鐘的檔案連結
+const TICKET_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.(pdf|jpg|jpeg|png|webp)$/;
+function ticketsHtml(f) {
+  const list = (Array.isArray(f.tickets) ? f.tickets : []).filter(t => t && TICKET_RE.test(t.path || ''));
+  if (!list.length) return '';
+  return '<div class="tix"><div class="tl2">電子機票</div>' + list.map(t => '<div class="tk"><span class="nm">' + esc(t.name || '機票') + '</span>' +
+    '<button type="button" class="pri" data-tview="' + esc(t.path) + '">' + ICON.eye + '檢視</button>' +
+    '<button type="button" data-tdown="' + esc(t.path) + '" data-tname="' + esc(t.name || '') + '">' + ICON.down + '下載</button></div>').join('') + '</div>';
+}
+async function ticketUrl(path, name) {
+  const res = await apiPost('trip-file-url', name ? { path, name } : { path });
+  if (res && res.needLogin) throw new Error('登入過期，請重新整理後登入');
+  if (!res || res.success !== true || !res.url) throw new Error((res && res.error) || '拿不到檔案');
+  return res.url;
+}
+document.addEventListener('click', async e => {
+  const v = e.target.closest('[data-tview]'), d = e.target.closest('[data-tdown]');
+  if (!v && !d) return;
+  const btn = v || d;
+  // 先同步開新分頁再塞網址（iPhone 對 await 之後才開的視窗會擋）
+  const win = v ? window.open('', '_blank') : null;
+  btn.disabled = true;
+  try {
+    if (v) { const url = await ticketUrl(v.dataset.tview); if (win) win.location.href = url; else location.href = url; }
+    else { const nm = (d.dataset.tname || '機票').replace(/[^A-Za-z0-9 _-]/g, '').trim() || 'ticket'; location.href = await ticketUrl(d.dataset.tdown, nm + '.' + d.dataset.tdown.split('.').pop()); }
+  } catch (err) { if (win) win.close(); alert(err.message); }
+  finally { btn.disabled = false; }
+});
 
 function renderSteps() {
   const box = document.getElementById('steps');
@@ -557,19 +601,33 @@ function renderDay(dir) {
 }
 
 /* ---------- 準備清單（這頁可打勾、新增、刪除；多人同時改依 id 合併） ---------- */
+// 每個人各自一份清單（2026-10-14 雪莉：雪莉跟小璦要準備的東西不同）；沒填 owner 的舊項目兩人都看得到
+const PREP_PEOPLE = ['雪莉', '小璦'];
+const LS_PREP_WHO = 'trip_prep_who_' + TRIP;
+let PREP_WHO = (() => {
+  try { const v = localStorage.getItem(LS_PREP_WHO); if (PREP_PEOPLE.includes(v)) return v; } catch (e) {}
+  const u = getUser(); const hit = PREP_PEOPLE.find(n => u && (u === n || u.includes(n)));
+  return hit || PREP_PEOPLE[0];
+})();
 const PREP_GROUPS = [
   { id: 'todo', name: '出發前準備', ph: '例如：護照、網卡' },
   { id: 'buy', name: '待買清單', ph: '例如：藥妝、伴手禮' },
 ];
 function renderPrep() {
-  const live = EXTRA.prep.filter(p => !p.del);
-  document.getElementById('prepLists').innerHTML = PREP_GROUPS.map(g => {
+  const live = EXTRA.prep.filter(p => !p.del && (!p.owner || p.owner === PREP_WHO));
+  const count = n => { const l = EXTRA.prep.filter(p => !p.del && (!p.owner || p.owner === n)); return l.filter(p => p.done).length + '/' + l.length; };
+  const who = '<div class="who-seg">' + PREP_PEOPLE.map(n => '<button type="button" data-who="' + esc(n) + '" class="' + (n === PREP_WHO ? 'on' : '') + '">' + esc(n) + '<small>' + count(n) + '</small></button>').join('') + '</div>';
+  document.getElementById('prepLists').innerHTML = who + PREP_GROUPS.map(g => {
     const items = live.filter(p => p.group === g.id).sort((a, b) => (a.done - b.done) || (a.id < b.id ? -1 : 1));
     const done = items.filter(p => p.done).length;
     return '<div class="panel"><h3>' + g.name + (items.length ? '<small>' + done + ' / ' + items.length + '</small>' : '') + '</h3>' +
       (items.length ? items.map(p => '<label class="ck' + (p.done ? ' done' : '') + '" data-id="' + esc(p.id) + '"><input type="checkbox"' + (p.done ? ' checked' : '') + '><span class="box2">' + ICON.check + '</span><span class="tx">' + esc(p.text) + '</span><button type="button" class="x-btn" data-del="' + esc(p.id) + '" aria-label="刪除">' + ICON.x + '</button></label>').join('') : '<div class="empty" style="padding:6px 0">還沒有項目</div>') +
       '<div class="addrow"><input data-add="' + g.id + '" placeholder="' + g.ph + '" maxlength="80"><button type="button" data-addbtn="' + g.id + '">新增</button></div></div>';
   }).join('');
+  document.querySelectorAll('#prepLists [data-who]').forEach(b => b.addEventListener('click', () => {
+    PREP_WHO = b.dataset.who; try { localStorage.setItem(LS_PREP_WHO, PREP_WHO); } catch (e) {}
+    renderPrep();
+  }));
   document.querySelectorAll('#prepLists .ck input').forEach(inp => inp.addEventListener('change', () => {
     const id = inp.closest('.ck').dataset.id;
     updatePrep(id, { done: inp.checked });
@@ -586,7 +644,7 @@ function addPrep(group) {
   const inp = document.querySelector('#prepLists [data-add="' + group + '"]');
   const text = inp.value.trim().slice(0, 80);
   if (!text) return;
-  EXTRA.prep.push({ id: uid(), group, text, done: false, by: getUser(), at: Date.now(), del: false });
+  EXTRA.prep.push({ id: uid(), group, owner: PREP_WHO, text, done: false, by: getUser(), at: Date.now(), del: false });
   renderPrep();
   const again = document.querySelector('#prepLists [data-add="' + group + '"]');
   if (again) again.focus();
