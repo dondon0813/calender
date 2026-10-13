@@ -70,7 +70,7 @@ const SD_ICON = {
   down: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 11l4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg>'
 };
 
-function sdForceRelogin() {
+function sgnForceRelogin() {
   currentToken = null;
   localStorage.removeItem('admin_unlocked');
   localStorage.removeItem('admin_token');
@@ -83,19 +83,19 @@ async function sdApiGet() {
   const res = await fetch(SD_API_URL + '?token=' + encodeURIComponent(currentToken || ''), { cache: 'no-store' });
   let data;
   try { data = await res.json(); } catch (e) { throw new Error('後端回應格式不對（HTTP ' + res.status + '），可能還沒部署'); }
-  if (data && data.needLogin) { sdForceRelogin(); throw new Error(data.error || '請重新登入'); }
+  if (data && data.needLogin) { sgnForceRelogin(); throw new Error(data.error || '請重新登入'); }
   return data;
 }
-async function sdApiPost(type, extra) {
+async function sgnApiPost(type, extra) {
   const body = Object.assign({ type, token: currentToken }, extra || {});
   const res = await fetch(SD_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   let data;
   try { data = await res.json(); } catch (e) { throw new Error('後端回應格式不對（HTTP ' + res.status + '）'); }
-  if (data && data.needLogin) { sdForceRelogin(); throw new Error(data.error || '請重新登入'); }
+  if (data && data.needLogin) { sgnForceRelogin(); throw new Error(data.error || '請重新登入'); }
   return data;
 }
 async function sdCall(type, extra) {
-  const res = await sdApiPost(type, extra);
+  const res = await sgnApiPost(type, extra);
   if (!sdIsOk(res)) throw new Error((res && res.error) || '操作失敗');
   return res;
 }
