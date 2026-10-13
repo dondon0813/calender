@@ -959,7 +959,7 @@ function sdRenderSignerRows(doc) {
       if (url) {
         h += '<div class="sd-link-row"><input type="url" readonly value="' + sdEsc(url) + '" aria-label="簽署連結" onfocus="this.select()">' +
           '<button type="button" class="task-mini-btn" data-act="copy" data-id="' + sdEsc(s.id) + '">' + SD_ICON.copy + '複製</button>' +
-          '<button type="button" class="task-mini-btn" data-act="line" data-id="' + sdEsc(s.id) + '">' + SD_ICON.share + 'LINE 分享</button>' +
+          '<button type="button" class="task-mini-btn" data-act="line" data-id="' + sdEsc(s.id) + '">' + SD_ICON.share + '分享到 LINE</button>' +
           '<button type="button" class="task-mini-btn" data-act="relink" data-id="' + sdEsc(s.id) + '">' + SD_ICON.refresh + '重新產生連結</button></div>';
       } else {
         h += '<div class="sd-link-row"><span class="sd-sg-sub">連結只在送出時顯示一次。</span>' +
@@ -978,7 +978,16 @@ function sdRenderSignerRows(doc) {
     const s = (doc.signers || []).find(x => x.id === id);
     if (!s) return;
     if (act === 'copy') { await sdCopy(SD_LINKS[id]); sdSetStatus('已複製 ' + s.name + ' 的連結'); }
-    else if (act === 'line') { window.open(sdLineShareUrl(s.name, doc.title, SD_LINKS[id]), '_blank'); }
+    else if (act === 'line') {
+      // 優先用系統分享選單（iPad／iPhone／手機可直接選 LINE）；電腦沒有分享選單時改成複製整段訊息，避免跳到 LINE 官網
+      const text = s.name + '您好，請點連結簽署《' + doc.title + '》：' + SD_LINKS[id];
+      if (navigator.share) {
+        try { await navigator.share({ text }); } catch (err) { if (err && err.name !== 'AbortError') { await sdCopy(text); sdSetStatus('無法開啟分享選單，已改為複製訊息，請貼到 LINE'); } }
+      } else {
+        await sdCopy(text);
+        sdSetStatus('已複製給 ' + s.name + ' 的訊息（含連結），請直接貼到 LINE');
+      }
+    }
     else if (act === 'sigimg') { sdOpenFile('signature', id); }
     else if (act === 'relink') {
       if (!confirm('重新產生「' + s.name + '」的連結？舊連結會立即失效。')) return;
