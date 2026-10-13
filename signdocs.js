@@ -171,6 +171,14 @@ function sdInjectStyle() {
   .sd-sg-fields{ grid-column:2 / 5; font-size:12px; color:var(--c-text-soft); }
   .sd-x{ width:26px; height:26px; border:none; border-radius:50%; background:transparent; color:var(--c-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
   .sd-x:hover{ color:var(--c-brown); }
+  .sd-seg{ display:inline-flex; background:var(--c-surface); border-radius:999px; padding:3px; gap:2px; }
+  .sd-seg button{ border:none; background:transparent; color:var(--c-text-soft); font:inherit; font-size:13px; font-weight:800; padding:5px 14px; border-radius:999px; cursor:pointer; }
+  .sd-seg button.on{ background:#fff; color:var(--c-text); box-shadow:0 1px 3px rgba(90,74,63,.15); }
+  .sd-box.picked{ box-shadow:0 0 0 2px #fff, 0 0 0 4px currentColor; }
+  .sd-box[data-type=text]{ border-style:dashed; }
+  .sd-box[data-type=signdate]{ border-style:dotted; }
+  .sd-fill{ margin-top:6px; font-size:13px; color:var(--c-text); line-height:1.7; word-break:break-all; }
+  .sd-fill span{ color:var(--c-text-soft); font-weight:800; }
   .sd-hint{ font-size:12.5px; color:var(--c-text-soft); line-height:1.7; margin:6px 0; }
   /* PDF 頁面與簽名框 */
   .sd-pages{ margin-top:10px; display:flex; flex-direction:column; gap:12px; align-items:center; width:100%; }
@@ -390,15 +398,35 @@ function sdOpenDetail(id) {
     renderToken: 0,
     signers: (doc.signers || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).map((s, i) => ({
       id: s.id, key: 'k' + (i + 1), name: s.name || '', role: s.role || '',
-      fields: (s.fields || []).map(f => ({ page: f.page, x: f.x, y: f.y, w: f.w, h: f.h }))
-    }))
+      fields: (s.fields || []).map(f => ({ id: f.id || '', type: f.type || 'signature', label: f.label || '', required: f.required, value: f.value, page: f.page, x: f.x, y: f.y, w: f.w, h: f.h }))
+    })),
+    tool: 'signature', newLabel: '姓名', selBox: null
   };
+  SD_ED.signers.forEach(sdEnsureFieldIds);
   SD_ED.keySeq = SD_ED.signers.length;
   sdRenderDetail();
 }
 function sdBackToList() {
   SD_CUR = null; SD_ED = null;
   sdRenderCurrent();
+}
+function sdFieldType(f) { return f && (f.type === 'text' || f.type === 'signdate') ? f.type : 'signature'; }
+function sdEnsureFieldIds(s) {
+  const used = new Set(s.fields.map(f => f.id).filter(Boolean));
+  let n = 0;
+  s.fields.forEach(f => {
+    if (f.id) return;
+    do { n++; } while (used.has('f' + n));
+    f.id = 'f' + n; used.add(f.id);
+  });
+}
+function sdMakeField(s, base) {
+  const type = (SD_ED && SD_ED.tool) || 'signature';
+  const f = Object.assign({ type, label: '', id: '' }, base);
+  if (type === 'text') { f.label = (SD_ED.newLabel || '').trim() || '姓名'; f.required = true; }
+  s.fields.push(f);
+  sdEnsureFieldIds(s);
+  return f;
 }
 function sdColorOf(i) { return SD_COLORS[i % SD_COLORS.length]; }
 function sdSetStatus(msg, isErr) {
@@ -451,11 +479,16 @@ function sdRenderDetail() {
   // 簽署人
   if (draft) {
     html += '<div class="sd-h">簽署人</div>' +
-      '<div class="sd-hint">點選一位簽署人後，在下方 PDF 頁面上按住滑鼠拖曳畫出簽名框（手機請按「在目前頁面加簽名框」再拖曳／縮放）。每人至少一個框，可多處。座標以頁面比例儲存。</div>' +
+      '<div class="sd-hint">點選一位簽署人後，在下方 PDF 頁面上按住滑鼠拖曳畫出簽名框（手機請按「在目前頁面加框」再拖曳／縮放）。每人至少一個簽名框，可多處；也可加「文字欄」（簽署人自己填）和「簽署日期」（簽署時自動填）。座標以頁面比例儲存。</div>' +
+      '<div class="sd-toolbar" style="margin-top:8px;"><span class="sd-lb" style="margin:0;">畫框工具</span>' +
+        '<div class="sd-seg" id="sdToolSeg" role="group" aria-label="畫框工具">' +
+          '<button type="button" data-tool="signature">簽名</button><button type="button" data-tool="text">文字欄</button><button type="button" data-tool="signdate">簽署日期</button></div>' +
+        '<input type="text" id="sdFieldLabel" maxlength="20" placeholder="文字欄名稱" aria-label="文字欄名稱" style="width:160px;">' +
+      '</div>' +
       '<div class="sd-signers" id="sdSigners"></div>' +
       '<div class="sd-toolbar" style="margin-top:8px;">' +
         '<button type="button" class="task-mini-btn" id="sdAddSignerBtn">' + SD_ICON.plus + '新增簽署人</button>' +
-        '<button type="button" class="task-mini-btn" id="sdAddBoxBtn">' + SD_ICON.plus + '在目前頁面加簽名框</button>' +
+        '<button type="button" class="task-mini-btn" id="sdAddBoxBtn">' + SD_ICON.plus + '在目前頁面加框</button>' +
       '</div>';
   } else {
     html += '<div class="sd-h">簽署進度</div><div id="sdSignerRows"></div>';
@@ -473,6 +506,7 @@ function sdRenderDetail() {
     sdRenderSignerList();
     document.getElementById('sdAddSignerBtn').addEventListener('click', sdAddSigner);
     document.getElementById('sdAddBoxBtn').addEventListener('click', sdAddBoxToVisiblePage);
+    sdBindToolbar();
     document.getElementById('sdReplaceFile').addEventListener('change', sdReplaceSource);
   } else {
     sdRenderSignerRows(doc);
@@ -492,7 +526,7 @@ function sdRenderSignerList() {
       '<input type="text" class="sd-name" data-i="' + i + '" value="' + sdEsc(s.name) + '" placeholder="姓名 *" aria-label="姓名" style="color:var(--c-text);">' +
       '<input type="text" class="sd-role" data-i="' + i + '" value="' + sdEsc(s.role) + '" placeholder="角色（例如：家長）" aria-label="角色" style="color:var(--c-text);">' +
       '<button type="button" class="sd-x" data-rm="' + i + '" aria-label="刪除簽署人" title="刪除簽署人">' + SD_ICON.x + '</button>' +
-      '<div class="sd-sg-fields">簽名框 ' + s.fields.length + ' 處' + (s.fields.length ? '' : '（尚未畫框）') + '</div>' +
+      '<div class="sd-sg-fields">' + sdFieldSummary(s) + '</div>' +
     '</div>';
   }).join('') || '<div class="sd-empty">尚未新增簽署人</div>';
   el.querySelectorAll('.sd-signer').forEach(row => {
@@ -584,6 +618,51 @@ function sdClampField(f) {
   f.x = sdRound(f.x); f.y = sdRound(f.y);
   f.w = sdRound(Math.min(f.w, 1 - f.x)); f.h = sdRound(Math.min(f.h, 1 - f.y));
 }
+function sdSelectedField() {
+  const sb = SD_ED && SD_ED.selBox;
+  const s = sb && SD_ED.signers[sb.si];
+  return s && s.fields[sb.fi] ? s.fields[sb.fi] : null;
+}
+function sdSyncToolbar() {
+  const seg = document.getElementById('sdToolSeg'), inp = document.getElementById('sdFieldLabel');
+  if (!seg || !inp) return;
+  const sel = sdSelectedField();
+  const editing = sel && sdFieldType(sel) === 'text';
+  seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tool === SD_ED.tool));
+  inp.style.display = (editing || SD_ED.tool === 'text') ? '' : 'none';
+  inp.value = editing ? sel.label : SD_ED.newLabel;
+  inp.placeholder = editing ? '修改這個文字欄的名稱' : '新文字欄的名稱';
+}
+function sdBindToolbar() {
+  const seg = document.getElementById('sdToolSeg'), inp = document.getElementById('sdFieldLabel');
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button[data-tool]');
+    if (!b) return;
+    SD_ED.tool = b.dataset.tool; SD_ED.selBox = null;
+    sdRenderBoxes();
+  });
+  inp.addEventListener('input', () => {
+    const sel = sdSelectedField();
+    if (sel && sdFieldType(sel) === 'text') { sel.label = inp.value; sdRefreshBoxLabels(); }
+    else SD_ED.newLabel = inp.value;
+  });
+  sdSyncToolbar();
+}
+function sdFieldLabelHtml(s, f, done) {
+  const t = sdFieldType(f);
+  let txt;
+  if (t === 'signature') txt = (s.name || '（未命名）') + (s.role ? '・' + s.role : '') + (done ? '（已簽）' : '');
+  else if (t === 'text') txt = '文字欄：' + (f.label || '') + (f.value ? '＝' + f.value : '');
+  else txt = '簽署日期' + (f.value ? '＝' + f.value : '') + '・' + (s.name || '');
+  return sdEsc(txt);
+}
+function sdRefreshBoxLabels() {
+  document.querySelectorAll('.sd-box[data-si]').forEach(b => {
+    const s = SD_ED.signers[Number(b.dataset.si)], f = s && s.fields[Number(b.dataset.fi)];
+    const lb = b.querySelector('.sd-box-lb');
+    if (f && lb) lb.innerHTML = sdFieldLabelHtml(s, f, false);
+  });
+}
 function sdRenderBoxes() {
   if (!SD_ED) return;
   const doc = sdFindDoc(SD_ED.docId);
@@ -601,19 +680,27 @@ function sdRenderBoxes() {
       b.style.cssText = 'left:' + f.x * 100 + '%;top:' + f.y * 100 + '%;width:' + f.w * 100 + '%;height:' + f.h * 100 + '%;border-color:' + c + ';background:' + c + '26;color:' + c + ';' +
         (draft && si !== SD_ED.sel ? 'opacity:.75;' : '');
       b.dataset.si = String(si); b.dataset.fi = String(fi);
-      b.innerHTML = '<span class="sd-box-lb">' + sdEsc(s.name || '（未命名）') + (s.role ? '・' + sdEsc(s.role) : '') + (done ? '（已簽）' : '') + '</span>' +
+      b.dataset.type = sdFieldType(f);
+      if (draft && SD_ED.selBox && SD_ED.selBox.si === si && SD_ED.selBox.fi === fi) b.classList.add('picked');
+      b.innerHTML = '<span class="sd-box-lb">' + sdFieldLabelHtml(s, f, done) + '</span>' +
         (draft ? '<button type="button" class="sd-box-del" aria-label="刪除簽名框">' + SD_ICON.x + '</button><div class="sd-box-rz"></div>' : '');
       pg.el.appendChild(b);
       if (draft) sdBindBox(b, pg.el);
     });
   });
-  if (draft) sdUpdateFieldCounts();
+  if (draft) { sdUpdateFieldCounts(); sdSyncToolbar(); }
+}
+function sdFieldSummary(s) {
+  if (!s.fields.length) return '尚未畫框';
+  const c = { signature: 0, text: 0, signdate: 0 };
+  s.fields.forEach(f => { c[sdFieldType(f)]++; });
+  return '簽名框 ' + c.signature + ' 處' + (c.text ? '・文字欄 ' + c.text : '') + (c.signdate ? '・簽署日期 ' + c.signdate : '') + (c.signature ? '' : '（缺簽名框）');
 }
 function sdUpdateFieldCounts() {
   document.querySelectorAll('#sdSigners .sd-signer').forEach(row => {
     const s = SD_ED.signers[Number(row.dataset.i)];
     const el = row.querySelector('.sd-sg-fields');
-    if (s && el) el.textContent = '簽名框 ' + s.fields.length + ' 處' + (s.fields.length ? '' : '（尚未畫框）');
+    if (s && el) el.textContent = sdFieldSummary(s);
   });
 }
 function sdBindBox(b, pageEl) {
@@ -630,6 +717,11 @@ function sdBindBox(b, pageEl) {
     e.preventDefault(); e.stopPropagation();
     if (SD_ED.sel !== si) { SD_ED.sel = si; sdRenderSignerList(); }
     const f = field(); if (!f) return;
+    if (!SD_ED.selBox || SD_ED.selBox.si !== si || SD_ED.selBox.fi !== fi) {
+      SD_ED.selBox = { si, fi };
+      document.querySelectorAll('.sd-box.picked').forEach(x => x.classList.remove('picked'));
+      b.classList.add('picked'); sdSyncToolbar();
+    }
     const rect = pageEl.getBoundingClientRect();
     const sx = e.clientX, sy = e.clientY;
     const orig = { x: f.x, y: f.y, w: f.w, h: f.h };
@@ -666,7 +758,7 @@ function sdBindDraw() {
       if (e.pointerType !== 'mouse' || e.button !== 0) return;
       if (e.target.closest('.sd-box')) return;
       const s = SD_ED.signers[SD_ED.sel];
-      if (!s) { sdSetStatus('請先新增並選取一位簽署人，再畫簽名框', true); return; }
+      if (!s) { sdSetStatus('請先新增並選取一位簽署人，再畫框', true); return; }
       e.preventDefault();
       sdSetStatus('');
       const rect = pg.el.getBoundingClientRect();
@@ -691,7 +783,8 @@ function sdBindDraw() {
         ghost.remove();
         if (f.w >= 0.03 && f.h >= 0.015) {
           sdClampField(f);
-          s.fields.push({ page: f.page, x: f.x, y: f.y, w: f.w, h: f.h });
+          const nf = sdMakeField(s, { page: f.page, x: f.x, y: f.y, w: f.w, h: f.h });
+          SD_ED.selBox = { si: SD_ED.sel, fi: s.fields.indexOf(nf) };
         }
         sdRenderBoxes();
       }
@@ -718,7 +811,8 @@ function sdAddBoxToVisiblePage() {
   sdSetStatus('');
   const f = { page: sdVisiblePageIndex(), x: 0.55, y: 0.8, w: 0.3, h: 0.07 };
   sdClampField(f);
-  s.fields.push(f);
+  const nf = sdMakeField(s, f);
+  SD_ED.selBox = { si: SD_ED.sel, fi: s.fields.indexOf(nf) };
   sdRenderBoxes();
 }
 
@@ -785,7 +879,7 @@ async function sdOpenFile(which, signerId) {
 function sdCollectDraft() {
   const title = document.getElementById('sdTitle').value.trim();
   const signers = SD_ED.signers.map((s, i) => {
-    const o = { name: s.name.trim(), role: s.role.trim(), sort: i, fields: s.fields.map(f => ({ page: f.page, x: f.x, y: f.y, w: f.w, h: f.h })) };
+    const o = { name: s.name.trim(), role: s.role.trim(), sort: i, fields: s.fields.map(f => { const t = sdFieldType(f); const o = { id: f.id, type: t, page: f.page, x: f.x, y: f.y, w: f.w, h: f.h }; if (t === 'text') { o.label = (f.label || '').trim() || '姓名'; o.required = f.required !== false; } else if (f.label) o.label = f.label; return o; }) };
     if (s.id) o.id = s.id;
     return o;
   });
@@ -799,6 +893,7 @@ async function sdSaveDraft(showOk) {
   const p = sdCollectDraft();
   if (!p.title) { sdSetStatus('請填標題', true); return false; }
   if (p.signers.some(s => !s.name)) { sdSetStatus('每位簽署人都要填姓名', true); return false; }
+  if (SD_ED.signers.some(s => s.fields.some(f => sdFieldType(f) === 'text' && !(f.label || '').trim()))) { sdSetStatus('文字欄要有名稱', true); return false; }
   SD_BUSY = true;
   sdSetStatus('儲存中…');
   try {
@@ -822,8 +917,8 @@ async function sdSaveDraft(showOk) {
 // --- 送出簽署 ---
 async function sdSend() {
   if (SD_ED.signers.length < 1) { sdSetStatus('請至少新增一位簽署人', true); return; }
-  const bad = SD_ED.signers.find(s => !s.fields.length);
-  if (bad) { sdSetStatus('「' + (bad.name || '未命名') + '」還沒有簽名框，每位簽署人至少要畫一處', true); return; }
+  const bad = SD_ED.signers.find(s => !s.fields.some(f => sdFieldType(f) === 'signature'));
+  if (bad) { sdSetStatus('「' + (bad.name || '未命名') + '」還沒有簽名框（文字欄與日期不算），每位簽署人至少要畫一處', true); return; }
   if (!confirm('送出後文件會鎖定（原檔與簽名位置不能再改），並產生每位簽署人的專屬連結（7 天有效）。確定送出？')) return;
   if (!(await sdSaveDraft(false))) return;
   SD_BUSY = true;
@@ -858,6 +953,8 @@ function sdRenderSignerRows(doc) {
       '<div class="sd-sg-top"><span class="sd-sg-name">' + sdEsc(s.name) + (s.role ? '（' + sdEsc(s.role) + '）' : '') + '</span>' +
       '<span class="sd-pill ' + (signed ? 'sd-sg-ok' : '') + '">' + (signed ? '已簽署' : '待簽署') + '</span>' +
       '<span class="sd-sg-sub">' + (signed ? '簽署時間 ' + sdFmtDt(s.signedAt) : (s.viewedAt ? '已開啟 ' + sdFmtDt(s.viewedAt) : '尚未開啟') + (s.tokenExpiresAt ? '・連結期限 ' + sdFmtDt(s.tokenExpiresAt) : '')) + '</span></div>';
+    const filled = (s.fields || []).filter(f => f.type === 'text' && f.value);
+    if (filled.length) h += '<div class="sd-fill">' + filled.map(f => '<div><span>' + sdEsc(f.label) + '</span>：' + sdEsc(f.value) + '</div>').join('') + '</div>';
     if (!signed && doc.status === 'sending') {
       if (url) {
         h += '<div class="sd-link-row"><input type="url" readonly value="' + sdEsc(url) + '" aria-label="簽署連結" onfocus="this.select()">' +
@@ -978,7 +1075,9 @@ async function sdBuildRecordPages(doc, signers, sha, completedAt) {
 
   const BLOCK = 118 * S;
   for (const s of signers) {
-    if (y + BLOCK > H - M - 30 * S) newPage();
+    const fills = (s.fields || []).filter(f => sdFieldType(f) !== 'signature' && String(f.value == null ? '' : f.value).trim())
+      .map(f => (f.label || (f.type === 'signdate' ? '簽署日期' : '')) + '：' + String(f.value).trim());
+    if (y + BLOCK + (fills.length ? 36 * S : 0) > H - M - 30 * S) newPage();
     const top = y;
     line(s.name + (s.role ? '（' + s.role + '）' : ''), 14, { bold: true });
     line('簽署時間：' + sdFmtDt(s.signedAt).replace(/\//g, '-') + '（台灣時間）', 11);
@@ -992,6 +1091,7 @@ async function sdBuildRecordPages(doc, signers, sha, completedAt) {
       ctx.strokeStyle = '#E6DCD2'; ctx.lineWidth = 1 * S; ctx.strokeRect(bx, by, boxW, boxH);
       ctx.drawImage(s.sigImg, bx + (boxW - iw) / 2, by + (boxH - ih) / 2, iw, ih);
     }
+    if (fills.length) line('填寫內容：' + fills.join('；'), 11);
     y = Math.max(y, top + 84 * S) + 8 * S;
     ctx.fillStyle = '#F3E2D3'; ctx.fillRect(M, y, W - 2 * M, 1 * S); y += 12 * S;
   }
@@ -1007,6 +1107,22 @@ async function sdBuildRecordPages(doc, signers, sha, completedAt) {
   return out;
 }
 
+// 文字／日期欄：透明底 PNG，字級＝框高 60%、過長縮小、靠左垂直置中、2x 解析度
+async function sdTextPng(text, wPt, hPt) {
+  const S = 2, FONT = '"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif';
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(wPt * S)); c.height = Math.max(1, Math.round(hPt * S));
+  const ctx = c.getContext('2d');
+  const pad = 2 * S;
+  let px = hPt * 0.6 * S;
+  const set = () => { ctx.font = '400 ' + px + 'px ' + FONT; };
+  set();
+  while (px > 4 && ctx.measureText(text).width > c.width - 2 * pad) { px -= 1; set(); }
+  ctx.fillStyle = '#333'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, pad, c.height / 2);
+  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+  return new Uint8Array(await blob.arrayBuffer());
+}
 async function sdBuildSignedPdf(assets, doc) {
   const { PDFDocument } = PDFLib;
   const srcBytes = await sdFetchBytes(assets.sourceUrl);
@@ -1029,11 +1145,22 @@ async function sdBuildSignedPdf(assets, doc) {
   }
   const pageCount = pdf.getPageCount();
   for (const s of signers) {
-    if (!s.png) continue;
+    if (!s.signedAt) continue;
     for (const f of (s.fields || [])) {
       if (f.page < 0 || f.page >= pageCount) continue;
+      if (sdFieldType(f) !== 'signature') {
+        const v = String(f.value == null ? '' : f.value).trim();
+        if (!v) continue;
+        const pg2 = pdf.getPage(f.page);
+        const sz = pg2.getSize();
+        const bw2 = f.w * sz.width, bh2 = f.h * sz.height;
+        const tim = await pdf.embedPng(await sdTextPng(v, bw2, bh2));
+        pg2.drawImage(tim, { x: f.x * sz.width, y: sz.height - (f.y + f.h) * sz.height, width: bw2, height: bh2 });
+        continue;
+      }
       const pg = pdf.getPage(f.page);
       const { width: pw, height: ph } = pg.getSize();
+      if (!s.png) continue;
       const bw = f.w * pw, bh = f.h * ph;
       const sc = Math.min(bw / s.png.width, bh / s.png.height);
       const dw = s.png.width * sc, dh = s.png.height * sc;
