@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FBF7EF">
+<title>旅遊行程｜雪莉與朵栗</title>
+<link rel="apple-touch-icon" href="icons/site-apple-touch-v2.png">
+<link rel="icon" type="image/png" href="icons/site-192-v2.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap">
+<style>
+  /* 員工旅遊「成品頁」（2026-10-14）：只看不改，資料＝trip-expense.html 排行程那份。
+     風格參考雪莉交件匣「旅遊網站參考」：奶油底、深色粗線、粉黃綠藍手繪插圖。 */
+  :root {
+    --bg: #FBF7EF; --ink: #3B3330; --soft: #6E625C; --muted: #A1958D;
+    --card: #FFFFFF; --pink: #E8A49C; --pink-bg: #F6DEDA; --yellow: #EFCB6E; --yellow-bg: #F8EDCB;
+    --green: #A9C98F; --green-bg: #E1ECD6; --blue: #A9CBE0; --blue-bg: #DCEAF2; --line: 3px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); -webkit-tap-highlight-color: transparent;
+    font-family: "Huninn", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  body { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  a { color: inherit; }
+  svg { display: block; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+
+  /* 頂列 */
+  .nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: var(--line) solid var(--ink); }
+  .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .nav .logo { width: 44px; height: 44px; }
+  .nav .links { display: flex; gap: 6px; }
+  .nav .links a { text-decoration: none; font-size: 1.05rem; padding: 7px 16px; border-radius: 999px; border: var(--line) solid transparent; }
+  .nav .links a.on { background: var(--pink); border-color: var(--ink); }
+
+  /* 主視覺 */
+  .hero { border: var(--line) solid var(--ink); border-top: none; border-radius: 0 0 34px 34px; overflow: hidden; background: #fff; margin: 0 -16px; }
+  .hero svg { width: 100%; height: auto; }
+  .title { text-align: center; margin: 22px 0 6px; font-size: clamp(2rem, 10vw, 2.8rem); letter-spacing: .12em; font-weight: 400; }
+  .range { text-align: center; color: var(--soft); font-size: 1.05rem; letter-spacing: .04em; }
+  .count { display: flex; justify-content: center; margin: 18px 0 8px; }
+  .count span { background: var(--yellow); border: var(--line) solid var(--ink); border-radius: 999px; padding: 8px 26px; font-size: 1rem; }
+  .count b { font-size: 1.7rem; font-weight: 400; margin: 0 6px; vertical-align: -2px; }
+
+  .sec-h { display: flex; align-items: center; gap: 14px; margin: 40px 0 22px; font-size: 1.6rem; }
+  .sec-h .ic { width: 52px; height: 52px; border-radius: 50%; border: var(--line) solid var(--ink); display: flex; align-items: center; justify-content: center; }
+  .sec-h .ic svg { width: 28px; height: 28px; }
+
+  /* 日期軌道 */
+  .stepper { position: relative; padding: 4px 0 0; }
+  .stepper .rail { position: absolute; left: 0; right: 0; top: 16px; height: var(--line); background: var(--ink); }
+  .stepper .rail.hide { display: none; }
+  .steps { display: grid; position: relative; }
+  .step { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+  .step .dot { width: 26px; height: 26px; border-radius: 50%; border: var(--line) solid var(--ink); background: #fff; position: relative; z-index: 1; }
+  .step .car { height: 54px; display: flex; align-items: flex-start; justify-content: center; }
+  .step .car svg { width: 46px; height: 50px; margin-top: -10px; visibility: hidden; transition: transform .25s; }
+  .step.on .car svg { visibility: visible; }
+  .step .md { font-size: 1.15rem; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .step.on .md { background: var(--pink); }
+  .step .wd { font-size: .82rem; color: var(--soft); margin-top: 2px; }
+  .steps.dense .step .md { font-size: .95rem; padding: 2px 6px; }
+
+  /* 當日卡 */
+  .daycard { display: flex; gap: 16px; align-items: center; border: var(--line) solid var(--ink); border-radius: 26px; padding: 16px; margin: 22px 0 26px; }
+  .daycard .pic { flex: 0 0 96px; height: 74px; border: var(--line) solid var(--ink); border-radius: 16px; overflow: hidden; background: #fff; }
+  .daycard .pic svg { width: 100%; height: 100%; }
+  .daycard .dn { color: var(--soft); font-size: .95rem; }
+  .daycard .dt { font-size: 1.25rem; line-height: 1.35; margin: 2px 0 4px; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .daycard > div:last-child { min-width: 0; }
+  .daycard .ds { color: var(--soft); font-size: .92rem; }
+
+  /* 時間軸 */
+  .tl { position: relative; }
+  .ev { display: grid; grid-template-columns: 54px 22px 1fr; column-gap: 8px; position: relative; padding-bottom: 18px; }
+  .ev::before { content: ''; position: absolute; left: 70px; top: 22px; bottom: -4px; border-left: 3px dotted var(--ink); }
+  .ev:last-child::before { display: none; }
+  .ev .tm { text-align: right; font-size: 1rem; padding-top: 12px; color: var(--ink); white-space: nowrap; }
+  .ev .tm.none { color: var(--muted); }
+  .ev .nd { width: 20px; height: 20px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--bg); margin-top: 12px; position: relative; z-index: 1; }
+  .ev .bd { min-width: 0; }
+  .move { padding-top: 8px; font-size: 1.02rem; line-height: 1.5; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border: var(--line) solid var(--ink); border-radius: 999px; padding: 1px 12px; margin-right: 8px; font-size: .92rem; vertical-align: 1px; }
+  .pill svg { width: 16px; height: 16px; }
+  .box { background: var(--card); border: var(--line) solid var(--ink); border-radius: 20px; padding: 13px 16px; }
+  .box .n { font-size: 1.15rem; line-height: 1.4; display: inline; background: linear-gradient(transparent 86%, var(--blue) 86%); word-break: break-word; }
+  .box .tag { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; border-radius: 999px; padding: 1px 9px; margin-left: 6px; border: 2px solid var(--ink); vertical-align: 3px; }
+  .box .tag svg { width: 12px; height: 12px; }
+  .sub { color: var(--soft); font-size: .92rem; margin-top: 6px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .sub a { color: #5D88A6; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .acts a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; font-size: .85rem; border: 2px solid var(--ink); border-radius: 999px; padding: 4px 12px; background: var(--bg); max-width: 100%; }
+  .acts a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acts a svg { width: 15px; height: 15px; flex: 0 0 auto; }
+  .who { color: var(--muted); font-size: .78rem; margin-top: 6px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 0; }
+  .swipehint { text-align: center; color: var(--muted); font-size: .8rem; margin: 6px 0 0; }
+  .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; }
+  .pager button { flex: 1; font: inherit; color: var(--ink); background: #fff; border: var(--line) solid var(--ink); border-radius: 999px; padding: 10px; cursor: pointer; }
+  .pager button:disabled { opacity: .3; cursor: default; }
+
+  /* 相簿 */
+  .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: var(--line) solid var(--ink); border-radius: 14px; display: block; background: #fff; cursor: zoom-in; }
+  .lb { position: fixed; inset: 0; background: rgba(30,25,22,.92); z-index: 50; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+  .lb.on { display: flex; }
+  .lb img { max-width: 100%; max-height: 80vh; border-radius: 12px; }
+  .lb .cap { color: #fff; margin-top: 12px; font-size: .95rem; text-align: center; }
+
+  .foot { text-align: center; color: var(--muted); font-size: .82rem; margin-top: 40px; }
+  .foot a { color: var(--soft); }
+
+  /* 登入 */
+  .login { max-width: 360px; margin: 60px auto; padding: 24px; background: #fff; border: var(--line) solid var(--ink); border-radius: 24px; display: none; }
+  .login h2 { margin: 0 0 6px; font-weight: 400; }
+  .login p { color: var(--soft); font-size: .9rem; margin: 0 0 16px; }
+  .login input { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 12px; margin-bottom: 10px; background: var(--bg); }
+  .login button { width: 100%; font: inherit; padding: 11px; border-radius: 999px; border: var(--line) solid var(--ink); background: var(--pink); cursor: pointer; }
+  .login .err { color: #B5485A; font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
+  .status { text-align: center; color: var(--muted); padding: 60px 0; }
+</style>
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a href="#top" aria-label="回到最上面"><svg class="logo" viewBox="0 0 48 48" id="logoSvg"></svg></a>
+  <div class="links"><a href="#plan" data-sec="plan">行程</a><a href="#album" data-sec="album" id="albumLink" hidden>相簿</a></div>
+</div></nav>
+
+<div id="loginBox" class="login">
+  <h2>先登入一下</h2>
+  <p>用後台的姓名和密碼登入，就能看我們的旅遊行程。</p>
+  <input id="loginName" placeholder="姓名" autocomplete="username">
+  <input id="loginPw" type="password" placeholder="密碼" autocomplete="current-password">
+  <button id="loginBtn" type="button">登入</button>
+  <div class="err" id="loginErr"></div>
+</div>
+
+<main id="app" class="wrap" hidden>
+  <div id="top" class="hero"></div>
+  <h1 class="title" id="tTitle"></h1>
+  <div class="range" id="tRange"></div>
+  <div class="count" id="tCount"></div>
+
+  <section id="plan">
+    <div class="sec-h"><span class="ic" style="background:var(--pink)" id="planIc"></span>每日行程</div>
+    <div class="stepper"><div class="rail" id="rail"></div><div class="steps" id="steps"></div></div>
+    <div id="day"></div>
+  </section>
+
+  <section id="album" hidden>
+    <div class="sec-h"><span class="ic" style="background:var(--blue)" id="albumIc"></span>旅途相簿</div>
+    <div class="pgrid" id="pgrid"></div>
+  </section>
+
+  <div class="foot">要改行程請到 <a id="editLink" href="trip-expense.html">排行程／記帳頁</a></div>
+</main>
+<div class="status" id="status">載入中…</div>
+<div class="lb" id="lb"><img id="lbImg" alt=""><div class="cap" id="lbCap"></div></div>
+
+<script>
+const API = 'https://dondon-platform.vercel.app/api/legacy';
+const TRIP = (new URLSearchParams(location.search).get('trip') || 'japan2026').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'japan2026';
+const KEY = 'trip_ledger_' + TRIP;
+const LS_KEY = 'trip_ledger_cache_' + TRIP;   // 與 trip-expense.html 共用同一份本機快取
+const STORAGE_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/object/public/images/';
+const RENDER_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/render/image/public/images/';
+const PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+const TONES = [['var(--pink-bg)', 'var(--pink)'], ['var(--yellow-bg)', 'var(--yellow)'], ['var(--green-bg)', 'var(--green)'], ['var(--blue-bg)', 'var(--blue)']];
+
+/* ---------- 圖示（線條） ---------- */
+const S = 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"';
+const ICON = {
+  train: '<svg viewBox="0 0 24 24" ' + S + '><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 10h14"/><path d="M9 14h.01M15 14h.01"/><path d="M8 17l-2 4M16 17l2 4"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" ' + S + '><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>',
+  link: '<svg viewBox="0 0 24 24" ' + S + '><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  food: '<svg viewBox="0 0 24 24" ' + S + '><path d="M5 3v7a3 3 0 0 0 6 0V3"/><path d="M8 3v18"/><path d="M17 3c-2 1-3 4-3 8h3v10"/></svg>',
+  stay: '<svg viewBox="0 0 24 24" ' + S + '><path d="M3 18V8"/><path d="M3 14h18v4"/><path d="M7 11a2 2 0 1 1 0 .01"/><path d="M11 14v-3h7a3 3 0 0 1 3 3"/></svg>',
+  shop: '<svg viewBox="0 0 24 24" ' + S + '><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" ' + S + '><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  cam: '<svg viewBox="0 0 24 24" ' + S + '><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+};
+const CAT = {
+  transport: { name: '交通', color: 'var(--blue)', icon: ICON.train },
+  sight: { name: '景點', color: 'var(--green)', icon: ICON.pin },
+  food: { name: '美食', color: 'var(--yellow)', icon: ICON.food },
+  stay: { name: '住宿', color: 'var(--pink)', icon: ICON.stay },
+  shop: { name: '購物', color: 'var(--pink-bg)', icon: ICON.shop },
+  other: { name: '其他', color: 'var(--bg)', icon: '' },
+};
+
+// 吉祥物：粉紅小電車（取代參考圖的纜車）
+function trainSvg(w) {
+  return '<svg viewBox="0 0 48 52" width="' + (w || 46) + '"><path d="M24 2v8" stroke="#3B3330" stroke-width="3" stroke-linecap="round"/>' +
+    '<rect x="5" y="10" width="38" height="36" rx="11" fill="#E8A49C" stroke="#3B3330" stroke-width="3"/>' +
+    '<rect x="11" y="18" width="11" height="11" rx="3.5" fill="#EFCB6E" stroke="#3B3330" stroke-width="3"/>' +
+    '<rect x="26" y="18" width="11" height="11" rx="3.5" fill="#EFCB6E" stroke="#3B3330" stroke-width="3"/>' +
+    '<path d="M15 38h18" stroke="#3B3330" stroke-width="3" stroke-linecap="round"/></svg>';
+}
+const HERO = '<svg viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg" stroke="#3B3330" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M20 26 q14 -6 28 0 M58 18 q8 -4 16 0" fill="none" stroke-width="2"/>' +
+  '<circle cx="336" cy="44" r="24" fill="#EFCB6E"/>' +
+  '<path d="M336 8v-6M372 44h6M362 18l4-4M362 70l4 4M300 44h-6" fill="none" stroke-width="2.5"/>' +
+  '<path d="M40 150 L120 62 Q128 54 136 62 L216 150 Z" fill="#DCEAF2"/>' +
+  '<path d="M100 84 L120 62 Q128 54 136 62 L156 84 L144 92 L128 82 L112 92 Z" fill="#fff"/>' +
+  '<path d="M262 150 V70 M278 150 V70 M270 70 V30 M262 70 h16 M258 98 h24 M266 70 L262 150 M274 70 L278 150" fill="none"/>' +
+  '<rect x="260" y="56" width="20" height="10" rx="3" fill="#E8A49C"/>' +
+  '<path d="M300 150 v-34 h22 v34 M330 150 v-22 h18 v22" fill="#F8EDCB"/>' +
+  '<path d="M-5 150 H405" fill="none"/>' +
+  '<path d="M-5 150 H405 V200 H-5 Z" fill="#E1ECD6" stroke="none"/>' +
+  '<path d="M-5 166 H405" fill="none" stroke-width="2.5"/>' +
+  '<path d="M20 166 v8 M60 166 v8 M100 166 v8 M140 166 v8 M180 166 v8 M220 166 v8 M260 166 v8 M300 166 v8 M340 166 v8 M380 166 v8" fill="none" stroke-width="2"/>' +
+  '<g transform="translate(150 118)"><rect x="0" y="0" width="96" height="40" rx="14" fill="#E8A49C"/>' +
+  '<rect x="12" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/><rect x="36" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/><rect x="60" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/>' +
+  '<circle cx="22" cy="44" r="6" fill="#fff"/><circle cx="74" cy="44" r="6" fill="#fff"/></g>' +
+  '</svg>';
+// 當日卡小插圖（輪流）
+const SCENES = [
+  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 54 Q24 46 48 54 T96 54 V74 H0Z" fill="#A9CBE0"/><path d="M10 54 L36 24 Q40 20 44 24 L70 54" fill="#DCEAF2"/><path d="M30 31 L36 24 Q40 20 44 24 L50 31 L44 34 L40 30 L36 34Z" fill="#fff"/><circle cx="78" cy="18" r="8" fill="#EFCB6E"/></svg>',
+  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 58 H96 V74 H0Z" fill="#E1ECD6"/><path d="M48 58 V22 M40 58 L46 22 M56 58 L50 22 M42 40 h12" fill="none"/><rect x="42" y="14" width="12" height="8" rx="2" fill="#E8A49C"/><path d="M48 14 V4" fill="none"/><path d="M14 18 q6 -4 12 0" fill="none" stroke-width="2"/></svg>',
+  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 52 H96 V74 H0Z" fill="#F8EDCB"/><path d="M18 52 V30 M78 52 V30 M12 30 Q48 16 84 30 M16 38 H80" fill="none"/><path d="M12 30 Q48 16 84 30" fill="none" stroke="#B5485A" stroke-width="4"/><path d="M16 38 H80" stroke="#B5485A" stroke-width="3"/><circle cx="48" cy="62" r="4" fill="#E8A49C"/></svg>',
+  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 56 Q24 48 48 56 T96 56 V74 H0Z" fill="#A9CBE0"/><path d="M30 56 h34 l-6 8 h-22z" fill="#E8A49C"/><path d="M48 56 V24 L64 50 H48" fill="#fff"/><path d="M20 18 l3 3 M20 24 l3 -3 M76 14 l2 4 M80 14 l-4 4" fill="none" stroke="#EFCB6E" stroke-width="2.5"/></svg>',
+];
+
+/* ---------- 工具 ---------- */
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function getToken() { try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; } }
+function isoOk(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || ''); }
+function toDate(iso) { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); }
+function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function md(iso) { const d = toDate(iso); return (d.getMonth() + 1) + '/' + d.getDate(); }
+function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s]+$/i.test(u) ? u : ''; }
+function mapsUrl(place) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); }
+// 備註文字裡的網址變成可點連結（先跳脫再換）
+function linkify(text) {
+  return esc(text).replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + (u.length > 38 ? u.slice(0, 36) + '…' : u) + '</a>');
+}
+function planSort(a, b) {
+  if (a.time && b.time && a.time !== b.time) return a.time < b.time ? -1 : 1;
+  if (a.time && !b.time) return -1;
+  if (!a.time && b.time) return 1;
+  return (a.at || 0) - (b.at || 0);
+}
+function thumbUrl(path, w) { return RENDER_BASE + path + '?width=' + (w || 360) + '&resize=contain&quality=70'; }
+
+/* ---------- 資料 ---------- */
+let DATA = null, DAYS = [], CUR = 0;
+function clean(raw) {
+  const s = raw || {};
+  const plan = (Array.isArray(s.plan) ? s.plan : []).filter(p => p && p.id && !p.del).map(p => ({
+    date: isoOk(p.date) ? p.date : '', time: /^\d{2}:\d{2}$/.test(p.time || '') ? p.time : '',
+    cat: CAT[p.cat] ? p.cat : 'other', title: String(p.title || ''), place: String(p.place || ''),
+    url: safeUrl(p.url), note: String(p.note || ''), by: String(p.by || ''), at: Number(p.at) || 0,
+  }));
+  const photos = [];
+  for (const p of (Array.isArray(s.photos) ? s.photos : [])) if (p && !p.del && PATH_RE.test(p.path || '')) photos.push({ date: p.date || '', path: p.path, caption: p.caption || '', at: p.at || 0 });
+  photos.sort((a, b) => (a.date + String(a.at).padStart(15, '0')).localeCompare(b.date + String(b.at).padStart(15, '0')));
+  return { title: String(s.title || '我們的旅行'), start: isoOk(s.start) ? s.start : '', end: isoOk(s.end) ? s.end : '', plan, photos };
+}
+function buildDays(d) {
+  // 有設定出發～回程就用；沒設定就用行程裡出現的日期範圍
+  const dated = d.plan.map(p => p.date).filter(Boolean).sort();
+  let start = d.start || dated[0] || '', end = d.end && d.end >= start ? d.end : (dated[dated.length - 1] || start);
+  if (dated.length && dated[dated.length - 1] > end) end = dated[dated.length - 1];
+  if (!start) return [];
+  const out = [];
+  for (let t = toDate(start); isoOf(t) <= end && out.length < 31; t.setDate(t.getDate() + 1)) out.push(isoOf(t));
+  return out;
+}
+
+/* ---------- 畫面 ---------- */
+function render() {
+  const d = DATA;
+  document.getElementById('top').innerHTML = HERO;
+  document.title = d.title + '｜雪莉與朵栗';
+  document.getElementById('tTitle').textContent = d.title;
+  const first = DAYS[0], last = DAYS[DAYS.length - 1];
+  if (first) {
+    const f = toDate(first), l = toDate(last);
+    document.getElementById('tRange').textContent = f.getFullYear() + '・' + md(first) + '（' + WEEK[f.getDay()] + '）－ ' + md(last) + '（' + WEEK[l.getDay()] + '）';
+    const today = isoOf(new Date());
+    const diff = Math.round((toDate(first) - toDate(today)) / 86400000);
+    let html = '';
+    if (diff > 0) html = '出發倒數<b>' + diff + '</b>天';
+    else if (today <= last) html = '旅程第<b>' + (DAYS.indexOf(today) + 1) + '</b>天';
+    else html = '平安回家，旅程完成';
+    document.getElementById('tCount').innerHTML = '<span>' + html + '</span>';
+  } else {
+    document.getElementById('tRange').textContent = '還沒排日期';
+    document.getElementById('tCount').innerHTML = '';
+  }
+  document.getElementById('planIc').innerHTML = ICON.cal;
+  document.getElementById('albumIc').innerHTML = ICON.cam;
+  renderSteps();
+  renderDay();
+  renderAlbum();
+}
+function renderSteps() {
+  const box = document.getElementById('steps');
+  const n = DAYS.length;
+  document.getElementById('rail').classList.toggle('hide', n < 2);
+  box.style.gridTemplateColumns = 'repeat(' + Math.max(n, 1) + ', 1fr)';
+  box.classList.toggle('dense', n > 5);
+  box.innerHTML = DAYS.map((iso, i) => '<button class="step' + (i === CUR ? ' on' : '') + '" data-i="' + i + '"><span class="dot"></span><span class="car">' + trainSvg() + '</span><span class="md">' + md(iso) + '</span><span class="wd">週' + WEEK[toDate(iso).getDay()] + '</span></button>').join('');
+  // 軌道左右端對齊第一顆與最後一顆圓點
+  const rail = document.getElementById('rail');
+  const pad = 100 / n / 2;
+  rail.style.left = pad + '%'; rail.style.right = pad + '%';
+  box.querySelectorAll('.step').forEach(b => b.addEventListener('click', () => goDay(+b.dataset.i, false)));
+}
+function goDay(i, scroll) {
+  if (i < 0 || i >= DAYS.length || i === CUR) return;
+  CUR = i;
+  document.querySelectorAll('#steps .step').forEach((b, k) => b.classList.toggle('on', k === CUR));
+  renderDay();
+  try { history.replaceState(null, '', '#day' + (CUR + 1)); } catch (e) {}
+  if (scroll) document.getElementById('plan').scrollIntoView({ behavior: 'smooth' });
+}
+function dayTitle(items) {
+  const pick = items.filter(p => p.cat === 'sight').concat(items.filter(p => p.cat === 'food' || p.cat === 'shop'));
+  const names = pick.map(p => p.title).filter(Boolean).slice(0, 2);
+  return names.length ? names.join('＋') : (items[0] ? items[0].title : '自由活動');
+}
+function stayFor(iso) {
+  // 當天有住宿就用當天的；沒有就往前找最近一晚
+  for (let k = DAYS.indexOf(iso); k >= 0; k--) {
+    const s = DATA.plan.filter(p => p.date === DAYS[k] && p.cat === 'stay').sort(planSort).pop();
+    if (s) return (s.title || '').replace(/\s*(check[\s-]?in|辦理入住|入住)\s*/ig, '').trim() || s.place;
+  }
+  return '';
+}
+function evHtml(p) {
+  const c = CAT[p.cat];
+  const acts = [];
+  if (p.place) acts.push('<a href="' + esc(mapsUrl(p.place)) + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + esc(p.place) + '</span></a>');
+  if (p.url) acts.push('<a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + ICON.link + '<span>開啟連結</span></a>');
+  let body;
+  if (p.cat === 'transport') {
+    body = '<div class="move"><span class="pill" style="background:' + c.color + '">' + c.icon + c.name + '</span>' + esc(p.title) + '</div>' +
+      (p.note ? '<div class="sub">' + linkify(p.note) + '</div>' : '') + (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '');
+  } else {
+    const tag = p.cat === 'sight' || p.cat === 'other' ? '' : '<span class="tag" style="background:' + c.color + '">' + c.icon + c.name + '</span>';
+    body = '<div class="box"><span class="n">' + esc(p.title || c.name) + '</span>' + tag +
+      (p.note ? '<div class="sub">' + linkify(p.note) + '</div>' : '') +
+      (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') +
+      (p.by ? '<div class="who">' + esc(p.by) + ' 排的</div>' : '') + '</div>';
+  }
+  return '<div class="ev"><span class="tm' + (p.time ? '' : ' none') + '">' + (p.time || '') + '</span><span class="nd"></span><div class="bd">' + body + '</div></div>';
+}
+function renderDay() {
+  const box = document.getElementById('day');
+  if (!DAYS.length) {
+    const undated = DATA.plan.slice().sort(planSort);
+    box.innerHTML = undated.length ? '<div class="tl" style="margin-top:20px">' + undated.map(evHtml).join('') + '</div>' : '<div class="empty">還沒有行程，到排行程頁加第一個吧</div>';
+    return;
+  }
+  const iso = DAYS[CUR];
+  const items = DATA.plan.filter(p => p.date === iso).sort(planSort);
+  const tone = TONES[CUR % TONES.length];
+  const stay = stayFor(iso);
+  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + SCENES[CUR % SCENES.length] + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
+    '<div class="dt">' + esc(dayTitle(items)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
+  html += items.length ? '<div class="tl">' + items.map(evHtml).join('') + '</div>' : '<div class="empty">這天還沒安排，自由活動</div>';
+  // 沒填日期的行程放在最後一天後面
+  if (CUR === DAYS.length - 1) {
+    const undated = DATA.plan.filter(p => !p.date).sort(planSort);
+    if (undated.length) html += '<div class="sec-h" style="font-size:1.1rem;margin:24px 0 14px">還沒排日期</div><div class="tl">' + undated.map(evHtml).join('') + '</div>';
+  }
+  const dayPhotos = DATA.photos.filter(p => p.date === iso);
+  if (dayPhotos.length) html += '<div class="sec-h" style="font-size:1.1rem;margin:20px 0 12px">這天的相片</div><div class="pgrid">' + dayPhotos.map(p => '<img loading="lazy" src="' + esc(thumbUrl(p.path)) + '" data-full="' + esc(STORAGE_BASE + p.path) + '" data-cap="' + esc(p.caption) + '" alt="">').join('') + '</div>';
+  html += '<div class="pager"><button type="button" id="prevDay"' + (CUR === 0 ? ' disabled' : '') + '>‹ 前一天</button><button type="button" id="nextDay"' + (CUR === DAYS.length - 1 ? ' disabled' : '') + '>下一天 ›</button></div>';
+  if (DAYS.length > 1) html += '<div class="swipehint">左右滑動也可以換天</div>';
+  box.innerHTML = html;
+  document.getElementById('prevDay').onclick = () => goDay(CUR - 1, true);
+  document.getElementById('nextDay').onclick = () => goDay(CUR + 1, true);
+  bindLightbox(box);
+}
+function renderAlbum() {
+  const has = DATA.photos.length > 0;
+  document.getElementById('album').hidden = !has;
+  document.getElementById('albumLink').hidden = !has;
+  if (!has) return;
+  const g = document.getElementById('pgrid');
+  g.innerHTML = DATA.photos.map(p => '<img loading="lazy" src="' + esc(thumbUrl(p.path)) + '" data-full="' + esc(STORAGE_BASE + p.path) + '" data-cap="' + esc((p.date ? md(p.date) + '　' : '') + p.caption) + '" alt="">').join('');
+  bindLightbox(g);
+}
+function bindLightbox(root) {
+  root.querySelectorAll('img[data-full]').forEach(img => {
+    img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = img.dataset.full; } };
+    img.onclick = () => {
+      document.getElementById('lbImg').src = img.dataset.full;
+      document.getElementById('lbCap').textContent = img.dataset.cap || '';
+      document.getElementById('lb').classList.add('on');
+    };
+  });
+}
+document.getElementById('lb').addEventListener('click', () => document.getElementById('lb').classList.remove('on'));
+
+// 左右滑動換天（橫向位移明顯大於直向才算，避免影響上下捲動）
+(function () {
+  let x0 = null, y0 = 0;
+  const el = document.getElementById('day');
+  el.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (x0 == null) return;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goDay(CUR + (dx < 0 ? 1 : -1), true);
+  }, { passive: true });
+})();
+
+// 頂列「行程／相簿」依捲動位置亮起
+function syncNav() {
+  const album = document.getElementById('album');
+  const onAlbum = !album.hidden && album.getBoundingClientRect().top < window.innerHeight * 0.4;
+  const onPlan = !onAlbum && document.getElementById('plan').getBoundingClientRect().top < window.innerHeight * 0.6;
+  document.querySelectorAll('.nav .links a').forEach(a => a.classList.toggle('on', (a.dataset.sec === 'plan' && onPlan) || (a.dataset.sec === 'album' && onAlbum)));
+}
+window.addEventListener('scroll', syncNav, { passive: true });
+
+/* ---------- 讀取 ---------- */
+function show(data) {
+  const keepDay = DATA ? DAYS[CUR] : null;
+  DATA = clean(data);
+  DAYS = buildDays(DATA);
+  if (keepDay && DAYS.includes(keepDay)) CUR = DAYS.indexOf(keepDay);
+  else {
+    const hash = /^#day(\d+)$/.exec(location.hash || '');
+    const today = isoOf(new Date());
+    CUR = hash && +hash[1] >= 1 && +hash[1] <= DAYS.length ? +hash[1] - 1 : (DAYS.includes(today) ? DAYS.indexOf(today) : 0);
+  }
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('app').hidden = false;
+  render();
+  syncNav();
+}
+function showLogin() {
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('app').hidden = true;
+  document.getElementById('loginBox').style.display = 'block';
+}
+async function load() {
+  try { const c = localStorage.getItem(LS_KEY); if (c) show(JSON.parse(c)); } catch (e) {}
+  if (!getToken()) { if (!DATA) showLogin(); return; }
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'setting-get', token: getToken(), key: KEY }) }).then(r => r.json());
+    if (res && res.needLogin) { showLogin(); return; }
+    if (!res || res.success !== true) throw new Error((res && res.error) || '讀取失敗');
+    const remote = res.value ? JSON.parse(res.value) : {};
+    // 只讀不寫；快取更新交給編輯頁（避免蓋掉編輯頁還沒上傳的變更）
+    show(remote);
+  } catch (err) {
+    if (!DATA) { document.getElementById('status').textContent = '讀取失敗：' + err.message + '（請確認網路後重新整理）'; }
+  }
+}
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const name = document.getElementById('loginName').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!name || !pw) { errEl.textContent = '請輸入姓名和密碼'; return; }
+  const btn = document.getElementById('loginBtn'); btn.disabled = true;
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'login', name, password: pw }) }).then(r => r.json());
+    if (!res || !res.success) { errEl.textContent = (res && res.error) || '登入失敗'; return; }
+    try { localStorage.setItem('admin_token', res.token); localStorage.setItem('admin_user', res.name || name); localStorage.setItem('admin_unlocked', '1'); } catch (e) {}
+    document.getElementById('loginPw').value = '';
+    load();
+  } catch (err) { errEl.textContent = '連線失敗：' + err.message; }
+  finally { btn.disabled = false; }
+});
+document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
+document.getElementById('logoSvg').outerHTML = trainSvg(44).replace('<svg ', '<svg class="logo" ');
+document.getElementById('editLink').href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
+// 回到頁面時重抓一次（別人剛改了行程）
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && getToken()) load(); });
+load();
+</script>
+</body>
+</html>

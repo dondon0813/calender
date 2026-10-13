@@ -239,7 +239,7 @@
         <div class="big" id="planRange">尚未設定日期</div>
         <div class="sub" id="planSub"></div>
       </div>
-      <div class="planbtns"><button type="button" class="btn ghost" id="copyPlanBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>複製行程文字</button></div>
+      <div class="planbtns"><button type="button" class="btn ghost" id="copyPlanBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>複製行程文字</button><a class="btn ghost" id="viewPlanLink" href="trip.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>看成品頁</a></div>
     </div>
 
     <div class="card" id="ledgerSummary">
@@ -405,6 +405,7 @@ const API = 'https://dondon-platform.vercel.app/api/legacy';
 const TRIP = (new URLSearchParams(location.search).get('trip') || 'japan2026').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'japan2026';
 const KEY = 'trip_ledger_' + TRIP;
 const LS_KEY = 'trip_ledger_cache_' + TRIP;
+try { document.getElementById('viewPlanLink').href = 'trip.html?trip=' + encodeURIComponent(TRIP); } catch (e) {}
 // 照片：瀏覽器先縮圖（長邊 1600px、WebP），POST trip-photo-upload-url 拿簽名網址直傳
 // Supabase 公開 bucket images 的 trip/<trip>/ 資料夾；記帳 JSON 只存路徑（省 200KB 上限空間）。
 // 縮圖列用 Storage 影像轉換（render/image，Pro 方案功能）省流量，載不到就退回原圖。
