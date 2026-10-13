@@ -1367,11 +1367,18 @@ function isLinkUnlocked(ev) {
 
 // 有食譜品牌（食材／食譜入口）、折扣碼、或是繪本團（繪本館介紹入口），點擊時都要先跳小視窗而不是直接開網頁
 // 2026-10-09 起生效中的優惠筆（ev.promos，後端算好）也算
+// 2026-10-13 起：開團中、當下沒有生效優惠、但品牌「有過優惠」(promoBrand.promoHist) 也算——
+// 空窗期（例如島嶼生吐司週二）客人才找得到訂閱入口。正本：新站 lib/shared/promos.mjs needsPromoSubscribeModal，兩邊規則要一起改。
+function promoSubscribeOnly(ev) {
+  // 必須是開團中（含延長）：isLinkUnlocked 只看開團日、不擋已結團，所以這裡自己判斷狀態
+  const st = ev ? getEventStatus(ev) : '';
+  return !!(ev && (st === 'active' || st === 'closingSoon') && ev.promoBrand && ev.promoBrand.promoHist === true && !(ev.promos && ev.promos.length));
+}
 function needsGroupModal(ev) {
-  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()) || bookTeamBrandOf(ev) || (ev.promos && ev.promos.length));
+  return !!((ev.recipeBrand && ev.recipeBrand.trim()) || (ev.discountCode && ev.discountCode.trim()) || bookTeamBrandOf(ev) || (ev.promos && ev.promos.length) || promoSubscribeOnly(ev));
 }
 
-// scope=calendar c[33] PROMOS（'' 或 JSON 字串 [{kind,label,text}]）／c[34] PROMO_BRAND（'' 或 JSON {id,name}）；壞值一律當空
+// scope=calendar c[33] PROMOS（'' 或 JSON 字串 [{kind,label,text}]）／c[34] PROMO_BRAND（'' 或 JSON {id,name,promoHist}）；壞值一律當空
 function parsePromos(raw) {
   if (!raw || typeof raw !== 'string') return [];
   try {
@@ -1386,7 +1393,7 @@ function parsePromoBrand(raw) {
   if (!raw || typeof raw !== 'string') return null;
   try {
     const o = JSON.parse(raw);
-    if (o && typeof o.id === 'string' && o.id && typeof o.name === 'string' && o.name) return { id: o.id, name: o.name };
+    if (o && typeof o.id === 'string' && o.id && typeof o.name === 'string' && o.name) return { id: o.id, name: o.name, promoHist: o.promoHist === true };
   } catch (e) { /* 壞值當沒有 */ }
   return null;
 }
@@ -2252,7 +2259,8 @@ function openGroupChoiceModal(ev, srcCode) {
   const code = (ev.discountCode || '').trim();
   const bookBrand = bookTeamBrandOf(ev);
   const promos = ev.promos || [];
-  if (!brand && !code && !bookBrand && !promos.length) return;
+  const histOnly = promoSubscribeOnly(ev);
+  if (!brand && !code && !bookBrand && !promos.length && !histOnly) return;
 
   const modal = document.getElementById('groupChoiceModal');
   document.getElementById('groupChoiceTitle').textContent = plainTitle(ev.title);
@@ -2287,7 +2295,7 @@ function openGroupChoiceModal(ev, srcCode) {
     if (code) copyToClipboard(code).then(flashGcCopied);
   };
 
-  setupPromoBlock(promos);
+  setupPromoBlock(promos, histOnly);
   setupDiscountBlock(ev, code, baseKey);
   setupSubscribeBlock(ev, baseKey);
 
@@ -2295,10 +2303,22 @@ function openGroupChoiceModal(ev, srcCode) {
 }
 
 // 優惠區塊（2026-10-09）：生效中的優惠筆各一列，label（本週六日 10/11–10/12／今天…）小字＋內文（保留換行）；沒優惠整塊隱藏
-function setupPromoBlock(promos) {
+// emptyHint=true（品牌有過優惠但這週還沒公布）：顯示一列提示，引導下方的訂閱鈕
+function setupPromoBlock(promos, emptyHint) {
   const wrap = document.getElementById('gcPromo');
   const list = document.getElementById('gcPromoList');
   list.textContent = '';
+  if (!promos.length && emptyHint) {
+    const row = document.createElement('div');
+    row.className = 'gc-promo-item';
+    const text = document.createElement('div');
+    text.className = 'gc-promo-text';
+    text.textContent = '本週優惠尚未公布，訂閱就會通知你';
+    row.appendChild(text);
+    list.appendChild(row);
+    wrap.classList.add('show');
+    return;
+  }
   if (!promos.length) { wrap.classList.remove('show'); return; }
   promos.forEach(p => {
     const row = document.createElement('div');

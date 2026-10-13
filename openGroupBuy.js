@@ -42,8 +42,14 @@
   // 有食譜品牌（食材／食譜入口）、折扣碼、或是繪本團（繪本館介紹入口），點擊時先跳選擇視窗
   // 繪本團判定由後端算好（item.bookBrand＝品牌全名，非空＝繪本團）
   // 2026-10-09 起生效中的優惠筆（o.promos，後端算好）也算
+  // 2026-10-13 起：開團中、當下沒有生效優惠、但品牌「有過優惠」(promoBrand.promoHist) 也算——空窗期客人才找得到訂閱入口。
+  // 正本：新站 lib/shared/promos.mjs needsPromoSubscribeModal；index.html promoSubscribeOnly 是同規則複本，三處要一起改。
+  // 本檔橫列只列後端判定「開團中（含延長）」的團，所以不必另判狀態（新站版 needsPromoSubscribeModal 要多傳 isOpen）。
+  function promoSubscribeOnly(o) {
+    return !!(o && o.promoBrand && o.promoBrand.promoHist === true && !(o.promos && o.promos.length));
+  }
   function needsGroupModal(o) {
-    return !!((o.recipeBrand && o.recipeBrand.trim()) || (o.discountCode && o.discountCode.trim()) || o.bookBrand || (o.promos && o.promos.length));
+    return !!((o.recipeBrand && o.recipeBrand.trim()) || (o.discountCode && o.discountCode.trim()) || o.bookBrand || (o.promos && o.promos.length) || promoSubscribeOnly(o));
   }
 
   function isValidUrl(s) {
@@ -247,15 +253,27 @@
       gc.discount.classList.remove('show');
     }
 
-    setupPromoBlock(gc, o.promos || []);
+    setupPromoBlock(gc, o.promos || [], promoSubscribeOnly(o));
     setupSubscribeBlock(gc, o, baseKey);
 
     gc.backdrop.classList.add('show');
   }
 
   // 優惠區塊（2026-10-09，與 index.html setupPromoBlock 同款）：生效中的優惠筆各一列，沒優惠整塊隱藏
-  function setupPromoBlock(gc, promos) {
+  function setupPromoBlock(gc, promos, emptyHint) {
     gc.promoList.textContent = '';
+    if (!promos.length && emptyHint) {
+      // 品牌有過優惠但這週還沒公布：一列提示，引導下方的訂閱鈕
+      const row = document.createElement('div');
+      row.className = 'ogbgc-promo-item';
+      const text = document.createElement('div');
+      text.className = 'ogbgc-promo-text';
+      text.textContent = '本週優惠尚未公布，訂閱就會通知你';
+      row.appendChild(text);
+      gc.promoList.appendChild(row);
+      gc.promo.classList.add('show');
+      return;
+    }
     if (!promos.length) { gc.promo.classList.remove('show'); return; }
     promos.forEach(p => {
       const row = document.createElement('div');
@@ -343,7 +361,7 @@
       bookBrand: String(it.bookBrand || ''),
       promos: toPromos(it.promos),
       promoBrand: (it.promoBrand && typeof it.promoBrand.id === 'string' && it.promoBrand.id && typeof it.promoBrand.name === 'string' && it.promoBrand.name)
-        ? { id: it.promoBrand.id, name: it.promoBrand.name } : null
+        ? { id: it.promoBrand.id, name: it.promoBrand.name, promoHist: it.promoBrand.promoHist === true } : null
     };
   }
 
