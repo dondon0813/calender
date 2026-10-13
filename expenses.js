@@ -299,6 +299,8 @@ function expInjectStyle() {
   .exp-empty{ text-align:center; color:var(--c-text-soft); font-size:13.5px; padding:22px 8px; }
   /* 視窗 */
   .exp-modal .modal-box{ width:min(560px, 94vw); }
+  .exp-modal .modal-close{ color:var(--c-muted); }
+  .exp-modal .modal-close:hover{ color:var(--c-brown); }
   .exp-lb{ display:block; font-size:12.5px; font-weight:800; color:var(--c-text-soft); margin:12px 0 4px; }
   .exp-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .exp-grid3{ display:grid; grid-template-columns:1fr 110px 1fr; gap:8px; }
