@@ -151,6 +151,9 @@
   .seg button svg { width: 18px; height: 18px; }
   .seg button.on { background: #fff; color: var(--primary-dark); box-shadow: 0 2px 8px rgba(176,127,131,.15); }
   #planRange { font-size: 1.25rem; }
+  .topacts { display: flex; align-items: center; gap: 6px; }
+  .viewpill { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; color: var(--primary-dark); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-size: .88rem; white-space: nowrap; }
+  .viewpill svg { width: 16px; height: 16px; }
   .planbtns { margin-top: 10px; display: flex; gap: 8px; }
   .planbtns .btn { padding: 8px 14px; font-size: .85rem; background: #fff; }
   .planbtns .btn svg { width: 16px; height: 16px; }
@@ -214,7 +217,8 @@
 <div class="wrap">
   <div class="topbar">
     <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 7l2-3h12l2 3"/><path d="M9 11h6"/></svg><span id="tripTitle">員工旅遊記帳</span></h1>
-    <button class="iconbtn" id="settingsBtn" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <div class="topacts"><a class="viewpill" id="viewPillLink" href="trip.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>成品頁</a>
+    <button class="iconbtn" id="settingsBtn" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </div>
   <div class="sync" id="sync"></div>
 
@@ -405,7 +409,7 @@ const API = 'https://dondon-platform.vercel.app/api/legacy';
 const TRIP = (new URLSearchParams(location.search).get('trip') || 'japan2026').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'japan2026';
 const KEY = 'trip_ledger_' + TRIP;
 const LS_KEY = 'trip_ledger_cache_' + TRIP;
-try { document.getElementById('viewPlanLink').href = 'trip.html?trip=' + encodeURIComponent(TRIP); } catch (e) {}
+try { ['viewPlanLink', 'viewPillLink'].forEach(id => { document.getElementById(id).href = 'trip.html?trip=' + encodeURIComponent(TRIP); }); } catch (e) {}
 // 照片：瀏覽器先縮圖（長邊 1600px、WebP），POST trip-photo-upload-url 拿簽名網址直傳
 // Supabase 公開 bucket images 的 trip/<trip>/ 資料夾；記帳 JSON 只存路徑（省 200KB 上限空間）。
 // 縮圖列用 Storage 影像轉換（render/image，Pro 方案功能）省流量，載不到就退回原圖。

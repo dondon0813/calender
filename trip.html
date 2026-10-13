@@ -30,13 +30,16 @@
   /* 頂列 */
   .nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: var(--line) solid var(--ink); }
   .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-  .nav .logo { width: 44px; height: 44px; }
+  .nav .logo { width: 40px; height: 40px; }
+  .navl { display: flex; align-items: center; gap: 10px; }
+  .back { display: inline-flex; align-items: center; gap: 2px; text-decoration: none; font-size: .95rem; padding: 6px 12px 6px 6px; border: var(--line) solid var(--ink); border-radius: 999px; background: var(--card); }
+  .back svg { width: 18px; height: 18px; }
   .nav .links { display: flex; gap: 6px; }
   .nav .links a { text-decoration: none; font-size: 1.05rem; padding: 7px 16px; border-radius: 999px; border: var(--line) solid transparent; }
   .nav .links a.on { background: var(--pink); border-color: var(--ink); }
 
   /* 主視覺 */
-  .hero { border: var(--line) solid var(--ink); border-top: none; border-radius: 0 0 34px 34px; overflow: hidden; background: #fff; margin: 0 -16px; }
+  .hero { border: var(--line) solid var(--ink); border-top: none; border-radius: 0 0 34px 34px; overflow: hidden; background: var(--card); margin: 0 -16px; }
   .hero svg { width: 100%; height: auto; }
   .title { text-align: center; margin: 22px 0 6px; font-size: clamp(2rem, 10vw, 2.8rem); letter-spacing: .12em; font-weight: 400; }
   .range { text-align: center; color: var(--soft); font-size: 1.05rem; letter-spacing: .04em; }
@@ -54,7 +57,7 @@
   .stepper .rail.hide { display: none; }
   .steps { display: grid; position: relative; }
   .step { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 0; }
-  .step .dot { width: 26px; height: 26px; border-radius: 50%; border: var(--line) solid var(--ink); background: #fff; position: relative; z-index: 1; }
+  .step .dot { width: 26px; height: 26px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--card); position: relative; z-index: 1; }
   .step .car { height: 54px; display: flex; align-items: flex-start; justify-content: center; }
   .step .car svg { width: 46px; height: 50px; margin-top: -10px; visibility: hidden; transition: transform .25s; }
   .step.on .car svg { visibility: visible; }
@@ -65,7 +68,7 @@
 
   /* 當日卡 */
   .daycard { display: flex; gap: 16px; align-items: center; border: var(--line) solid var(--ink); border-radius: 26px; padding: 16px; margin: 22px 0 26px; }
-  .daycard .pic { flex: 0 0 96px; height: 74px; border: var(--line) solid var(--ink); border-radius: 16px; overflow: hidden; background: #fff; }
+  .daycard .pic { flex: 0 0 96px; height: 74px; border: var(--line) solid var(--ink); border-radius: 16px; overflow: hidden; background: var(--card); }
   .daycard .pic svg { width: 100%; height: 100%; }
   .daycard .dn { color: var(--soft); font-size: .95rem; }
   .daycard .dt { font-size: 1.25rem; line-height: 1.35; margin: 2px 0 4px; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -89,7 +92,7 @@
   .box .tag { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; border-radius: 999px; padding: 1px 9px; margin-left: 6px; border: 2px solid var(--ink); vertical-align: 3px; }
   .box .tag svg { width: 12px; height: 12px; }
   .sub { color: var(--soft); font-size: .92rem; margin-top: 6px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-  .sub a { color: #5D88A6; }
+  .sub a { color: var(--link); }
   .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .acts a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; font-size: .85rem; border: 2px solid var(--ink); border-radius: 999px; padding: 4px 12px; background: var(--bg); max-width: 100%; }
   .acts a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -98,12 +101,12 @@
   .empty { text-align: center; color: var(--muted); padding: 30px 0; }
   .swipehint { text-align: center; color: var(--muted); font-size: .8rem; margin: 6px 0 0; }
   .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; }
-  .pager button { flex: 1; font: inherit; color: var(--ink); background: #fff; border: var(--line) solid var(--ink); border-radius: 999px; padding: 10px; cursor: pointer; }
+  .pager button { flex: 1; font: inherit; color: var(--ink); background: var(--card); border: var(--line) solid var(--ink); border-radius: 999px; padding: 10px; cursor: pointer; }
   .pager button:disabled { opacity: .3; cursor: default; }
 
   /* 相簿 */
   .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .pgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: var(--line) solid var(--ink); border-radius: 14px; display: block; background: #fff; cursor: zoom-in; }
+  .pgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: var(--line) solid var(--ink); border-radius: 14px; display: block; background: var(--card); cursor: zoom-in; }
   .lb { position: fixed; inset: 0; background: rgba(30,25,22,.92); z-index: 50; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
   .lb.on { display: flex; }
   .lb img { max-width: 100%; max-height: 80vh; border-radius: 12px; }
@@ -113,18 +116,18 @@
   .foot a { color: var(--soft); }
 
   /* 登入 */
-  .login { max-width: 360px; margin: 60px auto; padding: 24px; background: #fff; border: var(--line) solid var(--ink); border-radius: 24px; display: none; }
+  .login { max-width: 360px; margin: 60px auto; padding: 24px; background: var(--card); border: var(--line) solid var(--ink); border-radius: 24px; display: none; }
   .login h2 { margin: 0 0 6px; font-weight: 400; }
   .login p { color: var(--soft); font-size: .9rem; margin: 0 0 16px; }
   .login input { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 12px; margin-bottom: 10px; background: var(--bg); }
   .login button { width: 100%; font: inherit; padding: 11px; border-radius: 999px; border: var(--line) solid var(--ink); background: var(--pink); cursor: pointer; }
-  .login .err { color: #B5485A; font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
+  .login .err { color: var(--accent); font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
   .status { text-align: center; color: var(--muted); padding: 60px 0; }
 </style>
 </head>
 <body>
 <nav class="nav"><div class="wrap">
-  <a href="#top" aria-label="回到最上面"><svg class="logo" viewBox="0 0 48 48" id="logoSvg"></svg></a>
+  <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>編輯</a><a href="#top" aria-label="回到最上面"><svg class="logo" viewBox="0 0 48 48" id="logoSvg"></svg></a></div>
   <div class="links"><a href="#plan" data-sec="plan">行程</a><a href="#album" data-sec="album" id="albumLink" hidden>相簿</a></div>
 </div></nav>
 
@@ -168,6 +171,24 @@ const STORAGE_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/object
 const RENDER_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/render/image/public/images/';
 const PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+// 色系（2026-10-14 雪莉要藕粉奶油色系，四款給她挑；?palette=a|b|c|d 可切，定案後改 DEFAULT_PALETTE）
+const DEFAULT_PALETTE = 'a';
+const PALETTES = {
+  a: { name: '藕粉奶茶・柔線', line: '3px', bg: '#FBF6F0', ink: '#6E5852', soft: '#8A766E', muted: '#B3A49B', card: '#FFFFFF', pink: '#D7A9A8', pinkBg: '#F4E4E1', yellow: '#E9D3A6', yellowBg: '#F7EEDC', green: '#C7CFB4', greenBg: '#ECEFE2', blue: '#C0CDD3', blueBg: '#E8EEF0', accent: '#B5485A', link: '#A0767A' },
+  b: { name: '奶油藕粉・可可粗線', line: '3px', bg: '#FFF9EF', ink: '#4E3F3A', soft: '#7A6A62', muted: '#ABA096', card: '#FFFDF9', pink: '#C99A9B', pinkBg: '#F2DEDC', yellow: '#E8C88E', yellowBg: '#F8EBCF', green: '#B9C4A2', greenBg: '#E8EDDC', blue: '#B4C6CF', blueBg: '#E3ECEF', accent: '#A85B63', link: '#9A6B6E' },
+  c: { name: '全藕粉單色・細線', line: '2px', bg: '#FCF7F4', ink: '#8C6B68', soft: '#9C807B', muted: '#BFA9A4', card: '#FFFFFF', pink: '#D8AEAD', pinkBg: '#F5E6E3', yellow: '#EAD5C4', yellowBg: '#F6EDE5', green: '#E2C7C3', greenBg: '#F3E7E4', blue: '#CDB9B6', blueBg: '#EFE5E3', accent: '#B07F83', link: '#B07F83' },
+  d: { name: '奶茶拿鐵底＋藕粉點綴', line: '2.5px', bg: '#F5EFE9', ink: '#5A4A42', soft: '#7D6A5F', muted: '#A3948A', card: '#FFFFFF', pink: '#C99A9B', pinkBg: '#EFD9D6', yellow: '#DCC3A3', yellowBg: '#EFE3D3', green: '#BFC4A8', greenBg: '#E4E6D6', blue: '#B9C4C9', blueBg: '#E2E6E6', accent: '#B5485A', link: '#9A6B6E' },
+};
+const P = PALETTES[(new URLSearchParams(location.search).get('palette') || '').toLowerCase()] || PALETTES[DEFAULT_PALETTE];
+(function applyPalette() {
+  const r = document.documentElement.style;
+  const map = { bg: '--bg', ink: '--ink', soft: '--soft', muted: '--muted', card: '--card', pink: '--pink', pinkBg: '--pink-bg', yellow: '--yellow', yellowBg: '--yellow-bg', green: '--green', greenBg: '--green-bg', blue: '--blue', blueBg: '--blue-bg', accent: '--accent', link: '--link', line: '--line' };
+  for (const k in map) r.setProperty(map[k], P[k]);
+  const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.content = P.bg;
+})();
+// 插圖原稿用固定色，畫出來前換成目前色系
+const SVG_COLORS = { '#3B3330': 'ink', '#E8A49C': 'pink', '#EFCB6E': 'yellow', '#DCEAF2': 'blueBg', '#F8EDCB': 'yellowBg', '#E1ECD6': 'greenBg', '#A9CBE0': 'blue', '#B5485A': 'accent', '#fff': 'card' };
+function paint(svg) { return svg.replace(/#3B3330|#E8A49C|#EFCB6E|#DCEAF2|#F8EDCB|#E1ECD6|#A9CBE0|#B5485A|#fff/g, m => P[SVG_COLORS[m]]); }
 const TONES = [['var(--pink-bg)', 'var(--pink)'], ['var(--yellow-bg)', 'var(--yellow)'], ['var(--green-bg)', 'var(--green)'], ['var(--blue-bg)', 'var(--blue)']];
 
 /* ---------- 圖示（線條） ---------- */
@@ -273,7 +294,7 @@ function buildDays(d) {
 /* ---------- 畫面 ---------- */
 function render() {
   const d = DATA;
-  document.getElementById('top').innerHTML = HERO;
+  document.getElementById('top').innerHTML = paint(HERO);
   document.title = d.title + '｜雪莉與朵栗';
   document.getElementById('tTitle').textContent = d.title;
   const first = DAYS[0], last = DAYS[DAYS.length - 1];
@@ -303,7 +324,7 @@ function renderSteps() {
   document.getElementById('rail').classList.toggle('hide', n < 2);
   box.style.gridTemplateColumns = 'repeat(' + Math.max(n, 1) + ', 1fr)';
   box.classList.toggle('dense', n > 5);
-  box.innerHTML = DAYS.map((iso, i) => '<button class="step' + (i === CUR ? ' on' : '') + '" data-i="' + i + '"><span class="dot"></span><span class="car">' + trainSvg() + '</span><span class="md">' + md(iso) + '</span><span class="wd">週' + WEEK[toDate(iso).getDay()] + '</span></button>').join('');
+  box.innerHTML = DAYS.map((iso, i) => '<button class="step' + (i === CUR ? ' on' : '') + '" data-i="' + i + '"><span class="dot"></span><span class="car">' + paint(trainSvg()) + '</span><span class="md">' + md(iso) + '</span><span class="wd">週' + WEEK[toDate(iso).getDay()] + '</span></button>').join('');
   // 軌道左右端對齊第一顆與最後一顆圓點
   const rail = document.getElementById('rail');
   const pad = 100 / n / 2;
@@ -360,7 +381,7 @@ function renderDay() {
   const items = DATA.plan.filter(p => p.date === iso).sort(planSort);
   const tone = TONES[CUR % TONES.length];
   const stay = stayFor(iso);
-  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + SCENES[CUR % SCENES.length] + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
+  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENES[CUR % SCENES.length]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
     '<div class="dt">' + esc(dayTitle(items)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
   html += items.length ? '<div class="tl">' + items.map(evHtml).join('') + '</div>' : '<div class="empty">這天還沒安排，自由活動</div>';
   // 沒填日期的行程放在最後一天後面
@@ -473,7 +494,15 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   finally { btn.disabled = false; }
 });
 document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
-document.getElementById('logoSvg').outerHTML = trainSvg(44).replace('<svg ', '<svg class="logo" ');
+document.getElementById('logoSvg').outerHTML = paint(trainSvg(40)).replace('<svg ', '<svg class="logo" ');
+// 上一頁：從編輯頁點進來就直接返回（保留編輯頁原本的捲動位置），否則開編輯頁
+(function () {
+  const b = document.getElementById('backBtn');
+  b.href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
+  b.addEventListener('click', e => {
+    if (document.referrer && /trip-expense.html/.test(document.referrer) && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+})();
 document.getElementById('editLink').href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
 // 回到頁面時重抓一次（別人剛改了行程）
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && getToken()) load(); });
