@@ -263,7 +263,7 @@ const P = PALETTES[(new URLSearchParams(location.search).get('palette') || '').t
   const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.content = P.bg;
 })();
 // 插圖原稿用固定色，畫出來前換成目前色系
-const SVG_COLORS = { '#3B3330': 'ink', '#E8A49C': 'pink', '#EFCB6E': 'yellow', '#DCEAF2': 'blueBg', '#F8EDCB': 'yellowBg', '#E1ECD6': 'greenBg', '#A9CBE0': 'blue', '#B5485A': 'accent', '#fff': 'card' };
+const SVG_COLORS = { '#3B3330': 'ink', '#E8A49C': 'pink', '#EFCB6E': 'yellow', '#DCEAF2': 'blueBg', '#F8EDCB': 'yellowBg', '#E1ECD6': 'greenBg', '#A9CBE0': 'blue', '#B5485A': 'accent', '#A9C98F': 'green', '#fff': 'card' };
 function paint(svg) { return svg.replace(/#3B3330|#E8A49C|#EFCB6E|#DCEAF2|#F8EDCB|#E1ECD6|#A9CBE0|#B5485A|#fff/g, m => P[SVG_COLORS[m]]); }
 const TONES = [['var(--pink-bg)', 'var(--pink)'], ['var(--yellow-bg)', 'var(--yellow)'], ['var(--green-bg)', 'var(--green)'], ['var(--blue-bg)', 'var(--blue)']];
 
@@ -323,13 +323,65 @@ const HERO = '<svg viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg" stro
   '<rect x="12" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/><rect x="36" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/><rect x="60" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/>' +
   '<circle cx="22" cy="44" r="6" fill="#fff"/><circle cx="74" cy="44" r="6" fill="#fff"/></g>' +
   '</svg>';
-// 當日卡小插圖（輪流）
-const SCENES = [
-  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="80" cy="17" r="7" fill="#EFCB6E"/><path d="M12 56 L40 22 Q44 18 48 22 L76 56 Z" fill="#DCEAF2"/><path d="M31.8 32 L40 22 Q44 18 48 22 L56.2 32 L50 35.5 L44 31.5 L38 35.5 Z" fill="#fff"/><path d="M-2 55 Q22 49 48 55 T98 55 V76 H-2 Z" fill="#A9CBE0"/></svg>',
-  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 58 H96 V74 H0Z" fill="#E1ECD6"/><path d="M48 58 V22 M40 58 L46 22 M56 58 L50 22 M42 40 h12" fill="none"/><rect x="42" y="14" width="12" height="8" rx="2" fill="#E8A49C"/><path d="M48 14 V4" fill="none"/><path d="M14 18 q6 -4 12 0" fill="none" stroke-width="2"/></svg>',
-  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 52 H96 V74 H0Z" fill="#F8EDCB"/><path d="M18 52 V30 M78 52 V30 M12 30 Q48 16 84 30 M16 38 H80" fill="none"/><path d="M12 30 Q48 16 84 30" fill="none" stroke="#B5485A" stroke-width="4"/><path d="M16 38 H80" stroke="#B5485A" stroke-width="3"/><circle cx="48" cy="62" r="4" fill="#E8A49C"/></svg>',
-  '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 56 Q24 48 48 56 T96 56 V74 H0Z" fill="#A9CBE0"/><path d="M30 56 h34 l-6 8 h-22z" fill="#E8A49C"/><path d="M48 56 V24 L64 50 H48" fill="#fff"/><path d="M20 18 l3 3 M20 24 l3 -3 M76 14 l2 4 M80 14 l-4 4" fill="none" stroke="#EFCB6E" stroke-width="2.5"/></svg>',
-];
+// 當日卡小插圖：依當天內容挑（回程飛機／遊樂園／動物園／燒肉螃蟹），都沒對到就輪流用通用圖
+const G = '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">';
+const SCENE = {
+  // 富士山：山在後、水在前（山腳整個藏在水後面，不再兩條線重疊）
+  fuji: G + '<circle cx="80" cy="17" r="7" fill="#EFCB6E"/><path d="M4 90 L40 22 Q44 18 48 22 L84 90" fill="#DCEAF2"/><path d="M34.7 32 L40 22 Q44 18 48 22 L53.3 32 L48.5 35.5 L44 31.5 L39.5 35.5 Z" fill="#fff"/><path d="M-4 56 Q22 49 48 56 T100 56 V80 H-4 Z" fill="#A9CBE0"/><path d="M14 64 q5 -3 10 0 M60 66 q5 -3 10 0" fill="none" stroke="#fff" stroke-width="2"/></svg>',
+  // 遊樂園：摩天輪＋馬戲團帳篷＋氣球
+  park: G + '<path d="M-2 60 H98 V76 H-2 Z" fill="#E1ECD6"/>' +
+    '<path d="M30 31 L19 60 M30 31 L41 60" fill="none"/><circle cx="30" cy="31" r="19" fill="none"/>' +
+    '<path d="M30 12 V50 M11 31 H49 M16.6 17.6 L43.4 44.4 M43.4 17.6 L16.6 44.4" fill="none" stroke-width="1.6"/>' +
+    '<circle cx="30" cy="12" r="3.4" fill="#E8A49C"/><circle cx="49" cy="31" r="3.4" fill="#EFCB6E"/><circle cx="30" cy="50" r="3.4" fill="#A9CBE0"/><circle cx="11" cy="31" r="3.4" fill="#EFCB6E"/>' +
+    '<circle cx="43.4" cy="17.6" r="3.4" fill="#A9CBE0"/><circle cx="43.4" cy="44.4" r="3.4" fill="#E8A49C"/><circle cx="16.6" cy="44.4" r="3.4" fill="#EFCB6E"/><circle cx="16.6" cy="17.6" r="3.4" fill="#E8A49C"/><circle cx="30" cy="31" r="2.6" fill="#fff"/>' +
+    '<path d="M57 60 V42 H87 V60 Z" fill="#fff"/><path d="M64 42 V60 M72 42 V60 M80 42 V60" fill="none" stroke="#E8A49C" stroke-width="3"/><path d="M57 60 V42 H87 V60" fill="none"/>' +
+    '<path d="M54 43 L72 27 L90 43 Z" fill="#E8A49C"/><path d="M72 27 V17 L79 20 L72 23" fill="#EFCB6E"/><path d="M68 60 V52 Q72 47 76 52 V60" fill="#B5485A"/>' +
+    '<ellipse cx="88" cy="12" rx="5" ry="6" fill="#A9CBE0"/><path d="M88 18 q-2 5 1 10" fill="none" stroke-width="1.6"/></svg>',
+  // 動物園：熊貓＋竹子
+  zoo: G + '<path d="M-2 60 H98 V76 H-2 Z" fill="#E1ECD6"/>' +
+    '<path d="M80 62 V8 M88 62 V20" fill="none" stroke="#A9C98F" stroke-width="3.4"/>' +
+    '<path d="M77 24 h6 M77 42 h6 M85 36 h6" fill="none" stroke-width="1.6"/>' +
+    '<path d="M80 24 q-10 -6 -14 -2 q8 4 14 2 M88 36 q8 -8 12 -4 q-6 6 -12 4 M80 42 q-9 -2 -11 3 q7 1 11 -3" fill="#A9C98F" stroke-width="1.8"/>' +
+    '<circle cx="24" cy="22" r="7" fill="#3B3330"/><circle cx="56" cy="22" r="7" fill="#3B3330"/>' +
+    '<circle cx="40" cy="38" r="20" fill="#fff"/>' +
+    '<ellipse cx="32" cy="36" rx="5" ry="6.5" fill="#3B3330" transform="rotate(25 32 36)"/><ellipse cx="48" cy="36" rx="5" ry="6.5" fill="#3B3330" transform="rotate(-25 48 36)"/>' +
+    '<circle cx="33" cy="35" r="1.6" fill="#fff" stroke="none"/><circle cx="47" cy="35" r="1.6" fill="#fff" stroke="none"/>' +
+    '<ellipse cx="40" cy="45" rx="3" ry="2.2" fill="#3B3330"/><path d="M37 49 q3 3 6 0" fill="none" stroke-width="2"/>' +
+    '<circle cx="27" cy="46" r="3" fill="#E8A49C" stroke="none"/><circle cx="53" cy="46" r="3" fill="#E8A49C" stroke="none"/></svg>',
+  // 燒肉＋螃蟹
+  food: G + '<path d="M-2 62 H98 V76 H-2 Z" fill="#F8EDCB"/>' +
+    '<path d="M16 26 q-3 -5 0 -10 M26 24 q-3 -5 0 -10 M36 26 q-3 -5 0 -10" fill="none" stroke-width="1.8"/>' +
+    '<path d="M12 52 L15 64 M44 52 L41 64" fill="none"/>' +
+    '<ellipse cx="28" cy="44" rx="22" ry="10" fill="#3B3330"/><ellipse cx="28" cy="42" rx="19" ry="7.5" fill="#fff"/>' +
+    '<path d="M12 42 H44 M15 38.5 H41 M15 45.5 H41" fill="none" stroke-width="1.4"/>' +
+    '<rect x="15" y="37" width="12" height="7" rx="3" fill="#E8A49C" transform="rotate(-8 21 40)"/><rect x="29" y="39" width="12" height="7" rx="3" fill="#E8A49C" transform="rotate(6 35 42)"/>' +
+    '<path d="M60 52 l-6 6 M63 54 l-4 8 M84 52 l6 6 M81 54 l4 8" fill="none" stroke-width="2.2"/>' +
+    '<path d="M62 37 L57 28 M82 37 L87 28" fill="none" stroke-width="2.2"/>' +
+    '<path d="M57 28 a6 6 0 1 1 -5 -7 l3 5 z" fill="#B5485A"/><path d="M87 28 a6 6 0 1 0 5 -7 l-3 5 z" fill="#B5485A"/>' +
+    '<ellipse cx="72" cy="47" rx="15" ry="11" fill="#B5485A"/>' +
+    '<path d="M67 36 V31 M77 36 V31" fill="none" stroke-width="2"/><circle cx="67" cy="30" r="2.6" fill="#fff"/><circle cx="77" cy="30" r="2.6" fill="#fff"/>' +
+    '<path d="M68 50 q4 3 8 0" fill="none" stroke="#fff" stroke-width="2"/></svg>',
+  // 回程：飛機往上飛、穿過雲
+  plane: G + '<path d="M-2 -2 H98 V76 H-2 Z" fill="#DCEAF2" stroke="none"/>' +
+    '<path d="M6 60 q4 -8 12 -5 q4 -7 12 -2 q8 0 8 7 Z" fill="#fff"/><path d="M62 24 q3 -6 9 -4 q4 -5 10 -1 q6 0 6 5 Z" fill="#fff"/>' +
+    '<path d="M10 70 Q28 66 36 54" fill="none" stroke-dasharray="1 5" stroke-width="2.4"/>' +
+    '<g transform="rotate(-20 52 40)"><path d="M30 34 H70 Q80 34 80 40 Q80 46 70 46 H30 Q26 46 26 40 Q26 34 30 34 Z" fill="#fff"/>' +
+    '<path d="M32 34 L26 22 H33 L40 34" fill="#E8A49C"/><path d="M48 42 L40 56 H48 L60 42" fill="#E8A49C"/>' +
+    '<circle cx="56" cy="39" r="1.6" fill="#A9CBE0"/><circle cx="62" cy="39" r="1.6" fill="#A9CBE0"/><circle cx="68" cy="39" r="1.6" fill="#A9CBE0"/><path d="M74 37 Q78 37 78.5 40" fill="none" stroke-width="1.6"/></g></svg>',
+  tower: G + '<path d="M0 58 H96 V74 H0Z" fill="#E1ECD6"/><path d="M48 58 V22 M40 58 L46 22 M56 58 L50 22 M42 40 h12" fill="none"/><rect x="42" y="14" width="12" height="8" rx="2" fill="#E8A49C"/><path d="M48 14 V4" fill="none"/><path d="M14 18 q6 -4 12 0" fill="none" stroke-width="2"/></svg>',
+  torii: G + '<path d="M0 52 H96 V74 H0Z" fill="#F8EDCB"/><path d="M18 52 V30 M78 52 V30 M12 30 Q48 16 84 30 M16 38 H80" fill="none"/><path d="M12 30 Q48 16 84 30" fill="none" stroke="#B5485A" stroke-width="4"/><path d="M16 38 H80" stroke="#B5485A" stroke-width="3"/><circle cx="48" cy="62" r="4" fill="#E8A49C"/></svg>',
+  boat: G + '<path d="M0 56 Q24 48 48 56 T96 56 V74 H0Z" fill="#A9CBE0"/><path d="M30 56 h34 l-6 8 h-22z" fill="#E8A49C"/><path d="M48 56 V24 L64 50 H48" fill="#fff"/><path d="M20 18 l3 3 M20 24 l3 -3 M76 14 l2 4 M80 14 l-4 4" fill="none" stroke="#EFCB6E" stroke-width="2.5"/></svg>',
+};
+const SCENE_ROTATE = ['tower', 'torii', 'boat', 'fuji'];
+function sceneFor(iso, items, idx) {
+  if (liveFlights().some(f => f.date === iso && f.dir === 'back')) return 'plane';
+  const txt = items.map(p => (p.title || '') + ' ' + (p.note || '')).join(' ');
+  if (/迪士尼|樂園|遊樂|disney/i.test(txt)) return 'park';
+  if (/動物園|zoo/i.test(txt)) return 'zoo';
+  if (/燒肉|螃蟹|蟹/.test(txt)) return 'food';
+  if (idx === 0) return 'fuji';
+  return SCENE_ROTATE[idx % SCENE_ROTATE.length];
+}
 
 
 /* ---------- 工具 ---------- */
@@ -581,7 +633,7 @@ function renderDay(dir) {
   const tone = TONES[CUR % TONES.length];
   const stay = stayFor(iso);
   const titleItems = items.filter(p => p.cat !== '_flight');
-  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENES[CUR % SCENES.length]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
+  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENE[sceneFor(iso, items.filter(p => p.cat !== '_flight'), CUR)]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
     '<div class="dt">' + esc(dayTitle(titleItems)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
   html += items.length ? '<div class="tl">' + items.map(evHtml).join('') + '</div>' : '<div class="empty">這天還沒安排，自由活動</div>';
   if (CUR === DAYS.length - 1) {
