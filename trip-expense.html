@@ -110,6 +110,15 @@
   .curpick button.on { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
   .actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 16px; }
   .actions .r { display: flex; gap: 6px; }
+  .fl-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .fl-head h2 { margin: 0; font-size: 1rem; color: var(--primary-dark); display: flex; align-items: center; gap: 6px; }
+  .fl-head svg { width: 18px; height: 18px; }
+  .fl-head .btn { padding: 6px 12px; font-size: .82rem; }
+  .fl-head .btn svg { width: 15px; height: 15px; }
+  .fl-row { display: flex; gap: 8px; align-items: baseline; background: var(--surface); border-radius: 12px; padding: 9px 12px; margin-top: 8px; cursor: pointer; font-size: .9rem; color: var(--text); flex-wrap: wrap; }
+  .fl-row .tag { font-weight: 700; color: var(--primary-dark); flex: none; }
+  .fl-row .no { font-weight: 700; }
+  .fl-empty { color: var(--muted); font-size: .88rem; margin-top: 8px; }
   .hint { font-size: .78rem; color: var(--muted); line-height: 1.6; margin-top: 6px; }
 
   /* 分攤 */
@@ -246,6 +255,11 @@
       <div class="planbtns"><button type="button" class="btn ghost" id="copyPlanBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>複製行程文字</button><a class="btn ghost" id="viewPlanLink" href="trip.html" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>看成品頁</a></div>
     </div>
 
+    <div class="card" id="flightCard">
+      <div class="fl-head"><h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5 3 11l1.5-1.5 9 .5 4.5-4.5a2 2 0 0 1 3 3L16.5 13l.5 9L15.5 23.5 13 16"/></svg>航班</h2><button type="button" class="btn ghost" id="flightAddBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>加航班</button></div>
+      <div id="flightList"></div>
+    </div>
+
     <div class="card" id="ledgerSummary">
       <div class="total">
         <div class="big" id="totalTwd">NT$ 0</div>
@@ -368,6 +382,37 @@
     <div class="actions">
       <button class="btn danger hidden" id="planDelBtn">刪除</button>
       <div class="r"><button class="btn ghost" id="planCancelBtn">取消</button><button class="btn" id="planSaveBtn">儲存</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="flightModal">
+  <div class="sheet">
+    <h3 id="flightModalTitle">加航班</h3>
+    <label>去回程</label>
+    <div class="curpick" id="flDirPick" style="--n:3">
+      <button type="button" data-dir="out">去程</button><button type="button" data-dir="back">回程</button><button type="button" data-dir="other">其他</button>
+    </div>
+    <div class="grid2">
+      <div><label for="flDate">日期</label><input type="date" id="flDate"></div>
+      <div><label for="flNo">航班號</label><input type="text" id="flNo" maxlength="20" placeholder="例：BR198"></div>
+    </div>
+    <label for="flAirline">航空公司</label>
+    <input type="text" id="flAirline" maxlength="30">
+    <div class="grid2">
+      <div><label for="flFrom">出發機場</label><input type="text" id="flFrom" maxlength="30" placeholder="例：桃園 TPE"></div>
+      <div><label for="flFromTerm">出發航廈</label><input type="text" id="flFromTerm" maxlength="10" placeholder="例：T2"></div>
+      <div><label for="flTo">抵達機場</label><input type="text" id="flTo" maxlength="30" placeholder="例：成田 NRT"></div>
+      <div><label for="flToTerm">抵達航廈</label><input type="text" id="flToTerm" maxlength="10"></div>
+      <div><label for="flDep">起飛時間</label><input type="time" id="flDep"></div>
+      <div><label for="flArr">抵達時間</label><input type="time" id="flArr"></div>
+    </div>
+    <label for="flNote">備註</label>
+    <textarea id="flNote" rows="2" maxlength="300" placeholder="例：出發前 2 天網路報到"></textarea>
+    <div class="err" id="flErr"></div>
+    <div class="actions">
+      <button class="btn danger hidden" id="flDelBtn">刪除</button>
+      <div class="r"><button class="btn ghost" id="flCancelBtn">取消</button><button class="btn" id="flSaveBtn">儲存</button></div>
     </div>
   </div>
 </div>
@@ -705,6 +750,7 @@ async function runSync() {
     const res = await apiPost('setting-set', { key: KEY, value: JSON.stringify(STATE) });
     if (!res || res.success !== true) throw new Error((res && res.error) || '寫入失敗');
     cacheSave(); render();
+    fetchExtra();
     const d = new Date();
     setSync('已同步 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'));
   } catch (err) {
@@ -727,6 +773,7 @@ async function boot() {
     STATE = cached ? merge(cached, got.remote) : normalize(got.remote);
     cacheSave();
     showApp();
+    fetchExtra();
     setSync(got.remote ? '已同步' : '第一筆還沒記，按右下角開始');
     // 本機快取有雲端沒有的東西（上次同步失敗）→ 補推上去
     if (cached && fingerprint(normalize(got.remote)) !== fingerprint(STATE)) scheduleSync();
@@ -986,6 +1033,8 @@ function render() {
   const isPlan = VIEW === 'plan';
   document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === VIEW));
   document.getElementById('planSummary').classList.toggle('hidden', !isPlan);
+  document.getElementById('flightCard').classList.toggle('hidden', !isPlan);
+  renderFlights();
   document.getElementById('ledgerSummary').classList.toggle('hidden', isPlan);
   document.getElementById('planAddBtn').classList.toggle('hidden', !isPlan);
   document.getElementById('photoBtn').classList.toggle('hidden', isPlan);
@@ -1206,6 +1255,122 @@ function itemHtml(it) {
     '<div class="m"><div class="n">' + esc(it.name || c.name) + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>' +
     '<div class="a">' + fmtMoney(it.amount, it.cur) + est + '</div></div>';
 }
+
+/* ---------- 航班（獨立 key trip_extra_<TRIP>；prep 由成品頁維護，這裡原封不動） ---------- */
+const EXTRA_KEY = 'trip_extra_' + TRIP;
+let EXTRA_FLIGHTS = [];
+let FL_EDITING_ID = null;
+let FL_DIR = 'out';
+const FL_DIR_NAME = { out: '去程', back: '回程', other: '其他' };
+function cleanFlights(arr) {
+  return (Array.isArray(arr) ? arr : []).filter(f => f && f.id).map(f => ({
+    id: String(f.id), dir: FL_DIR_NAME[f.dir] ? f.dir : 'other', date: String(f.date || ''),
+    flightNo: String(f.flightNo || '').slice(0, 20), airline: String(f.airline || '').slice(0, 30),
+    from: String(f.from || '').slice(0, 30), fromTerm: String(f.fromTerm || '').slice(0, 10),
+    to: String(f.to || '').slice(0, 30), toTerm: String(f.toTerm || '').slice(0, 10),
+    dep: /^\d{2}:\d{2}$/.test(String(f.dep || '')) ? String(f.dep) : '', arr: /^\d{2}:\d{2}$/.test(String(f.arr || '')) ? String(f.arr) : '',
+    note: String(f.note || '').slice(0, 300), at: Number(f.at) || 0, del: !!f.del,
+  }));
+}
+// 讀最新 extra（原始物件，保留 prep 與其他未知欄位）
+async function loadExtraRaw() {
+  const res = await apiPost('setting-get', { key: EXTRA_KEY });
+  if (res && res.needLogin) return { needLogin: true };
+  if (!res || res.success !== true) throw new Error((res && res.error) || '讀取航班失敗');
+  let extra = null;
+  if (res.value) { try { extra = JSON.parse(res.value); } catch (e) { extra = null; } }
+  if (!extra || typeof extra !== 'object' || Array.isArray(extra)) extra = {};
+  return { extra };
+}
+async function fetchExtra() {
+  try {
+    const got = await loadExtraRaw();
+    if (got.needLogin) { showLogin(); return; }
+    EXTRA_FLIGHTS = cleanFlights(got.extra.flights);
+    renderFlights();
+  } catch (e) { /* 航班讀不到不影響其他功能 */ }
+}
+function renderFlights() {
+  const box = document.getElementById('flightList');
+  if (!box) return;
+  const list = EXTRA_FLIGHTS.filter(f => !f.del).sort((a, b) => (a.date + (a.dep || '99:99')) < (b.date + (b.dep || '99:99')) ? -1 : 1);
+  if (!list.length) { box.innerHTML = '<div class="fl-empty">還沒有航班</div>'; return; }
+  box.innerHTML = list.map(f => {
+    const md = /^\d{4}-(\d{2})-(\d{2})$/.exec(f.date);
+    const d = md ? Number(md[1]) + '/' + Number(md[2]) : '';
+    const from = f.from + (f.fromTerm ? ' ' + f.fromTerm : ''), to = f.to + (f.toTerm ? ' ' + f.toTerm : '');
+    return '<div class="fl-row" data-id="' + esc(f.id) + '"><span class="tag">' + esc(FL_DIR_NAME[f.dir]) + '</span>' +
+      '<span>' + esc(d) + '</span><span class="no">' + esc(f.flightNo) + '</span>' +
+      '<span>' + esc(f.dep) + (f.dep || f.arr ? ' → ' : '') + esc(f.arr) + '</span>' +
+      '<span>' + esc(from) + (from || to ? ' → ' : '') + esc(to) + '</span></div>';
+  }).join('');
+  box.querySelectorAll('.fl-row').forEach(r => r.addEventListener('click', () => openFlight(r.dataset.id)));
+}
+function renderFlDirPick() {
+  document.querySelectorAll('#flDirPick button').forEach(b => b.classList.toggle('on', b.dataset.dir === FL_DIR));
+}
+function openFlight(id) {
+  const f = id ? EXTRA_FLIGHTS.find(x => x.id === id && !x.del) : null;
+  FL_EDITING_ID = f ? f.id : null;
+  FL_DIR = f ? f.dir : 'out';
+  renderFlDirPick();
+  document.getElementById('flightModalTitle').textContent = f ? '編輯航班' : '加航班';
+  const set = (k, v) => { document.getElementById(k).value = v; };
+  set('flDate', f ? f.date : (STATE.start || todayStr()));
+  set('flNo', f ? f.flightNo : ''); set('flAirline', f ? f.airline : '');
+  set('flFrom', f ? f.from : ''); set('flFromTerm', f ? f.fromTerm : '');
+  set('flTo', f ? f.to : ''); set('flToTerm', f ? f.toTerm : '');
+  set('flDep', f ? f.dep : ''); set('flArr', f ? f.arr : ''); set('flNote', f ? f.note : '');
+  document.getElementById('flErr').textContent = '';
+  document.getElementById('flDelBtn').classList.toggle('hidden', !f);
+  openModal('flightModal');
+}
+// 存檔：先抓最新 → 依 id 合併航班 → prep 與其他欄位沿用伺服器那份 → 寫回
+async function saveFlight(rec) {
+  const got = await loadExtraRaw();
+  if (got.needLogin) { showLogin(); return false; }
+  const extra = got.extra;
+  const remoteList = cleanFlights(extra.flights);
+  const merged = mergeList(EXTRA_FLIGHTS.filter(f => f.id !== rec.id), remoteList);
+  const cur = merged.find(f => f.id === rec.id);
+  if (!cur || (rec.at || 0) >= (cur.at || 0)) { const i = merged.findIndex(f => f.id === rec.id); if (i >= 0) merged[i] = rec; else merged.push(rec); }
+  const out = Object.assign({}, extra, { v: 1, flights: merged });
+  if (!Array.isArray(out.prep)) out.prep = Array.isArray(extra.prep) ? extra.prep : [];
+  const res = await apiPost('setting-set', { key: EXTRA_KEY, value: JSON.stringify(out) });
+  if (!res || res.success !== true) throw new Error((res && res.error) || '寫入失敗');
+  EXTRA_FLIGHTS = merged;
+  renderFlights();
+  return true;
+}
+async function submitFlight(rec, btn) {
+  btn.disabled = true;
+  try {
+    if (await saveFlight(rec)) closeModal('flightModal');
+  } catch (err) { alert('航班儲存失敗：' + err.message); }
+  finally { btn.disabled = false; }
+}
+document.getElementById('flightAddBtn').addEventListener('click', () => openFlight(null));
+document.getElementById('flCancelBtn').addEventListener('click', () => closeModal('flightModal'));
+document.querySelectorAll('#flDirPick button').forEach(b => b.addEventListener('click', () => { FL_DIR = b.dataset.dir; renderFlDirPick(); }));
+document.getElementById('flSaveBtn').addEventListener('click', () => {
+  const v = id => document.getElementById(id).value.trim();
+  const errEl = document.getElementById('flErr');
+  if (!v('flDate')) { errEl.textContent = '請填日期'; return; }
+  if (!v('flNo') && !v('flFrom') && !v('flTo')) { errEl.textContent = '請至少填航班號或機場'; return; }
+  const rec = cleanFlights([{
+    id: FL_EDITING_ID || uid(), dir: FL_DIR, date: v('flDate'), flightNo: v('flNo'), airline: v('flAirline'),
+    from: v('flFrom'), fromTerm: v('flFromTerm'), to: v('flTo'), toTerm: v('flToTerm'),
+    dep: v('flDep'), arr: v('flArr'), note: v('flNote'), at: Date.now(), del: false,
+  }])[0];
+  errEl.textContent = '';
+  submitFlight(rec, document.getElementById('flSaveBtn'));
+});
+document.getElementById('flDelBtn').addEventListener('click', () => {
+  if (!FL_EDITING_ID || !confirm('確定刪除這個航班？')) return;
+  const f = EXTRA_FLIGHTS.find(x => x.id === FL_EDITING_ID);
+  if (!f) return;
+  submitFlight(Object.assign({}, f, { del: true, at: Date.now() }), document.getElementById('flDelBtn'));
+});
 
 /* ---------- 記一筆／編輯 ---------- */
 function openModal(id) { document.getElementById(id).classList.add('open'); }

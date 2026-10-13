@@ -4,38 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#FBF7EF">
+<meta name="theme-color" content="#FBF6F0">
 <title>旅遊行程｜雪莉與朵栗</title>
 <link rel="apple-touch-icon" href="icons/site-apple-touch-v2.png">
 <link rel="icon" type="image/png" href="icons/site-192-v2.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap">
 <style>
-  /* 員工旅遊「成品頁」（2026-10-14）：只看不改，資料＝trip-expense.html 排行程那份。
-     風格參考雪莉交件匣「旅遊網站參考」：奶油底、深色粗線、粉黃綠藍手繪插圖。 */
+  /* 員工旅遊「成品頁」（2026-10-14）：行程資料＝trip-expense.html 排行程那份（只讀）；
+     航班＋準備清單另存 trip_extra_<trip>（航班在編輯頁改、準備清單在這頁打勾／新增）。
+     版面參考雪莉交件匣「旅遊網站參考」：頂列 航班｜行程｜準備，往下滑依序出現。
+     色系 2026-10-14 雪莉選 A（藕粉奶茶・柔線），?palette=b|c|d 仍可預覽其他三款。 */
   :root {
-    --bg: #FBF7EF; --ink: #3B3330; --soft: #6E625C; --muted: #A1958D;
-    --card: #FFFFFF; --pink: #E8A49C; --pink-bg: #F6DEDA; --yellow: #EFCB6E; --yellow-bg: #F8EDCB;
-    --green: #A9C98F; --green-bg: #E1ECD6; --blue: #A9CBE0; --blue-bg: #DCEAF2; --line: 3px;
+    --bg: #FBF6F0; --ink: #6E5852; --soft: #8A766E; --muted: #B3A49B;
+    --card: #FFFFFF; --pink: #D7A9A8; --pink-bg: #F4E4E1; --yellow: #E9D3A6; --yellow-bg: #F7EEDC;
+    --green: #C7CFB4; --green-bg: #ECEFE2; --blue: #C0CDD3; --blue-bg: #E8EEF0; --accent: #B5485A; --link: #A0767A; --line: 3px;
+    --nav-h: 64px;
   }
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  html { scroll-behavior: smooth; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); -webkit-tap-highlight-color: transparent;
     font-family: "Huninn", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
   body { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
   a { color: inherit; }
   svg { display: block; }
+  button { font: inherit; color: inherit; }
   .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
 
   /* 頂列 */
-  .nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: var(--line) solid var(--ink); }
-  .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-  .nav .logo { width: 40px; height: 40px; }
-  .navl { display: flex; align-items: center; gap: 10px; }
-  .back { display: inline-flex; align-items: center; gap: 2px; text-decoration: none; font-size: .95rem; padding: 6px 12px 6px 6px; border: var(--line) solid var(--ink); border-radius: 999px; background: var(--card); }
-  .back svg { width: 18px; height: 18px; }
-  .nav .links { display: flex; gap: 6px; }
-  .nav .links a { text-decoration: none; font-size: 1.05rem; padding: 7px 16px; border-radius: 999px; border: var(--line) solid transparent; }
+  .nav { position: sticky; top: 0; z-index: 30; background: var(--bg); border-bottom: var(--line) solid var(--ink); }
+  .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); gap: 8px; }
+  .navl { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .nav .logo { width: 52px; height: 34px; flex: 0 0 auto; }
+  .back { display: inline-flex; align-items: center; gap: 1px; text-decoration: none; font-size: .9rem; padding: 5px 11px 5px 5px; border: var(--line) solid var(--ink); border-radius: 999px; background: var(--card); white-space: nowrap; }
+  .back svg { width: 17px; height: 17px; }
+  .nav .links { display: flex; gap: 2px; }
+  .nav .links a { text-decoration: none; font-size: 1rem; padding: 6px 12px; border-radius: 999px; border: var(--line) solid transparent; white-space: nowrap; }
   .nav .links a.on { background: var(--pink); border-color: var(--ink); }
 
   /* 主視覺 */
@@ -47,41 +51,60 @@
   .count span { background: var(--yellow); border: var(--line) solid var(--ink); border-radius: 999px; padding: 8px 26px; font-size: 1rem; }
   .count b { font-size: 1.7rem; font-weight: 400; margin: 0 6px; vertical-align: -2px; }
 
-  .sec-h { display: flex; align-items: center; gap: 14px; margin: 40px 0 22px; font-size: 1.6rem; }
-  .sec-h .ic { width: 52px; height: 52px; border-radius: 50%; border: var(--line) solid var(--ink); display: flex; align-items: center; justify-content: center; }
+  section { scroll-margin-top: calc(var(--nav-h) + 8px); }
+  .sec-h { display: flex; align-items: center; gap: 14px; margin: 44px 0 20px; font-size: 1.6rem; }
+  .sec-h .ic { width: 52px; height: 52px; border-radius: 50%; border: var(--line) solid var(--ink); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .sec-h .ic svg { width: 28px; height: 28px; }
+  .sub-h { font-size: 1.15rem; margin: 26px 0 12px; }
 
-  /* 日期軌道 */
-  .stepper { position: relative; padding: 4px 0 0; }
-  .stepper .rail { position: absolute; left: 0; right: 0; top: 16px; height: var(--line); background: var(--ink); }
-  .stepper .rail.hide { display: none; }
-  .steps { display: grid; position: relative; }
-  .step { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 0; }
-  .step .dot { width: 26px; height: 26px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--card); position: relative; z-index: 1; }
-  .step .car { height: 54px; display: flex; align-items: flex-start; justify-content: center; }
-  .step .car svg { width: 46px; height: 50px; margin-top: -10px; visibility: hidden; transition: transform .25s; }
-  .step.on .car svg { visibility: visible; }
-  .step .md { font-size: 1.15rem; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  /* 航班 */
+  .flight { border: var(--line) solid var(--ink); border-radius: 24px; overflow: hidden; background: var(--card); margin-bottom: 16px; }
+  .flight .fh { display: flex; justify-content: space-between; gap: 10px; padding: 10px 18px; border-bottom: var(--line) solid var(--ink); font-size: 1.02rem; }
+  .flight .fb { padding: 16px 18px 14px; }
+  .flight .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+  .flight .t { font-size: 2.1rem; letter-spacing: .02em; line-height: 1.1; }
+  .flight .mid { text-align: center; color: var(--soft); font-size: .85rem; position: relative; padding-top: 10px; }
+  .flight .mid::before { content: ''; position: absolute; left: 0; right: 0; top: 0; border-top: 4px dotted var(--ink); }
+  .flight .ap { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; font-size: .95rem; }
+  .flight .ap span:last-child { text-align: right; }
+  .flight .air { color: var(--soft); font-size: .85rem; margin-top: 10px; }
+  .flight .fn { color: var(--accent); font-size: .92rem; margin-top: 8px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+
+  /* 日期軌道（電車沿軌道開到選中的那天；捲動時黏在頂列下方） */
+  .stepper { position: sticky; top: calc(var(--nav-h) + var(--line)); z-index: 20; background: var(--bg); margin: 0 -16px; padding: 6px 16px 8px; }
+  .track { position: relative; height: 46px; }
+  .rail { position: absolute; top: 40px; height: var(--line); background: var(--ink); }
+  .sleepers { position: absolute; top: calc(40px + var(--line)); height: 5px; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 12px); opacity: .45; }
+  .train { position: absolute; top: 2px; left: 0; width: 64px; height: 40px; transform: translateX(-50%); transition: left .9s cubic-bezier(.45,.05,.3,1); z-index: 2; pointer-events: none; }
+  .train svg { width: 64px; height: 40px; transition: transform .2s; }
+  .train.flip svg { transform: scaleX(-1); }
+  .train.moving svg { animation: bob .18s ease-in-out infinite alternate; }
+  .train.flip.moving svg { animation-name: bobflip; }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+  @keyframes bobflip { from { transform: scaleX(-1) translateY(0); } to { transform: scaleX(-1) translateY(-2px); } }
+  .steps { display: grid; position: relative; margin-top: -14px; }
+  .step { background: none; border: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+  .step .dot { width: 22px; height: 22px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--card); position: relative; z-index: 1; }
+  .step .md { font-size: 1.1rem; padding: 1px 9px; border-radius: 999px; white-space: nowrap; margin-top: 6px; transition: background .3s; }
   .step.on .md { background: var(--pink); }
-  .step .wd { font-size: .82rem; color: var(--soft); margin-top: 2px; }
-  .steps.dense .step .md { font-size: .95rem; padding: 2px 6px; }
+  .step .wd { font-size: .8rem; color: var(--soft); margin-top: 1px; }
+  .steps.dense .step .md { font-size: .92rem; padding: 1px 5px; }
 
   /* 當日卡 */
-  .daycard { display: flex; gap: 16px; align-items: center; border: var(--line) solid var(--ink); border-radius: 26px; padding: 16px; margin: 22px 0 26px; }
+  #day { touch-action: pan-y; }
+  .daycard { display: flex; gap: 16px; align-items: center; border: var(--line) solid var(--ink); border-radius: 26px; padding: 16px; margin: 16px 0 24px; }
   .daycard .pic { flex: 0 0 96px; height: 74px; border: var(--line) solid var(--ink); border-radius: 16px; overflow: hidden; background: var(--card); }
   .daycard .pic svg { width: 100%; height: 100%; }
+  .daycard > div:last-child { min-width: 0; }
   .daycard .dn { color: var(--soft); font-size: .95rem; }
   .daycard .dt { font-size: 1.25rem; line-height: 1.35; margin: 2px 0 4px; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .daycard > div:last-child { min-width: 0; }
   .daycard .ds { color: var(--soft); font-size: .92rem; }
 
   /* 時間軸 */
-  .tl { position: relative; }
   .ev { display: grid; grid-template-columns: 54px 22px 1fr; column-gap: 8px; position: relative; padding-bottom: 18px; }
   .ev::before { content: ''; position: absolute; left: 70px; top: 22px; bottom: -4px; border-left: 3px dotted var(--ink); }
   .ev:last-child::before { display: none; }
-  .ev .tm { text-align: right; font-size: 1rem; padding-top: 12px; color: var(--ink); white-space: nowrap; }
-  .ev .tm.none { color: var(--muted); }
+  .ev .tm { text-align: right; font-size: 1rem; padding-top: 12px; white-space: nowrap; }
   .ev .nd { width: 20px; height: 20px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--bg); margin-top: 12px; position: relative; z-index: 1; }
   .ev .bd { min-width: 0; }
   .move { padding-top: 8px; font-size: 1.02rem; line-height: 1.5; }
@@ -98,11 +121,36 @@
   .acts a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .acts a svg { width: 15px; height: 15px; flex: 0 0 auto; }
   .who { color: var(--muted); font-size: .78rem; margin-top: 6px; }
-  .empty { text-align: center; color: var(--muted); padding: 30px 0; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 0; }
   .swipehint { text-align: center; color: var(--muted); font-size: .8rem; margin: 6px 0 0; }
   .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; }
-  .pager button { flex: 1; font: inherit; color: var(--ink); background: var(--card); border: var(--line) solid var(--ink); border-radius: 999px; padding: 10px; cursor: pointer; }
+  .pager button { flex: 1; background: var(--card); border: var(--line) solid var(--ink); border-radius: 999px; padding: 10px; cursor: pointer; }
   .pager button:disabled { opacity: .3; cursor: default; }
+
+  /* 準備 */
+  .panel { background: var(--card); border: var(--line) solid var(--ink); border-radius: 24px; padding: 16px 18px; margin-bottom: 16px; }
+  .panel h3 { margin: 0 0 10px; font-weight: 400; font-size: 1.15rem; display: flex; justify-content: space-between; align-items: baseline; }
+  .panel h3 small { color: var(--muted); font-size: .82rem; }
+  .ck { display: flex; align-items: flex-start; gap: 12px; padding: 7px 0; }
+  .ck input { position: absolute; opacity: 0; pointer-events: none; }
+  .ck .box2 { flex: 0 0 auto; width: 24px; height: 24px; border: var(--line) solid var(--ink); border-radius: 7px; background: var(--card); display: flex; align-items: center; justify-content: center; margin-top: 1px; cursor: pointer; }
+  .ck .box2 svg { width: 16px; height: 16px; opacity: 0; color: var(--card); }
+  .ck.done .box2 { background: var(--green); }
+  .ck.done .box2 svg { opacity: 1; color: var(--ink); }
+  .ck .tx { flex: 1; min-width: 0; font-size: 1.02rem; line-height: 1.5; word-break: break-word; cursor: pointer; }
+  .ck.done .tx { text-decoration: line-through; color: var(--muted); }
+  .ck .by { display: block; font-size: .75rem; color: var(--muted); text-decoration: none; }
+  .x-btn { background: none; border: none; color: var(--muted); padding: 2px 4px; cursor: pointer; flex: 0 0 auto; }
+  .x-btn svg { width: 16px; height: 16px; }
+  .addrow { display: flex; gap: 8px; margin-top: 10px; }
+  .addrow input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 8px 12px; border: 2px solid var(--ink); border-radius: 12px; background: var(--bg); color: var(--ink); }
+  .addrow button { background: var(--pink); border: var(--line) solid var(--ink); border-radius: 999px; padding: 6px 16px; cursor: pointer; white-space: nowrap; }
+  .stay { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 3px dotted var(--ink); }
+  .stay:last-child { border-bottom: none; }
+  .stay .sd { color: var(--soft); white-space: nowrap; font-size: .92rem; }
+  .stay .sp { display: block; color: var(--muted); font-size: .8rem; margin-top: 2px; }
+  .savemsg { text-align: center; color: var(--muted); font-size: .8rem; min-height: 1.2em; }
+  .savemsg.err { color: var(--accent); }
 
   /* 相簿 */
   .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -120,15 +168,15 @@
   .login h2 { margin: 0 0 6px; font-weight: 400; }
   .login p { color: var(--soft); font-size: .9rem; margin: 0 0 16px; }
   .login input { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 12px; margin-bottom: 10px; background: var(--bg); }
-  .login button { width: 100%; font: inherit; padding: 11px; border-radius: 999px; border: var(--line) solid var(--ink); background: var(--pink); cursor: pointer; }
+  .login button { width: 100%; padding: 11px; border-radius: 999px; border: var(--line) solid var(--ink); background: var(--pink); cursor: pointer; }
   .login .err { color: var(--accent); font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
   .status { text-align: center; color: var(--muted); padding: 60px 0; }
 </style>
 </head>
 <body>
 <nav class="nav"><div class="wrap">
-  <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>編輯</a><a href="#top" aria-label="回到最上面"><svg class="logo" viewBox="0 0 48 48" id="logoSvg"></svg></a></div>
-  <div class="links"><a href="#plan" data-sec="plan">行程</a><a href="#album" data-sec="album" id="albumLink" hidden>相簿</a></div>
+  <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>編輯</a><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
+  <div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div>
 </div></nav>
 
 <div id="loginBox" class="login">
@@ -146,18 +194,33 @@
   <div class="range" id="tRange"></div>
   <div class="count" id="tCount"></div>
 
+  <section id="flights">
+    <div class="sec-h"><span class="ic" style="background:var(--blue)" data-icon="plane"></span>航班</div>
+    <div id="flightList"></div>
+  </section>
+
   <section id="plan">
-    <div class="sec-h"><span class="ic" style="background:var(--pink)" id="planIc"></span>每日行程</div>
-    <div class="stepper"><div class="rail" id="rail"></div><div class="steps" id="steps"></div></div>
+    <div class="sec-h"><span class="ic" style="background:var(--pink)" data-icon="cal"></span>每日行程</div>
+    <div class="stepper" id="stepper">
+      <div class="track" id="track"><div class="rail" id="rail"></div><div class="sleepers" id="sleepers"></div><div class="train" id="train"></div></div>
+      <div class="steps" id="steps"></div>
+    </div>
     <div id="day"></div>
   </section>
 
+  <section id="prep">
+    <div class="sec-h"><span class="ic" style="background:var(--green)" data-icon="bag"></span>出發前準備</div>
+    <div id="prepLists"></div>
+    <div class="savemsg" id="saveMsg"></div>
+    <div class="panel" id="stayPanel" hidden><h3>住宿</h3><div id="stayList"></div></div>
+  </section>
+
   <section id="album" hidden>
-    <div class="sec-h"><span class="ic" style="background:var(--blue)" id="albumIc"></span>旅途相簿</div>
+    <div class="sec-h"><span class="ic" style="background:var(--yellow)" data-icon="cam"></span>旅途相簿</div>
     <div class="pgrid" id="pgrid"></div>
   </section>
 
-  <div class="foot">要改行程請到 <a id="editLink" href="trip-expense.html">排行程／記帳頁</a></div>
+  <div class="foot">要改行程或航班請到 <a id="editLink" href="trip-expense.html">排行程／記帳頁</a></div>
 </main>
 <div class="status" id="status">載入中…</div>
 <div class="lb" id="lb"><img id="lbImg" alt=""><div class="cap" id="lbCap"></div></div>
@@ -166,12 +229,13 @@
 const API = 'https://dondon-platform.vercel.app/api/legacy';
 const TRIP = (new URLSearchParams(location.search).get('trip') || 'japan2026').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'japan2026';
 const KEY = 'trip_ledger_' + TRIP;
-const LS_KEY = 'trip_ledger_cache_' + TRIP;   // 與 trip-expense.html 共用同一份本機快取
+const EXTRA_KEY = 'trip_extra_' + TRIP;        // 航班＋準備清單（與 trip-expense.html 共用）
+const LS_KEY = 'trip_ledger_cache_' + TRIP;    // 與 trip-expense.html 共用同一份本機快取
+const LS_EXTRA = 'trip_extra_cache_' + TRIP;
 const STORAGE_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/object/public/images/';
 const RENDER_BASE = 'https://apweuvvskeajbhwlcydm.supabase.co/storage/v1/render/image/public/images/';
 const PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
-// 色系（2026-10-14 雪莉要藕粉奶油色系，四款給她挑；?palette=a|b|c|d 可切，定案後改 DEFAULT_PALETTE）
 const DEFAULT_PALETTE = 'a';
 const PALETTES = {
   a: { name: '藕粉奶茶・柔線', line: '3px', bg: '#FBF6F0', ink: '#6E5852', soft: '#8A766E', muted: '#B3A49B', card: '#FFFFFF', pink: '#D7A9A8', pinkBg: '#F4E4E1', yellow: '#E9D3A6', yellowBg: '#F7EEDC', green: '#C7CFB4', greenBg: '#ECEFE2', blue: '#C0CDD3', blueBg: '#E8EEF0', accent: '#B5485A', link: '#A0767A' },
@@ -191,6 +255,7 @@ const SVG_COLORS = { '#3B3330': 'ink', '#E8A49C': 'pink', '#EFCB6E': 'yellow', '
 function paint(svg) { return svg.replace(/#3B3330|#E8A49C|#EFCB6E|#DCEAF2|#F8EDCB|#E1ECD6|#A9CBE0|#B5485A|#fff/g, m => P[SVG_COLORS[m]]); }
 const TONES = [['var(--pink-bg)', 'var(--pink)'], ['var(--yellow-bg)', 'var(--yellow)'], ['var(--green-bg)', 'var(--green)'], ['var(--blue-bg)', 'var(--blue)']];
 
+
 /* ---------- 圖示（線條） ---------- */
 const S = 'fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"';
 const ICON = {
@@ -202,6 +267,10 @@ const ICON = {
   shop: '<svg viewBox="0 0 24 24" ' + S + '><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
   cal: '<svg viewBox="0 0 24 24" ' + S + '><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   cam: '<svg viewBox="0 0 24 24" ' + S + '><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  plane: '<svg viewBox="0 0 24 24" ' + S + '><path d="M21 3L3 10.5l7 2.5 2.5 7z"/><path d="M10 13l5-5"/></svg>',
+  bag: '<svg viewBox="0 0 24 24" ' + S + '><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M4 12h16"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
 const CAT = {
   transport: { name: '交通', color: 'var(--blue)', icon: ICON.train },
@@ -211,14 +280,16 @@ const CAT = {
   shop: { name: '購物', color: 'var(--pink-bg)', icon: ICON.shop },
   other: { name: '其他', color: 'var(--bg)', icon: '' },
 };
-
-// 吉祥物：粉紅小電車（取代參考圖的纜車）
-function trainSvg(w) {
-  return '<svg viewBox="0 0 48 52" width="' + (w || 46) + '"><path d="M24 2v8" stroke="#3B3330" stroke-width="3" stroke-linecap="round"/>' +
-    '<rect x="5" y="10" width="38" height="36" rx="11" fill="#E8A49C" stroke="#3B3330" stroke-width="3"/>' +
-    '<rect x="11" y="18" width="11" height="11" rx="3.5" fill="#EFCB6E" stroke="#3B3330" stroke-width="3"/>' +
-    '<rect x="26" y="18" width="11" height="11" rx="3.5" fill="#EFCB6E" stroke="#3B3330" stroke-width="3"/>' +
-    '<path d="M15 38h18" stroke="#3B3330" stroke-width="3" stroke-linecap="round"/></svg>';
+// 吉祥物：側面小電車（東京是電車不是纜車；車頂有集電弓、車頭朝右有車燈，往回開時整台翻面）
+function trainSvg() {
+  return '<svg viewBox="0 0 64 40"><g stroke="#3B3330" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M24 9 L30 3 L36 9 M26 3 h8" fill="none"/>' +
+    '<path d="M6 9 H50 Q60 9 60 21 V27 Q60 32 55 32 H6 Q3 32 3 29 V12 Q3 9 6 9 Z" fill="#E8A49C"/>' +
+    '<rect x="9" y="14" width="10" height="8" rx="2.5" fill="#EFCB6E"/><rect x="23" y="14" width="10" height="8" rx="2.5" fill="#EFCB6E"/><rect x="37" y="14" width="9" height="8" rx="2.5" fill="#EFCB6E"/>' +
+    '<path d="M50 13 Q56 13 57 21 H50 Z" fill="#DCEAF2"/>' +
+    '<path d="M4 26 H59" fill="none" stroke-width="2"/>' +
+    '<circle cx="15" cy="34" r="3.6" fill="#fff"/><circle cx="46" cy="34" r="3.6" fill="#fff"/>' +
+    '</g><circle cx="57.5" cy="28.5" r="1.6" fill="#EFCB6E"/></svg>';
 }
 const HERO = '<svg viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg" stroke="#3B3330" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M20 26 q14 -6 28 0 M58 18 q8 -4 16 0" fill="none" stroke-width="2"/>' +
@@ -245,15 +316,19 @@ const SCENES = [
   '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 56 Q24 48 48 56 T96 56 V74 H0Z" fill="#A9CBE0"/><path d="M30 56 h34 l-6 8 h-22z" fill="#E8A49C"/><path d="M48 56 V24 L64 50 H48" fill="#fff"/><path d="M20 18 l3 3 M20 24 l3 -3 M76 14 l2 4 M80 14 l-4 4" fill="none" stroke="#EFCB6E" stroke-width="2.5"/></svg>',
 ];
 
+
 /* ---------- 工具 ---------- */
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function getToken() { try { return localStorage.getItem('admin_token') || ''; } catch (e) { return ''; } }
+function getUser() { try { return localStorage.getItem('admin_user') || ''; } catch (e) { return ''; } }
 function isoOk(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || ''); }
 function toDate(iso) { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); }
 function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function md(iso) { const d = toDate(iso); return (d.getMonth() + 1) + '/' + d.getDate(); }
+function mdw(iso) { return md(iso) + '（' + WEEK[toDate(iso).getDay()] + '）'; }
 function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s]+$/i.test(u) ? u : ''; }
 function mapsUrl(place) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 // 備註文字裡的網址變成可點連結（先跳脫再換）
 function linkify(text) {
   return esc(text).replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + (u.length > 38 ? u.slice(0, 36) + '…' : u) + '</a>');
@@ -265,9 +340,14 @@ function planSort(a, b) {
   return (a.at || 0) - (b.at || 0);
 }
 function thumbUrl(path, w) { return RENDER_BASE + path + '?width=' + (w || 360) + '&resize=contain&quality=70'; }
+async function apiPost(type, payload) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ type, token: getToken() }, payload || {})) });
+  return res.json();
+}
 
 /* ---------- 資料 ---------- */
 let DATA = null, DAYS = [], CUR = 0;
+let EXTRA = { v: 1, flights: [], prep: [] };
 function clean(raw) {
   const s = raw || {};
   const plan = (Array.isArray(s.plan) ? s.plan : []).filter(p => p && p.id && !p.del).map(p => ({
@@ -280,15 +360,29 @@ function clean(raw) {
   photos.sort((a, b) => (a.date + String(a.at).padStart(15, '0')).localeCompare(b.date + String(b.at).padStart(15, '0')));
   return { title: String(s.title || '我們的旅行'), start: isoOk(s.start) ? s.start : '', end: isoOk(s.end) ? s.end : '', plan, photos };
 }
+function cleanExtra(raw) {
+  const s = raw && typeof raw === 'object' ? raw : {};
+  return {
+    v: 1,
+    flights: (Array.isArray(s.flights) ? s.flights : []).filter(f => f && f.id),
+    prep: (Array.isArray(s.prep) ? s.prep : []).filter(p => p && p.id).map(p => ({
+      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', text: String(p.text || '').slice(0, 80),
+      done: !!p.done, by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
+    })),
+  };
+}
 function buildDays(d) {
-  // 有設定出發～回程就用；沒設定就用行程裡出現的日期範圍
-  const dated = d.plan.map(p => p.date).filter(Boolean).sort();
+  // 有設定出發～回程就用；沒設定就用行程與航班裡出現的日期範圍
+  const dated = d.plan.map(p => p.date).concat(liveFlights().map(f => f.date)).filter(isoOk).sort();
   let start = d.start || dated[0] || '', end = d.end && d.end >= start ? d.end : (dated[dated.length - 1] || start);
   if (dated.length && dated[dated.length - 1] > end) end = dated[dated.length - 1];
   if (!start) return [];
   const out = [];
   for (let t = toDate(start); isoOf(t) <= end && out.length < 31; t.setDate(t.getDate() + 1)) out.push(isoOf(t));
   return out;
+}
+function liveFlights() {
+  return EXTRA.flights.filter(f => !f.del).sort((a, b) => ((a.date || '') + (a.dep || '')).localeCompare((b.date || '') + (b.dep || '')));
 }
 
 /* ---------- 畫面 ---------- */
@@ -299,8 +393,7 @@ function render() {
   document.getElementById('tTitle').textContent = d.title;
   const first = DAYS[0], last = DAYS[DAYS.length - 1];
   if (first) {
-    const f = toDate(first), l = toDate(last);
-    document.getElementById('tRange').textContent = f.getFullYear() + '・' + md(first) + '（' + WEEK[f.getDay()] + '）－ ' + md(last) + '（' + WEEK[l.getDay()] + '）';
+    document.getElementById('tRange').textContent = toDate(first).getFullYear() + '・' + mdw(first) + ' － ' + mdw(last);
     const today = isoOf(new Date());
     const diff = Math.round((toDate(first) - toDate(today)) / 86400000);
     let html = '';
@@ -312,47 +405,109 @@ function render() {
     document.getElementById('tRange').textContent = '還沒排日期';
     document.getElementById('tCount').innerHTML = '';
   }
-  document.getElementById('planIc').innerHTML = ICON.cal;
-  document.getElementById('albumIc').innerHTML = ICON.cam;
+  document.querySelectorAll('.sec-h .ic[data-icon]').forEach(el => { el.innerHTML = ICON[el.dataset.icon] || ''; });
+  renderFlights();
   renderSteps();
-  renderDay();
+  renderDay(0);
+  renderPrep();
+  renderStays();
   renderAlbum();
 }
+
+// 航班：時區（同一班機起降時間是各自當地時間，算飛行時間要換算）
+const TZ = { TPE: 8, TSA: 8, KHH: 8, RMQ: 8, HKG: 8, MFM: 8, NRT: 9, HND: 9, KIX: 9, NGO: 9, FUK: 9, CTS: 9, OKA: 9, SDJ: 9, KMJ: 9, ICN: 9, GMP: 9, PUS: 9, CJU: 9, BKK: 7, DMK: 7, SGN: 7, HAN: 7, SIN: 8, KUL: 8, MNL: 8 };
+function apCode(s) { const m = /\b([A-Z]{3})\b/.exec(String(s || '')); return m && TZ[m[1]] != null ? m[1] : ''; }
+function flightDuration(f) {
+  const a = apCode(f.from), b = apCode(f.to);
+  if (!a || !b || !/^\d{2}:\d{2}$/.test(f.dep || '') || !/^\d{2}:\d{2}$/.test(f.arr || '')) return '';
+  const toMin = t => +t.slice(0, 2) * 60 + +t.slice(3);
+  let m = (toMin(f.arr) - TZ[b] * 60) - (toMin(f.dep) - TZ[a] * 60);
+  while (m <= 0) m += 1440;
+  return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
+}
+function renderFlights() {
+  const list = liveFlights();
+  const box = document.getElementById('flightList');
+  if (!list.length) { box.innerHTML = '<div class="panel"><div class="empty" style="padding:8px 0">還沒有航班，到編輯頁「加航班」就會出現在這裡</div></div>'; return; }
+  const DIR = { out: ['去程', 'var(--blue)'], back: ['回程', 'var(--green)'], other: ['航班', 'var(--yellow)'] };
+  box.innerHTML = list.map(f => {
+    const dir = DIR[f.dir] || DIR.other;
+    const term = (ap, t) => esc([ap, t].filter(Boolean).join(' '));
+    const dur = flightDuration(f);
+    return '<div class="flight"><div class="fh" style="background:' + dir[1] + '"><span>' + (isoOk(f.date) ? esc(mdw(f.date)) + ' ' : '') + dir[0] + '</span><span>' + esc(f.flightNo || '') + '</span></div>' +
+      '<div class="fb"><div class="row"><span class="t">' + esc(f.dep || '--:--') + '</span><span class="mid">' + esc(dur) + '</span><span class="t">' + esc(f.arr || '--:--') + '</span></div>' +
+      '<div class="ap"><span>' + term(f.from, f.fromTerm) + '</span><span>' + term(f.to, f.toTerm) + '</span></div>' +
+      (f.airline ? '<div class="air">' + esc(f.airline) + '</div>' : '') +
+      (f.note ? '<div class="fn">' + linkify(f.note) + '</div>' : '') + '</div></div>';
+  }).join('');
+}
+
 function renderSteps() {
   const box = document.getElementById('steps');
   const n = DAYS.length;
-  document.getElementById('rail').classList.toggle('hide', n < 2);
+  document.getElementById('stepper').hidden = n < 1;
   box.style.gridTemplateColumns = 'repeat(' + Math.max(n, 1) + ', 1fr)';
   box.classList.toggle('dense', n > 5);
-  box.innerHTML = DAYS.map((iso, i) => '<button class="step' + (i === CUR ? ' on' : '') + '" data-i="' + i + '"><span class="dot"></span><span class="car">' + paint(trainSvg()) + '</span><span class="md">' + md(iso) + '</span><span class="wd">週' + WEEK[toDate(iso).getDay()] + '</span></button>').join('');
-  // 軌道左右端對齊第一顆與最後一顆圓點
-  const rail = document.getElementById('rail');
-  const pad = 100 / n / 2;
-  rail.style.left = pad + '%'; rail.style.right = pad + '%';
+  box.innerHTML = DAYS.map((iso, i) => '<button class="step' + (i === CUR ? ' on' : '') + '" data-i="' + i + '"><span class="dot"></span><span class="md">' + md(iso) + '</span><span class="wd">週' + WEEK[toDate(iso).getDay()] + '</span></button>').join('');
+  // 軌道兩端對齊第一站與最後一站
+  const pad = 100 / Math.max(n, 1) / 2;
+  for (const id of ['rail', 'sleepers']) { const el = document.getElementById(id); el.style.left = pad + '%'; el.style.right = pad + '%'; }
+  const train = document.getElementById('train');
+  if (!train.innerHTML) train.innerHTML = paint(trainSvg());
+  train.style.transition = 'none';
+  train.style.left = ((CUR + 0.5) / Math.max(n, 1) * 100) + '%';
+  void train.offsetWidth;
+  train.style.transition = '';
   box.querySelectorAll('.step').forEach(b => b.addEventListener('click', () => goDay(+b.dataset.i, false)));
 }
+let MOVE_TIMER = null;
 function goDay(i, scroll) {
   if (i < 0 || i >= DAYS.length || i === CUR) return;
+  const dir = i > CUR ? 1 : -1;
   CUR = i;
   document.querySelectorAll('#steps .step').forEach((b, k) => b.classList.toggle('on', k === CUR));
-  renderDay();
+  // 電車慢慢開到下一站：往回開時車頭轉向
+  const train = document.getElementById('train');
+  train.classList.toggle('flip', dir < 0);
+  train.classList.add('moving');
+  train.style.left = ((CUR + 0.5) / DAYS.length * 100) + '%';
+  clearTimeout(MOVE_TIMER);
+  MOVE_TIMER = setTimeout(() => train.classList.remove('moving'), 900);
+  renderDay(dir);
   try { history.replaceState(null, '', '#day' + (CUR + 1)); } catch (e) {}
-  if (scroll) document.getElementById('plan').scrollIntoView({ behavior: 'smooth' });
+  if (scroll) {
+    // 讓當日卡停在黏住的日期軌道正下方
+    const st = document.getElementById('stepper');
+    const y = document.getElementById('day').getBoundingClientRect().top + scrollY - st.offsetHeight - document.querySelector('.nav').offsetHeight - 4;
+    if (y < scrollY) window.scrollTo({ top: y, behavior: 'smooth' });
+  }
 }
 function dayTitle(items) {
   const pick = items.filter(p => p.cat === 'sight').concat(items.filter(p => p.cat === 'food' || p.cat === 'shop'));
   const names = pick.map(p => p.title).filter(Boolean).slice(0, 2);
   return names.length ? names.join('＋') : (items[0] ? items[0].title : '自由活動');
 }
+function stayName(s) { return (s.title || '').replace(/\s*(check[\s-]?in|辦理入住|入住)\s*/ig, '').trim() || s.place; }
 function stayFor(iso) {
   // 當天有住宿就用當天的；沒有就往前找最近一晚
   for (let k = DAYS.indexOf(iso); k >= 0; k--) {
     const s = DATA.plan.filter(p => p.date === DAYS[k] && p.cat === 'stay').sort(planSort).pop();
-    if (s) return (s.title || '').replace(/\s*(check[\s-]?in|辦理入住|入住)\s*/ig, '').trim() || s.place;
+    if (s) return stayName(s);
   }
   return '';
 }
+// 這天的航班也排進時間軸（去程那天 13:10 起飛之類）
+function flightEvents(iso) {
+  return liveFlights().filter(f => f.date === iso).map(f => ({
+    cat: '_flight', time: /^\d{2}:\d{2}$/.test(f.dep || '') ? f.dep : '', at: 0,
+    title: [f.flightNo, (f.from || '') + (f.to ? ' → ' + f.to : '')].filter(Boolean).join('　'),
+    note: f.arr ? f.arr + ' 抵達' + (f.toTerm ? ' ' + f.toTerm : '') : '',
+  }));
+}
 function evHtml(p) {
+  if (p.cat === '_flight') {
+    return '<div class="ev"><span class="tm">' + esc(p.time) + '</span><span class="nd"></span><div class="bd"><div class="move"><span class="pill" style="background:var(--blue)">' + ICON.plane + '飛機</span>' + esc(p.title) + '</div>' + (p.note ? '<div class="sub">' + esc(p.note) + '</div>' : '') + '</div></div>';
+  }
   const c = CAT[p.cat];
   const acts = [];
   if (p.place) acts.push('<a href="' + esc(mapsUrl(p.place)) + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + esc(p.place) + '</span></a>');
@@ -368,9 +523,9 @@ function evHtml(p) {
       (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') +
       (p.by ? '<div class="who">' + esc(p.by) + ' 排的</div>' : '') + '</div>';
   }
-  return '<div class="ev"><span class="tm' + (p.time ? '' : ' none') + '">' + (p.time || '') + '</span><span class="nd"></span><div class="bd">' + body + '</div></div>';
+  return '<div class="ev"><span class="tm">' + (p.time || '') + '</span><span class="nd"></span><div class="bd">' + body + '</div></div>';
 }
-function renderDay() {
+function renderDay(dir) {
   const box = document.getElementById('day');
   if (!DAYS.length) {
     const undated = DATA.plan.slice().sort(planSort);
@@ -378,30 +533,119 @@ function renderDay() {
     return;
   }
   const iso = DAYS[CUR];
-  const items = DATA.plan.filter(p => p.date === iso).sort(planSort);
+  const items = DATA.plan.filter(p => p.date === iso).concat(flightEvents(iso)).sort(planSort);
   const tone = TONES[CUR % TONES.length];
   const stay = stayFor(iso);
+  const titleItems = items.filter(p => p.cat !== '_flight');
   let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENES[CUR % SCENES.length]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
-    '<div class="dt">' + esc(dayTitle(items)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
+    '<div class="dt">' + esc(dayTitle(titleItems)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
   html += items.length ? '<div class="tl">' + items.map(evHtml).join('') + '</div>' : '<div class="empty">這天還沒安排，自由活動</div>';
-  // 沒填日期的行程放在最後一天後面
   if (CUR === DAYS.length - 1) {
     const undated = DATA.plan.filter(p => !p.date).sort(planSort);
-    if (undated.length) html += '<div class="sec-h" style="font-size:1.1rem;margin:24px 0 14px">還沒排日期</div><div class="tl">' + undated.map(evHtml).join('') + '</div>';
+    if (undated.length) html += '<div class="sub-h">還沒排日期</div><div class="tl">' + undated.map(evHtml).join('') + '</div>';
   }
   const dayPhotos = DATA.photos.filter(p => p.date === iso);
-  if (dayPhotos.length) html += '<div class="sec-h" style="font-size:1.1rem;margin:20px 0 12px">這天的相片</div><div class="pgrid">' + dayPhotos.map(p => '<img loading="lazy" src="' + esc(thumbUrl(p.path)) + '" data-full="' + esc(STORAGE_BASE + p.path) + '" data-cap="' + esc(p.caption) + '" alt="">').join('') + '</div>';
+  if (dayPhotos.length) html += '<div class="sub-h">這天的相片</div><div class="pgrid">' + dayPhotos.map(p => '<img loading="lazy" src="' + esc(thumbUrl(p.path)) + '" data-full="' + esc(STORAGE_BASE + p.path) + '" data-cap="' + esc(p.caption) + '" alt="">').join('') + '</div>';
   html += '<div class="pager"><button type="button" id="prevDay"' + (CUR === 0 ? ' disabled' : '') + '>‹ 前一天</button><button type="button" id="nextDay"' + (CUR === DAYS.length - 1 ? ' disabled' : '') + '>下一天 ›</button></div>';
   if (DAYS.length > 1) html += '<div class="swipehint">左右滑動也可以換天</div>';
   box.innerHTML = html;
   document.getElementById('prevDay').onclick = () => goDay(CUR - 1, true);
   document.getElementById('nextDay').onclick = () => goDay(CUR + 1, true);
   bindLightbox(box);
+  // 換天時內容從電車開往的方向滑進來
+  if (dir && box.animate) box.animate([{ transform: 'translateX(' + (dir * 46) + 'px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.2,.7,.3,1)' });
+}
+
+/* ---------- 準備清單（這頁可打勾、新增、刪除；多人同時改依 id 合併） ---------- */
+const PREP_GROUPS = [
+  { id: 'todo', name: '出發前準備', ph: '例如：護照、網卡' },
+  { id: 'buy', name: '待買清單', ph: '例如：藥妝、伴手禮' },
+];
+function renderPrep() {
+  const live = EXTRA.prep.filter(p => !p.del);
+  document.getElementById('prepLists').innerHTML = PREP_GROUPS.map(g => {
+    const items = live.filter(p => p.group === g.id).sort((a, b) => (a.done - b.done) || (a.id < b.id ? -1 : 1));
+    const done = items.filter(p => p.done).length;
+    return '<div class="panel"><h3>' + g.name + (items.length ? '<small>' + done + ' / ' + items.length + '</small>' : '') + '</h3>' +
+      (items.length ? items.map(p => '<label class="ck' + (p.done ? ' done' : '') + '" data-id="' + esc(p.id) + '"><input type="checkbox"' + (p.done ? ' checked' : '') + '><span class="box2">' + ICON.check + '</span><span class="tx">' + esc(p.text) + '</span><button type="button" class="x-btn" data-del="' + esc(p.id) + '" aria-label="刪除">' + ICON.x + '</button></label>').join('') : '<div class="empty" style="padding:6px 0">還沒有項目</div>') +
+      '<div class="addrow"><input data-add="' + g.id + '" placeholder="' + g.ph + '" maxlength="80"><button type="button" data-addbtn="' + g.id + '">新增</button></div></div>';
+  }).join('');
+  document.querySelectorAll('#prepLists .ck input').forEach(inp => inp.addEventListener('change', () => {
+    const id = inp.closest('.ck').dataset.id;
+    updatePrep(id, { done: inp.checked });
+  }));
+  document.querySelectorAll('#prepLists [data-del]').forEach(b => b.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const p = EXTRA.prep.find(x => x.id === b.dataset.del);
+    if (p && confirm('刪除「' + p.text + '」？')) updatePrep(p.id, { del: true });
+  }));
+  document.querySelectorAll('#prepLists [data-addbtn]').forEach(b => b.addEventListener('click', () => addPrep(b.dataset.addbtn)));
+  document.querySelectorAll('#prepLists [data-add]').forEach(inp => inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) addPrep(inp.dataset.add); }));
+}
+function addPrep(group) {
+  const inp = document.querySelector('#prepLists [data-add="' + group + '"]');
+  const text = inp.value.trim().slice(0, 80);
+  if (!text) return;
+  EXTRA.prep.push({ id: uid(), group, text, done: false, by: getUser(), at: Date.now(), del: false });
+  renderPrep();
+  const again = document.querySelector('#prepLists [data-add="' + group + '"]');
+  if (again) again.focus();
+  queueSave();
+}
+function updatePrep(id, patch) {
+  const p = EXTRA.prep.find(x => x.id === id);
+  if (!p) return;
+  Object.assign(p, patch, { at: Date.now() });
+  renderPrep();
+  queueSave();
+}
+function mergeById(remote, local) {
+  const map = new Map();
+  for (const x of remote) map.set(x.id, x);
+  for (const x of local) { const r = map.get(x.id); if (!r || (x.at || 0) > (r.at || 0)) map.set(x.id, x); }
+  return [...map.values()];
+}
+const SAVE = { busy: false, again: false };
+function setSaveMsg(t, err) { const el = document.getElementById('saveMsg'); el.textContent = t || ''; el.className = 'savemsg' + (err ? ' err' : ''); }
+async function queueSave() {
+  if (SAVE.busy) { SAVE.again = true; return; }
+  SAVE.busy = true; setSaveMsg('儲存中…');
+  try {
+    // 先抓最新版再合併：別人剛勾的、編輯頁剛改的航班都不會被蓋掉
+    const got = await apiPost('setting-get', { key: EXTRA_KEY });
+    if (got && got.needLogin) { setSaveMsg('登入過期，請重新整理後登入', true); return; }
+    if (!got || got.success !== true) throw new Error((got && got.error) || '讀取失敗');
+    const remote = cleanExtra(got.value ? JSON.parse(got.value) : {});
+    const merged = { v: 1, flights: remote.flights, prep: mergeById(remote.prep, EXTRA.prep) };
+    const res = await apiPost('setting-set', { key: EXTRA_KEY, value: JSON.stringify(merged) });
+    if (!res || res.success !== true) throw new Error((res && res.error) || '儲存失敗');
+    EXTRA = cleanExtra(merged);
+    try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
+    setSaveMsg('已儲存');
+    setTimeout(() => { if (!SAVE.busy) setSaveMsg(''); }, 1500);
+    renderPrep(); renderFlights();
+  } catch (err) {
+    setSaveMsg('沒存成功：' + err.message + '（稍後會再試）', true);
+    setTimeout(queueSave, 15000);
+  } finally {
+    SAVE.busy = false;
+    if (SAVE.again) { SAVE.again = false; queueSave(); }
+  }
+}
+
+function renderStays() {
+  // 住宿：排行程裡「住宿」類的項目，入住日～下一間入住日（或最後一天）
+  const stays = DATA.plan.filter(p => p.cat === 'stay' && p.date).sort((a, b) => a.date.localeCompare(b.date));
+  document.getElementById('stayPanel').hidden = !stays.length;
+  const last = DAYS[DAYS.length - 1] || '';
+  document.getElementById('stayList').innerHTML = stays.map((s, i) => {
+    const end = stays[i + 1] ? stays[i + 1].date : last;
+    return '<div class="stay"><span>' + esc(stayName(s)) + (s.place && s.place !== stayName(s) ? '<span class="sp">' + esc(s.place) + '</span>' : '') + '</span><span class="sd">' + md(s.date) + (end && end !== s.date ? '－' + md(end) : '') + '</span></div>';
+  }).join('');
 }
 function renderAlbum() {
   const has = DATA.photos.length > 0;
   document.getElementById('album').hidden = !has;
-  document.getElementById('albumLink').hidden = !has;
   if (!has) return;
   const g = document.getElementById('pgrid');
   g.innerHTML = DATA.photos.map(p => '<img loading="lazy" src="' + esc(thumbUrl(p.path)) + '" data-full="' + esc(STORAGE_BASE + p.path) + '" data-cap="' + esc((p.date ? md(p.date) + '　' : '') + p.caption) + '" alt="">').join('');
@@ -432,12 +676,13 @@ document.getElementById('lb').addEventListener('click', () => document.getElemen
   }, { passive: true });
 })();
 
-// 頂列「行程／相簿」依捲動位置亮起
+// 頂列「航班／行程／準備」依捲動位置亮起
 function syncNav() {
-  const album = document.getElementById('album');
-  const onAlbum = !album.hidden && album.getBoundingClientRect().top < window.innerHeight * 0.4;
-  const onPlan = !onAlbum && document.getElementById('plan').getBoundingClientRect().top < window.innerHeight * 0.6;
-  document.querySelectorAll('.nav .links a').forEach(a => a.classList.toggle('on', (a.dataset.sec === 'plan' && onPlan) || (a.dataset.sec === 'album' && onAlbum)));
+  const line = document.querySelector('.nav').offsetHeight + 120;
+  let cur = '';
+  for (const id of ['flights', 'plan', 'prep']) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < line) cur = id; }
+  if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = 'prep';
+  document.querySelectorAll('.nav .links a').forEach(a => a.classList.toggle('on', a.dataset.sec === cur));
 }
 window.addEventListener('scroll', syncNav, { passive: true });
 
@@ -464,15 +709,21 @@ function showLogin() {
   document.getElementById('loginBox').style.display = 'block';
 }
 async function load() {
+  try { const c = localStorage.getItem(LS_EXTRA); if (c) EXTRA = cleanExtra(JSON.parse(c)); } catch (e) {}
   try { const c = localStorage.getItem(LS_KEY); if (c) show(JSON.parse(c)); } catch (e) {}
   if (!getToken()) { if (!DATA) showLogin(); return; }
   try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'setting-get', token: getToken(), key: KEY }) }).then(r => r.json());
+    const [res, ex] = await Promise.all([apiPost('setting-get', { key: KEY }), apiPost('setting-get', { key: EXTRA_KEY })]);
     if (res && res.needLogin) { showLogin(); return; }
     if (!res || res.success !== true) throw new Error((res && res.error) || '讀取失敗');
-    const remote = res.value ? JSON.parse(res.value) : {};
-    // 只讀不寫；快取更新交給編輯頁（避免蓋掉編輯頁還沒上傳的變更）
-    show(remote);
+    if (ex && ex.success === true) {
+      const remoteEx = cleanExtra(ex.value ? JSON.parse(ex.value) : {});
+      // 還沒存上去的本機勾選保留（較新的 at 勝出）
+      EXTRA = { v: 1, flights: remoteEx.flights, prep: SAVE.busy ? mergeById(remoteEx.prep, EXTRA.prep) : remoteEx.prep };
+      try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
+    }
+    // 行程只讀不寫；行程快取交給編輯頁（避免蓋掉編輯頁還沒上傳的變更）
+    show(res.value ? JSON.parse(res.value) : {});
   } catch (err) {
     if (!DATA) { document.getElementById('status').textContent = '讀取失敗：' + err.message + '（請確認網路後重新整理）'; }
   }
@@ -494,18 +745,19 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   finally { btn.disabled = false; }
 });
 document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
-document.getElementById('logoSvg').outerHTML = paint(trainSvg(40)).replace('<svg ', '<svg class="logo" ');
+document.getElementById('logoLink').innerHTML = paint(trainSvg()).replace('<svg ', '<svg class="logo" ');
 // 上一頁：從編輯頁點進來就直接返回（保留編輯頁原本的捲動位置），否則開編輯頁
 (function () {
   const b = document.getElementById('backBtn');
   b.href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
   b.addEventListener('click', e => {
-    if (document.referrer && /trip-expense.html/.test(document.referrer) && history.length > 1) { e.preventDefault(); history.back(); }
+    if (document.referrer && /trip-expense\.html/.test(document.referrer) && history.length > 1) { e.preventDefault(); history.back(); }
   });
 })();
 document.getElementById('editLink').href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
-// 回到頁面時重抓一次（別人剛改了行程）
+// 回到頁面時重抓一次（別人剛改了行程、勾了清單）
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && getToken()) load(); });
+window.addEventListener('resize', () => { if (DATA) renderSteps(); });
 load();
 </script>
 </body>
