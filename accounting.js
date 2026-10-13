@@ -967,13 +967,17 @@ function acctSwitchTab(tab) {
   document.getElementById('acctPaneRecon').style.display = tab === 'recon' ? '' : 'none';
   const expPane = document.getElementById('acctPaneExpenses');
   if (expPane) expPane.style.display = tab === 'expenses' ? '' : 'none';
+  const sdPane = document.getElementById('acctPaneSigndocs');
+  if (sdPane) sdPane.style.display = tab === 'signdocs' ? '' : 'none';
   // 列印報表自己有範圍選單、對帳是獨立工作佇列，兩者都不吃上面的篩選列/摘要
-  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon' || tab === 'expenses') ? 'none' : '';
-  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon' || tab === 'expenses') ? 'none' : '';
+  document.querySelector('.acct-filters').style.display = (tab === 'print' || tab === 'recon' || tab === 'expenses' || tab === 'signdocs') ? 'none' : '';
+  document.getElementById('acctSummary').style.display = (tab === 'print' || tab === 'recon' || tab === 'expenses' || tab === 'signdocs') ? 'none' : '';
   // 只有真的在列印分頁才掛這個 class，否則在別頁按 Ctrl+P 會印出空白紙（見 @media print 註解）
   document.body.classList.toggle('acct-printing', tab === 'print');
   // 公司支出是獨立資料源（expenses.js），不吃帳務明細的渲染
   if (tab === 'expenses') { if (typeof loadExpensesView === 'function') loadExpensesView(); return; }
+  // 文件簽署同樣是獨立資料源（signdocs.js）
+  if (tab === 'signdocs') { if (typeof loadSigndocsView === 'function') loadSigndocsView(); return; }
   renderAccountingView();
 }
 
