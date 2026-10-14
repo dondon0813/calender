@@ -4108,6 +4108,8 @@ function lotShipContact(w, draw) {
   else addr = [v(w.zip), v(w.address)].filter(Boolean).join(' ');
   return { name, phone, addr, type: t };
 }
+// 寄出視窗顯示收件人姓名（雪莉 10-14：要姓名不是暱稱）；沒填姓名才退回暱稱
+function lotShipNameOf(p) { return lotShipContact(p.w, p.draw).name || lotWinnerWho(p.w); }
 function lotShipCopyCell(txt, cls) {
   if (!txt) return '<td class="' + cls + '"><span class="lot-empty-cell">—</span></td>';
   return '<td class="' + cls + '">' + lotEscapeHtml(txt) +
@@ -4258,14 +4260,14 @@ function openLotteryShipModal(ids, batchId) {
   const phys = LOT_SHIP_MODAL_PEOPLE.filter(p => lotWinnerType(p.w, p.draw) === 'physical');
   document.getElementById('lotShipModalCount').textContent = '這 ' + LOT_SHIP_MODAL_PEOPLE.length + ' 位一起寄出';
   document.getElementById('lotShipModalList').innerHTML = LOT_SHIP_MODAL_PEOPLE.map(p =>
-    '<div class="lot-ship-mrow"><span class="lot-ship-mwho">' + lotEscapeHtml(lotWinnerWho(p.w)) + '</span>' +
+    '<div class="lot-ship-mrow"><span class="lot-ship-mwho">' + lotEscapeHtml(lotShipNameOf(p)) + '</span>' +
     '<span class="lot-ship-mprize">' + lotEscapeHtml(p.w.prize || '') + '</span>' +
     '<span class="lot-ship-mtype">' + lotShipTypeLabel(p.w, p.draw) + '</span></div>').join('');
   document.getElementById('lotShipDate').value = lotToday();
   document.getElementById('lotShipCourier').value = '';
   document.getElementById('lotShipTrackWrap').style.display = phys.length ? '' : 'none';
   document.getElementById('lotShipTrackList').innerHTML = phys.map(p =>
-    '<div class="lot-ship-trow"><span class="lot-ship-mwho">' + lotEscapeHtml(lotWinnerWho(p.w)) + '</span>' +
+    '<div class="lot-ship-trow"><span class="lot-ship-mwho">' + lotEscapeHtml(lotShipNameOf(p)) + '</span>' +
     '<input type="text" data-ship-track="' + lotEscapeHtml(p.w.id) + '" placeholder="寄件編號"></div>').join('');
   document.getElementById('lotShipModalStatus').textContent = '';
   document.getElementById('lotShipConfirmBtn').disabled = false;
