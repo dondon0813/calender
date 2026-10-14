@@ -25,7 +25,7 @@
   html { scroll-behavior: smooth; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); -webkit-tap-highlight-color: transparent;
     font-family: "Huninn", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
-  body { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   a { color: inherit; }
   svg { display: block; }
   button { font: inherit; color: inherit; }
@@ -209,6 +209,29 @@
   .login button { width: 100%; padding: 11px; border-radius: 999px; border: var(--line) solid var(--ink); background: var(--pink); cursor: pointer; }
   .login .err { color: var(--accent); font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
   .status { text-align: center; color: var(--muted); padding: 60px 0; }
+
+  /* 日幣計算機 */
+  .calc-fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40; width: 56px; height: 56px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--yellow); color: var(--ink); font-size: 1.6rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+  .calc-sheet { position: fixed; inset: 0; z-index: 60; background: rgba(40,30,26,.35); display: none; align-items: flex-end; justify-content: center; }
+  .calc-sheet.on { display: flex; }
+  .calc-panel { width: 100%; max-width: 480px; background: var(--bg); border: var(--line) solid var(--ink); border-bottom: none; border-radius: 26px 26px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
+  .calc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .calc-seg { display: flex; gap: 4px; padding: 3px; background: var(--card); border-radius: 999px; border: 2px solid var(--ink); }
+  .calc-seg button { background: none; border: none; border-radius: 999px; padding: 6px 12px; font-size: .9rem; cursor: pointer; }
+  .calc-seg button.on { background: var(--pink); }
+  .calc-screen { background: var(--card); border: var(--line) solid var(--ink); border-radius: 18px; padding: 12px 16px; margin: 12px 0 10px; text-align: right; }
+  .calc-expr { color: var(--soft); font-size: .88rem; min-height: 1.3em; word-break: break-all; }
+  .calc-from { font-size: 2rem; line-height: 1.2; margin-top: 2px; }
+  .calc-to { font-size: 1.35rem; color: var(--accent); margin-top: 2px; }
+  .calc-opts { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .calc-tax { background: var(--card); border: 2px solid var(--ink); border-radius: 999px; padding: 5px 12px; font-size: .85rem; cursor: pointer; white-space: nowrap; }
+  .calc-tax.on { background: var(--green); }
+  .calc-rate { color: var(--muted); font-size: .75rem; text-align: right; }
+  .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .calc-keys button { height: 54px; border-radius: 16px; border: 2px solid var(--ink); background: var(--card); font-size: 1.35rem; cursor: pointer; }
+  .calc-keys button.op { background: var(--pink-bg); }
+  .calc-keys button.done { background: var(--pink); font-size: 1.05rem; }
+  .calc-keys button:active { transform: translateY(1px); }
 </style>
 </head>
 <body>
@@ -1010,6 +1033,7 @@ window.addEventListener('scroll', syncNav, { passive: true });
 
 /* ---------- 讀取 ---------- */
 function show(data) {
+  calcPickRate(data);
   const keepDay = DATA ? DAYS[CUR] : null;
   DATA = clean(data);
   DAYS = buildDays(DATA);
@@ -1080,6 +1104,76 @@ document.getElementById('editLink').href = 'trip-expense.html?trip=' + encodeURI
 // 回到頁面時重抓一次（別人剛改了行程、勾了清單）
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && getToken()) load(); });
 window.addEventListener('resize', () => { if (DATA) renderSteps(); });
+
+/* ---------- 日幣計算機（2026-10-14 雪莉）：右下角「¥」開啟；可連加、加 10% 稅、日圓台幣互換 ----------
+   匯率優先用記帳頁每天自動抓的匯率（ledger.rates，最新一天），沒有就即時抓一次市場匯率，再沒有用記帳頁的備用匯率 */
+const CALC = { dir: 'jpy', terms: [], cur: '', tax: false, rate: 0, rateNote: '' };
+function calcPickRate(raw) {
+  const rates = raw && raw.rates && typeof raw.rates === 'object' ? raw.rates : {};
+  const days = Object.keys(rates).filter(k => isoOk(k) && Number(rates[k]) > 0).sort();
+  if (days.length) { const d = days[days.length - 1]; CALC.rate = Number(rates[d]); CALC.rateNote = md(d) + ' 匯率'; return; }
+  if (raw && Number(raw.rate) > 0 && !CALC.rate) { CALC.rate = Number(raw.rate); CALC.rateNote = '備用匯率'; }
+}
+async function calcLiveRate() {
+  try {
+    const j = await fetch('https://open.er-api.com/v6/latest/JPY').then(r => r.json());
+    const v = j && j.rates && Number(j.rates.TWD);
+    if (v > 0) { CALC.rate = v; CALC.rateNote = '今日即時匯率'; renderCalc(); }
+  } catch (e) {}
+}
+function calcFmt(n, cur) { const v = Math.round(n); return (cur === 'TWD' ? 'NT$ ' : '¥ ') + v.toLocaleString('en-US'); }
+function calcTotal() {
+  const nums = CALC.terms.concat(CALC.cur ? [Number(CALC.cur)] : []);
+  const sum = nums.reduce((a, b) => a + b, 0);
+  return CALC.tax ? sum * 1.1 : sum;
+}
+function renderCalc() {
+  const from = CALC.dir === 'jpy' ? 'JPY' : 'TWD', to = from === 'JPY' ? 'TWD' : 'JPY';
+  const total = calcTotal();
+  const r = CALC.rate || 0;
+  const conv = !r ? 0 : (from === 'JPY' ? total * r : total / r);
+  const expr = CALC.terms.map(n => Math.round(n).toLocaleString('en-US')).concat(CALC.cur ? [Number(CALC.cur).toLocaleString('en-US')] : []).join(' + ');
+  document.getElementById('calcExpr').textContent = (expr || '0') + (CALC.tax ? '　＋10% 稅' : '');
+  document.getElementById('calcFrom').textContent = calcFmt(total, from);
+  document.getElementById('calcTo').textContent = r ? '≈ ' + calcFmt(conv, to) : '匯率讀取中…';
+  document.getElementById('calcRate').textContent = r ? '1 日圓 ≈ ' + r.toFixed(4) + ' 台幣（' + CALC.rateNote + '）' : '';
+  document.querySelectorAll('#calcSheet [data-dir]').forEach(b => b.classList.toggle('on', b.dataset.dir === CALC.dir));
+  document.getElementById('calcTax').classList.toggle('on', CALC.tax);
+}
+function calcKey(k) {
+  if (/^\d+$/.test(k)) { if ((CALC.cur + k).replace(/^0+/, '').length <= 9) CALC.cur = (CALC.cur + k).replace(/^0+(?=\d)/, ''); }
+  else if (k === 'back') CALC.cur = CALC.cur.slice(0, -1);
+  else if (k === 'clear') { CALC.terms = []; CALC.cur = ''; }
+  else if (k === 'plus') { if (CALC.cur) { CALC.terms.push(Number(CALC.cur)); CALC.cur = ''; } }
+  renderCalc();
+}
+function openCalc() {
+  if (!CALC.rate) calcLiveRate();
+  renderCalc();
+  document.getElementById('calcSheet').classList.add('on');
+}
+(function initCalc() {
+  const keys = [['7', '7'], ['8', '8'], ['9', '9'], ['back', '⌫'], ['4', '4'], ['5', '5'], ['6', '6'], ['clear', 'C'], ['1', '1'], ['2', '2'], ['3', '3'], ['plus', '+'], ['0', '0'], ['00', '00'], ['000', '000'], ['done', '完成']];
+  const wrap = document.createElement('div');
+  wrap.innerHTML = '<button type="button" class="calc-fab" id="calcFab" aria-label="日幣計算機">¥</button>' +
+    '<div class="calc-sheet" id="calcSheet"><div class="calc-panel">' +
+    '<div class="calc-top"><div class="calc-seg"><button type="button" data-dir="jpy">日圓 → 台幣</button><button type="button" data-dir="twd">台幣 → 日圓</button></div>' +
+    '<button type="button" class="x-btn" id="calcClose" aria-label="關閉">' + ICON.x + '</button></div>' +
+    '<div class="calc-screen"><div class="calc-expr" id="calcExpr"></div><div class="calc-from" id="calcFrom"></div><div class="calc-to" id="calcTo"></div></div>' +
+    '<div class="calc-opts"><button type="button" class="calc-tax" id="calcTax">加 10% 消費稅</button><span class="calc-rate" id="calcRate"></span></div>' +
+    '<div class="calc-keys">' + keys.map(([k, t]) => '<button type="button" data-k="' + k + '" class="' + (/^\d+$/.test(k) ? '' : 'op') + (k === 'done' ? ' done' : '') + '">' + t + '</button>').join('') + '</div>' +
+    '</div></div>';
+  document.body.appendChild(wrap);
+  document.getElementById('calcFab').onclick = openCalc;
+  document.getElementById('calcClose').onclick = () => document.getElementById('calcSheet').classList.remove('on');
+  document.getElementById('calcSheet').addEventListener('click', e => {
+    if (e.target.id === 'calcSheet') { e.currentTarget.classList.remove('on'); return; }
+    const k = e.target.closest('[data-k]'); if (k) { if (k.dataset.k === 'done') document.getElementById('calcSheet').classList.remove('on'); else calcKey(k.dataset.k); return; }
+    const d = e.target.closest('[data-dir]'); if (d) { CALC.dir = d.dataset.dir; renderCalc(); return; }
+    if (e.target.closest('#calcTax')) { CALC.tax = !CALC.tax; renderCalc(); }
+  });
+})();
+
 load();
 </script>
 </body>
