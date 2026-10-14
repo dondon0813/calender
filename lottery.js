@@ -4115,13 +4115,61 @@ function lotShipCopyCell(txt, cls) {
   return '<td class="' + cls + '">' + lotEscapeHtml(txt) +
     '<button type="button" class="lot-copy-btn" data-role="ship-copy" data-copy="' + lotEscapeHtml(txt) + '" title="複製">' + lotIcon('copy') + '</button></td>';
 }
+// 收件人名字可點：開「下單紀錄」視窗（下單幾次、總金額；lottery-buyer-history，2026-10-14 雪莉）
+function lotShipNameCell(name, winnerId) {
+  if (!name) return '<td class="lot-ship-td-name"><span class="lot-empty-cell">—</span></td>';
+  return '<td class="lot-ship-td-name"><button type="button" class="lot-buyer-link" data-role="ship-buyer" data-winner-id="' + lotEscapeHtml(winnerId) + '" title="看下單紀錄">' +
+    lotEscapeHtml(name) + '</button>' +
+    '<button type="button" class="lot-copy-btn" data-role="ship-copy" data-copy="' + lotEscapeHtml(name) + '" title="複製">' + lotIcon('copy') + '</button></td>';
+}
+function lotBuyerMoney(n) { return '$' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+function lotBuyerModalEl() {
+  let el = document.getElementById('lotBuyerModal');
+  if (el) return el;
+  el = document.createElement('div');
+  el.className = 'modal-backdrop';
+  el.id = 'lotBuyerModal';
+  el.innerHTML = '<div class="modal-box" style="width:min(560px, 94vw); max-height:88vh; overflow-y:auto;">' +
+    '<button type="button" class="modal-close" data-role="buyer-close">✕</button>' +
+    '<h3 id="lotBuyerTitle">下單紀錄</h3><div id="lotBuyerBody"></div></div>';
+  el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-role="buyer-close"]')) el.classList.remove('show'); });
+  document.body.appendChild(el);
+  return el;
+}
+function openLotteryBuyerHistory(winnerId, name) {
+  const el = lotBuyerModalEl();
+  document.getElementById('lotBuyerTitle').textContent = (name || '得獎人') + ' 的下單紀錄';
+  const body = document.getElementById('lotBuyerBody');
+  body.innerHTML = '<p class="hint">查詢中…</p>';
+  el.classList.add('show');
+  lotApiPost('lottery-buyer-history', { winnerId }).then(res => {
+    if (!(res && res.success)) { body.innerHTML = '<p class="hint">查詢失敗：' + lotEscapeHtml((res && res.error) || '未知錯誤') + '</p>'; return; }
+    if (!res.found) { body.innerHTML = '<p class="hint">' + lotEscapeHtml(res.reason || '查不到下單紀錄') + '</p>'; return; }
+    const stat = (label, val) => '<div class="lot-buyer-stat"><div class="lot-buyer-sval">' + val + '</div><div class="lot-buyer-slabel">' + label + '</div></div>';
+    const rows = (res.orders || []).map(o => '<tr' + (o.paid ? '' : ' class="lot-buyer-unpaid"') + '>' +
+      '<td class="lot-td-date">' + lotEscapeHtml(o.orderedAt || '—') + '</td>' +
+      '<td>' + lotEscapeHtml(o.teamTitle || '（團名不明）') + '</td>' +
+      '<td class="lot-td-num">' + lotBuyerMoney(o.amount) + '</td>' +
+      '<td class="lot-td-date">' + lotEscapeHtml(o.statusLabel || '') + '</td></tr>').join('');
+    body.innerHTML =
+      '<p class="hint" style="margin:0 0 10px;">' + lotEscapeHtml(res.basisText || '') + '</p>' +
+      '<div class="lot-buyer-stats">' +
+        stat('下單次數', String(res.paidCount)) + stat('總金額', lotBuyerMoney(res.paidTotal)) + stat('跟過幾團', String(res.teamCount)) +
+      '</div>' +
+      '<p class="hint" style="margin:6px 0 10px;">只算已付款' +
+        (res.unpaidCount ? '；另有 ' + res.unpaidCount + ' 筆未付款／取消' : '') +
+        (res.firstDate ? '；第一次下單 ' + lotEscapeHtml(res.firstDate) + '、最近一次 ' + lotEscapeHtml(res.lastDate) : '') + '</p>' +
+      (rows ? '<div class="lot-tbl-wrap"><table class="lot-tbl"><thead><tr><th>下單日</th><th>團購</th><th class="lot-td-num">金額</th><th>狀態</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '') +
+      (res.more ? '<p class="hint">還有 ' + res.more + ' 筆較早的訂單沒列出</p>' : '');
+  }).catch(err => { body.innerHTML = '<p class="hint">查詢失敗：' + lotEscapeHtml(err.message || String(err)) + '</p>'; });
+}
 function lotShipPackRowHtml(w, checked, draw) {
   const c = lotShipContact(w, draw);
   return '<tr class="lot-tr lot-ann-rowl' + (checked ? ' on' : '') + '">' +
     '<td class="lot-ann-td-cb"><input type="checkbox" data-role="ship-bcheck" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (checked ? ' checked' : '') + '></td>' +
     '<td class="lot-td-prize">' + lotEscapeHtml(w.prize || '') + '<div class="lot-ship-sub">' + lotEscapeHtml(lotWinnerWho(w)) + '・' + lotShipTypeLabel(w, draw) +
       (w.status !== 'info_ready' ? '・' + lotEscapeHtml(lotStatusLabel(w.status, c.type)) : '') + '</div></td>' +
-    lotShipCopyCell(c.name, 'lot-ship-td-name') + lotShipCopyCell(c.phone, 'lot-ship-td-phone') + lotShipCopyCell(c.addr, 'lot-ship-td-addr') +
+    lotShipNameCell(c.name, w.id) + lotShipCopyCell(c.phone, 'lot-ship-td-phone') + lotShipCopyCell(c.addr, 'lot-ship-td-addr') +
   '</tr>';
 }
 function lotShipPackAllText(people) {
@@ -4366,6 +4414,9 @@ function lotBindShipEvents(box) {
       btn.classList.add('copied');
       setTimeout(() => btn.classList.remove('copied'), 1200);
     });
+  });
+  box.querySelectorAll('[data-role="ship-buyer"]').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openLotteryBuyerHistory(el.dataset.winnerId, el.textContent); });
   });
   box.querySelectorAll('[data-role="ship-bcopy-all"]').forEach(el => {
     el.addEventListener('click', () => {
