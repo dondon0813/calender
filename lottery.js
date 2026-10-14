@@ -3654,7 +3654,16 @@ function lotAnnPendingGroups(kind) {
     const list = (d.winners || []).filter(w => lotAnnEligible(w, kind) && !lotAnnDoneAt(w, kind));
     if (list.length) groups.push({ draw: d, list });
   });
-  return lotApplyDir(groups);
+  // 10-14 雪莉：待寄出依「開團日期」欄排（跟畫面顯示同一個日期），舊→新為預設；沒日期的排最後
+  const key = g => String(g.draw.eventStartDate || g.draw.teamDate || g.draw.drawDate || '');
+  groups.sort((x, y) => {
+    const kx = key(x), ky = key(y);
+    if (!kx || !ky) return kx ? -1 : (ky ? 1 : 0);
+    return kx.localeCompare(ky);
+  });
+  if (LOTTERY_SORT_DIR !== 'desc') return groups;
+  const dated = groups.filter(g => key(g)), undated = groups.filter(g => !key(g));
+  return dated.reverse().concat(undated);
 }
 // winnerId → { w, draw }
 function lotAnnWinnerIndex() {
@@ -4138,6 +4147,7 @@ function renderLotteryShip() {
   const bar = '<div class="lot-ann-bar">' +
     '<label class="lot-ann-selall"><input type="checkbox" data-role="ship-selall"' + (pendingIds.size ? '' : ' disabled') + '>全選</label>' +
     (canEdit ? '<button type="button" class="task-mini-btn" data-role="ship-batch-create" disabled>' + lotIcon('send') + ' 打包寄出</button>' : '') +
+    '<button type="button" class="task-mini-btn" data-role="ship-sort-dir">' + lotSortDirLabel() + '</button>' +
     '<span class="lot-ann-barinfo" data-role="ship-barinfo"></span></div>';
   const note = (!LOTTERY_SHIP_BATCH_READY && canEdit)
     ? '<div class="lot-ann-note" style="margin-bottom:10px">打包寄出待 db push（20261011160000_lottery_ship_batches），push 前「打包寄出」無法使用；待寄出名單照常顯示。</div>' : '';
@@ -4225,6 +4235,12 @@ function lotShipSubmit() {
 }
 function lotBindShipEvents(box) {
   const batchOf = el => LOTTERY_SHIP_BATCHES.find(x => x.id === el.dataset.batchId);
+  const sortBtn = box.querySelector('[data-role="ship-sort-dir"]');
+  if (sortBtn) sortBtn.addEventListener('click', () => {
+    LOTTERY_SORT_DIR = LOTTERY_SORT_DIR === 'asc' ? 'desc' : 'asc';
+    lotSaveSortDir(LOTTERY_SORT_DIR);
+    renderLotteryShip();
+  });
   box.querySelectorAll('tr.lot-ann-rowl').forEach(tr => {
     tr.addEventListener('click', e => {
       if (e.target.closest('input')) return;
