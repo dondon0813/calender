@@ -438,7 +438,7 @@ function cleanExtra(raw) {
     v: 1,
     flights: (Array.isArray(s.flights) ? s.flights : []).filter(f => f && f.id),
     prep: (Array.isArray(s.prep) ? s.prep : []).filter(p => p && p.id).map(p => ({
-      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', owner: String(p.owner || '').slice(0, 20), cat: PREP_CAT_MAP[p.cat] ? p.cat : 'key', text: String(p.text || '').slice(0, 80),
+      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', owner: String(p.owner || '').slice(0, 20), cat: PREP_CAT_MAP[p.cat] ? p.cat : 'key', ord: Number.isFinite(p.ord) ? p.ord : null, text: String(p.text || '').slice(0, 80),
       done: !!p.done, by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
     })),
   };
@@ -690,7 +690,9 @@ function renderPrep() {
   const live = EXTRA.prep.filter(p => !p.del && (!p.owner || p.owner === PREP_WHO));
   const count = n => { const l = EXTRA.prep.filter(p => !p.del && (!p.owner || p.owner === n)); return l.filter(p => p.done).length + '/' + l.length; };
   const who = '<div class="who-seg">' + PREP_PEOPLE.map(n => '<button type="button" data-who="' + esc(n) + '" class="' + (n === PREP_WHO ? 'on' : '') + '">' + esc(n) + '<small>' + count(n) + '</small></button>').join('') + '</div>';
-  const sortItems = l => l.sort((a, b) => (a.done - b.done) || (a.id < b.id ? -1 : 1));
+  // 未勾在前；有指定順序（ord）的排前面，其餘照新增先後
+  const ordOf = p => (p.ord == null ? Infinity : p.ord);
+  const sortItems = l => l.sort((a, b) => (a.done - b.done) || (ordOf(a) - ordOf(b)) || (a.id < b.id ? -1 : 1));
   document.getElementById('prepLists').innerHTML = who + PREP_GROUPS.map(g => {
     const all = live.filter(p => p.group === g.id);
     const isTodo = g.id === 'todo';
