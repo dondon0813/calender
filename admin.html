@@ -6309,6 +6309,11 @@
     .lot-ship-trow{ display:flex; gap:10px; align-items:center; margin-bottom:6px; font-size:13px; }
     .lot-ship-trow input{ flex:1; min-width:0; }
     .lot-ship-msec{ margin-top:14px; }
+    /* 打包中的包：收件人／電話／地址可複製（2026-10-14 兩段式） */
+    .lot-ship-sub{ font-size:12px; color:var(--c-text-soft); margin-top:2px; }
+    .lot-ship-pack-tbl td{ vertical-align:top; }
+    .lot-ship-td-name, .lot-ship-td-phone{ white-space:nowrap; font-weight:700; }
+    .lot-ship-td-addr{ min-width:220px; max-width:420px; white-space:normal; word-break:break-all; }
     .lot-ship-msec > label{ display:block; font-size:13px; font-weight:700; margin-bottom:6px; }
     .lot-ship-mfoot{ display:flex; align-items:center; gap:10px; margin-top:16px; }
     #lotteryShipModal input[type="text"], #lotteryShipModal input[type="date"]{ width:100%; box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid #E6DCD2; background:#fff; font:inherit; font-size:13px; }
@@ -7312,7 +7317,7 @@
 <div class="modal-backdrop" id="lotteryShipModal" onclick="if(event.target===this) closeLotteryShipModal()">
   <div class="modal-box" style="width:min(520px, 94vw); max-height:90vh; overflow-y:auto;">
     <button class="modal-close" onclick="closeLotteryShipModal()">✕</button>
-    <h3>打包寄出</h3>
+    <h3>寄出</h3>
     <p id="lotShipModalCount" class="hint" style="font-size:12px; margin:0 0 8px;"></p>
     <div id="lotShipModalList"></div>
     <div class="lot-ship-msec"><label for="lotShipDate">寄出日期</label><input type="date" id="lotShipDate"></div>
@@ -8100,7 +8105,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=58"></script>
+<script src="lottery.js?v=59"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=121"></script>
 <script src="memo.js?v=8"></script>

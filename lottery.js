@@ -4073,6 +4073,8 @@ function lotBindAnnounceEvents(box) {
 // 寄出分頁＝打包寄出＋寄出紀錄（2026-10-11，docs/16 §10.6；版面與互動完全比照上面的打包公告）
 // 待寄出：status=info_ready、團主寄（shipBy!=='vendor'）、非結案；勾選只動記憶體。
 // 「打包寄出」開視窗填寄出日期／貨運／寄件編號 → lottery-ship-batch-create。寄出紀錄＝一包一張，可移出、取消。
+// 2026-10-14 雪莉改兩段式：「打包」先把勾的人包成一包（打包中、還沒寄出），包內列出收件人／電話／地址可複製，
+// 包貨寄件後在包上按「寄出」才填寄出日期／貨運／寄件編號（lottery-ship-batch-ship）。
 // =====================================================================
 let LOTTERY_SHIP_BATCHES = [];
 let LOTTERY_SHIP_BATCH_READY = false;
@@ -4084,10 +4086,72 @@ function lotShipPendingGroups() {
   const groups = [];
   LOTTERY_DRAWS.forEach(d => {
     if (d.archived || lotIsVendorShip(d)) return;
-    const list = (d.winners || []).filter(w => w.status === 'info_ready');
+    const list = (d.winners || []).filter(w => w.status === 'info_ready' && !w.shipBatchId); // 已打包的人在「打包中」那包裡
     if (list.length) groups.push({ draw: d, list });
   });
   return lotApplyDir(groups);
+}
+// 打包中＝還沒寄出（後端 packing:true；舊後端沒這欄就看 shippedAt 空白）
+function lotShipIsPacking(b) { return b.packing === true || (b.packing === undefined && !b.shippedAt); }
+// 包貨用的收件資料：收件人｜電話｜地址（現金＝匯款資料、虛擬＝Email）；複製用完整值（帳號不遮罩）
+function lotShipContact(w, draw) {
+  const v = (x) => { const s = (x == null ? '' : String(x)).trim(); return /^[-－—]+$/.test(s) ? '' : s; };
+  const t = lotWinnerType(w, draw);
+  const name = (t === 'cash' ? v(w.accountName) : '') || v(w.name) || v(w.order && w.order.customerName);
+  const phone = v(w.phone);
+  let addr = '';
+  if (t === 'cash') {
+    addr = [[v(w.bankName), v(w.bankCode), v(w.bankBranch)].filter(Boolean).join(' '), v(w.bankAccount) ? '帳號 ' + v(w.bankAccount) : '',
+      (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join(' ');
+    if (!addr) addr = v(w.address);
+  } else if (t === 'virtual') addr = v(w.email);
+  else addr = [v(w.zip), v(w.address)].filter(Boolean).join(' ');
+  return { name, phone, addr, type: t };
+}
+function lotShipCopyCell(txt, cls) {
+  if (!txt) return '<td class="' + cls + '"><span class="lot-empty-cell">—</span></td>';
+  return '<td class="' + cls + '">' + lotEscapeHtml(txt) +
+    '<button type="button" class="lot-copy-btn" data-role="ship-copy" data-copy="' + lotEscapeHtml(txt) + '" title="複製">' + lotIcon('copy') + '</button></td>';
+}
+function lotShipPackRowHtml(w, checked, draw) {
+  const c = lotShipContact(w, draw);
+  return '<tr class="lot-tr lot-ann-rowl' + (checked ? ' on' : '') + '">' +
+    '<td class="lot-ann-td-cb"><input type="checkbox" data-role="ship-bcheck" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (checked ? ' checked' : '') + '></td>' +
+    '<td class="lot-td-prize">' + lotEscapeHtml(w.prize || '') + '<div class="lot-ship-sub">' + lotEscapeHtml(lotWinnerWho(w)) + '・' + lotShipTypeLabel(w, draw) +
+      (w.status !== 'info_ready' ? '・' + lotEscapeHtml(lotStatusLabel(w.status, c.type)) : '') + '</div></td>' +
+    lotShipCopyCell(c.name, 'lot-ship-td-name') + lotShipCopyCell(c.phone, 'lot-ship-td-phone') + lotShipCopyCell(c.addr, 'lot-ship-td-addr') +
+  '</tr>';
+}
+function lotShipPackAllText(people) {
+  return people.map(p => {
+    const c = lotShipContact(p.w, p.draw);
+    return [c.name, c.phone, c.addr, p.w.prize ? '（' + p.w.prize + '）' : ''].filter(Boolean).join(' ');
+  }).join('\n');
+}
+function lotShipPackBatchHtml(b, wIndex) {
+  const people = (b.winnerIds || []).map(id => wIndex.get(id)).filter(Boolean);
+  const open = (b.id in LOT_SHIP_OPEN) ? LOT_SHIP_OPEN[b.id] : true;
+  const bid = lotEscapeHtml(b.id);
+  const waiting = people.filter(p => p.w.status === 'info_ready').length;
+  const head = '<div class="lot-ann-bhead" data-role="ship-batch-toggle" data-batch-id="' + bid + '">' +
+    '<span class="lot-ann-btitle">' + lotEscapeHtml(lotShipFmtMD(b.createdAt)) + ' 打包・未寄出</span>' +
+    '<span class="lot-ann-bmeta">' + (b.createdBy ? lotEscapeHtml(b.createdBy) + ' 打包的・' : '') + people.length + ' 位</span>' +
+    '<span class="lot-ann-bcaret">' + lotCaretHtml(open, '收合', '展開') + '</span></div>';
+  if (!open) return '<div class="lot-ann-batch lot-ann-card">' + head + '</div>';
+  const rows = people.length
+    ? '<div class="lot-tbl-wrap"><table class="lot-tbl lot-ann-tbl lot-ship-pack-tbl"><thead><tr><th class="lot-ann-td-cb"></th><th>獎品</th><th>收件人</th><th>電話</th><th>地址／匯款／Email</th></tr></thead><tbody>' +
+        people.map(p => lotShipPackRowHtml(p.w, LOT_SHIP_BSEL.has(p.w.id), p.draw)).join('') + '</tbody></table></div>'
+    : '<div class="task-empty">這包的人資料已不在清單中</div>';
+  const nSel = people.filter(p => LOT_SHIP_BSEL.has(p.w.id)).length;
+  return '<div class="lot-ann-batch lot-ann-card" data-batch-id="' + bid + '">' + head +
+    '<div class="lot-ann-list">' + rows + '</div>' +
+    '<div class="lot-ann-ops">' +
+      (people.length ? '<button type="button" class="task-mini-btn" data-role="ship-bcopy-all" data-batch-id="' + bid + '">' + lotIcon('copy') + ' 複製全部收件資料</button>' : '') +
+      (LOTTERY_CAN_EDIT ? '<button type="button" class="task-mini-btn" data-role="ship-bship" data-batch-id="' + bid + '"' + (waiting ? '' : ' disabled') + '>' + lotIcon('send') + ' 寄出</button>' +
+        '<button type="button" class="task-mini-btn" data-role="ship-bremove" data-batch-id="' + bid + '"' + (nSel ? '' : ' disabled') + '>' + lotIcon('undo') + ' 移出這包' + (nSel ? '（' + nSel + '）' : '') + '</button>' +
+        '<button type="button" class="task-mini-btn" data-role="ship-bdelete" data-batch-id="' + bid + '">' + lotIcon('trash') + ' 取消這包</button>' : '') +
+    '</div>' +
+  '</div>';
 }
 function lotShipTypeLabel(w, draw) {
   const t = lotWinnerType(w, draw);
@@ -4142,11 +4206,13 @@ function renderLotteryShip() {
   const pendingIds = new Set();
   groups.forEach(g => g.list.forEach(w => pendingIds.add(w.id)));
   Array.from(LOT_SHIP_SEL).forEach(id => { if (!pendingIds.has(id)) LOT_SHIP_SEL.delete(id); });
-  const batches = LOTTERY_SHIP_BATCHES.slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  const allBatches = LOTTERY_SHIP_BATCHES.slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  const packing = allBatches.filter(lotShipIsPacking);
+  const batches = allBatches.filter(b => !lotShipIsPacking(b));
   const canEdit = LOTTERY_CAN_EDIT;
   const bar = '<div class="lot-ann-bar">' +
     '<label class="lot-ann-selall"><input type="checkbox" data-role="ship-selall"' + (pendingIds.size ? '' : ' disabled') + '>全選</label>' +
-    (canEdit ? '<button type="button" class="task-mini-btn" data-role="ship-batch-create" disabled>' + lotIcon('send') + ' 打包寄出</button>' : '') +
+    (canEdit ? '<button type="button" class="task-mini-btn" data-role="ship-batch-create" disabled>' + lotIcon('send') + ' 打包</button>' : '') +
     '<button type="button" class="task-mini-btn" data-role="ship-sort-dir">' + lotSortDirLabel() + '</button>' +
     '<span class="lot-ann-barinfo" data-role="ship-barinfo"></span></div>';
   const note = (!LOTTERY_SHIP_BATCH_READY && canEdit)
@@ -4154,12 +4220,16 @@ function renderLotteryShip() {
   const todoHtml = groups.length
     ? lotShipTableHtml(groups.map(g => g.list.map(w => lotShipRowHtml(w, LOT_SHIP_SEL.has(w.id), 'ship-check', g.draw, false)).join('')).join(''), false)
     : '<div class="task-empty">目前沒有待寄出的人</div>';
+  const packHtml = packing.length
+    ? packing.map(b => lotShipPackBatchHtml(b, wIndex)).join('')
+    : '<div class="task-empty">沒有打包中的包（在上面勾人按「打包」）</div>';
   const doneHtml = batches.length
     ? batches.map((b, i) => lotShipBatchHtml(b, i, wIndex)).join('')
     : '<div class="task-empty">還沒有寄出紀錄</div>';
   box.innerHTML = note +
     '<div class="lot-ann-zone"><div class="lot-ann-zone-title">待寄出<span>' + pendingIds.size + ' 位</span></div>' + bar +
       '<div class="lot-ann-list lot-ann-todo">' + todoHtml + '</div></div>' +
+    '<div class="lot-ann-zone"><div class="lot-ann-zone-title">打包中（還沒寄出）<span>' + packing.length + ' 包</span></div>' + packHtml + '</div>' +
     '<div class="lot-ann-zone"><div class="lot-ann-zone-title">寄出紀錄<span>' + batches.length + ' 包</span></div>' + doneHtml + '</div>';
   lotBindShipEvents(box);
   lotShipRefreshBar(box);
@@ -4179,8 +4249,10 @@ function lotShipRefreshBar(box) {
 }
 // ---- 打包寄出視窗 ----
 let LOT_SHIP_MODAL_PEOPLE = [];
-function openLotteryShipModal(ids) {
+let LOT_SHIP_MODAL_BATCH = '';   // 有值＝把這包（打包中）標成已寄出
+function openLotteryShipModal(ids, batchId) {
   const idx = lotAnnWinnerIndex();
+  LOT_SHIP_MODAL_BATCH = batchId || '';
   LOT_SHIP_MODAL_PEOPLE = ids.map(id => idx.get(id)).filter(Boolean);
   if (!LOT_SHIP_MODAL_PEOPLE.length) return;
   const phys = LOT_SHIP_MODAL_PEOPLE.filter(p => lotWinnerType(p.w, p.draw) === 'physical');
@@ -4202,6 +4274,7 @@ function openLotteryShipModal(ids) {
 function closeLotteryShipModal() {
   document.getElementById('lotteryShipModal').classList.remove('show');
   LOT_SHIP_MODAL_PEOPLE = [];
+  LOT_SHIP_MODAL_BATCH = '';
 }
 function lotShipApplyAll() {
   const inputs = Array.from(document.querySelectorAll('#lotShipTrackList [data-ship-track]'));
@@ -4220,18 +4293,20 @@ function lotShipSubmit() {
     const v = i.value.trim(); if (v) tracking[i.dataset.shipTrack] = v;
   });
   const hasPhys = !!document.querySelector('#lotShipTrackList [data-ship-track]');
-  const body = { winnerIds: people.map(p => p.w.id), shippedAt };
+  const batchId = LOT_SHIP_MODAL_BATCH;
+  const body = batchId ? { batchId, shippedAt } : { winnerIds: people.map(p => p.w.id), shippedAt };
   if (hasPhys) { body.courier = document.getElementById('lotShipCourier').value.trim(); body.tracking = tracking; }
   const btn = document.getElementById('lotShipConfirmBtn');
   btn.disabled = true; status.textContent = '送出中…';
-  lotApiPost('lottery-ship-batch-create', body).then(res => {
+  lotApiPost(batchId ? 'lottery-ship-batch-ship' : 'lottery-ship-batch-create', body).then(res => {
     if (res && res.success) {
       people.forEach(p => LOT_SHIP_SEL.delete(p.w.id));
-      if (res.skipped && res.skipped.length) alert('有 ' + res.skipped.length + ' 位不符合條件，已略過。');
+      if (res.skipped && res.skipped.length) alert('有 ' + res.skipped.length + ' 位不符合條件（例如已單獨處理過），已略過。');
+      if (batchId) LOT_SHIP_OPEN[batchId] = true; // 寄出後這包到寄出紀錄，保持展開
       closeLotteryShipModal();
       loadLotteryView(true);
-    } else { status.textContent = '打包寄出失敗：' + ((res && res.error) || '未知錯誤'); btn.disabled = false; }
-  }).catch(err => { status.textContent = '打包寄出失敗：' + (err.message || err); btn.disabled = false; });
+    } else { status.textContent = '寄出失敗：' + ((res && res.error) || '未知錯誤'); btn.disabled = false; }
+  }).catch(err => { status.textContent = '寄出失敗：' + (err.message || err); btn.disabled = false; });
 }
 function lotBindShipEvents(box) {
   const batchOf = el => LOTTERY_SHIP_BATCHES.find(x => x.id === el.dataset.batchId);
@@ -4269,13 +4344,49 @@ function lotBindShipEvents(box) {
   if (go) go.addEventListener('click', () => {
     const ids = Array.from(LOT_SHIP_SEL);
     if (!ids.length || !LOTTERY_SHIP_BATCH_READY) return;
-    openLotteryShipModal(ids);
+    if (!confirm('把勾選的 ' + ids.length + ' 位打包成一包？\n打包後可以在「打包中」看收件人、電話、地址；包好寄出後再按那包的「寄出」填日期與寄件編號。')) return;
+    go.disabled = true;
+    lotApiPost('lottery-ship-batch-create', { winnerIds: ids }).then(res => {
+      if (res && res.success) {
+        ids.forEach(id => LOT_SHIP_SEL.delete(id));
+        if (res.batch && res.batch.id) LOT_SHIP_OPEN[res.batch.id] = true;
+        if (res.skipped && res.skipped.length) alert('有 ' + res.skipped.length + ' 位不符合條件，已略過。');
+      } else alert('打包失敗：' + ((res && res.error) || '未知錯誤'));
+      loadLotteryView(true);
+    }).catch(err => { alert('打包失敗：' + (err.message || err)); loadLotteryView(true); });
+  });
+  box.querySelectorAll('[data-role="ship-copy"]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const txt = btn.dataset.copy || '';
+      try { await navigator.clipboard.writeText(txt); }
+      catch (err) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1200);
+    });
+  });
+  box.querySelectorAll('[data-role="ship-bcopy-all"]').forEach(el => {
+    el.addEventListener('click', () => {
+      const b = batchOf(el); if (!b) return;
+      const idx = lotAnnWinnerIndex();
+      lotCopyPlain(lotShipPackAllText((b.winnerIds || []).map(id => idx.get(id)).filter(Boolean)), el);
+    });
+  });
+  box.querySelectorAll('[data-role="ship-bship"]').forEach(el => {
+    el.addEventListener('click', () => {
+      const b = batchOf(el); if (!b) return;
+      const idx = lotAnnWinnerIndex();
+      const ids = (b.winnerIds || []).filter(id => { const p = idx.get(id); return p && p.w.status === 'info_ready'; });
+      if (!ids.length) return;
+      openLotteryShipModal(ids, b.id);
+    });
   });
   box.querySelectorAll('[data-role="ship-batch-toggle"]').forEach(el => {
     el.addEventListener('click', () => {
       const b = batchOf(el); if (!b) return;
       const sorted = LOTTERY_SHIP_BATCHES.slice().sort((x, y) => String(y.createdAt || '').localeCompare(String(x.createdAt || '')));
-      const cur = (b.id in LOT_SHIP_OPEN) ? LOT_SHIP_OPEN[b.id] : (sorted[0] && sorted[0].id === b.id);
+      const shipped = sorted.filter(x => !lotShipIsPacking(x));
+      const cur = (b.id in LOT_SHIP_OPEN) ? LOT_SHIP_OPEN[b.id] : (lotShipIsPacking(b) || (shipped[0] && shipped[0].id === b.id));
       LOT_SHIP_OPEN[b.id] = !cur;
       renderLotteryShip();
     });
@@ -4300,7 +4411,7 @@ function lotBindShipEvents(box) {
       const ids = (b.winnerIds || []).filter(id => LOT_SHIP_BSEL.has(id));
       if (!ids.length) return;
       const ann = announcedN(ids);
-      if (!confirm('把勾選的 ' + ids.length + ' 位移出這包？\n他們會回到待寄出，寄出日與寄件編號會清掉。' +
+      if (!confirm('把勾選的 ' + ids.length + ' 位移出這包？\n他們會回到待寄出' + (lotShipIsPacking(b) ? '。' : '，寄出日與寄件編號會清掉。') +
         (ids.length >= (b.winnerIds || []).length ? '\n\n這包沒有人了，整包會一起刪除。' : '') +
         (ann ? '\n\n其中 ' + ann + ' 位已公告寄出，公告紀錄會保留。' : ''))) return;
       ids.forEach(id => LOT_SHIP_BSEL.delete(id));
@@ -4311,7 +4422,7 @@ function lotBindShipEvents(box) {
     el.addEventListener('click', () => {
       const b = batchOf(el); if (!b) return;
       const ann = announcedN(b.winnerIds || []);
-      if (!confirm('取消這包？\n包內 ' + (b.winnerIds || []).length + ' 位會全部回到待寄出，寄出日與寄件編號會清掉。' +
+      if (!confirm('取消這包？\n包內 ' + (b.winnerIds || []).length + ' 位會全部回到待寄出' + (lotShipIsPacking(b) ? '。' : '，寄出日與寄件編號會清掉。') +
         (ann ? '\n\n其中 ' + ann + ' 位已公告寄出，公告紀錄會保留。' : ''))) return;
       (b.winnerIds || []).forEach(id => LOT_SHIP_BSEL.delete(id));
       shipCall('lottery-ship-batch-delete', { batchId: b.id }, '取消失敗');
