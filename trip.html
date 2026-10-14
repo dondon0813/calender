@@ -36,10 +36,11 @@
   .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); gap: 8px; }
   .navl { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .nav .logo { width: 52px; height: 34px; flex: 0 0 auto; }
+  @media (max-width: 400px) { .nav .logo { display: none; } .nav .links a { padding: 6px 9px; } }
   .back { display: inline-flex; align-items: center; gap: 1px; text-decoration: none; font-size: .9rem; padding: 5px 11px 5px 5px; border: var(--line) solid var(--ink); border-radius: 999px; background: var(--card); white-space: nowrap; }
   .back svg { width: 17px; height: 17px; }
   .nav .links { display: flex; gap: 2px; }
-  .nav .links a { text-decoration: none; font-size: 1rem; padding: 6px 12px; border-radius: 999px; border: var(--line) solid transparent; white-space: nowrap; }
+  .nav .links a { text-decoration: none; font-size: .98rem; padding: 6px 10px; border-radius: 999px; border: var(--line) solid transparent; white-space: nowrap; }
   .nav .links a.on { background: var(--pink); border-color: var(--ink); }
 
   /* 主視覺 */
@@ -69,7 +70,11 @@
   .flight .ap span:last-child { text-align: right; }
   .flight .air { color: var(--soft); font-size: .85rem; margin-top: 10px; }
   .tix { margin-top: 12px; border-top: 3px dotted var(--ink); padding-top: 10px; }
-  .tix .tl2 { font-size: .85rem; color: var(--soft); margin-bottom: 6px; }
+  .tix .tl2 { font-size: .92rem; color: var(--soft); cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; padding: 2px 0; }
+  .tix .tl2::-webkit-details-marker { display: none; }
+  .tix .chev { width: 9px; height: 9px; border-right: 2.4px solid var(--soft); border-bottom: 2.4px solid var(--soft); transform: rotate(45deg); transition: transform .2s; margin: 0 6px 4px 0; }
+  .tix[open] .chev { transform: rotate(-135deg); margin-bottom: -4px; }
+  .tix[open] .tl2 { margin-bottom: 6px; }
   .tk { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
   .tk .nm { flex: 1; min-width: 0; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tk button { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border: 2px solid var(--ink); border-radius: 999px; padding: 4px 11px; font-size: .82rem; cursor: pointer; white-space: nowrap; }
@@ -83,6 +88,9 @@
   .hotel .io div { background: var(--bg); border-radius: 14px; padding: 8px 12px; }
   .hotel .io small { display: block; color: var(--soft); font-size: .78rem; }
   .hotel .io b { font-weight: 400; font-size: 1.25rem; }
+  .qrbox { text-align: center; margin: 14px 0 6px; }
+  .qrbox img { width: 190px; height: 190px; border: var(--line) solid var(--ink); border-radius: 16px; padding: 8px; background: #fff; cursor: zoom-in; display: block; margin: 0 auto; }
+  .qrbox small { display: block; color: var(--soft); font-size: .8rem; margin-top: 6px; }
   .hotel .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 2px dotted var(--muted); font-size: .92rem; }
   .hotel .kv:last-of-type { border-bottom: none; }
   .hotel .kv span:first-child { color: var(--soft); white-space: nowrap; }
@@ -206,7 +214,7 @@
 <body>
 <nav class="nav"><div class="wrap">
   <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>編輯</a><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
-  <div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div>
+  <div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#stay" data-sec="stay">住宿</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div>
 </div></nav>
 
 <div id="loginBox" class="login">
@@ -225,9 +233,12 @@
   <div class="count" id="tCount"></div>
 
   <section id="flights">
-    <div class="sec-h"><span class="ic" style="background:var(--blue)" data-icon="plane"></span>航班與住宿</div>
+    <div class="sec-h"><span class="ic" style="background:var(--blue)" data-icon="plane"></span>航班</div>
     <div id="flightList"></div>
-    <div class="sub-h" id="hotelHead" hidden>住宿</div>
+  </section>
+
+  <section id="stay">
+    <div class="sec-h"><span class="ic" style="background:var(--pink)" data-icon="stay"></span>住宿</div>
     <div id="hotelList"></div>
   </section>
 
@@ -536,9 +547,10 @@ const TICKET_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.(pdf|jpg|jpeg|png|we
 function ticketsHtml(f) {
   const list = (Array.isArray(f.tickets) ? f.tickets : []).filter(t => t && TICKET_RE.test(t.path || ''));
   if (!list.length) return '';
-  return '<div class="tix"><div class="tl2">電子機票</div>' + list.map(t => '<div class="tk"><span class="nm">' + esc(t.name || '機票') + '</span>' +
+  // 預設摺疊，點「電子機票」才展開（2026-10-14 雪莉）
+  return '<details class="tix"><summary class="tl2">電子機票（' + list.length + ' 張）<span class="chev"></span></summary>' + list.map(t => '<div class="tk"><span class="nm">' + esc(t.name || '機票') + '</span>' +
     '<button type="button" class="pri" data-tview="' + esc(t.path) + '">' + ICON.eye + '檢視</button>' +
-    '<button type="button" data-tdown="' + esc(t.path) + '" data-tname="' + esc(t.name || '') + '">' + ICON.down + '下載</button></div>').join('') + '</div>';
+    '<button type="button" data-tdown="' + esc(t.path) + '" data-tname="' + esc(t.name || '') + '">' + ICON.down + '下載</button></div>').join('') + '</details>';
 }
 async function ticketUrl(path, name) {
   const res = await apiPost('trip-file-url', name ? { path, name } : { path });
@@ -565,7 +577,7 @@ function liveHotels() { return (EXTRA.hotels || []).filter(h => !h.del).sort((a,
 function nights(a, b) { return isoOk(a) && isoOk(b) ? Math.round((toDate(b) - toDate(a)) / 86400000) : 0; }
 function renderHotels() {
   const list = liveHotels();
-  document.getElementById('hotelHead').hidden = !list.length;
+  if (!list.length) { document.getElementById('hotelList').innerHTML = '<div class="panel"><div class="empty" style="padding:8px 0">還沒有住宿資料</div></div>'; return; }
   document.getElementById('hotelList').innerHTML = list.map(h => {
     const n = nights(h.checkin, h.checkout);
     const kv = (k, v, copy) => v ? '<div class="kv"><span>' + k + '</span><span' + (copy ? ' class="code"' : '') + '>' + esc(v) + (copy ? '<button type="button" class="copy" data-copy="' + esc(v) + '">複製</button>' : '') + '</span></div>' : '';
@@ -576,10 +588,24 @@ function renderHotels() {
     return '<div class="flight hotel"><div class="fh"><span>' + (isoOk(h.checkin) ? esc(mdw(h.checkin)) : '') + (isoOk(h.checkout) ? '－' + esc(mdw(h.checkout)) : '') + '</span><span>' + (n ? n + ' 晚' : '住宿') + '</span></div>' +
       '<div class="fb"><div class="hn">' + esc(h.name || '飯店') + '</div>' + (h.nameJa ? '<div class="hj">' + esc(h.nameJa) + '</div>' : '') +
       '<div class="io"><div><small>入住</small><b>' + esc(h.checkinTime || '--:--') + '</b> 以後</div><div><small>退房</small><b>' + esc(h.checkoutTime || '--:--') + '</b> 以前</div></div>' +
+      (TICKET_RE.test(h.qr || '') ? '<div class="qrbox"><img data-qr="' + esc(h.qr) + '" alt="Check-in QR code"><small>到飯店出示這個 QR code（點一下放大）</small></div>' : '') +
       kv('Check-in Code', h.code, true) + kv('PIN Code', h.pin, true) + kv('訂房編號', h.booking) + kv('房型', h.room) + kv('人數', h.guests) +
       (h.note ? '<div class="fn">' + linkify(h.note) + '</div>' : '') +
       (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') + '</div></div>';
   }).join('');
+  loadHotelQr();
+}
+// QR code 存私人區：用登入換 10 分鐘網址（同電子機票），同一頁面期間只換一次
+const QR_URLS = {};
+function loadHotelQr() {
+  document.querySelectorAll('#hotelList img[data-qr]').forEach(async img => {
+    const path = img.dataset.qr;
+    try {
+      if (!QR_URLS[path]) QR_URLS[path] = await ticketUrl(path);
+      img.src = QR_URLS[path];
+      img.onclick = () => { document.getElementById('lbImg').src = img.src; document.getElementById('lbCap').textContent = 'Check-in QR code'; document.getElementById('lb').classList.add('on'); };
+    } catch (err) { img.replaceWith(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'QR code 要登入才看得到' })); }
+  });
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-copy]'); if (!b) return;
@@ -888,7 +914,7 @@ document.getElementById('lb').addEventListener('click', () => document.getElemen
 function syncNav() {
   const line = document.querySelector('.nav').offsetHeight + 120;
   let cur = '';
-  for (const id of ['flights', 'plan', 'prep']) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < line) cur = id; }
+  for (const id of ['flights', 'stay', 'plan', 'prep']) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < line) cur = id; }
   if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = 'prep';
   document.querySelectorAll('.nav .links a').forEach(a => a.classList.toggle('on', a.dataset.sec === cur));
 }
