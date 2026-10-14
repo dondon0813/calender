@@ -25,7 +25,7 @@
   html { scroll-behavior: smooth; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); -webkit-tap-highlight-color: transparent;
     font-family: "Huninn", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
-  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  body { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
   a { color: inherit; }
   svg { display: block; }
   button { font: inherit; color: inherit; }
@@ -36,7 +36,6 @@
   .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: var(--nav-h); gap: 8px; }
   .navl { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .nav .logo { width: 52px; height: 34px; flex: 0 0 auto; }
-  @media (max-width: 400px) { .nav .logo { display: none; } .nav .links a { padding: 6px 9px; } }
   .back { display: inline-flex; align-items: center; gap: 1px; text-decoration: none; font-size: .9rem; padding: 5px 11px 5px 5px; border: var(--line) solid var(--ink); border-radius: 999px; background: var(--card); white-space: nowrap; }
   .back svg { width: 17px; height: 17px; }
   .nav .links { display: flex; gap: 2px; }
@@ -211,7 +210,10 @@
   .status { text-align: center; color: var(--muted); padding: 60px 0; }
 
   /* 日幣計算機 */
-  .calc-fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40; width: 56px; height: 56px; border-radius: 50%; border: var(--line) solid var(--ink); background: var(--yellow); color: var(--ink); font-size: 1.6rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+  /* 計算機按鈕放頂列最右邊（2026-10-15 雪莉：放下面會擋） */
+  .calc-fab { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--ink); background: var(--yellow); color: var(--ink); font-size: 1.05rem; line-height: 1; cursor: pointer; padding: 0; margin-left: 2px; }
+  .nav-r { display: flex; align-items: center; gap: 4px; }
+  .navl { flex-shrink: 0; }
   .calc-sheet { position: fixed; inset: 0; z-index: 60; background: rgba(40,30,26,.35); display: none; align-items: flex-end; justify-content: center; }
   .calc-sheet.on { display: flex; }
   .calc-panel { width: 100%; max-width: 480px; background: var(--bg); border: var(--line) solid var(--ink); border-bottom: none; border-radius: 26px 26px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); }
@@ -232,12 +234,15 @@
   .calc-keys button.op { background: var(--pink-bg); }
   .calc-keys button.done { background: var(--pink); font-size: 1.05rem; }
   .calc-keys button:active { transform: translateY(1px); }
+  /* 手機頂列縮排（放在最後才蓋得過前面的一般規則） */
+@media (max-width: 460px) { .nav .logo { display: none; } .nav .links a { padding: 6px 6px; font-size: .95rem; } .calc-fab { width: 34px; height: 34px; margin-left: 0; } .back { padding-right: 9px; } }
+  @media (max-width: 340px) { .back-t { display: none; } .back { padding: 5px 7px; } }
 </style>
 </head>
 <body>
 <nav class="nav"><div class="wrap">
-  <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>編輯</a><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
-  <div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#stay" data-sec="stay">住宿</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div>
+  <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span class="back-t">編輯</span></a><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
+  <div class="nav-r"><div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#stay" data-sec="stay">住宿</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div><button type="button" class="calc-fab" id="calcFab" aria-label="日幣計算機">¥</button></div>
 </div></nav>
 
 <div id="loginBox" class="login">
@@ -1155,7 +1160,7 @@ function openCalc() {
 (function initCalc() {
   const keys = [['7', '7'], ['8', '8'], ['9', '9'], ['back', '⌫'], ['4', '4'], ['5', '5'], ['6', '6'], ['clear', 'C'], ['1', '1'], ['2', '2'], ['3', '3'], ['plus', '+'], ['0', '0'], ['00', '00'], ['000', '000'], ['done', '完成']];
   const wrap = document.createElement('div');
-  wrap.innerHTML = '<button type="button" class="calc-fab" id="calcFab" aria-label="日幣計算機">¥</button>' +
+  wrap.innerHTML = '' +
     '<div class="calc-sheet" id="calcSheet"><div class="calc-panel">' +
     '<div class="calc-top"><div class="calc-seg"><button type="button" data-dir="jpy">日圓 → 台幣</button><button type="button" data-dir="twd">台幣 → 日圓</button></div>' +
     '<button type="button" class="x-btn" id="calcClose" aria-label="關閉">' + ICON.x + '</button></div>' +
