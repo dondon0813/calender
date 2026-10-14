@@ -286,7 +286,86 @@ const PALETTES = {
   c: { name: '全藕粉單色・細線', line: '2px', bg: '#FCF7F4', ink: '#8C6B68', soft: '#9C807B', muted: '#BFA9A4', card: '#FFFFFF', pink: '#D8AEAD', pinkBg: '#F5E6E3', yellow: '#EAD5C4', yellowBg: '#F6EDE5', green: '#E2C7C3', greenBg: '#F3E7E4', blue: '#CDB9B6', blueBg: '#EFE5E3', accent: '#B07F83', link: '#B07F83' },
   d: { name: '奶茶拿鐵底＋藕粉點綴', line: '2.5px', bg: '#F5EFE9', ink: '#5A4A42', soft: '#7D6A5F', muted: '#A3948A', card: '#FFFFFF', pink: '#C99A9B', pinkBg: '#EFD9D6', yellow: '#DCC3A3', yellowBg: '#EFE3D3', green: '#BFC4A8', greenBg: '#E4E6D6', blue: '#B9C4C9', blueBg: '#E2E6E6', accent: '#B5485A', link: '#9A6B6E' },
 };
-const P = PALETTES[(new URLSearchParams(location.search).get('palette') || '').toLowerCase()] || PALETTES[DEFAULT_PALETTE];
+// 版型不變、換整體樣式（2026-10-14 雪莉要四款參考）：網址 ?style=1|2|3|4 預覽；
+// 每款＝一組色系＋一段覆寫 CSS（掛在 <html data-style>），插圖顏色跟著色系走。
+const STYLES = {
+  1: { name: '極簡文青',
+    palette: { line: '1.5px', bg: '#FAF7F2', ink: '#9A877D', soft: '#8F7F76', muted: '#BDB0A7', card: '#FFFFFF', pink: '#E3C4C0', pinkBg: '#F6ECE9', yellow: '#EADBC0', yellowBg: '#F8F2E6', green: '#D5DAC8', greenBg: '#F0F2EA', blue: '#CFD8DC', blueBg: '#EEF2F3', accent: '#B07F83', link: '#A0767A' },
+    font: 'Noto+Serif+TC:wght@500;700',
+    css: `
+html[data-style="1"] body { color: #5E4E46; }
+html[data-style="1"] .title, html[data-style="1"] .sec-h, html[data-style="1"] .hn, html[data-style="1"] .daycard .dt { font-family: "Noto Serif TC", serif; font-weight: 500; }
+html[data-style="1"] .title { letter-spacing: .3em; font-size: clamp(1.8rem, 8vw, 2.4rem); }
+html[data-style="1"] .nav { border-bottom-width: 1px; }
+html[data-style="1"] .hero { border: none; border-radius: 0; margin: 0 -16px; }
+html[data-style="1"] .flight, html[data-style="1"] .daycard, html[data-style="1"] .box, html[data-style="1"] .panel { border: none; box-shadow: 0 2px 14px rgba(120,95,80,.10); border-radius: 14px; }
+html[data-style="1"] .flight .fh { background: transparent !important; border-bottom: 1px solid #EFE6DE; color: #8F7F76; letter-spacing: .08em; }
+html[data-style="1"] .count span { background: transparent; border-width: 1px; letter-spacing: .1em; }
+html[data-style="1"] .sec-h .ic { background: transparent !important; border-width: 1px; width: 44px; height: 44px; }
+html[data-style="1"] .nav .links a.on, html[data-style="1"] .step.on .md { background: transparent; border-color: transparent; border-bottom: 1px solid #5E4E46; border-radius: 0; }
+html[data-style="1"] .daycard .pic { border-width: 1px; }
+html[data-style="1"] .box .n { background: none; }
+html[data-style="1"] .pill, html[data-style="1"] .acts a, html[data-style="1"] .back, html[data-style="1"] .pager button, html[data-style="1"] .tk button { border-width: 1px; }
+` },
+  2: { name: '和風藍染',
+    palette: { line: '2px', bg: '#F3EEE3', ink: '#2F3E5C', soft: '#5B6680', muted: '#9AA1B0', card: '#FFFDF8', pink: '#E7B9B0', pinkBg: '#F5E3DE', yellow: '#E6C77A', yellowBg: '#F6EBCB', green: '#A9BC9C', greenBg: '#E5EBDD', blue: '#9FB3CF', blueBg: '#DEE6F0', accent: '#C0392B', link: '#2F5D8C' },
+    font: 'Noto+Serif+TC:wght@600;700',
+    css: `
+html[data-style="2"] body { background-image: radial-gradient(rgba(47,62,92,.05) 1px, transparent 1px); background-size: 6px 6px; }
+html[data-style="2"] .title, html[data-style="2"] .sec-h, html[data-style="2"] .hn { font-family: "Noto Serif TC", serif; font-weight: 700; }
+html[data-style="2"] .flight, html[data-style="2"] .daycard, html[data-style="2"] .box, html[data-style="2"] .panel, html[data-style="2"] .hero { border-radius: 6px; }
+html[data-style="2"] .hero { border-radius: 0 0 6px 6px; }
+html[data-style="2"] .flight .fh { background: #2F3E5C !important; color: #FFFDF8; }
+html[data-style="2"] .count span { background: #C0392B; color: #FFFDF8; border-color: #C0392B; border-radius: 4px; }
+html[data-style="2"] .sec-h .ic { border-radius: 4px; background: #2F3E5C !important; color: #FFFDF8; }
+html[data-style="2"] .nav .links a.on, html[data-style="2"] .step.on .md { background: #2F3E5C; color: #FFFDF8; border-radius: 4px; }
+html[data-style="2"] .daycard { background: #FFFDF8 !important; border-left: 10px solid #2F3E5C; }
+html[data-style="2"] .pill, html[data-style="2"] .acts a, html[data-style="2"] .back, html[data-style="2"] .pager button, html[data-style="2"] .tk button, html[data-style="2"] .who-seg button, html[data-style="2"] .addrow button { border-radius: 4px; }
+html[data-style="2"] .box .n { background: linear-gradient(transparent 86%, #E7B9B0 86%); }
+` },
+  3: { name: '繪本貼紙',
+    palette: { line: '0px', bg: '#FFF7F2', ink: '#7A5C52', soft: '#8E7369', muted: '#C2AAA0', card: '#FFFFFF', pink: '#F4B9B2', pinkBg: '#FDE4E0', yellow: '#F8D58A', yellowBg: '#FEF1D2', green: '#BFDCAE', greenBg: '#E8F3E0', blue: '#AFD3E8', blueBg: '#E2F0F8', accent: '#E0677A', link: '#C97A6F' },
+    css: `
+html[data-style="3"] .nav { border-bottom: none; box-shadow: 0 3px 0 #F4E2DA; }
+html[data-style="3"] .hero { border: none; border-radius: 0 0 40px 40px; }
+html[data-style="3"] .hero svg [stroke], html[data-style="3"] .daycard .pic svg [stroke] { stroke-opacity: .55; }
+html[data-style="3"] .flight, html[data-style="3"] .daycard, html[data-style="3"] .box, html[data-style="3"] .panel { border: none; border-radius: 30px; box-shadow: 0 5px 0 rgba(122,92,82,.10); }
+html[data-style="3"] .daycard .pic, html[data-style="3"] .step .dot, html[data-style="3"] .ev .nd { border: 3px solid #fff; box-shadow: 0 2px 0 rgba(122,92,82,.15); }
+html[data-style="3"] .step .dot { background: #F4B9B2; }
+html[data-style="3"] .rail { height: 6px; border-radius: 3px; background: #F4D9D2; }
+html[data-style="3"] .count span { border: none; box-shadow: 0 4px 0 #E8BE6A; }
+html[data-style="3"] .sec-h .ic { border: none; box-shadow: 0 4px 0 rgba(122,92,82,.12); }
+html[data-style="3"] .pill, html[data-style="3"] .acts a, html[data-style="3"] .back, html[data-style="3"] .pager button, html[data-style="3"] .tk button, html[data-style="3"] .who-seg button, html[data-style="3"] .addrow button, html[data-style="3"] .nav .links a.on, html[data-style="3"] .box .tag { border-color: transparent; box-shadow: 0 3px 0 rgba(122,92,82,.13); }
+html[data-style="3"] .ev::before { border-left-color: #F0CFC6; }
+html[data-style="3"] .ck .box2 { border: 3px solid #F4B9B2; }
+` },
+  4: { name: '復古車票',
+    palette: { line: '2px', bg: '#EFE6D3', ink: '#2F4F45', soft: '#5B6F66', muted: '#9AA69E', card: '#FBF6EA', pink: '#D98B73', pinkBg: '#F3D9CC', yellow: '#D9A441', yellowBg: '#F2E2BC', green: '#8FAE8F', greenBg: '#DCE6D3', blue: '#8FB0B7', blueBg: '#D8E4E4', accent: '#B5533C', link: '#2F6F5E' },
+    css: `
+html[data-style="4"] .t, html[data-style="4"] .ev .tm, html[data-style="4"] .code, html[data-style="4"] .count b, html[data-style="4"] .step .md { font-family: "Courier New", ui-monospace, monospace; font-weight: 700; }
+html[data-style="4"] .title { letter-spacing: .2em; text-transform: uppercase; }
+html[data-style="4"] .flight, html[data-style="4"] .panel { border-radius: 10px; position: relative; overflow: visible; }
+html[data-style="4"] .flight::before, html[data-style="4"] .flight::after { content: ''; position: absolute; top: 46px; width: 20px; height: 20px; border-radius: 50%; background: var(--bg); border: 2px solid var(--ink); z-index: 1; }
+html[data-style="4"] .flight::before { left: -12px; clip-path: inset(0 0 0 50%); }
+html[data-style="4"] .flight::after { right: -12px; clip-path: inset(0 50% 0 0); }
+html[data-style="4"] .flight .fh { border-radius: 8px 8px 0 0; border-bottom-style: dashed; background: #2F4F45 !important; color: #FBF6EA; letter-spacing: .08em; }
+html[data-style="4"] .daycard, html[data-style="4"] .box { border-radius: 10px; border-style: solid; }
+html[data-style="4"] .daycard { border-style: dashed; }
+html[data-style="4"] .count span { border-radius: 6px; background: #D9A441; letter-spacing: .1em; }
+html[data-style="4"] .sec-h .ic { border-radius: 8px; }
+html[data-style="4"] .nav .links a.on, html[data-style="4"] .step.on .md { background: #B5533C; color: #FBF6EA; border-radius: 6px; }
+html[data-style="4"] .pill, html[data-style="4"] .acts a, html[data-style="4"] .back, html[data-style="4"] .pager button, html[data-style="4"] .tk button { border-radius: 6px; }
+html[data-style="4"] .hero { border-radius: 0 0 10px 10px; }
+` },
+};
+const STYLE_ID = (new URLSearchParams(location.search).get('style') || '').replace(/\D/g, '');
+const STYLE = STYLES[STYLE_ID] || null;
+if (STYLE) {
+  document.documentElement.dataset.style = STYLE_ID;
+  const st = document.createElement('style'); st.textContent = STYLE.css; document.head.appendChild(st);
+  if (STYLE.font) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + STYLE.font + '&display=swap'; document.head.appendChild(l); }
+}
+const P = (STYLE && STYLE.palette) || PALETTES[(new URLSearchParams(location.search).get('palette') || '').toLowerCase()] || PALETTES[DEFAULT_PALETTE];
 (function applyPalette() {
   const r = document.documentElement.style;
   const map = { bg: '--bg', ink: '--ink', soft: '--soft', muted: '--muted', card: '--card', pink: '--pink', pinkBg: '--pink-bg', yellow: '--yellow', yellowBg: '--yellow-bg', green: '--green', greenBg: '--green-bg', blue: '--blue', blueBg: '--blue-bg', accent: '--accent', link: '--link', line: '--line' };
