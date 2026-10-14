@@ -6312,7 +6312,9 @@
     /* 打包中的包：收件人／電話／地址可複製（2026-10-14 兩段式） */
     .lot-ship-sub{ font-size:12px; color:var(--c-text-soft); margin-top:2px; }
     .lot-ship-pack-tbl td{ vertical-align:top; }
-    .lot-ship-td-name, .lot-ship-td-phone{ white-space:nowrap; font-weight:700; }
+    .lot-ship-td-phone{ white-space:nowrap; font-weight:700; }
+    .lot-ship-td-name{ font-weight:700; min-width:150px; max-width:260px; }
+    .lot-ship-td-name .lot-ship-sub{ font-weight:400; white-space:normal; }
     .lot-buyer-link{ appearance:none; border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--c-primary-dark); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
     .lot-buyer-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     .lot-buyer-stat{ background:var(--c-surface); border-radius:10px; padding:10px; text-align:center; }
@@ -8111,7 +8113,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=62"></script>
+<script src="lottery.js?v=63"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=121"></script>
 <script src="memo.js?v=8"></script>
