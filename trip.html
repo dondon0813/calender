@@ -507,8 +507,17 @@ function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s]+$/i.
 function mapsUrl(place) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 // 備註文字裡的網址變成可點連結（先跳脫再換）
+// 成品頁不顯示 emoji（2026-10-14 雪莉）：箭頭換成一般箭頭，其餘直接拿掉；只影響顯示，資料不動
+const EMOJI_ARROWS = { '⬇': '↓', '⬆': '↑', '➡': '→', '⬅': '←', '↗': '↗', '↘': '↘', '↙': '↙', '↖': '↖', '🔽': '↓', '🔼': '↑' };
+function noEmoji(text) {
+  return String(text == null ? '' : text)
+    .replace(/[⬇⬆➡⬅↗↘↙↖🔽🔼]\uFE0F?/gu, m => EMOJI_ARROWS[m.replace(/\uFE0F/g, '')] || '')
+    .replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}]/gu, '')
+    .replace(/[\uFE0F\u200D\u20E3]/g, '')
+    .replace(/[ \t]{2,}/g, ' ').replace(/^[ \t]+/gm, '');
+}
 function linkify(text) {
-  return esc(text).replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + (u.length > 38 ? u.slice(0, 36) + '…' : u) + '</a>');
+  return esc(noEmoji(text)).replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + (u.length > 38 ? u.slice(0, 36) + '…' : u) + '</a>');
 }
 function planSort(a, b) {
   if (a.time && b.time && a.time !== b.time) return a.time < b.time ? -1 : 1;
@@ -757,7 +766,7 @@ function flightEvents(iso) {
 }
 function evHtml(p) {
   if (p.cat === '_flight') {
-    return '<div class="ev"><span class="tm">' + esc(p.time) + '</span><span class="nd"></span><div class="bd"><div class="move"><span class="pill" style="background:var(--blue)">' + ICON.plane + '飛機</span>' + esc(p.title) + '</div>' + (p.note ? '<div class="sub">' + esc(p.note) + '</div>' : '') + '</div></div>';
+    return '<div class="ev"><span class="tm">' + esc(p.time) + '</span><span class="nd"></span><div class="bd"><div class="move"><span class="pill" style="background:var(--blue)">' + ICON.plane + '飛機</span>' + esc(noEmoji(p.title)) + '</div>' + (p.note ? '<div class="sub">' + esc(p.note) + '</div>' : '') + '</div></div>';
   }
   const c = CAT[p.cat];
   const acts = [];
@@ -765,11 +774,11 @@ function evHtml(p) {
   if (p.url) acts.push('<a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + ICON.link + '<span>開啟連結</span></a>');
   let body;
   if (p.cat === 'transport') {
-    body = '<div class="move"><span class="pill" style="background:' + c.color + '">' + c.icon + c.name + '</span>' + esc(p.title) + '</div>' +
+    body = '<div class="move"><span class="pill" style="background:' + c.color + '">' + c.icon + c.name + '</span>' + esc(noEmoji(p.title)) + '</div>' +
       (p.note ? '<div class="sub">' + linkify(p.note) + '</div>' : '') + (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '');
   } else {
     const tag = p.cat === 'sight' || p.cat === 'other' ? '' : '<span class="tag" style="background:' + c.color + '">' + c.icon + c.name + '</span>';
-    body = '<div class="box"><span class="n">' + esc(p.title || c.name) + '</span>' + tag +
+    body = '<div class="box"><span class="n">' + esc(noEmoji(p.title) || c.name) + '</span>' + tag +
       (p.note ? '<div class="sub">' + linkify(p.note) + '</div>' : '') +
       (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') +
       (p.by ? '<div class="who">' + esc(p.by) + ' 排的</div>' : '') + '</div>';
