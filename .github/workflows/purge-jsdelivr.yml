@@ -1,0 +1,26 @@
+# 主網域過渡期（2026-10-14 起）舊站檔案經 jsDelivr @main 轉送，jsDelivr 會快取最長 12 小時，
+# 導致後台改版後拿到舊程式。每次推上 main 自動清掉這次有改到的檔案的快取；也可手動執行清常用檔。
+name: purge-jsdelivr
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Purge changed files
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            files=$(git ls-files '*.html' '*.js' '*.css')
+          else
+            files=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files '*.html' '*.js' '*.css')
+          fi
+          for f in $files; do
+            [ -f "$f" ] || continue
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://purge.jsdelivr.net/gh/dondon0813/calender@main/$f")
+            echo "$code $f"
+          done
