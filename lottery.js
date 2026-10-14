@@ -4214,14 +4214,15 @@ function lotShipRowHtml(w, checked, role, draw, withTrack) {
     '<td class="lot-td-date">' + lotEscapeHtml(lotAnnDateTxt(draw)) + '</td>' +
     '<td class="lot-td-title" title="' + lotEscapeHtml(title) + '">' + lotEscapeHtml(title) + '</td>' +
     '<td class="lot-td-prize">' + lotEscapeHtml(w.prize || '') + '</td>' +
-    '<td class="lot-td-winners">' + lotEscapeHtml(lotWinnerWho(w)) + '</td>' +
+    lotShipNameCell(lotShipContact(w, draw).name || lotWinnerWho(w), w.id) +
     '<td class="lot-td-date">' + lotShipTypeLabel(w, draw) + '</td>' +
-    (withTrack ? '<td class="lot-td-date">' + lotEscapeHtml(w.courier || '') + '</td><td class="lot-td-date">' + lotEscapeHtml(w.trackingNo || '') + '</td>' : '') +
+    (withTrack ? lotShipCopyCell(lotShipContact(w, draw).phone, 'lot-ship-td-phone') + lotShipCopyCell(lotShipContact(w, draw).addr, 'lot-ship-td-addr') +
+      '<td class="lot-td-date">' + lotEscapeHtml(w.courier || '') + '</td><td class="lot-td-date">' + lotEscapeHtml(w.trackingNo || '') + '</td>' : '') +
   '</tr>';
 }
 function lotShipTableHtml(rowsHtml, withTrack) {
-  return '<div class="lot-tbl-wrap"><table class="lot-tbl lot-ann-tbl"><thead><tr><th class="lot-ann-td-cb"></th><th>開團日期</th><th>團名</th><th>獎品</th><th>得獎人</th><th>類型</th>' +
-    (withTrack ? '<th>貨運</th><th>寄件編號</th>' : '') + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+  return '<div class="lot-tbl-wrap"><table class="lot-tbl lot-ann-tbl"><thead><tr><th class="lot-ann-td-cb"></th><th>開團日期</th><th>團名</th><th>獎品</th><th>收件人</th><th>類型</th>' +
+    (withTrack ? '<th>電話</th><th>地址／匯款／Email</th><th>貨運</th><th>寄件編號</th>' : '') + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
 }
 function lotShipFmtMD(dateStr) {
   const m = String(dateStr || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
