@@ -24,3 +24,10 @@ jobs:
             code=$(curl -s -o /dev/null -w "%{http_code}" "https://purge.jsdelivr.net/gh/dondon0813/calender@main/$f")
             echo "$code $f"
           done
+      - name: Check what is served now
+        run: |
+          sleep 20
+          echo "jsDelivr admin.html: $(curl -s https://cdn.jsdelivr.net/gh/dondon0813/calender@main/admin.html | grep -o 'lottery.js?v=[0-9]*')"
+          echo "main domain admin.html: $(curl -s https://sheridondon.com.tw/admin.html | grep -o 'lottery.js?v=[0-9]*')"
+          echo "main domain admin.html (no cache): $(curl -s "https://sheridondon.com.tw/admin.html?nc=$(date +%s)" | grep -o 'lottery.js?v=[0-9]*')"
+          echo "github main: $(curl -s https://raw.githubusercontent.com/dondon0813/calender/main/admin.html | grep -o 'lottery.js?v=[0-9]*')"
