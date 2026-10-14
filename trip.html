@@ -137,6 +137,11 @@
 
   /* 準備 */
   .panel { background: var(--card); border: var(--line) solid var(--ink); border-radius: 24px; padding: 16px 18px; margin-bottom: 16px; }
+  .cat-tabs { display: flex; gap: 6px; margin: 0 0 8px; padding: 4px; background: var(--bg); border-radius: 999px; }
+  .cat-tabs button { flex: 1; background: none; border: 2px solid transparent; border-radius: 999px; padding: 6px 4px; font-size: .92rem; cursor: pointer; white-space: nowrap; }
+  .cat-tabs button.on { background: var(--pink); border-color: var(--ink); }
+  .cat-tabs small { margin-left: 3px; color: var(--soft); font-size: .72rem; }
+  .cat-list { touch-action: pan-y; min-height: 40px; }
   .who-seg { display: flex; gap: 10px; justify-content: center; margin: 0 0 16px; }
   .who-seg button { flex: 1; max-width: 180px; background: var(--card); border: var(--line) solid var(--ink); border-radius: 999px; padding: 9px 12px; font-size: 1.05rem; cursor: pointer; }
   .who-seg button.on { background: var(--pink); }
@@ -433,7 +438,7 @@ function cleanExtra(raw) {
     v: 1,
     flights: (Array.isArray(s.flights) ? s.flights : []).filter(f => f && f.id),
     prep: (Array.isArray(s.prep) ? s.prep : []).filter(p => p && p.id).map(p => ({
-      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', owner: String(p.owner || '').slice(0, 20), text: String(p.text || '').slice(0, 80),
+      id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', owner: String(p.owner || '').slice(0, 20), cat: PREP_CAT_MAP[p.cat] ? p.cat : 'key', text: String(p.text || '').slice(0, 80),
       done: !!p.done, by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
     })),
   };
@@ -661,6 +666,22 @@ let PREP_WHO = (() => {
   const u = getUser(); const hit = PREP_PEOPLE.find(n => u && (u === n || u.includes(n)));
   return hit || PREP_PEOPLE[0];
 })();
+// 出發前準備再分三類，左右滑或點分頁切換（2026-10-14 雪莉定）；舊項目沒分類＝重要物品
+const PREP_CATS = [
+  { id: 'key', name: '重要物品', ph: '例如：護照、網卡' },
+  { id: 'pr', name: '業配產品', ph: '例如：要拍的商品' },
+  { id: 'other', name: '其它', ph: '例如：雨傘、暈車藥' },
+];
+const PREP_CAT_MAP = Object.fromEntries(PREP_CATS.map(c => [c.id, c]));
+const LS_PREP_CAT = 'trip_prep_cat_' + TRIP;
+let PREP_CAT = (() => { try { const v = localStorage.getItem(LS_PREP_CAT); if (PREP_CAT_MAP[v]) return v; } catch (e) {} return 'key'; })();
+function setPrepCat(id, dir) {
+  if (!PREP_CAT_MAP[id] || id === PREP_CAT) return;
+  PREP_CAT = id; try { localStorage.setItem(LS_PREP_CAT, id); } catch (e) {}
+  renderPrep();
+  const list = document.querySelector('#prepLists .cat-list');
+  if (dir && list && list.animate) list.animate([{ transform: 'translateX(' + (dir * 40) + 'px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.2,.7,.3,1)' });
+}
 const PREP_GROUPS = [
   { id: 'todo', name: '出發前準備', ph: '例如：護照、網卡' },
   { id: 'buy', name: '待買清單', ph: '例如：藥妝、伴手禮' },
@@ -669,17 +690,39 @@ function renderPrep() {
   const live = EXTRA.prep.filter(p => !p.del && (!p.owner || p.owner === PREP_WHO));
   const count = n => { const l = EXTRA.prep.filter(p => !p.del && (!p.owner || p.owner === n)); return l.filter(p => p.done).length + '/' + l.length; };
   const who = '<div class="who-seg">' + PREP_PEOPLE.map(n => '<button type="button" data-who="' + esc(n) + '" class="' + (n === PREP_WHO ? 'on' : '') + '">' + esc(n) + '<small>' + count(n) + '</small></button>').join('') + '</div>';
+  const sortItems = l => l.sort((a, b) => (a.done - b.done) || (a.id < b.id ? -1 : 1));
   document.getElementById('prepLists').innerHTML = who + PREP_GROUPS.map(g => {
-    const items = live.filter(p => p.group === g.id).sort((a, b) => (a.done - b.done) || (a.id < b.id ? -1 : 1));
-    const done = items.filter(p => p.done).length;
-    return '<div class="panel"><h3>' + g.name + (items.length ? '<small>' + done + ' / ' + items.length + '</small>' : '') + '</h3>' +
-      (items.length ? items.map(p => '<label class="ck' + (p.done ? ' done' : '') + '" data-id="' + esc(p.id) + '"><input type="checkbox"' + (p.done ? ' checked' : '') + '><span class="box2">' + ICON.check + '</span><span class="tx">' + esc(p.text) + '</span><button type="button" class="x-btn" data-del="' + esc(p.id) + '" aria-label="刪除">' + ICON.x + '</button></label>').join('') : '<div class="empty" style="padding:6px 0">還沒有項目</div>') +
-      '<div class="addrow"><input data-add="' + g.id + '" placeholder="' + g.ph + '" maxlength="80"><button type="button" data-addbtn="' + g.id + '">新增</button></div></div>';
+    const all = live.filter(p => p.group === g.id);
+    const isTodo = g.id === 'todo';
+    const items = sortItems(isTodo ? all.filter(p => p.cat === PREP_CAT) : all);
+    const done = all.filter(p => p.done).length;
+    const ph = isTodo ? PREP_CAT_MAP[PREP_CAT].ph : g.ph;
+    const tabs = isTodo ? '<div class="cat-tabs">' + PREP_CATS.map(c => { const l = all.filter(p => p.cat === c.id); return '<button type="button" data-cat="' + c.id + '" class="' + (c.id === PREP_CAT ? 'on' : '') + '">' + c.name + (l.length ? '<small>' + l.filter(p => p.done).length + '/' + l.length + '</small>' : '') + '</button>'; }).join('') + '</div>' : '';
+    return '<div class="panel" data-g="' + g.id + '"><h3>' + g.name + (all.length ? '<small>' + done + ' / ' + all.length + '</small>' : '') + '</h3>' + tabs + '<div class="cat-list">' +
+      (items.length ? items.map(p => '<label class="ck' + (p.done ? ' done' : '') + '" data-id="' + esc(p.id) + '"><input type="checkbox"' + (p.done ? ' checked' : '') + '><span class="box2">' + ICON.check + '</span><span class="tx">' + esc(p.text) + '</span><button type="button" class="x-btn" data-del="' + esc(p.id) + '" aria-label="刪除">' + ICON.x + '</button></label>').join('') : '<div class="empty" style="padding:6px 0">還沒有項目</div>') + '</div>' +
+      '<div class="addrow"><input data-add="' + g.id + '" placeholder="' + ph + '" maxlength="80"><button type="button" data-addbtn="' + g.id + '">新增</button></div></div>';
   }).join('');
   document.querySelectorAll('#prepLists [data-who]').forEach(b => b.addEventListener('click', () => {
     PREP_WHO = b.dataset.who; try { localStorage.setItem(LS_PREP_WHO, PREP_WHO); } catch (e) {}
     renderPrep();
   }));
+  document.querySelectorAll('#prepLists [data-cat]').forEach(b => b.addEventListener('click', () => {
+    const order = PREP_CATS.map(c => c.id);
+    setPrepCat(b.dataset.cat, order.indexOf(b.dataset.cat) > order.indexOf(PREP_CAT) ? 1 : -1);
+  }));
+  // 出發前準備清單左右滑換分類
+  const todoPanel = document.querySelector('#prepLists .panel[data-g="todo"]');
+  if (todoPanel) {
+    let x0 = null, y0 = 0;
+    todoPanel.addEventListener('touchstart', e => { if (e.target.closest('input')) return; const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+    todoPanel.addEventListener('touchend', e => {
+      if (x0 == null) return;
+      const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      const order = PREP_CATS.map(c => c.id), i = order.indexOf(PREP_CAT) + (dx < 0 ? 1 : -1);
+      if (i >= 0 && i < order.length) setPrepCat(order[i], dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
   document.querySelectorAll('#prepLists .ck input').forEach(inp => inp.addEventListener('change', () => {
     const id = inp.closest('.ck').dataset.id;
     updatePrep(id, { done: inp.checked });
@@ -696,7 +739,7 @@ function addPrep(group) {
   const inp = document.querySelector('#prepLists [data-add="' + group + '"]');
   const text = inp.value.trim().slice(0, 80);
   if (!text) return;
-  EXTRA.prep.push({ id: uid(), group, owner: PREP_WHO, text, done: false, by: getUser(), at: Date.now(), del: false });
+  EXTRA.prep.push({ id: uid(), group, owner: PREP_WHO, cat: group === 'todo' ? PREP_CAT : 'key', text, done: false, by: getUser(), at: Date.now(), del: false });
   renderPrep();
   const again = document.querySelector('#prepLists [data-add="' + group + '"]');
   if (again) again.focus();
