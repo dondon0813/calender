@@ -76,6 +76,19 @@
   .tk button.pri { background: var(--pink); }
   .tk button svg { width: 14px; height: 14px; }
   .tk button:disabled { opacity: .5; }
+  .hotel .fh { background: var(--pink); }
+  .hotel .hn { font-size: 1.4rem; line-height: 1.3; }
+  .hotel .hj { color: var(--soft); font-size: .85rem; margin-top: 2px; }
+  .hotel .io { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 4px; }
+  .hotel .io div { background: var(--bg); border-radius: 14px; padding: 8px 12px; }
+  .hotel .io small { display: block; color: var(--soft); font-size: .78rem; }
+  .hotel .io b { font-weight: 400; font-size: 1.25rem; }
+  .hotel .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 2px dotted var(--muted); font-size: .92rem; }
+  .hotel .kv:last-of-type { border-bottom: none; }
+  .hotel .kv span:first-child { color: var(--soft); white-space: nowrap; }
+  .hotel .kv span:last-child { text-align: right; word-break: break-all; }
+  .hotel .code { font-size: 1.15rem; letter-spacing: .06em; }
+  .copy { background: none; border: none; color: var(--link); font: inherit; font-size: .78rem; padding: 0 0 0 6px; cursor: pointer; }
   .flight .fn { color: var(--accent); font-size: .92rem; margin-top: 8px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 
   /* 日期軌道（電車沿軌道開到選中的那天；捲動時黏在頂列下方） */
@@ -212,8 +225,10 @@
   <div class="count" id="tCount"></div>
 
   <section id="flights">
-    <div class="sec-h"><span class="ic" style="background:var(--blue)" data-icon="plane"></span>航班</div>
+    <div class="sec-h"><span class="ic" style="background:var(--blue)" data-icon="plane"></span>航班與住宿</div>
     <div id="flightList"></div>
+    <div class="sub-h" id="hotelHead" hidden>住宿</div>
+    <div id="hotelList"></div>
   </section>
 
   <section id="plan">
@@ -419,7 +434,7 @@ async function apiPost(type, payload) {
 
 /* ---------- 資料 ---------- */
 let DATA = null, DAYS = [], CUR = 0;
-let EXTRA = { v: 1, flights: [], prep: [] };
+let EXTRA = { v: 1, flights: [], hotels: [], prep: [] };
 function clean(raw) {
   const s = raw || {};
   const plan = (Array.isArray(s.plan) ? s.plan : []).filter(p => p && p.id && !p.del).map(p => ({
@@ -437,6 +452,7 @@ function cleanExtra(raw) {
   return {
     v: 1,
     flights: (Array.isArray(s.flights) ? s.flights : []).filter(f => f && f.id),
+    hotels: (Array.isArray(s.hotels) ? s.hotels : []).filter(h => h && h.id),
     prep: (Array.isArray(s.prep) ? s.prep : []).filter(p => p && p.id).map(p => ({
       id: String(p.id), group: p.group === 'buy' ? 'buy' : 'todo', owner: String(p.owner || '').slice(0, 20), cat: PREP_CAT_MAP[p.cat] ? p.cat : 'key', ord: Number.isFinite(p.ord) ? p.ord : null, text: String(p.text || '').slice(0, 80),
       done: !!p.done, by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
@@ -479,6 +495,7 @@ function render() {
   }
   document.querySelectorAll('.sec-h .ic[data-icon]').forEach(el => { el.innerHTML = ICON[el.dataset.icon] || ''; });
   renderFlights();
+  renderHotels();
   renderSteps();
   renderDay(0);
   renderPrep();
@@ -543,6 +560,32 @@ document.addEventListener('click', async e => {
   finally { btn.disabled = false; }
 });
 
+// 住宿（2026-10-14 雪莉從交件匣給的訂房截圖＋線上 Check-in 網址）
+function liveHotels() { return (EXTRA.hotels || []).filter(h => !h.del).sort((a, b) => String(a.checkin || '').localeCompare(String(b.checkin || ''))); }
+function nights(a, b) { return isoOk(a) && isoOk(b) ? Math.round((toDate(b) - toDate(a)) / 86400000) : 0; }
+function renderHotels() {
+  const list = liveHotels();
+  document.getElementById('hotelHead').hidden = !list.length;
+  document.getElementById('hotelList').innerHTML = list.map(h => {
+    const n = nights(h.checkin, h.checkout);
+    const kv = (k, v, copy) => v ? '<div class="kv"><span>' + k + '</span><span' + (copy ? ' class="code"' : '') + '>' + esc(v) + (copy ? '<button type="button" class="copy" data-copy="' + esc(v) + '">複製</button>' : '') + '</span></div>' : '';
+    const url = safeUrl(h.url);
+    const acts = [];
+    if (url) acts.push('<a href="' + esc(url) + '" target="_blank" rel="noopener">' + ICON.link + '<span>開啟線上 Check-in</span></a>');
+    if (h.address) acts.push('<a href="' + esc(mapsUrl(h.address)) + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + esc(h.address) + '</span></a>');
+    return '<div class="flight hotel"><div class="fh"><span>' + (isoOk(h.checkin) ? esc(mdw(h.checkin)) : '') + (isoOk(h.checkout) ? '－' + esc(mdw(h.checkout)) : '') + '</span><span>' + (n ? n + ' 晚' : '住宿') + '</span></div>' +
+      '<div class="fb"><div class="hn">' + esc(h.name || '飯店') + '</div>' + (h.nameJa ? '<div class="hj">' + esc(h.nameJa) + '</div>' : '') +
+      '<div class="io"><div><small>入住</small><b>' + esc(h.checkinTime || '--:--') + '</b> 以後</div><div><small>退房</small><b>' + esc(h.checkoutTime || '--:--') + '</b> 以前</div></div>' +
+      kv('Check-in Code', h.code, true) + kv('PIN Code', h.pin, true) + kv('訂房編號', h.booking) + kv('房型', h.room) + kv('人數', h.guests) +
+      (h.note ? '<div class="fn">' + linkify(h.note) + '</div>' : '') +
+      (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') + '</div></div>';
+  }).join('');
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = '已複製'; setTimeout(() => { b.textContent = '複製'; }, 1500); } catch (err) { alert(b.dataset.copy); }
+});
+
 function renderSteps() {
   const box = document.getElementById('steps');
   const n = DAYS.length;
@@ -590,6 +633,8 @@ function dayTitle(items) {
 }
 function stayName(s) { return (s.title || '').replace(/\s*(check[\s-]?in|辦理入住|入住)\s*/ig, '').trim() || s.place; }
 function stayFor(iso) {
+  const h = liveHotels().find(x => isoOk(x.checkin) && x.checkin <= iso && (!isoOk(x.checkout) || iso < x.checkout));
+  if (h) return h.name;
   // 當天有住宿就用當天的；沒有就往前找最近一晚
   for (let k = DAYS.indexOf(iso); k >= 0; k--) {
     const s = DATA.plan.filter(p => p.date === DAYS[k] && p.cat === 'stay').sort(planSort).pop();
@@ -770,15 +815,17 @@ async function queueSave() {
     const got = await apiPost('setting-get', { key: EXTRA_KEY });
     if (got && got.needLogin) { setSaveMsg('登入過期，請重新整理後登入', true); return; }
     if (!got || got.success !== true) throw new Error((got && got.error) || '讀取失敗');
-    const remote = cleanExtra(got.value ? JSON.parse(got.value) : {});
-    const merged = { v: 1, flights: remote.flights, prep: mergeById(remote.prep, EXTRA.prep) };
+    const raw = got.value ? JSON.parse(got.value) : {};
+    const remote = cleanExtra(raw);
+    // 以伺服器那份為底只換 prep：航班、住宿與之後加的欄位原封保留
+    const merged = Object.assign({}, raw && typeof raw === 'object' ? raw : {}, { v: 1, prep: mergeById(remote.prep, EXTRA.prep) });
     const res = await apiPost('setting-set', { key: EXTRA_KEY, value: JSON.stringify(merged) });
     if (!res || res.success !== true) throw new Error((res && res.error) || '儲存失敗');
     EXTRA = cleanExtra(merged);
     try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
     setSaveMsg('已儲存');
     setTimeout(() => { if (!SAVE.busy) setSaveMsg(''); }, 1500);
-    renderPrep(); renderFlights();
+    renderPrep(); renderFlights(); renderHotels();
   } catch (err) {
     setSaveMsg('沒存成功：' + err.message + '（稍後會再試）', true);
     setTimeout(queueSave, 15000);
@@ -789,6 +836,12 @@ async function queueSave() {
 }
 
 function renderStays() {
+  const hs = liveHotels();
+  if (hs.length) {
+    document.getElementById('stayPanel').hidden = false;
+    document.getElementById('stayList').innerHTML = hs.map(h => '<div class="stay"><span>' + esc(h.name || '飯店') + (h.address ? '<span class="sp">' + esc(h.address) + '</span>' : '') + '</span><span class="sd">' + (isoOk(h.checkin) ? md(h.checkin) : '') + (isoOk(h.checkout) ? '－' + md(h.checkout) : '') + '</span></div>').join('');
+    return;
+  }
   // 住宿：排行程裡「住宿」類的項目，入住日～下一間入住日（或最後一天）
   const stays = DATA.plan.filter(p => p.cat === 'stay' && p.date).sort((a, b) => a.date.localeCompare(b.date));
   document.getElementById('stayPanel').hidden = !stays.length;
@@ -874,7 +927,7 @@ async function load() {
     if (ex && ex.success === true) {
       const remoteEx = cleanExtra(ex.value ? JSON.parse(ex.value) : {});
       // 還沒存上去的本機勾選保留（較新的 at 勝出）
-      EXTRA = { v: 1, flights: remoteEx.flights, prep: SAVE.busy ? mergeById(remoteEx.prep, EXTRA.prep) : remoteEx.prep };
+      EXTRA = { v: 1, flights: remoteEx.flights, hotels: remoteEx.hotels, prep: SAVE.busy ? mergeById(remoteEx.prep, EXTRA.prep) : remoteEx.prep };
       try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
     }
     // 行程只讀不寫；行程快取交給編輯頁（避免蓋掉編輯頁還沒上傳的變更）
