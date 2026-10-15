@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>頁面轉址中</title>
+<script>
+// 2026-10-15：官網 10/14 改由 Vercel 提供，新網址是 /calendar、/recipes 這類「沒有 .html」的路徑。
+// 手機網路還記著舊位址（DNS 快取）的人會連到這裡（GitHub Pages），這些路徑在舊站不存在 → 自動轉到同內容的 member 網域。
+// 有副檔名的（圖片、.html…）不轉，避免把真的找不到的檔案轉成迴圈。DNS 全面更新後這個檔案就用不到了。
+(function () {
+  var p = location.pathname;
+  if (!/\.[a-z0-9]+$/i.test(p)) {
+    location.replace('https://member.sheridondon.com.tw' + p + location.search + location.hash);
+  }
+})();
+</script>
+<style>body{font-family:sans-serif;text-align:center;padding:60px 16px;color:#5a4a42;background:#fff}a{color:#B5485A}</style>
+</head>
+<body>
+<p>找不到這個頁面。</p>
+<p><a href="https://sheridondon.com.tw/">回到雪莉與朵栗首頁</a></p>
+</body>
+</html>
