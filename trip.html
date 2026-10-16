@@ -1112,18 +1112,21 @@ window.addEventListener('resize', () => { if (DATA) renderSteps(); });
 
 /* ---------- 日幣計算機（2026-10-14 雪莉）：右下角「¥」開啟；可連加、加 10% 稅、日圓台幣互換 ----------
    匯率優先用記帳頁每天自動抓的匯率（ledger.rates，最新一天），沒有就即時抓一次市場匯率，再沒有用記帳頁的備用匯率 */
-const CALC = { dir: 'jpy', terms: [], cur: '', tax: false, rate: 0, rateNote: '' };
+const CALC = { dir: 'jpy', terms: [], cur: '', tax: false, rate: 0, rateNote: '', rateDay: '', live: false };
+// 存的匯率不是今天的（今天還沒人開記帳頁）＝開計算機時改抓今日即時匯率（2026-10-16 雪莉：匯率要更新到今天）
+function calcToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function calcPickRate(raw) {
+  if (CALC.live && CALC.rateDay === calcToday()) return;   // 已抓到今日即時匯率就不被舊的蓋回去
   const rates = raw && raw.rates && typeof raw.rates === 'object' ? raw.rates : {};
   const days = Object.keys(rates).filter(k => isoOk(k) && Number(rates[k]) > 0).sort();
-  if (days.length) { const d = days[days.length - 1]; CALC.rate = Number(rates[d]); CALC.rateNote = md(d) + ' 匯率'; return; }
+  if (days.length) { const d = days[days.length - 1]; CALC.rate = Number(rates[d]); CALC.rateDay = d; CALC.rateNote = (d === calcToday() ? '今日' : md(d)) + ' 匯率'; return; }
   if (raw && Number(raw.rate) > 0 && !CALC.rate) { CALC.rate = Number(raw.rate); CALC.rateNote = '備用匯率'; }
 }
 async function calcLiveRate() {
   try {
-    const j = await fetch('https://open.er-api.com/v6/latest/JPY').then(r => r.json());
+    const j = await fetch('https://open.er-api.com/v6/latest/JPY', { cache: 'no-store' }).then(r => r.json());
     const v = j && j.rates && Number(j.rates.TWD);
-    if (v > 0) { CALC.rate = v; CALC.rateNote = '今日即時匯率'; renderCalc(); }
+    if (v > 0 && v < 1) { CALC.rate = v; CALC.rateDay = calcToday(); CALC.live = true; CALC.rateNote = '今日即時匯率'; renderCalc(); }
   } catch (e) {}
 }
 function calcFmt(n, cur) { const v = Math.round(n); return (cur === 'TWD' ? 'NT$ ' : '¥ ') + v.toLocaleString('en-US'); }
@@ -1153,7 +1156,7 @@ function calcKey(k) {
   renderCalc();
 }
 function openCalc() {
-  if (!CALC.rate) calcLiveRate();
+  if (!CALC.rate || CALC.rateDay !== calcToday()) calcLiveRate();
   renderCalc();
   document.getElementById('calcSheet').classList.add('on');
 }
