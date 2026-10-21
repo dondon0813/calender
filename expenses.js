@@ -27,6 +27,12 @@ const EXP_RECEIPT_TYPES = [
 ];
 const EXP_FILE_MAX_BYTES = 15 * 1024 * 1024;
 const EXP_IMG_MAX_EDGE = 2000;
+const EXP_ASSET_MAX_EDGE = 1600;   // 出差素材：長邊縮到 1600px（docs/20）
+// 出差紀錄（docs/20）：素材類型、發文與產出類型、行程類別（沿用旅遊頁 food/transport/fun/shop/stay/other）
+const EXP_ASSET_KINDS = [['product', '產品配圖'], ['travel', '旅遊分享'], ['story', '限動截圖'], ['video', '影片代表畫面']];
+const EXP_POST_KINDS = [['post', '貼文'], ['reel', '影片'], ['story', '限動'], ['event', '開團'], ['tool', '工具與內容']];
+const EXP_ITIN_CATS = [['food', '美食'], ['transport', '交通'], ['fun', '景點'], ['shop', '購物'], ['stay', '住宿'], ['other', '其他']];
+const EXP_TRIP_SECS = [['basic', '基本'], ['itin', '行程'], ['assets', '素材'], ['posts', '發文與產出']];
 
 let EXP_LOADED = false;
 let EXP_TABLE_READY = true;
@@ -37,6 +43,11 @@ let EXP_EVENTS = [];
 let EXP_FILTER = { month: '', category: '', trip: '', unreimbursed: false };
 let EXP_EDIT_ID = null;       // 目前編輯中的支出 id；null＝新增
 let EXP_TRIP_EDIT_ID = null;  // 目前編輯中的出差 id；null＝新增
+let EXP_RECORDS_READY = true;  // false＝出差紀錄的新表／新欄位還沒 db push（後三區擋寫入）
+let EXP_TRIP_SEC = 'basic';   // 出差視窗目前停在哪一區
+let EXP_ASSET_EDIT_ID = null; // 目前編輯中的素材 id
+let EXP_POST_EDIT_ID = null;  // 目前編輯中的發文／產出 id；null＝新增
+let EXP_ASSET_UPLOADING = false;
 let EXP_RECEIPT_UP = null;    // 支出視窗的收據上傳器
 let EXP_TRIP_UP = null;       // 出差視窗的附件上傳器
 const EXP_URL_CACHE = {};     // path → { url, at }；簽名網址 600 秒，這裡 500 秒內重用
@@ -118,9 +129,9 @@ function expLoadImage(file) {
   });
 }
 // 長邊縮到 2000px；能出 WebP 就 WebP，不行（舊 Safari）退 JPEG
-async function expCompressImage(file) {
+async function expCompressImage(file, maxEdge) {
   const img = await expLoadImage(file);
-  const scale = Math.min(1, EXP_IMG_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const scale = Math.min(1, (maxEdge || EXP_IMG_MAX_EDGE) / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
   const canvas = document.createElement('canvas');
@@ -134,13 +145,13 @@ async function expCompressImage(file) {
   return { blob, ext };
 }
 // 傳一個檔案，回傳可存進 receipts／attachments 的 {path,name,size,uploadedAt}（外加 localUrl 供當下預覽，存檔前會去掉）
-async function expUploadOne(file, kind, tripId) {
+async function expUploadOne(file, kind, tripId, maxEdge) {
   const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
   const isImg = !isPdf && (String(file.type).indexOf('image/') === 0 || expIsImageName(file.name));
   if (!isPdf && !isImg) throw new Error('只能上傳圖片或 PDF（' + file.name + '）');
   let blob = file, ext = 'pdf', name = file.name, localUrl = '';
   if (isImg) {
-    const c = await expCompressImage(file);
+    const c = await expCompressImage(file, maxEdge);
     blob = c.blob; ext = c.ext;
     name = file.name.replace(/\.[^.]+$/, '') + '.' + ext;
     localUrl = URL.createObjectURL(blob);
@@ -320,6 +331,45 @@ function expInjectStyle() {
   .exp-x .exp-ic{ width:12px; height:12px; vertical-align:0; }
   .exp-actions{ display:flex; gap:8px; align-items:center; margin-top:16px; flex-wrap:wrap; }
   .exp-upbtn{ display:inline-flex; align-items:center; gap:6px; }
+  /* 出差紀錄（docs/20）：四區切換、行程、素材格、發文清單 */
+  .exp-modal #expTripModal .modal-box{ width:min(780px, 94vw); }
+  .exp-modal #expAssetModal .modal-box, .exp-modal #expPostModal .modal-box{ width:min(520px, 94vw); }
+  .exp-tabs{ display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 12px; }
+  .exp-banner.warn{ background:#FBF1D6; color:#8A6D1F; }
+  .exp-impbox{ margin-top:14px; padding:12px; background:var(--c-surface); border-radius:12px; }
+  .exp-impbox .exp-lb{ margin-top:0; }
+  .exp-impres{ margin-top:10px; font-size:13px; line-height:1.7; color:var(--c-text); }
+  .exp-impres ul{ margin:4px 0 0; padding-left:18px; color:#8A6D1F; }
+  .exp-hint{ font-size:12.5px; color:var(--c-text-soft); line-height:1.7; }
+  .exp-it-day{ font-size:13px; font-weight:800; color:var(--c-text-soft); padding:10px 4px 6px; border-bottom:1px solid var(--c-line); margin-top:6px; }
+  .exp-it-row{ display:grid; grid-template-columns:52px 22px 1fr; gap:8px; padding:8px 4px; border-bottom:1px solid var(--c-line); align-items:start; font-size:13.5px; }
+  .exp-it-time{ color:var(--c-text-soft); font-variant-numeric:tabular-nums; }
+  .exp-it-ic{ color:var(--c-text-soft); display:flex; }
+  .exp-it-ic .exp-ic{ width:17px; height:17px; vertical-align:0; }
+  .exp-it-t{ font-weight:800; color:var(--c-text); word-break:break-all; }
+  .exp-it-t a{ color:inherit; text-decoration:underline; text-decoration-color:#C99A9B; }
+  .exp-it-p{ font-size:12.5px; color:var(--c-text-soft); margin-top:2px; word-break:break-all; }
+  .exp-assets{ display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; margin-top:6px; }
+  .exp-as{ position:relative; background:var(--c-surface); border-radius:10px; padding:6px; cursor:pointer; min-width:0; }
+  .exp-as.off{ opacity:.5; }
+  .exp-as-th{ height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:8px; color:var(--c-text-soft); background:#fff; }
+  .exp-as-th img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .exp-as-ty{ position:absolute; top:10px; left:10px; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; background:rgba(255,255,255,.92); color:var(--c-text-soft); }
+  .exp-as-nm{ font-size:11.5px; color:var(--c-text-soft); margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .exp-as-nm.warn{ color:#B5485A; }
+  .exp-prow{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:10px 6px; border-bottom:1px solid var(--c-line); cursor:pointer; }
+  .exp-prow:hover{ background:var(--c-surface); }
+  .exp-prow .d{ font-size:12.5px; color:var(--c-text-soft); min-width:84px; font-variant-numeric:tabular-nums; }
+  .exp-prow .t{ flex:1 1 180px; min-width:0; font-weight:800; font-size:14px; color:var(--c-text); word-break:break-all; }
+  .exp-prow .s{ flex:1 1 100%; font-size:12px; color:var(--c-text-soft); padding-left:94px; word-break:break-all; }
+  .exp-prow a.exp-lk{ color:var(--c-text-soft); display:inline-flex; }
+  .exp-prow a.exp-lk:hover{ color:var(--c-brown); }
+  .exp-suggest{ margin-top:6px; }
+  .exp-prev{ margin-top:10px; height:160px; display:flex; align-items:center; justify-content:center; background:var(--c-surface); border-radius:10px; overflow:hidden; cursor:pointer; color:var(--c-text-soft); }
+  .exp-prev img{ max-width:100%; max-height:100%; object-fit:contain; }
+  @media (max-width:480px){
+    .exp-prow .s{ padding-left:0; }
+  }
   @media (min-width:720px){
     .exp-row{ grid-template-columns:1fr 150px; }
   }
@@ -400,27 +450,105 @@ function expBuildSkeleton() {
       '<div class="form-status" id="expEditStatus"></div>' +
     '</div>' +
   '</div>' +
-  // 出差視窗
+  // 出差視窗（四區：基本／行程／素材／發文與產出）
   '<div class="modal-backdrop" id="expTripModal" onclick="if(event.target===this) closeExpTripModal()">' +
     '<div class="modal-box">' +
       '<button class="modal-close" type="button" onclick="closeExpTripModal()">✕</button>' +
       '<h3 id="expTripTitle">新增出差</h3>' +
-      '<label class="exp-lb" for="exptTitle">標題 *</label><input type="text" id="exptTitle" placeholder="例如：2026 東京員工旅遊">' +
+      '<div class="exp-tabs" id="exptTabs"></div>' +
+      '<div class="exp-sec" id="exptSecBasic">' +
+        '<label class="exp-lb" for="exptTitle">標題 *</label><input type="text" id="exptTitle" placeholder="例如：2026 東京員工旅遊">' +
+        '<div class="exp-grid2">' +
+          '<div><label class="exp-lb" for="exptStart">開始日</label><input type="date" id="exptStart"></div>' +
+          '<div><label class="exp-lb" for="exptEnd">結束日</label><input type="date" id="exptEnd"></div>' +
+        '</div>' +
+        '<label class="exp-lb" for="exptLoc">地點</label><input type="text" id="exptLoc">' +
+        '<label class="exp-lb" for="exptNote">備註</label><textarea id="exptNote" rows="2"></textarea>' +
+        '<label class="exp-lb">附件（計畫書／出差報告／同意書，PDF 或圖片）</label>' +
+        '<label class="task-mini-btn exp-upbtn" for="exptFile" style="cursor:pointer;">' + EXP_ICON.clip + '選擇檔案</label>' +
+        '<input type="file" id="exptFile" accept="image/*,application/pdf,.pdf" multiple style="display:none;">' +
+        '<div class="exp-files" id="exptFiles"></div>' +
+        '<div class="exp-impbox" id="exptImpBox">' +
+          '<label class="exp-lb" for="exptImpSel">從旅遊頁匯入</label>' +
+          '<div class="exp-hint" style="margin-bottom:8px;">把旅遊頁記的公司負擔支出、隨手拍照片、每日行程帶進這趟出差。已匯入過的不會重複、也不會覆蓋你改過的內容。</div>' +
+          '<div class="exp-inline">' +
+            '<select id="exptImpSel" style="flex:1 1 220px; width:auto; min-width:0;"></select>' +
+            '<button type="button" class="task-mini-btn" id="exptImpBtn">' + EXP_ICON.refresh + '匯入</button>' +
+          '</div>' +
+          '<div class="exp-impres" id="exptImpRes"></div>' +
+        '</div>' +
+        '<div class="exp-actions">' +
+          '<button type="button" class="task-submit-btn" id="expTripSaveBtn" style="margin-top:0;">儲存</button>' +
+          '<button type="button" class="task-mini-btn danger" id="expTripDeleteBtn" style="display:none; padding:0 18px;">刪除</button>' +
+        '</div>' +
+        '<div class="form-status" id="expTripStatus"></div>' +
+      '</div>' +
+      '<div class="exp-sec" id="exptSecItin" style="display:none;"><div id="exptBnItin"></div><div id="exptItin"></div></div>' +
+      '<div class="exp-sec" id="exptSecAssets" style="display:none;">' +
+        '<div id="exptBnAssets"></div>' +
+        '<div id="exptAssetTools" class="exp-inline">' +
+          '<label class="task-mini-btn exp-upbtn" for="expaFile" style="cursor:pointer;">' + EXP_ICON.plus + '上傳素材</label>' +
+          '<input type="file" id="expaFile" accept="image/*" multiple style="display:none;">' +
+          '<span class="exp-hint" id="expaUpStatus"></span>' +
+        '</div>' +
+        '<div class="exp-hint" style="margin-top:6px;">手機拍的現場照、產品、限動／影片截圖都放這裡；點縮圖可標註品牌、產品與用在哪。</div>' +
+        '<div id="exptAssets"></div>' +
+      '</div>' +
+      '<div class="exp-sec" id="exptSecPosts" style="display:none;">' +
+        '<div id="exptBnPosts"></div>' +
+        '<div class="exp-toolbar"><button type="button" class="task-mini-btn" id="exppAddBtn">' + EXP_ICON.plus + '新增發文／產出</button></div>' +
+        '<div id="exptPosts"></div>' +
+      '</div>' +
+    '</div>' +
+  '</div>' +
+  // 素材編輯視窗
+  '<div class="modal-backdrop" id="expAssetModal" onclick="if(event.target===this) closeExpAssetModal()">' +
+    '<div class="modal-box">' +
+      '<button class="modal-close" type="button" onclick="closeExpAssetModal()">✕</button>' +
+      '<h3>編輯素材</h3>' +
+      '<div class="exp-prev" id="expaPreview"></div>' +
       '<div class="exp-grid2">' +
-        '<div><label class="exp-lb" for="exptStart">開始日</label><input type="date" id="exptStart"></div>' +
-        '<div><label class="exp-lb" for="exptEnd">結束日</label><input type="date" id="exptEnd"></div>' +
+        '<div><label class="exp-lb" for="expaDate">拍攝／日期</label><input type="date" id="expaDate"></div>' +
+        '<div><label class="exp-lb" for="expaKind">類型</label><select id="expaKind">' + expSelectOptions(EXP_ASSET_KINDS, 'travel') + '</select></div>' +
       '</div>' +
-      '<label class="exp-lb" for="exptLoc">地點</label><input type="text" id="exptLoc">' +
-      '<label class="exp-lb" for="exptNote">備註</label><textarea id="exptNote" rows="2"></textarea>' +
-      '<label class="exp-lb">附件（計畫書／出差報告／同意書，PDF 或圖片）</label>' +
-      '<label class="task-mini-btn exp-upbtn" for="exptFile" style="cursor:pointer;">' + EXP_ICON.clip + '選擇檔案</label>' +
-      '<input type="file" id="exptFile" accept="image/*,application/pdf,.pdf" multiple style="display:none;">' +
-      '<div class="exp-files" id="exptFiles"></div>' +
+      '<label class="exp-lb" for="expaBrand">品牌（必綁，可打字搜尋）</label>' +
+      '<input type="text" id="expaBrand" list="expBrandList" placeholder="這張素材是拍哪個品牌" autocomplete="off">' +
+      '<label class="exp-lb" for="expaProduct">產品</label><input type="text" id="expaProduct" placeholder="例如：藍莓寶寶餐包">' +
+      '<label class="exp-lb" for="expaEvent">綁團購（可之後補）</label><select id="expaEvent"></select>' +
+      '<div class="exp-suggest" id="expaSuggest"></div>' +
+      '<label class="exp-lb" for="expaPost">用在哪篇發文／產出</label><select id="expaPost"></select>' +
+      '<label class="exp-lb" for="expaUrl">影片原檔連結（雲端硬碟等，選填）</label><input type="text" id="expaUrl" placeholder="https://">' +
+      '<label class="exp-lb" for="expaNote">備註</label><textarea id="expaNote" rows="2"></textarea>' +
+      '<label class="exp-inline" for="expaInReport" style="cursor:pointer; margin-top:12px;"><input type="checkbox" id="expaInReport"><span style="font-size:13.5px;">放進出差紀錄表</span></label>' +
       '<div class="exp-actions">' +
-        '<button type="button" class="task-submit-btn" id="expTripSaveBtn" style="margin-top:0;">儲存</button>' +
-        '<button type="button" class="task-mini-btn danger" id="expTripDeleteBtn" style="display:none; padding:0 18px;">刪除</button>' +
+        '<button type="button" class="task-submit-btn" id="expaSaveBtn" style="margin-top:0;">儲存</button>' +
+        '<button type="button" class="task-mini-btn danger" id="expaDeleteBtn" style="padding:0 18px;">刪除</button>' +
       '</div>' +
-      '<div class="form-status" id="expTripStatus"></div>' +
+      '<div class="form-status" id="expaStatus"></div>' +
+    '</div>' +
+  '</div>' +
+  // 發文與產出編輯視窗
+  '<div class="modal-backdrop" id="expPostModal" onclick="if(event.target===this) closeExpPostModal()">' +
+    '<div class="modal-box">' +
+      '<button class="modal-close" type="button" onclick="closeExpPostModal()">✕</button>' +
+      '<h3 id="exppTitleH">新增發文／產出</h3>' +
+      '<div class="exp-grid2">' +
+        '<div><label class="exp-lb" for="exppDate">發布日期</label><input type="date" id="exppDate"></div>' +
+        '<div><label class="exp-lb" for="exppKind">類型</label><select id="exppKind">' + expSelectOptions(EXP_POST_KINDS, 'post') + '</select></div>' +
+      '</div>' +
+      '<label class="exp-lb" for="exppTitle">標題 *</label><input type="text" id="exppTitle" placeholder="例如：東京出差 Day2 逛超市">' +
+      '<label class="exp-lb" for="exppUrl">網址（貼文、影片、工具頁）</label><input type="text" id="exppUrl" placeholder="https://">' +
+      '<label class="exp-lb" for="exppBrand">品牌（必綁，可打字搜尋）</label>' +
+      '<input type="text" id="exppBrand" list="expBrandList" placeholder="這篇是介紹哪個品牌" autocomplete="off">' +
+      '<label class="exp-lb" for="exppEvent">綁團購（可之後補）</label><select id="exppEvent"></select>' +
+      '<div class="exp-suggest" id="exppSuggest"></div>' +
+      '<label class="exp-lb" for="exppTraffic">流量／成效備註</label><textarea id="exppTraffic" rows="2" placeholder="例如：IG 觸及 3.2 萬、開團首日 80 單"></textarea>' +
+      '<label class="exp-lb" for="exppNote">備註</label><textarea id="exppNote" rows="2"></textarea>' +
+      '<div class="exp-actions">' +
+        '<button type="button" class="task-submit-btn" id="exppSaveBtn" style="margin-top:0;">儲存</button>' +
+        '<button type="button" class="task-mini-btn danger" id="exppDeleteBtn" style="display:none; padding:0 18px;">刪除</button>' +
+      '</div>' +
+      '<div class="form-status" id="exppStatus"></div>' +
     '</div>' +
   '</div>';
   document.body.appendChild(wrap);
@@ -438,6 +566,7 @@ function expBuildSkeleton() {
   document.getElementById('expDeleteBtn').addEventListener('click', expDeleteExpense);
   document.getElementById('expTripSaveBtn').addEventListener('click', expSaveTrip);
   document.getElementById('expTripDeleteBtn').addEventListener('click', expDeleteTrip);
+  expWireRecords();
 
   document.getElementById('expList').addEventListener('click', e => {
     const row = e.target.closest('.exp-row');
@@ -480,6 +609,17 @@ function expShowBanner(html) {
   if (b) b.innerHTML = html ? '<div class="exp-banner">' + EXP_ICON.warn + ' ' + html + '</div>' : '';
 }
 
+// 把 GET 回應套進全域狀態（loadExpensesView 與出差視窗內的就地重整共用）
+function expApplyData(data) {
+  EXP_LOADED = true;
+  EXP_TABLE_READY = data.tableReady !== false;
+  EXP_RECORDS_READY = data.recordsReady !== false;
+  EXP_LIST = Array.isArray(data.expenses) ? data.expenses : [];
+  EXP_TRIPS = Array.isArray(data.trips) ? data.trips : [];
+  EXP_BRANDS = Array.isArray(data.brandChoices) ? data.brandChoices : [];
+  EXP_EVENTS = Array.isArray(data.eventChoices) ? data.eventChoices : [];
+}
+
 function loadExpensesView(forceReload) {
   expInjectStyle();
   expBuildSkeleton();
@@ -495,12 +635,7 @@ function loadExpensesView(forceReload) {
       expShowBanner('讀取失敗：' + expEsc((data && data.error) || '未知錯誤'));
       return;
     }
-    EXP_LOADED = true;
-    EXP_TABLE_READY = data.tableReady !== false;
-    EXP_LIST = Array.isArray(data.expenses) ? data.expenses : [];
-    EXP_TRIPS = Array.isArray(data.trips) ? data.trips : [];
-    EXP_BRANDS = Array.isArray(data.brandChoices) ? data.brandChoices : [];
-    EXP_EVENTS = Array.isArray(data.eventChoices) ? data.eventChoices : [];
+    expApplyData(data);
     if (!EXP_TABLE_READY) expShowBanner('公司支出功能待 db push（資料表尚未建立），建好之後才能新增。');
     renderExpAll();
   }).catch(err => {
@@ -534,6 +669,7 @@ function renderExpTrips() {
       '<div class="exp-trip-m">' + period + (t.location ? '　' + expEsc(t.location) : '') + '</div>' +
       '<div class="exp-trip-m">' + (t.expenseCount || 0) + ' 筆　<span class="exp-trip-total">' + expMoney('TWD', t.totalTwd || 0) + '</span>' +
         (att ? '　<span class="exp-clipn">' + EXP_ICON.clip + att + '</span>' : '') + '</div>' +
+      (EXP_RECORDS_READY ? '<div class="exp-trip-m">素材 ' + (t.assetCount || 0) + '　發文與產出 ' + (t.postCount || 0) + '</div>' : '') +
       '<div class="exp-trip-b"><button type="button" class="task-mini-btn" data-act="edit">' + EXP_ICON.pencil + '編輯</button></div>' +
       '</div>';
   }).join('');
@@ -627,10 +763,10 @@ function expSyncPaidUi() {
 function expFillBrandList() {
   document.getElementById('expBrandList').innerHTML = EXP_BRANDS.map(b => '<option value="' + expEsc(b.name) + '"></option>').join('');
 }
-function expFillEventSelect(sel, rec) {
+function expFillEventSelect(sel, rec, elId) {
   let list = EXP_EVENTS.slice();
   if (rec && rec.eventId && !list.some(x => x.id === rec.eventId)) list.unshift({ id: rec.eventId, title: rec.eventTitle || '（已綁定的團購）', startDate: '' });
-  document.getElementById('expfEvent').innerHTML = '<option value="">不綁團購</option>' +
+  document.getElementById(elId || 'expfEvent').innerHTML = '<option value="">不綁團購</option>' +
     list.map(x => '<option value="' + expEsc(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' +
       expEsc((x.startDate ? x.startDate + ' ' : '') + x.title) + '</option>').join('');
 }
@@ -765,10 +901,16 @@ function openExpTripModal(rec) {
   EXP_TRIP_UP.setItems(rec ? rec.attachments : []);
   const st = document.getElementById('expTripStatus');
   st.textContent = ''; st.className = 'form-status';
+  EXP_TRIP_SEC = 'basic';
+  document.getElementById('exptImpRes').innerHTML = '';
+  expRenderTripSections();
+  expLoadImportSources();
   document.getElementById('expTripModal').classList.add('show');
 }
 function closeExpTripModal() {
   document.getElementById('expTripModal').classList.remove('show');
+  closeExpAssetModal();
+  closeExpPostModal();
   EXP_TRIP_EDIT_ID = null;
 }
 
@@ -829,9 +971,540 @@ async function expDeleteTrip() {
   btn.disabled = false;
 }
 
+// ===================================================================
+// 出差紀錄（docs/20）：出差視窗四區（基本／行程／素材／發文與產出）＋從旅遊頁匯入
+// 資料全來自 GET 的 trips[].itinerary／assets／posts；寫入打 expense-asset-*／expense-post-*／expense-trip-import
+// recordsReady:false（新表還沒 db push）→ 行程／素材／發文三區顯示黃色橫幅並擋寫入
+// ===================================================================
+const EXP_ITIN_ICON = {
+  food: '<path d="M7 3v7"/><path d="M4.5 3v4a2.5 2.5 0 0 0 5 0V3"/><path d="M7 10v11"/><path d="M17 3c-2.2 1.6-3 4-3 7h3v11"/>',
+  transport: '<rect x="4" y="4" width="16" height="13" rx="3"/><path d="M4 11h16"/><circle cx="8.5" cy="19.5" r="1.2"/><circle cx="15.5" cy="19.5" r="1.2"/>',
+  fun: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.5 9.7l5.9-.9z"/>',
+  shop: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  stay: '<path d="M3.5 19V6"/><path d="M3.5 15h17v4"/><path d="M20.5 15v-2.5a3 3 0 0 0-3-3H10v5.5"/>',
+  other: '<circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/>'
+};
+function expItinIcon(cat) {
+  const key = EXP_ITIN_ICON[cat] ? cat : 'other';
+  return '<svg class="exp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + EXP_ITIN_ICON[key] + '</svg>';
+}
+const EXP_LINK_ICON = '<svg class="exp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+
+function expKindLabel(list, v) { const f = list.find(c => c[0] === v); return f ? f[1] : (v || ''); }
+function expSafeHttp(u) { return /^https?:\/\//i.test(String(u || '').trim()) ? String(u).trim() : ''; }
+function expCurTrip() { return EXP_TRIPS.find(t => t.id === EXP_TRIP_EDIT_ID) || null; }
+function expTripAssets(t) { return t && Array.isArray(t.assets) ? t.assets : []; }
+function expTripPosts(t) { return t && Array.isArray(t.posts) ? t.posts : []; }
+function expTripItin(t) { return t && Array.isArray(t.itinerary) ? t.itinerary : []; }
+function expSortByDate(list, key) {
+  return list.slice().sort((a, b) =>
+    String(a[key] || '9999').localeCompare(String(b[key] || '9999')) || (Number(a.sort) || 0) - (Number(b.sort) || 0));
+}
+function expRecordsBlocked() {
+  if (!EXP_RECORDS_READY) { alert('出差紀錄功能待 db push（migration 20261021120000），資料表建好之後才能新增或修改。'); return true; }
+  return false;
+}
+function expWarnBanner(html) { return '<div class="exp-banner warn">' + EXP_ICON.warn + ' ' + html + '</div>'; }
+function expNeedSaveHint() { return '<div class="exp-empty">請先在「基本」區儲存這趟出差，才能使用這一區。</div>'; }
+
+// 品牌輸入文字 → 品牌 id（空字串＝不綁）
+function expResolveBrand(name) {
+  const n = String(name || '').trim();
+  if (!n) return { ok: true, id: null };
+  const b = EXP_BRANDS.find(x => x.name === n) || EXP_BRANDS.find(x => String(x.name).toLowerCase() === n.toLowerCase());
+  if (!b) return { ok: false, msg: '品牌「' + n + '」不在品牌庫，請從下拉選一個（或清空不綁）' };
+  return { ok: true, id: b.id };
+}
+// 確保綁團下拉裡有這個選項（建議綁定的團可能不在 eventChoices 內）
+function expEnsureEventOption(selId, id, title) {
+  const sel = document.getElementById(selId);
+  if (!sel || !id) return;
+  if (!Array.from(sel.options).some(o => o.value === id)) {
+    const o = document.createElement('option');
+    o.value = id; o.textContent = title || '（已綁定的團購）';
+    sel.appendChild(o);
+  }
+  sel.value = id;
+}
+// 「建議綁 XX ›」按鈕：點了立刻寫 eventId（partial upsert），成功後把下拉同步成該團
+function expRenderSuggest(boxId, rec, selId, upsertType) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  const sg = rec && !rec.eventId && rec.suggestedEvent;
+  if (!sg || !sg.id) { box.innerHTML = ''; return; }
+  box.innerHTML = '<button type="button" class="task-mini-btn" data-sg="1">建議綁「' + expEsc(sg.title || '') +
+    '」' + (sg.startDate ? '（' + expEsc(sg.startDate) + ' 開團）' : '') + ' ›</button>';
+  box.querySelector('[data-sg]').addEventListener('click', async ev => {
+    const btn = ev.currentTarget;
+    if (expRecordsBlocked()) return;
+    btn.disabled = true;
+    try {
+      const res = await expApiPost(upsertType, { id: rec.id, eventId: sg.id });
+      if (!expIsOk(res)) throw new Error((res && res.error) || '綁定失敗');
+      expEnsureEventOption(selId, sg.id, sg.title);
+      rec.eventId = sg.id; rec.eventTitle = sg.title;
+      box.innerHTML = '';
+      expRefreshOpenTrip().catch(() => {});
+    } catch (err) {
+      btn.disabled = false;
+      alert('綁定失敗：' + err.message);
+    }
+  });
+}
+
+// ===== 出差視窗：分區切換與渲染 =====
+function expSwitchTripSec(sec) {
+  EXP_TRIP_SEC = sec;
+  expRenderTripSections();
+}
+function expRenderTripSections() {
+  const t = expCurTrip();
+  const tabs = document.getElementById('exptTabs');
+  if (!tabs) return;
+  const counts = { itin: expTripItin(t).length, assets: expTripAssets(t).length, posts: expTripPosts(t).length };
+  tabs.innerHTML = EXP_TRIP_SECS.map(s =>
+    '<button type="button" class="lot-status-chip' + (EXP_TRIP_SEC === s[0] ? ' on' : '') + '" data-sec="' + s[0] + '">' +
+    expEsc(s[1]) + (t && s[0] !== 'basic' ? ' ' + counts[s[0]] : '') + '</button>').join('');
+  const ids = { basic: 'exptSecBasic', itin: 'exptSecItin', assets: 'exptSecAssets', posts: 'exptSecPosts' };
+  Object.keys(ids).forEach(k => { document.getElementById(ids[k]).style.display = k === EXP_TRIP_SEC ? 'block' : 'none'; });
+  const warn = !EXP_RECORDS_READY ? expWarnBanner('出差紀錄功能待 db push（資料表尚未建立），建好之後才能新增或修改。') : '';
+  ['exptBnItin', 'exptBnAssets', 'exptBnPosts'].forEach(id => { document.getElementById(id).innerHTML = warn; });
+  if (EXP_TRIP_SEC === 'itin') expRenderItinerary(t);
+  else if (EXP_TRIP_SEC === 'assets') expRenderAssets(t);
+  else if (EXP_TRIP_SEC === 'posts') expRenderPosts(t);
+}
+
+function expWeekday(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!m) return '';
+  return '週' + '日一二三四五六'[new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay()];
+}
+function expDayNo(t, iso) {
+  if (!t || !t.startDate || !iso) return '';
+  const a = new Date(t.startDate + 'T00:00:00'), b = new Date(iso + 'T00:00:00');
+  const n = Math.round((b - a) / 86400000) + 1;
+  return n >= 1 && n <= 60 ? 'Day ' + n + '　' : '';
+}
+
+function expRenderItinerary(t) {
+  const box = document.getElementById('exptItin');
+  if (!t) { box.innerHTML = expNeedSaveHint(); return; }
+  const list = expTripItin(t).slice().sort((a, b) =>
+    String(a.date || '9999').localeCompare(String(b.date || '9999')) || String(a.time || '99:99').localeCompare(String(b.time || '99:99')));
+  if (!list.length) {
+    box.innerHTML = '<div class="exp-empty">還沒有行程。請先到「基本」區用「從旅遊頁匯入」帶進每日行程。</div>';
+    return;
+  }
+  const groups = [];
+  list.forEach(it => {
+    const d = it.date || '';
+    let g = groups[groups.length - 1];
+    if (!g || g.date !== d) { g = { date: d, items: [] }; groups.push(g); }
+    g.items.push(it);
+  });
+  box.innerHTML = groups.map(g =>
+    '<div class="exp-it-day">' + expEsc(expDayNo(t, g.date)) + (g.date ? expEsc(g.date) + '（' + expWeekday(g.date) + '）' : '未填日期') + '</div>' +
+    g.items.map(it => {
+      const url = expSafeHttp(it.url);
+      const title = url ? '<a href="' + expEsc(url) + '" target="_blank" rel="noopener">' + expEsc(it.title || '') + '</a>' : expEsc(it.title || '');
+      return '<div class="exp-it-row">' +
+        '<span class="exp-it-time">' + expEsc(it.time || '—') + '</span>' +
+        '<span class="exp-it-ic" title="' + expEsc(expKindLabel(EXP_ITIN_CATS, it.cat)) + '">' + expItinIcon(it.cat) + '</span>' +
+        '<span><div class="exp-it-t">' + title + '</div>' + (it.place ? '<div class="exp-it-p">' + expEsc(it.place) + '</div>' : '') + '</span>' +
+        '</div>';
+    }).join('')
+  ).join('');
+}
+
+// ----- 素材 -----
+function expRenderAssets(t) {
+  const tools = document.getElementById('exptAssetTools');
+  const box = document.getElementById('exptAssets');
+  if (!t) { tools.style.display = 'none'; box.innerHTML = expNeedSaveHint(); return; }
+  tools.style.display = EXP_RECORDS_READY ? 'flex' : 'none';
+  const list = expSortByDate(expTripAssets(t), 'assetDate');
+  if (!list.length) { box.innerHTML = '<div class="exp-empty">還沒有素材。按「上傳素材」選照片，或用基本區的「從旅遊頁匯入」帶進隨手拍。</div>'; return; }
+  const noBrand = list.filter(a => !a.brandId).length;
+  const groups = [];
+  list.forEach(a => {
+    const d = a.assetDate || '';
+    let g = groups[groups.length - 1];
+    if (!g || g.date !== d) { g = { date: d, items: [] }; groups.push(g); }
+    g.items.push(a);
+  });
+  box.innerHTML =
+    (noBrand ? '<div class="exp-hint" style="margin-top:8px;">還有 ' + noBrand + ' 張素材沒綁品牌（紅字標示）。</div>' : '') +
+    groups.map(g =>
+      '<div class="exp-it-day">' + (g.date ? expEsc(g.date) + '（' + expWeekday(g.date) + '）' : '未填日期') + '　' + g.items.length + ' 張</div>' +
+      '<div class="exp-assets">' + g.items.map(a =>
+        '<div class="exp-as' + (a.inReport === false ? ' off' : '') + '" data-id="' + expEsc(a.id) + '" role="button" tabindex="0" title="' + expEsc(a.name || '') + '">' +
+          '<div class="exp-as-th">' + (a.path ? '<img alt="" data-exp-apath="' + expEsc(a.path) + '">' : EXP_ICON.img) + '</div>' +
+          '<span class="exp-as-ty">' + expEsc(expKindLabel(EXP_ASSET_KINDS, a.kind)) + '</span>' +
+          '<div class="exp-as-nm' + (a.brandId ? '' : ' warn') + '">' + expEsc(a.brandId ? (a.brandName || '') + (a.product ? '・' + a.product : '') : '未綁品牌') + '</div>' +
+        '</div>').join('') + '</div>').join('');
+  // 縮圖：簽名網址 600 秒，最多同時 4 張一起要
+  const imgs = Array.from(box.querySelectorAll('img[data-exp-apath]'));
+  let idx = 0;
+  const worker = async () => {
+    while (idx < imgs.length) {
+      const img = imgs[idx++];
+      try { img.src = await expSignedUrl(img.dataset.expApath); } catch (e) { /* 縮圖載不到就留空 */ }
+    }
+  };
+  for (let i = 0; i < 4; i++) worker();
+}
+
+function expFileDate(file, t) {
+  const d = new Date(file.lastModified || 0);
+  if (!isFinite(d.getTime()) || !file.lastModified) return '';
+  const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  if (t && t.startDate && iso < t.startDate) return '';
+  if (t && t.endDate && iso > t.endDate) return '';
+  return iso;
+}
+async function expUploadAssets(files) {
+  const t = expCurTrip();
+  if (!t) { alert('請先儲存這趟出差，再上傳素材。'); return; }
+  if (expRecordsBlocked() || EXP_ASSET_UPLOADING) return;
+  const st = document.getElementById('expaUpStatus');
+  EXP_ASSET_UPLOADING = true;
+  let ok = 0; const errs = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    st.textContent = '上傳中 ' + (i + 1) + '／' + files.length + '…';
+    try {
+      if (!(String(f.type).indexOf('image/') === 0 || expIsImageName(f.name))) throw new Error('素材只能上傳圖片（影片請截一張代表畫面）');
+      const up = await expUploadOne(f, 'asset', t.id, EXP_ASSET_MAX_EDGE);
+      if (up.localUrl) { try { URL.revokeObjectURL(up.localUrl); } catch (x) {} }
+      const res = await expApiPost('expense-asset-upsert', {
+        tripId: t.id, path: up.path, name: up.name, size: up.size,
+        assetDate: expFileDate(f, t) || null, kind: 'travel', inReport: true
+      });
+      if (!expIsOk(res)) throw new Error((res && res.error) || '建立素材失敗');
+      ok++;
+    } catch (err) {
+      errs.push(f.name + '：' + err.message);
+    }
+  }
+  EXP_ASSET_UPLOADING = false;
+  st.textContent = '完成 ' + ok + ' 張' + (errs.length ? '，失敗 ' + errs.length + ' 張' : '');
+  if (errs.length) alert('以下素材上傳失敗：\n\n' + errs.join('\n'));
+  try { await expRefreshOpenTrip(); } catch (err) { st.textContent += '（重新整理失敗：' + err.message + '）'; }
+}
+
+function expFillPostSelect(sel, tripId) {
+  const t = EXP_TRIPS.find(x => x.id === tripId);
+  const posts = expSortByDate(expTripPosts(t), 'postDate');
+  document.getElementById('expaPost').innerHTML = '<option value="">不指定</option>' +
+    posts.map(p => '<option value="' + expEsc(p.id) + '"' + (p.id === sel ? ' selected' : '') + '>' +
+      expEsc((p.postDate ? p.postDate + ' ' : '') + '[' + expKindLabel(EXP_POST_KINDS, p.kind) + '] ' + (p.title || '')) + '</option>').join('');
+}
+function openExpAssetModal(rec) {
+  if (!rec) return;
+  EXP_ASSET_EDIT_ID = rec.id;
+  const v = (id, val) => { document.getElementById(id).value = (val === undefined || val === null) ? '' : val; };
+  v('expaDate', rec.assetDate);
+  v('expaKind', rec.kind || 'travel');
+  v('expaBrand', rec.brandName || '');
+  v('expaProduct', rec.product);
+  v('expaUrl', rec.externalUrl);
+  v('expaNote', rec.note);
+  document.getElementById('expaInReport').checked = rec.inReport !== false;
+  expFillBrandList();
+  expFillEventSelect(rec.eventId || '', rec, 'expaEvent');
+  expFillPostSelect(rec.postId || '', rec.tripId || EXP_TRIP_EDIT_ID);
+  expRenderSuggest('expaSuggest', rec, 'expaEvent', 'expense-asset-upsert');
+  const prev = document.getElementById('expaPreview');
+  if (rec.path) {
+    prev.innerHTML = '<span class="exp-hint">載入預覽…</span>';
+    prev.onclick = () => expOpenFile({ path: rec.path });
+    expSignedUrl(rec.path).then(url => {
+      if (EXP_ASSET_EDIT_ID !== rec.id) return;
+      prev.innerHTML = '<img alt="" src="' + expEsc(url) + '">';
+    }).catch(() => { prev.innerHTML = '<span class="exp-hint">預覽載入失敗</span>'; });
+  } else {
+    prev.innerHTML = '<span class="exp-hint">這筆素材沒有圖檔</span>';
+    prev.onclick = null;
+  }
+  const st = document.getElementById('expaStatus');
+  st.textContent = ''; st.className = 'form-status';
+  document.getElementById('expAssetModal').classList.add('show');
+}
+function closeExpAssetModal() {
+  const m = document.getElementById('expAssetModal');
+  if (m) m.classList.remove('show');
+  EXP_ASSET_EDIT_ID = null;
+}
+async function expSaveAsset() {
+  if (!EXP_ASSET_EDIT_ID || expRecordsBlocked()) return;
+  const val = id => document.getElementById(id).value.trim();
+  const st = document.getElementById('expaStatus');
+  const fail = msg => { st.textContent = msg; st.className = 'form-status error'; };
+  const br = expResolveBrand(val('expaBrand'));
+  if (!br.ok) return fail(br.msg);
+  const url = val('expaUrl');
+  if (url && !expSafeHttp(url)) return fail('影片原檔連結要以 http:// 或 https:// 開頭');
+  const payload = {
+    id: EXP_ASSET_EDIT_ID,
+    assetDate: val('expaDate') || null,
+    kind: document.getElementById('expaKind').value,
+    brandId: br.id,
+    product: val('expaProduct'),
+    eventId: document.getElementById('expaEvent').value || null,
+    postId: document.getElementById('expaPost').value || null,
+    externalUrl: url,
+    note: val('expaNote'),
+    inReport: document.getElementById('expaInReport').checked
+  };
+  const btn = document.getElementById('expaSaveBtn');
+  btn.disabled = true;
+  st.textContent = '儲存中…'; st.className = 'form-status';
+  try {
+    const res = await expApiPost('expense-asset-upsert', payload);
+    if (!expIsOk(res)) throw new Error((res && res.error) || '儲存失敗');
+    closeExpAssetModal();
+    await expRefreshOpenTrip();
+  } catch (err) {
+    fail('儲存失敗：' + err.message);
+  }
+  btn.disabled = false;
+}
+async function expDeleteAsset() {
+  if (!EXP_ASSET_EDIT_ID || expRecordsBlocked()) return;
+  if (!confirm('確定要刪除這張素材嗎？圖檔也會一併刪除。')) return;
+  const st = document.getElementById('expaStatus');
+  const btn = document.getElementById('expaDeleteBtn');
+  btn.disabled = true;
+  st.textContent = '刪除中…'; st.className = 'form-status';
+  try {
+    const res = await expApiPost('expense-asset-delete', { id: EXP_ASSET_EDIT_ID });
+    if (!expIsOk(res)) throw new Error((res && res.error) || '刪除失敗');
+    closeExpAssetModal();
+    await expRefreshOpenTrip();
+  } catch (err) {
+    st.textContent = '刪除失敗：' + err.message; st.className = 'form-status error';
+  }
+  btn.disabled = false;
+}
+
+// ----- 發文與產出 -----
+function expRenderPosts(t) {
+  const box = document.getElementById('exptPosts');
+  document.getElementById('exppAddBtn').style.display = t ? '' : 'none';
+  if (!t) { box.innerHTML = expNeedSaveHint(); return; }
+  const list = expSortByDate(expTripPosts(t), 'postDate');
+  if (!list.length) { box.innerHTML = '<div class="exp-empty">還沒有發文或產出。貼文、影片、限動、開團、工具頁都可以記在這裡。</div>'; return; }
+  box.innerHTML = list.map(p => {
+    const url = expSafeHttp(p.url);
+    const subs = [];
+    subs.push(p.brandId ? '品牌：' + (p.brandName || '') : '未綁品牌');
+    if (p.eventTitle) subs.push('團購：' + p.eventTitle);
+    else if (p.suggestedEvent && p.suggestedEvent.title) subs.push('建議綁：' + p.suggestedEvent.title);
+    if (p.trafficNote) subs.push('成效：' + p.trafficNote);
+    return '<div class="exp-prow" data-id="' + expEsc(p.id) + '" role="button" tabindex="0">' +
+      '<span class="d">' + expEsc(p.postDate || '未填日期') + '</span>' +
+      '<span class="exp-pill">' + expEsc(expKindLabel(EXP_POST_KINDS, p.kind)) + '</span>' +
+      '<span class="t">' + expEsc(p.title || '') + '</span>' +
+      (url ? '<a class="exp-lk" href="' + expEsc(url) + '" target="_blank" rel="noopener" title="開啟連結" aria-label="開啟連結">' + EXP_LINK_ICON + '</a>' : '') +
+      '<span class="s">' + subs.map(expEsc).join('　') + '</span>' +
+      '</div>';
+  }).join('');
+}
+function openExpPostModal(rec) {
+  EXP_POST_EDIT_ID = rec ? rec.id : null;
+  document.getElementById('exppTitleH').textContent = rec ? '編輯發文／產出' : '新增發文／產出';
+  document.getElementById('exppDeleteBtn').style.display = rec ? 'inline-block' : 'none';
+  const v = (id, val) => { document.getElementById(id).value = (val === undefined || val === null) ? '' : val; };
+  v('exppDate', rec ? rec.postDate : expToday());
+  v('exppKind', rec ? rec.kind : 'post');
+  v('exppTitle', rec ? rec.title : '');
+  v('exppUrl', rec ? rec.url : '');
+  v('exppBrand', rec ? (rec.brandName || '') : '');
+  v('exppTraffic', rec ? rec.trafficNote : '');
+  v('exppNote', rec ? rec.note : '');
+  expFillBrandList();
+  expFillEventSelect(rec ? rec.eventId : '', rec, 'exppEvent');
+  expRenderSuggest('exppSuggest', rec, 'exppEvent', 'expense-post-upsert');
+  const st = document.getElementById('exppStatus');
+  st.textContent = ''; st.className = 'form-status';
+  document.getElementById('expPostModal').classList.add('show');
+}
+function closeExpPostModal() {
+  const m = document.getElementById('expPostModal');
+  if (m) m.classList.remove('show');
+  EXP_POST_EDIT_ID = null;
+}
+async function expSavePost() {
+  if (expRecordsBlocked()) return;
+  const t = expCurTrip();
+  if (!t) return;
+  const val = id => document.getElementById(id).value.trim();
+  const st = document.getElementById('exppStatus');
+  const fail = msg => { st.textContent = msg; st.className = 'form-status error'; };
+  if (!val('exppTitle')) return fail('請填標題');
+  const br = expResolveBrand(val('exppBrand'));
+  if (!br.ok) return fail(br.msg);
+  const url = val('exppUrl');
+  if (url && !expSafeHttp(url)) return fail('網址要以 http:// 或 https:// 開頭');
+  const payload = {
+    tripId: t.id,
+    postDate: val('exppDate') || null,
+    kind: document.getElementById('exppKind').value,
+    title: val('exppTitle'),
+    url,
+    brandId: br.id,
+    eventId: document.getElementById('exppEvent').value || null,
+    trafficNote: val('exppTraffic'),
+    note: val('exppNote')
+  };
+  if (EXP_POST_EDIT_ID) payload.id = EXP_POST_EDIT_ID;
+  const btn = document.getElementById('exppSaveBtn');
+  btn.disabled = true;
+  st.textContent = '儲存中…'; st.className = 'form-status';
+  try {
+    const res = await expApiPost('expense-post-upsert', payload);
+    if (!expIsOk(res)) throw new Error((res && res.error) || '儲存失敗');
+    closeExpPostModal();
+    await expRefreshOpenTrip();
+  } catch (err) {
+    fail('儲存失敗：' + err.message);
+  }
+  btn.disabled = false;
+}
+async function expDeletePost() {
+  if (!EXP_POST_EDIT_ID || expRecordsBlocked()) return;
+  if (!confirm('確定要刪除這筆發文／產出嗎？（素材不會被刪，只是不再指向它）')) return;
+  const st = document.getElementById('exppStatus');
+  const btn = document.getElementById('exppDeleteBtn');
+  btn.disabled = true;
+  st.textContent = '刪除中…'; st.className = 'form-status';
+  try {
+    const res = await expApiPost('expense-post-delete', { id: EXP_POST_EDIT_ID });
+    if (!expIsOk(res)) throw new Error((res && res.error) || '刪除失敗');
+    closeExpPostModal();
+    await expRefreshOpenTrip();
+  } catch (err) {
+    st.textContent = '刪除失敗：' + err.message; st.className = 'form-status error';
+  }
+  btn.disabled = false;
+}
+
+// ----- 從旅遊頁匯入 -----
+async function expLoadImportSources() {
+  const box = document.getElementById('exptImpBox');
+  const sel = document.getElementById('exptImpSel');
+  const btn = document.getElementById('exptImpBtn');
+  const tripId = EXP_TRIP_EDIT_ID;
+  if (!tripId) {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  sel.disabled = true; btn.disabled = true;
+  sel.innerHTML = '<option value="">讀取旅遊頁清單…</option>';
+  try {
+    const res = await expApiPost('expense-trip-sources', {});
+    if (EXP_TRIP_EDIT_ID !== tripId) return;
+    if (!expIsOk(res)) throw new Error((res && res.error) || '讀取失敗');
+    const list = Array.isArray(res.sources) ? res.sources : [];
+    if (!list.length) { sel.innerHTML = '<option value="">（找不到旅遊頁資料）</option>'; return; }
+    const cur = expCurTrip();
+    const want = cur && cur.sourceKey ? cur.sourceKey : '';
+    sel.innerHTML = list.map(s =>
+      '<option value="' + expEsc(s.key) + '"' + (s.key === want ? ' selected' : '') + '>' +
+      expEsc((s.title || s.key) + '　' + (s.start || '?') + '～' + (s.end || '?') + '（' + (s.itemCount || 0) + ' 筆記帳）') + '</option>').join('');
+    sel.disabled = false; btn.disabled = false;
+  } catch (err) {
+    if (EXP_TRIP_EDIT_ID !== tripId) return;
+    sel.innerHTML = '<option value="">（讀不到旅遊頁清單）</option>';
+    document.getElementById('exptImpRes').innerHTML = '<span style="color:#B5485A;">讀取旅遊頁清單失敗：' + expEsc(err.message) + '</span>';
+  }
+}
+async function expRunImport() {
+  const tripId = EXP_TRIP_EDIT_ID;
+  if (!tripId || expRecordsBlocked()) return;
+  const sel = document.getElementById('exptImpSel');
+  const btn = document.getElementById('exptImpBtn');
+  const out = document.getElementById('exptImpRes');
+  const key = sel.value;
+  if (!key) { out.innerHTML = '<span style="color:#B5485A;">請先選一份旅遊頁資料</span>'; return; }
+  const label = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : key;
+  if (!confirm('從旅遊頁「' + label + '」匯入到這趟出差？\n\n' +
+    '．只會新增尚未匯入的支出和素材；已匯入過的不會被覆蓋\n' +
+    '．只匯入公司負擔的部分（個人消費不匯）\n' +
+    '．行程會整批更新成旅遊頁目前的內容')) return;
+  btn.disabled = true; sel.disabled = true;
+  const oldHtml = btn.innerHTML;
+  btn.textContent = '匯入中…';
+  out.innerHTML = '';
+  try {
+    const res = await expApiPost('expense-trip-import', { tripId, sourceKey: key });
+    if (!expIsOk(res)) throw new Error((res && res.error) || '匯入失敗');
+    const ad = res.added || {}, sk = res.skipped || {};
+    const warns = Array.isArray(res.warnings) ? res.warnings : [];
+    out.innerHTML =
+      '<div>新增 ' + (ad.expenses || 0) + ' 筆支出、' + (ad.assets || 0) + ' 張素材；行程 ' + (res.itinerary || 0) + ' 條。</div>' +
+      '<div class="exp-hint">已存在而略過：支出 ' + (sk.expenses || 0) + ' 筆、素材 ' + (sk.assets || 0) + ' 張。</div>' +
+      (warns.length ? '<div style="margin-top:4px;">警告 ' + warns.length + ' 則：</div><ul>' + warns.map(w => '<li>' + expEsc(w) + '</li>').join('') + '</ul>' : '');
+    await expRefreshOpenTrip();
+  } catch (err) {
+    out.innerHTML = '<span style="color:#B5485A;">匯入失敗：' + expEsc(err.message) + '</span>';
+  }
+  btn.innerHTML = oldHtml;
+  btn.disabled = false; sel.disabled = false;
+}
+
+// 就地重新抓資料（不關視窗）：更新清單與出差視窗各區；基本區日期欄是空的才補（匯入可能補了期間）
+async function expRefreshOpenTrip() {
+  const data = await expApiGet();
+  if (!expIsOk(data)) throw new Error((data && data.error) || '重新整理失敗');
+  expApplyData(data);
+  renderExpAll();
+  const t = expCurTrip();
+  if (t) {
+    const fillBlank = (id, val) => { const el = document.getElementById(id); if (el && !el.value && val) el.value = val; };
+    fillBlank('exptStart', t.startDate);
+    fillBlank('exptEnd', t.endDate);
+    expRenderTripSections();
+  }
+}
+
+// 事件掛載（骨架建好後呼叫一次）
+function expWireRecords() {
+  document.getElementById('exptTabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-sec]');
+    if (b) expSwitchTripSec(b.dataset.sec);
+  });
+  document.getElementById('exptImpBtn').addEventListener('click', expRunImport);
+  document.getElementById('expaFile').addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length) expUploadAssets(files);
+  });
+  document.getElementById('exptAssets').addEventListener('click', e => {
+    const tile = e.target.closest('.exp-as');
+    if (!tile) return;
+    const rec = expTripAssets(expCurTrip()).find(a => a.id === tile.dataset.id);
+    if (rec) openExpAssetModal(rec);
+  });
+  document.getElementById('exptPosts').addEventListener('click', e => {
+    if (e.target.closest('a.exp-lk')) return;
+    const row = e.target.closest('.exp-prow');
+    if (!row) return;
+    const rec = expTripPosts(expCurTrip()).find(p => p.id === row.dataset.id);
+    if (rec) openExpPostModal(rec);
+  });
+  document.getElementById('exppAddBtn').addEventListener('click', () => { if (!expRecordsBlocked()) openExpPostModal(null); });
+  document.getElementById('expaSaveBtn').addEventListener('click', expSaveAsset);
+  document.getElementById('expaDeleteBtn').addEventListener('click', expDeleteAsset);
+  document.getElementById('exppSaveBtn').addEventListener('click', expSavePost);
+  document.getElementById('exppDeleteBtn').addEventListener('click', expDeletePost);
+}
+
 // 支出列可用鍵盤 Enter 開啟（列是 role=button）
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
-  const row = e.target && e.target.classList && e.target.classList.contains('exp-row') ? e.target : null;
+  const cl = e.target && e.target.classList;
+  const row = cl && (cl.contains('exp-row') || cl.contains('exp-as') || cl.contains('exp-prow')) ? e.target : null;
   if (row) row.click();
 });
