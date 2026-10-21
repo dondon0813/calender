@@ -1472,7 +1472,8 @@ function renderSplitUI() {
   remain.className = 'hint-inline';
   if (!ms.length) {
     among.innerHTML = ''; custom.innerHTML = '';
-    remain.textContent = FORM_SPLIT_MODE === 'none' ? '' : '（先到設定填成員才能分攤）';
+    remain.textContent = FORM_SPLIT_MODE === 'none' ? '' : '（先到右上角設定填成員才能分攤）';
+    if (FORM_SPLIT_MODE !== 'none') remain.classList.add('bad');
     return;
   }
   if (FORM_SPLIT_MODE === 'even') {
@@ -1577,7 +1578,9 @@ document.getElementById('saveBtn').addEventListener('click', () => {
       if (Math.abs(sum - rest) > 0.5) { errEl.textContent = '自訂金額加起來要等於扣掉公司負擔後的 ' + Math.round(rest).toLocaleString('en-US'); return; }
     }
   } else if (rest > 0 && !ms.length && split.mode !== 'none') {
-    split.mode = 'none'; // 沒設成員就沒得分，先算付錢的人自己的
+    // 沒設成員就沒得分；以前會默默改成不分攤，使用者以為存了均分（10-17 回報），改成擋下來說清楚
+    errEl.textContent = '要分攤得先到右上角「設定」填成員名單（一行一個人）；不想分攤請改選「不分攤」';
+    return;
   }
   const photos = FORM_PHOTOS.filter(p => typeof p === 'string');
   FORM_PHOTOS_ORIG.filter(p => !photos.includes(p)).forEach(deletePhotoFile); // 編輯時被拿掉的
