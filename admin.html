@@ -2207,6 +2207,17 @@
   .gs-today-badge { background: #FF4D6A; }
   .gs-frozen-badge { background: #5F97DB; }
   .gs-tag-badge { background: #FF5C8A; }
+  .gs-harvest-badge { white-space: nowrap; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-pill); box-shadow: 0 2px 6px rgba(0,0,0,0.2); background: var(--c-surface); }
+  .gs-harvest-badge.hv-ok { color: var(--c-mint-text); background: var(--c-mint-bg); }
+  .gs-harvest-badge.hv-warn { color: var(--c-orange-text); background: var(--c-orange-bg-2); }
+  .gs-harvest-badge.hv-bad { color: var(--c-pink-deep); }
+  .gs-harvest-badge.hv-info { color: var(--c-muted); }
+  .hv-line { font-size: 13px; color: var(--c-text); line-height: 1.7; }
+  .hv-line.hv-dim { color: var(--c-muted); font-size: 12px; }
+  .hv-text-ok { color: var(--c-mint-text); font-weight: 700; }
+  .hv-text-warn { color: var(--c-orange-text); font-weight: 700; }
+  .hv-text-bad { color: var(--c-pink-deep); font-weight: 700; }
+  .hv-text-info { color: var(--c-muted); font-weight: 700; }
   .gs-empty {
     text-align: center;
     color: #A3948A;
@@ -6820,6 +6831,12 @@
       <div id="evViewLotteryBox"></div>
     </div>
 
+    <!-- 收單狀態（harvestStatus.js hvRenderEventBox；後端沒有該團資料整塊隱藏） -->
+    <div class="memo-section" id="evViewHarvestSection" style="display:none;">
+      <div class="bqa-section-title"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>收單狀態</div>
+      <div id="evViewHarvestBox"></div>
+    </div>
+
     <div class="memo-section">
       <label for="memoText"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>這團備註（只有這一團）</label>
       <textarea id="memoText" rows="4" placeholder="只跟這一團有關的事（例如這團的連結、代碼）"></textarea>
@@ -8114,8 +8131,9 @@
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="lottery.js?v=63"></script>
+<script src="harvestStatus.js?v=1"></script>
 <script src="homeLayout.js?v=7"></script>
-<script src="admin.js?v=121"></script>
+<script src="admin.js?v=122"></script>
 <script src="memo.js?v=8"></script>
 
 </body>

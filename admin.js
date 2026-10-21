@@ -975,6 +975,7 @@ function renderGroupStatusList(targetId) {
   const listEl = document.getElementById(targetId || 'calGroupList');
   if (!listEl) return;
   listEl.innerHTML = '';
+  if (typeof hvFetch === 'function') hvFetch(); // 收單狀態（harvestStatus.js；自己判斷要不要真打）
 
   // 【新】品牌社群連結列，放在整個清單最上方
   const socialRow = buildSocialIconRow();
@@ -1020,7 +1021,8 @@ function renderGroupStatusList(targetId) {
     dateEl.textContent = `${fmtSingleDate(ev.start)}–${fmtSingleDate(ev.displayEnd)}`;
     card.appendChild(dateEl);
 
-    if (ev.tag || frozen || isToday) {
+    const hvHtml = (ev.isGroupBuy !== false && typeof hvBadgeHtml === 'function') ? hvBadgeHtml(ev.id) : '';
+    if (ev.tag || frozen || isToday || hvHtml) {
       const badges = document.createElement('div');
       badges.className = 'gs-badges';
       if (ev.tag) {
@@ -1041,6 +1043,7 @@ function renderGroupStatusList(targetId) {
         todayBadge.textContent = '今日截止';
         badges.appendChild(todayBadge);
       }
+      if (hvHtml) badges.insertAdjacentHTML('beforeend', hvHtml);
       card.appendChild(badges);
     }
 
@@ -1214,6 +1217,14 @@ function openAdminModal(ev) {
   // 這團的抽獎（lottery.js；沒有 lotteryEdit 權限整塊隱藏）
   if (typeof lotRenderEventLotteryBox === 'function') {
     lotRenderEventLotteryBox(document.getElementById('evViewLotteryBox'), ev.id, { sectionEl: document.getElementById('evViewLotterySection') });
+  }
+
+  // 收單狀態（harvestStatus.js；只有團購事件、後端有資料才顯示）
+  var hvSec = document.getElementById('evViewHarvestSection');
+  if (ev.isGroupBuy !== false && typeof hvRenderEventBox === 'function') {
+    hvRenderEventBox(document.getElementById('evViewHarvestBox'), ev.id, { sectionEl: hvSec });
+  } else if (hvSec) {
+    hvSec.style.display = 'none';
   }
 
   document.getElementById('adminModal').classList.add('show');
