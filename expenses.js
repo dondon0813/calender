@@ -31,7 +31,7 @@ const EXP_ASSET_MAX_EDGE = 1600;   // 出差素材：長邊縮到 1600px（docs/
 // 出差紀錄（docs/20）：素材類型、發文與產出類型、行程類別（沿用旅遊頁 food/transport/fun/shop/stay/other）
 const EXP_ASSET_KINDS = [['product', '產品配圖'], ['travel', '旅遊分享'], ['story', '限動截圖'], ['video', '影片代表畫面']];
 const EXP_POST_KINDS = [['post', '貼文'], ['reel', '影片'], ['story', '限動'], ['event', '開團'], ['tool', '工具與內容']];
-const EXP_ITIN_CATS = [['food', '美食'], ['transport', '交通'], ['fun', '景點'], ['shop', '購物'], ['stay', '住宿'], ['other', '其他']];
+const EXP_ITIN_CATS = [['food', '美食'], ['transport', '交通'], ['sight', '景點'], ['fun', '娛樂'], ['shop', '購物'], ['stay', '住宿'], ['other', '其他']];
 const EXP_TRIP_SECS = [['basic', '基本'], ['itin', '行程'], ['assets', '素材'], ['posts', '發文與產出']];
 
 let EXP_LOADED = false;
@@ -979,6 +979,7 @@ async function expDeleteTrip() {
 const EXP_ITIN_ICON = {
   food: '<path d="M7 3v7"/><path d="M4.5 3v4a2.5 2.5 0 0 0 5 0V3"/><path d="M7 10v11"/><path d="M17 3c-2.2 1.6-3 4-3 7h3v11"/>',
   transport: '<rect x="4" y="4" width="16" height="13" rx="3"/><path d="M4 11h16"/><circle cx="8.5" cy="19.5" r="1.2"/><circle cx="15.5" cy="19.5" r="1.2"/>',
+  sight: '<path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>',
   fun: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.5 9.7l5.9-.9z"/>',
   shop: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   stay: '<path d="M3.5 19V6"/><path d="M3.5 15h17v4"/><path d="M20.5 15v-2.5a3 3 0 0 0-3-3H10v5.5"/>',
