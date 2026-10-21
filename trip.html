@@ -234,6 +234,43 @@
   .calc-keys button.op { background: var(--pink-bg); }
   .calc-keys button.done { background: var(--pink); font-size: 1.05rem; }
   .calc-keys button:active { transform: translateY(1px); }
+  /* 發布成範本（2026-10-21）：只用既有變數 */
+  .tpl-fab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 12px 0 10px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); color: var(--ink); font: inherit; font-size: .85rem; line-height: 1; cursor: pointer; position: relative; white-space: nowrap; }
+  .tpl-fab[hidden] { display: none; }
+  .tpl-fab svg { width: 17px; height: 17px; }
+  .tpl-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); display: none; }
+  .tpl-fab.pub .tpl-dot { display: inline-block; background: var(--green); }
+  .tpl-fab.draft .tpl-dot { display: inline-block; background: var(--yellow); }
+  .tpl-st { font-size: .72rem; color: var(--soft); white-space: nowrap; }
+  .tpl-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(40,30,26,.35); display: none; align-items: center; justify-content: center; padding: 16px; }
+  .tpl-overlay.on { display: flex; }
+  .tpl-panel { width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; background: var(--bg); border: var(--line) solid var(--ink); border-radius: 22px; padding: 16px; }
+  .tpl-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .tpl-h h3 { margin: 0; font-weight: 400; font-size: 1.1rem; }
+  .tpl-priv { background: var(--yellow-bg); border-radius: 12px; padding: 8px 10px; font-size: .8rem; color: var(--soft); margin: 6px 0 12px; line-height: 1.5; }
+  .tpl-lb { display: block; font-size: .82rem; color: var(--soft); margin: 10px 0 4px; }
+  .tpl-in { width: 100%; font: inherit; font-size: 16px; padding: 9px 11px; border: 2px solid var(--ink); border-radius: 12px; background: var(--card); color: var(--ink); box-sizing: border-box; }
+  textarea.tpl-in { min-height: 76px; resize: vertical; }
+  .tpl-in.bad { border-color: var(--accent); }
+  .tpl-hint { font-size: .75rem; color: var(--muted); margin-top: 3px; min-height: 1.1em; }
+  .tpl-hint.bad { color: var(--accent); }
+  .tpl-secs { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .tpl-secs label { display: inline-flex; align-items: center; gap: 5px; font-size: .9rem; cursor: pointer; }
+  .tpl-secs input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .tpl-err { color: var(--accent); font-size: .85rem; min-height: 1.2em; margin-top: 10px; word-break: break-all; }
+  .tpl-ok { background: var(--green-bg); border-radius: 12px; padding: 8px 10px; margin-top: 10px; font-size: .85rem; display: none; }
+  .tpl-ok.on { display: block; }
+  .tpl-ok .u { word-break: break-all; color: var(--link); margin: 4px 0; }
+  .tpl-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .tpl-btns button, .tpl-ok button { font: inherit; font-size: .92rem; padding: 9px 16px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); color: var(--ink); cursor: pointer; }
+  .tpl-btns button.main { background: var(--pink); }
+  .tpl-btns button.danger { color: var(--accent); border-color: var(--accent); margin-left: auto; }
+  .tpl-btns button[hidden] { display: none; }
+  .tpl-btns button:disabled { opacity: .55; cursor: default; }
+  .tpl-toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 80; background: var(--ink); color: var(--card); padding: 9px 16px; border-radius: 999px; font-size: .88rem; display: none; max-width: 90vw; text-align: center; }
+  .tpl-toast.on { display: block; }
+  @media (max-width: 760px) { .tpl-st { display: none; } }
+  @media (max-width: 640px) { .tpl-fab { width: 34px; height: 34px; padding: 0; justify-content: center; } .tpl-fab-t { display: none; } .tpl-dot { position: absolute; top: -3px; right: -3px; } }
   /* 手機頂列縮排（放在最後才蓋得過前面的一般規則） */
 @media (max-width: 460px) { .nav .logo { display: none; } .nav .links a { padding: 6px 6px; font-size: .95rem; } .calc-fab { width: 34px; height: 34px; margin-left: 0; } .back { padding-right: 9px; } }
   @media (max-width: 340px) { .back-t { display: none; } .back { padding: 5px 7px; } }
@@ -1075,6 +1112,7 @@ async function load() {
     }
     // 行程只讀不寫；行程快取交給編輯頁（避免蓋掉編輯頁還沒上傳的變更）
     show(res.value ? JSON.parse(res.value) : {});
+    tplRefresh();
   } catch (err) {
     if (!DATA) { document.getElementById('status').textContent = '讀取失敗：' + err.message + '（請確認網路後重新整理）'; }
   }
@@ -1180,6 +1218,185 @@ function openCalc() {
     const d = e.target.closest('[data-dir]'); if (d) { CALC.dir = d.dataset.dir; renderCalc(); return; }
     if (e.target.closest('#calcTax')) { CALC.tax = !CALC.tax; renderCalc(); }
   });
+})();
+
+/* ---------- 發布成範本（2026-10-21）：把這趟行程公開成旅遊範本，粉絲可複製成自己的行程 ----------
+   後端 trip-template-publish / get / unpublish（calendarEdit 權限）；公開的只有航班／住宿名稱與地址／每日行程／準備清單，
+   Check-in 代碼、PIN、記帳、照片後端會剝掉。函式一律 tpl 前綴。 */
+const TPL = { template: null, tableReady: true, loaded: false, busy: false, lastFetch: 0 };
+const TPL_SLUG_RE = /^[a-z0-9-]{3,40}$/;
+const TPL_ICON_UP = '<svg viewBox="0 0 24 24" ' + S + '><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>';
+function tplOk(r) { return !!r && (r.success === true || r.ok === true); }
+function tplErrMsg(r, fallback) {
+  if (r && r.needLogin) return '登入已過期，請重新整理頁面後再登入';
+  return (r && r.error) || fallback;
+}
+function tplToast(msg) {
+  const t = document.getElementById('tplToast'); if (!t) return;
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(tplToast._t); tplToast._t = setTimeout(() => t.classList.remove('on'), 3200);
+}
+function tplDefaultSlug() { return TRIP.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); }
+function tplSlugProblem(s) {
+  if (!s) return '請填網址代號';
+  if (!TPL_SLUG_RE.test(s)) return '只能用小寫英文、數字、連字號，長度 3～40';
+  return '';
+}
+function tplCoverProblem(s) { return !s || safeUrl(s) ? '' : '封面圖網址要以 http:// 或 https:// 開頭'; }
+function tplStateText() {
+  const t = TPL.template;
+  return t ? (t.isPublished ? '已發布' : '未發布（草稿）') : '';
+}
+function tplRenderFab() {
+  const fab = document.getElementById('tplFab'), st = document.getElementById('tplSt');
+  if (!fab) return;
+  const t = TPL.template;
+  fab.hidden = !(getToken() && TPL.loaded);
+  fab.classList.toggle('pub', !!(t && t.isPublished));
+  fab.classList.toggle('draft', !!(t && !t.isPublished));
+  const label = TPL.tableReady ? tplStateText() : '';
+  st.textContent = label; st.hidden = !label;
+  fab.title = label ? '發布成範本・' + label : '發布成範本';
+}
+// 登入後、行程載入成功才呼叫；失敗不影響頁面其他功能
+async function tplRefresh() {
+  if (!getToken() || Date.now() - TPL.lastFetch < 15000) { tplRenderFab(); return; }
+  TPL.lastFetch = Date.now();
+  try {
+    const r = await apiPost('trip-template-get', { sourceKey: KEY });
+    if (r && r.tableReady === false) { TPL.template = null; TPL.tableReady = false; }
+    else if (tplOk(r)) { TPL.template = r.template || null; TPL.tableReady = true; }
+  } catch (e) { /* 讀不到狀態仍顯示按鈕，點開後由後端回應決定 */ }
+  TPL.loaded = true;
+  tplRenderFab();
+}
+function tplValidate() {
+  const sl = document.getElementById('tplSlug'), cv = document.getElementById('tplCover');
+  const p1 = tplSlugProblem(sl.value.trim()), p2 = tplCoverProblem(cv.value.trim());
+  const title = document.getElementById('tplTitle').value.trim();
+  sl.classList.toggle('bad', !!p1); cv.classList.toggle('bad', !!p2);
+  const h1 = document.getElementById('tplSlugHint'), h2 = document.getElementById('tplCoverHint');
+  h1.textContent = p1 || '範本網址：…/trips/t/' + sl.value.trim(); h1.classList.toggle('bad', !!p1);
+  h2.textContent = p2; h2.classList.toggle('bad', !!p2);
+  return !p1 && !p2 && !!title;
+}
+function tplSyncState() {
+  const t = TPL.template;
+  document.getElementById('tplUnpub').hidden = !(t && t.isPublished);
+  document.getElementById('tplState').textContent = t ? '目前狀態：' + tplStateText() : '目前狀態：尚未建立範本';
+}
+function tplFillForm() {
+  const t = TPL.template;
+  document.getElementById('tplTitle').value = (t && t.title) || (DATA && DATA.title) || '';
+  document.getElementById('tplIntro').value = (t && t.intro) || '';
+  document.getElementById('tplSlug').value = (t && t.slug) || tplDefaultSlug();
+  document.getElementById('tplCover').value = (t && t.coverUrl) || '';
+  document.querySelectorAll('#tplSecs input').forEach(i => { i.checked = true; });
+  document.getElementById('tplErr').textContent = '';
+  document.getElementById('tplOk').classList.remove('on');
+  tplSyncState();
+  tplValidate();
+}
+function tplOpen() {
+  if (!TPL.tableReady) { tplToast('旅遊範本功能待 db push'); return; }
+  tplFillForm();
+  document.getElementById('tplOverlay').classList.add('on');
+}
+function tplClose() { document.getElementById('tplOverlay').classList.remove('on'); }
+function tplSetBusy(b) {
+  TPL.busy = b;
+  document.querySelectorAll('#tplOverlay .tpl-btns button').forEach(x => { x.disabled = b; });
+}
+function tplShowResult(url, msg) {
+  const box = document.getElementById('tplOk');
+  box.querySelector('.m').textContent = msg;
+  box.querySelector('.u').textContent = url || '';
+  box.querySelector('.u').hidden = !url; document.getElementById('tplCopy').hidden = !url;
+  box.classList.add('on');
+}
+async function tplCopyUrl() {
+  const url = document.getElementById('tplOk').querySelector('.u').textContent;
+  if (!url) return;
+  try { await navigator.clipboard.writeText(url); tplToast('已複製連結'); return; } catch (e) {}
+  try {
+    const ta = document.createElement('textarea'); ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); tplToast('已複製連結');
+  } catch (e) { tplToast('複製失敗，請手動選取網址'); }
+}
+async function tplPublish(publish) {
+  if (TPL.busy) return;
+  const errEl = document.getElementById('tplErr'); errEl.textContent = '';
+  if (!tplValidate()) { errEl.textContent = document.getElementById('tplTitle').value.trim() ? '請先修正標示紅字的欄位' : '請填標題'; return; }
+  const sections = {};
+  document.querySelectorAll('#tplSecs input').forEach(i => { sections[i.dataset.sec] = i.checked; });
+  const payload = {
+    sourceKey: KEY, slug: document.getElementById('tplSlug').value.trim(), title: document.getElementById('tplTitle').value.trim(),
+    intro: document.getElementById('tplIntro').value.trim(), coverUrl: document.getElementById('tplCover').value.trim(),
+    sections, publish: !!publish,
+  };
+  tplSetBusy(true);
+  try {
+    const r = await apiPost('trip-template-publish', payload);
+    if (!tplOk(r)) { errEl.textContent = tplErrMsg(r, '儲存失敗'); return; }
+    TPL.template = r.template || TPL.template; TPL.tableReady = true; TPL.lastFetch = Date.now();
+    tplRenderFab(); tplSyncState();
+    const url = (TPL.template && TPL.template.url) || r.url || '';
+    tplShowResult(url, publish ? '已發布，範本網址：' : '已更新（未發布），範本網址：');
+  } catch (e) { errEl.textContent = '連線失敗：' + e.message; }
+  finally { tplSetBusy(false); }
+}
+async function tplUnpublish() {
+  if (TPL.busy || !TPL.template || !TPL.template.id) return;
+  if (!confirm('確定要下架這個範本嗎？下架後粉絲看不到，已複製的行程不受影響。')) return;
+  const errEl = document.getElementById('tplErr'); errEl.textContent = '';
+  tplSetBusy(true);
+  try {
+    const r = await apiPost('trip-template-unpublish', { id: TPL.template.id });
+    if (!tplOk(r)) { errEl.textContent = tplErrMsg(r, '下架失敗'); return; }
+    TPL.template = Object.assign({}, TPL.template, r.template || {}, { isPublished: false }); TPL.lastFetch = Date.now();
+    tplRenderFab(); tplSyncState();
+    document.getElementById('tplOk').classList.remove('on');
+    tplToast('已下架');
+  } catch (e) { errEl.textContent = '連線失敗：' + e.message; }
+  finally { tplSetBusy(false); }
+}
+(function tplInit() {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = '' +
+    '<div class="tpl-overlay" id="tplOverlay"><div class="tpl-panel" role="dialog" aria-label="發布成範本">' +
+    '<div class="tpl-h"><h3>發布成範本</h3><button type="button" class="x-btn" id="tplClose" aria-label="關閉">' + ICON.x + '</button></div>' +
+    '<div class="tpl-hint" id="tplState"></div>' +
+    '<div class="tpl-priv">只會公開航班、住宿名稱與地址、每日行程、準備清單；Check-in 代碼、PIN、記帳、照片不會帶出。</div>' +
+    '<label class="tpl-lb" for="tplTitle">標題</label><input type="text" class="tpl-in" id="tplTitle" maxlength="80" autocomplete="off">' +
+    '<label class="tpl-lb" for="tplIntro">介紹</label><textarea class="tpl-in" id="tplIntro" maxlength="500"></textarea>' +
+    '<label class="tpl-lb" for="tplSlug">網址代號</label><input type="text" class="tpl-in" id="tplSlug" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="tpl-hint" id="tplSlugHint"></div>' +
+    '<span class="tpl-lb">公開哪些段落</span><div class="tpl-secs" id="tplSecs">' +
+    '<label><input type="checkbox" data-sec="flights" checked>航班</label><label><input type="checkbox" data-sec="hotels" checked>住宿</label>' +
+    '<label><input type="checkbox" data-sec="plan" checked>行程</label><label><input type="checkbox" data-sec="prep" checked>準備</label></div>' +
+    '<label class="tpl-lb" for="tplCover">封面圖網址（選填）</label><input type="url" class="tpl-in" id="tplCover" placeholder="https://" autocomplete="off"><div class="tpl-hint" id="tplCoverHint"></div>' +
+    '<div class="tpl-err" id="tplErr"></div>' +
+    '<div class="tpl-ok" id="tplOk"><div class="m"></div><div class="u"></div><button type="button" id="tplCopy">複製連結</button></div>' +
+    '<div class="tpl-btns"><button type="button" class="main" id="tplGo">發布</button><button type="button" id="tplSave">更新但不發布</button><button type="button" class="danger" id="tplUnpub" hidden>下架</button></div>' +
+    '</div></div><div class="tpl-toast" id="tplToast" role="status"></div>';
+  document.body.appendChild(wrap);
+  // 放到頂列計算機按鈕旁
+  const nav = document.querySelector('.nav-r'), calc = document.getElementById('calcFab');
+  const st = document.createElement('span'); st.className = 'tpl-st'; st.id = 'tplSt'; st.hidden = true;
+  const fab = document.createElement('button'); fab.type = 'button'; fab.className = 'tpl-fab'; fab.id = 'tplFab'; fab.hidden = true;
+  fab.setAttribute('aria-label', '發布成範本');
+  fab.innerHTML = TPL_ICON_UP + '<span class="tpl-fab-t">發布成範本</span><i class="tpl-dot"></i>';
+  nav.insertBefore(st, calc); nav.insertBefore(fab, calc);
+  fab.onclick = tplOpen;
+  document.getElementById('tplClose').onclick = tplClose;
+  // 拖曳選字放開在灰底不關視窗：按下與放開都在灰底才關
+  const ov = document.getElementById('tplOverlay'); let downOnOv = false;
+  ov.addEventListener('pointerdown', e => { downOnOv = e.target === ov; });
+  ov.addEventListener('click', e => { if (e.target === ov && downOnOv) tplClose(); downOnOv = false; });
+  ['tplTitle', 'tplSlug', 'tplCover'].forEach(id => document.getElementById(id).addEventListener('input', () => { document.getElementById('tplErr').textContent = ''; tplValidate(); }));
+  document.getElementById('tplGo').onclick = () => tplPublish(true);
+  document.getElementById('tplSave').onclick = () => tplPublish(false);
+  document.getElementById('tplUnpub').onclick = tplUnpublish;
+  document.getElementById('tplCopy').onclick = tplCopyUrl;
 })();
 
 load();
