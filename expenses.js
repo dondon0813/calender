@@ -1995,7 +1995,10 @@ async function expGenerateRecordPdf() {
     try {
       const file = new File([bytes], fileName, { type: 'application/pdf' });
       const up = await expUploadOne(file, 'trip', t.id);
-      const keep = (Array.isArray(t.attachments) ? t.attachments : []).map(x => ({ path: x.path, name: x.name, size: x.size, uploadedAt: x.uploadedAt }));
+      // 上傳期間別處可能新增附件：以伺服器最新清單為底追加（驗收抓到會洗掉中途新增的附件）
+      await expRefreshOpenTrip();
+      const tNow = expCurTrip() || t;
+      const keep = (Array.isArray(tNow.attachments) ? tNow.attachments : []).map(x => ({ path: x.path, name: x.name, size: x.size, uploadedAt: x.uploadedAt }));
       keep.push({ path: up.path, name: up.name, size: up.size, uploadedAt: up.uploadedAt });
       const res = await expApiPost('expense-trip-upsert', { id: t.id, attachments: keep });
       if (!expIsOk(res)) throw new Error((res && res.error) || '寫入附件失敗');
