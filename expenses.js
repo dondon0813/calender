@@ -29,7 +29,7 @@ const EXP_FILE_MAX_BYTES = 15 * 1024 * 1024;
 const EXP_IMG_MAX_EDGE = 2000;
 const EXP_ASSET_MAX_EDGE = 1600;   // 出差素材：長邊縮到 1600px（docs/20）
 // 出差紀錄（docs/20）：素材類型、發文與產出類型、行程類別（沿用旅遊頁 food/transport/fun/shop/stay/other）
-const EXP_ASSET_KINDS = [['product', '產品配圖'], ['travel', '旅遊分享'], ['story', '限動截圖'], ['video', '影片代表畫面']];
+const EXP_ASSET_KINDS = [['product', '產品配圖'], ['travel', '旅遊分享'], ['story', '限動截圖'], ['video', '影片代表畫面'], ['insight', '成效截圖']];
 const EXP_POST_KINDS = [['post', '貼文'], ['reel', '影片'], ['story', '限動'], ['event', '開團'], ['tool', '工具與內容']];
 const EXP_ITIN_CATS = [['food', '美食'], ['transport', '交通'], ['sight', '景點'], ['fun', '娛樂'], ['shop', '購物'], ['stay', '住宿'], ['other', '其他']];
 const EXP_TRIP_SECS = [['basic', '基本'], ['itin', '行程'], ['assets', '素材'], ['posts', '發文與產出']];
@@ -43,6 +43,9 @@ let EXP_EVENTS = [];
 let EXP_FILTER = { month: '', category: '', trip: '', unreimbursed: false };
 let EXP_EDIT_ID = null;       // 目前編輯中的支出 id；null＝新增
 let EXP_TRIP_EDIT_ID = null;  // 目前編輯中的出差 id；null＝新增
+let EXP_PHASE2_READY = true;   // false＝第二期欄位（結案日、成效截圖類型）還沒 db push（migration 20261021180000）
+let EXP_PDF_BUSY = false;      // 紀錄表 PDF 產出中
+let EXP_PDFLIB_PROMISE = null;
 let EXP_RECORDS_READY = true;  // false＝出差紀錄的新表／新欄位還沒 db push（後三區擋寫入）
 let EXP_TRIP_SEC = 'basic';   // 出差視窗目前停在哪一區
 let EXP_ASSET_EDIT_ID = null; // 目前編輯中的素材 id
@@ -83,6 +86,7 @@ const EXP_ICON = {
   x: '<svg class="exp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>',
   pdf: '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5"/><path d="M8.5 15h7"/><path d="M8.5 12h4"/></svg>',
   img: '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/></svg>',
+  doc: '<svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5"/><path d="M8.5 15h7"/><path d="M8.5 12h4"/></svg>',
   pencil: '<svg class="exp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4.2L16.5 4.3a1.9 1.9 0 0 1 2.7 0l.5.5a1.9 1.9 0 0 1 0 2.7L8.2 19z"/><path d="M14.5 6.3l3.2 3.2"/></svg>',
   warn: '<svg class="exp-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 15.5H3z"/><path d="M12 10v4.5"/><path d="M12 17.3h.01"/></svg>'
 };
@@ -365,6 +369,11 @@ function expInjectStyle() {
   .exp-prow a.exp-lk{ color:var(--c-text-soft); display:inline-flex; }
   .exp-prow a.exp-lk:hover{ color:var(--c-brown); }
   .exp-suggest{ margin-top:6px; }
+  .exp-ins{ grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); }
+  .exp-ins .exp-as-th{ height:80px; }
+  .exp-p2{ margin-top:6px; }
+  .exp-toast{ position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#3E3430; color:#fff; padding:10px 18px; border-radius:999px; font-size:13.5px; z-index:99999; max-width:90vw; text-align:center; }
+  .exp-toast.error{ background:#B5485A; }
   .exp-prev{ margin-top:10px; height:160px; display:flex; align-items:center; justify-content:center; background:var(--c-surface); border-radius:10px; overflow:hidden; cursor:pointer; color:var(--c-text-soft); }
   .exp-prev img{ max-width:100%; max-height:100%; object-fit:contain; }
   @media (max-width:480px){
@@ -477,6 +486,12 @@ function expBuildSkeleton() {
           '</div>' +
           '<div class="exp-impres" id="exptImpRes"></div>' +
         '</div>' +
+        '<div class="exp-impbox" id="exptPdfBox">' +
+          '<label class="exp-lb">出差紀錄表（查核留存用）</label>' +
+          '<div class="exp-hint" style="margin-bottom:8px;">把這趟的基本資料、每日行程、花費、素材清單、發文與產出組成一份黑白表格 PDF，自動存進上方附件。素材只放有勾「放進出差紀錄表」的。</div>' +
+          '<div class="exp-inline"><button type="button" class="task-mini-btn" id="exptPdfBtn">' + EXP_ICON.doc + '產出紀錄表 PDF</button></div>' +
+          '<div class="exp-impres" id="exptPdfRes"></div>' +
+        '</div>' +
         '<div class="exp-actions">' +
           '<button type="button" class="task-submit-btn" id="expTripSaveBtn" style="margin-top:0;">儲存</button>' +
           '<button type="button" class="task-mini-btn danger" id="expTripDeleteBtn" style="display:none; padding:0 18px;">刪除</button>' +
@@ -544,6 +559,21 @@ function expBuildSkeleton() {
       '<div class="exp-suggest" id="exppSuggest"></div>' +
       '<label class="exp-lb" for="exppTraffic">流量／成效備註</label><textarea id="exppTraffic" rows="2" placeholder="例如：IG 觸及 3.2 萬、開團首日 80 單"></textarea>' +
       '<label class="exp-lb" for="exppNote">備註</label><textarea id="exppNote" rows="2"></textarea>' +
+      '<div class="exp-p2" id="exppP2">' +
+        '<div id="exppBnP2"></div>' +
+        '<label class="exp-lb">成效截圖（發布滿一個月後，把成效畫面截圖留存）</label>' +
+        '<div class="exp-inline">' +
+          '<label class="task-mini-btn exp-upbtn" id="exppInsBtn" for="exppInsFile" style="cursor:pointer;">' + EXP_ICON.plus + '上傳成效截圖</label>' +
+          '<input type="file" id="exppInsFile" accept="image/*" multiple style="display:none;">' +
+          '<span class="exp-hint" id="exppInsStatus"></span>' +
+        '</div>' +
+        '<div class="exp-assets exp-ins" id="exppIns"></div>' +
+        '<div class="exp-inline" style="margin-top:12px;">' +
+          '<label class="exp-inline" for="exppClosed" style="cursor:pointer;"><input type="checkbox" id="exppClosed"><span style="font-size:13.5px;">已結案</span></label>' +
+          '<input type="date" id="exppClosedAt" style="width:auto;" aria-label="結案日期">' +
+        '</div>' +
+        '<div class="exp-hint" id="exppDueHint" style="color:#B5485A; margin-top:4px;"></div>' +
+      '</div>' +
       '<div class="exp-actions">' +
         '<button type="button" class="task-submit-btn" id="exppSaveBtn" style="margin-top:0;">儲存</button>' +
         '<button type="button" class="task-mini-btn danger" id="exppDeleteBtn" style="display:none; padding:0 18px;">刪除</button>' +
@@ -614,6 +644,7 @@ function expApplyData(data) {
   EXP_LOADED = true;
   EXP_TABLE_READY = data.tableReady !== false;
   EXP_RECORDS_READY = data.recordsReady !== false;
+  EXP_PHASE2_READY = data.phase2Ready !== false;
   EXP_LIST = Array.isArray(data.expenses) ? data.expenses : [];
   EXP_TRIPS = Array.isArray(data.trips) ? data.trips : [];
   EXP_BRANDS = Array.isArray(data.brandChoices) ? data.brandChoices : [];
@@ -903,6 +934,8 @@ function openExpTripModal(rec) {
   st.textContent = ''; st.className = 'form-status';
   EXP_TRIP_SEC = 'basic';
   document.getElementById('exptImpRes').innerHTML = '';
+  document.getElementById('exptPdfRes').innerHTML = '';
+  document.getElementById('exptPdfBox').style.display = rec ? 'block' : 'none';
   expRenderTripSections();
   expLoadImportSources();
   document.getElementById('expTripModal').classList.add('show');
@@ -1302,10 +1335,15 @@ function expRenderPosts(t) {
     if (p.eventTitle) subs.push('團購：' + p.eventTitle);
     else if (p.suggestedEvent && p.suggestedEvent.title) subs.push('建議綁：' + p.suggestedEvent.title);
     if (p.trafficNote) subs.push('成效：' + p.trafficNote);
+    const insN = expPostInsightCount(t, p);
+    if (insN > 0) subs.push('成效截圖 ' + insN + ' 張');
+    let closePill = '';
+    if (p.closedAt) closePill = '<span class="exp-pill ok">已結案 ' + expEsc(p.closedAt) + '</span>';
+    else if (p.dueForClose) closePill = '<span class="exp-pill warn">滿一個月，請存成效截圖並結案</span>';
     return '<div class="exp-prow" data-id="' + expEsc(p.id) + '" role="button" tabindex="0">' +
       '<span class="d">' + expEsc(p.postDate || '未填日期') + '</span>' +
       '<span class="exp-pill">' + expEsc(expKindLabel(EXP_POST_KINDS, p.kind)) + '</span>' +
-      '<span class="t">' + expEsc(p.title || '') + '</span>' +
+      '<span class="t">' + expEsc(p.title || '') + '</span>' + closePill +
       (url ? '<a class="exp-lk" href="' + expEsc(url) + '" target="_blank" rel="noopener" title="開啟連結" aria-label="開啟連結">' + EXP_LINK_ICON + '</a>' : '') +
       '<span class="s">' + subs.map(expEsc).join('　') + '</span>' +
       '</div>';
@@ -1326,6 +1364,7 @@ function openExpPostModal(rec) {
   expFillBrandList();
   expFillEventSelect(rec ? rec.eventId : '', rec, 'exppEvent');
   expRenderSuggest('exppSuggest', rec, 'exppEvent', 'expense-post-upsert');
+  expSyncPostPhase2(rec);
   const st = document.getElementById('exppStatus');
   st.textContent = ''; st.className = 'form-status';
   document.getElementById('expPostModal').classList.add('show');
@@ -1358,6 +1397,9 @@ async function expSavePost() {
     trafficNote: val('exppTraffic'),
     note: val('exppNote')
   };
+  if (EXP_PHASE2_READY) {
+    payload.closedAt = document.getElementById('exppClosed').checked ? (document.getElementById('exppClosedAt').value || expToday()) : null;
+  }
   if (EXP_POST_EDIT_ID) payload.id = EXP_POST_EDIT_ID;
   const btn = document.getElementById('exppSaveBtn');
   btn.disabled = true;
@@ -1388,6 +1430,101 @@ async function expDeletePost() {
     st.textContent = '刪除失敗：' + err.message; st.className = 'form-status error';
   }
   btn.disabled = false;
+}
+
+// ----- 第二期：結案與成效截圖（docs/20）-----
+function expPhase2Blocked() {
+  if (!EXP_PHASE2_READY) { alert('結案與成效截圖功能待 db push（migration 20261021180000），欄位建好之後才能使用。'); return true; }
+  return false;
+}
+function expPostInsightCount(t, p) {
+  if (p && p.insightCount !== null && p.insightCount !== undefined && Number.isFinite(Number(p.insightCount))) return Number(p.insightCount);
+  return expTripAssets(t).filter(a => a.kind === 'insight' && a.postId === p.id).length;
+}
+// 發文視窗下半部：橫幅、成效截圖上傳可用與否、結案勾選、到期提示
+function expSyncPostPhase2(rec) {
+  const ready = EXP_PHASE2_READY;
+  document.getElementById('exppBnP2').innerHTML = ready ? '' : expWarnBanner('結案與成效截圖待 db push（migration 20261021180000），建好之後才能使用。');
+  const chk = document.getElementById('exppClosed');
+  const dt = document.getElementById('exppClosedAt');
+  chk.checked = !!(rec && rec.closedAt);
+  dt.value = rec && rec.closedAt ? rec.closedAt : '';
+  chk.disabled = !ready;
+  dt.disabled = !ready || !chk.checked;
+  document.getElementById('exppDueHint').textContent = (ready && rec && rec.dueForClose && !rec.closedAt) ? '這筆發文已滿一個月：請存成效截圖並結案。' : '';
+  const canUp = ready && !!rec;
+  document.getElementById('exppInsFile').disabled = !canUp;
+  const btn = document.getElementById('exppInsBtn');
+  btn.style.opacity = canUp ? '' : '.5';
+  btn.style.pointerEvents = canUp ? '' : 'none';
+  document.getElementById('exppInsStatus').textContent = !ready ? '' : (rec ? '' : '請先儲存這筆發文，再上傳成效截圖。');
+  expRenderPostInsights();
+}
+function expRenderPostInsights() {
+  const box = document.getElementById('exppIns');
+  if (!box) return;
+  const t = expCurTrip();
+  const list = EXP_POST_EDIT_ID ? expTripAssets(t).filter(a => a.kind === 'insight' && a.postId === EXP_POST_EDIT_ID) : [];
+  box.innerHTML = list.map(a =>
+    '<div class="exp-as" data-id="' + expEsc(a.id) + '" title="' + expEsc(a.name || '') + '">' +
+      '<div class="exp-as-th">' + (a.path ? '<img alt="" data-exp-apath="' + expEsc(a.path) + '">' : EXP_ICON.img) + '</div>' +
+      '<div class="exp-as-nm">' + expEsc(a.assetDate || '') + '</div>' +
+      '<button type="button" class="exp-x" data-rm="' + expEsc(a.id) + '" aria-label="刪除這張成效截圖">' + EXP_ICON.x + '</button>' +
+    '</div>').join('');
+  expHydrateThumbs(box);
+}
+// 縮圖補簽名網址（最多同時 4 張）
+function expHydrateThumbs(box) {
+  const imgs = Array.from(box.querySelectorAll('img[data-exp-apath]'));
+  let idx = 0;
+  const worker = async () => {
+    while (idx < imgs.length) {
+      const img = imgs[idx++];
+      try { img.src = await expSignedUrl(img.dataset.expApath); } catch (e) { /* 載不到就留空 */ }
+    }
+  };
+  for (let i = 0; i < 4; i++) worker();
+}
+async function expUploadInsights(files) {
+  const t = expCurTrip();
+  const post = t ? expTripPosts(t).find(p => p.id === EXP_POST_EDIT_ID) : null;
+  if (!post) { alert('請先儲存這筆發文，再上傳成效截圖。'); return; }
+  if (expRecordsBlocked() || expPhase2Blocked() || EXP_ASSET_UPLOADING) return;
+  const st = document.getElementById('exppInsStatus');
+  EXP_ASSET_UPLOADING = true;
+  let ok = 0; const errs = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    st.textContent = '上傳中 ' + (i + 1) + '／' + files.length + '…';
+    try {
+      if (!(String(f.type).indexOf('image/') === 0 || expIsImageName(f.name))) throw new Error('成效截圖只能上傳圖片');
+      const up = await expUploadOne(f, 'asset', t.id, EXP_ASSET_MAX_EDGE);
+      if (up.localUrl) { try { URL.revokeObjectURL(up.localUrl); } catch (x) {} }
+      const res = await expApiPost('expense-asset-upsert', {
+        tripId: t.id, path: up.path, name: up.name, size: up.size,
+        assetDate: expToday(), kind: 'insight', postId: post.id,
+        brandId: post.brandId || null, eventId: post.eventId || null, inReport: true
+      });
+      if (!expIsOk(res)) throw new Error((res && res.error) || '建立成效截圖失敗');
+      ok++;
+    } catch (err) {
+      errs.push(f.name + '：' + err.message);
+    }
+  }
+  EXP_ASSET_UPLOADING = false;
+  st.textContent = '完成 ' + ok + ' 張' + (errs.length ? '，失敗 ' + errs.length + ' 張' : '');
+  if (errs.length) alert('以下成效截圖上傳失敗：\n\n' + errs.join('\n'));
+  try { await expRefreshOpenTrip(); expRenderPostInsights(); } catch (err) { st.textContent += '（重新整理失敗：' + err.message + '）'; }
+}
+async function expRemoveInsight(assetId) {
+  if (expRecordsBlocked() || expPhase2Blocked()) return;
+  if (!confirm('確定要刪除這張成效截圖嗎？圖檔也會一併刪除。')) return;
+  try {
+    const res = await expApiPost('expense-asset-delete', { id: assetId });
+    if (!expIsOk(res)) throw new Error((res && res.error) || '刪除失敗');
+    await expRefreshOpenTrip();
+    expRenderPostInsights();
+  } catch (err) { alert('刪除失敗：' + err.message); }
 }
 
 // ----- 從旅遊頁匯入 -----
@@ -1455,6 +1592,439 @@ async function expRunImport() {
   btn.disabled = false; sel.disabled = false;
 }
 
+// ===================================================================
+// 出差紀錄表 PDF（docs/20 第二期）：全程在瀏覽器端完成
+// 中文不內嵌字型：每頁 A4（595×842pt）用 canvas 以 2 倍解析度畫好，再 embedPng／embedJpg 進 pdf-lib（同 signdocs.js 做法）
+// 五個段落：封面／每日行程／花費／素材清單（每頁 3×4 格）／發文與產出；頁尾「出差紀錄表 ｜ 第 N／M 頁 ｜ 產出於 日期」
+// ===================================================================
+function expPdfEnsureLib() {
+  if (typeof PDFLib !== 'undefined') return Promise.resolve();
+  if (EXP_PDFLIB_PROMISE) return EXP_PDFLIB_PROMISE;
+  EXP_PDFLIB_PROMISE = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'vendor/pdf-lib.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('PDF 函式庫載入失敗'));
+    document.head.appendChild(s);
+  }).catch(err => { EXP_PDFLIB_PROMISE = null; throw err; });
+  return EXP_PDFLIB_PROMISE;
+}
+
+function expToast(msg, isError) {
+  const el = document.createElement('div');
+  el.className = 'exp-toast' + (isError ? ' error' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, isError ? 5000 : 3200);
+}
+
+// 取一張素材縮圖：簽名網址 → fetch → Image → 縮到長邊 520px 的 canvas（原圖馬上丟掉，避免上百張撐爆記憶體）
+async function expRecLoadThumb(path) {
+  if (!path) throw new Error('沒有圖檔');
+  const url = await expSignedUrl(path);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('下載失敗（' + res.status + '）');
+  const blob = await res.blob();
+  const objUrl = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('圖片無法讀取'));
+      im.src = objUrl;
+    });
+    const sc = Math.min(1, 520 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * sc));
+    c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  } finally {
+    URL.revokeObjectURL(objUrl);
+  }
+}
+// 並行上限 4；單張失敗記 null（畫灰框），不中止
+async function expRecFetchThumbs(assets, onProgress) {
+  const map = {};
+  let done = 0, idx = 0;
+  const worker = async () => {
+    while (idx < assets.length) {
+      const a = assets[idx++];
+      try { map[a.id] = await expRecLoadThumb(a.path); } catch (e) { map[a.id] = null; }
+      done++;
+      if (onProgress) onProgress(done, assets.length);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  return map;
+}
+
+// 版面工具：每頁一張 canvas（座標單位 = pt，ctx 已 scale 2 倍）
+function expRecDoc() {
+  const S = 2, PW = 595, PH = 842, M = 40, BOTTOM = PH - 54;
+  const FONT = '"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif';
+  const d = { S, PW, PH, M, BOTTOM, pages: [], ctx: null, cur: null, y: M };
+  d.setFont = (pt, bold) => { d.ctx.font = (bold ? '700 ' : '400 ') + pt + 'px ' + FONT; };
+  d.newPage = hasImg => {
+    const c = document.createElement('canvas');
+    c.width = PW * S; c.height = PH * S;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.scale(S, S);
+    ctx.textBaseline = 'top'; ctx.fillStyle = '#000000'; ctx.strokeStyle = '#000000'; ctx.lineWidth = 0.6;
+    d.ctx = ctx;
+    d.cur = { canvas: c, img: !!hasImg };
+    d.pages.push(d.cur);
+    d.y = M;
+  };
+  // 逐字換行（中文）；maxLines 超過時最後一行加刪節號
+  d.wrap = (text, maxW, maxLines) => {
+    const ctx = d.ctx, out = [];
+    String(text === null || text === undefined ? '' : text).split(/\r?\n/).forEach(p => {
+      let cur = '';
+      for (const ch of p) {
+        if (cur && ctx.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; } else cur += ch;
+      }
+      out.push(cur);
+    });
+    if (maxLines && out.length > maxLines) {
+      out.length = maxLines;
+      let l = out[maxLines - 1];
+      while (l && ctx.measureText(l + '…').width > maxW) l = l.slice(0, -1);
+      out[maxLines - 1] = l + '…';
+    }
+    return out;
+  };
+  d.heading = text => {
+    d.setFont(15, true);
+    d.ctx.fillText(text, M, d.y);
+    d.y += 23;
+    d.ctx.beginPath(); d.ctx.moveTo(M, d.y); d.ctx.lineTo(PW - M, d.y); d.ctx.lineWidth = 1.2; d.ctx.stroke(); d.ctx.lineWidth = 0.6;
+    d.y += 10;
+  };
+  d.paragraph = (text, pt, bold) => {
+    d.setFont(pt || 10, bold);
+    d.wrap(text, PW - 2 * M).forEach(l => { d.ctx.fillText(l, M, d.y); d.y += (pt || 10) * 1.6; });
+  };
+  // 表格：cols=[{w,align}]；header=字串陣列或 null；rows=字串陣列 | {group:'整列標題'}；opt={fs,maxLines,boldFirst,contHeading}
+  d.table = (cols, header, rows, opt) => {
+    opt = opt || {};
+    const fs = opt.fs || 8.5, lh = fs * 1.45, padX = 3.5, padY = 3.5, maxLines = opt.maxLines || 6;
+    const totalW = cols.reduce((a, c) => a + c.w, 0);
+    const cellX = i => M + cols.slice(0, i).reduce((a, c) => a + c.w, 0);
+    const drawLines = (lines, x, w, y, align) => {
+      const ctx = d.ctx;
+      lines.forEach((l, k) => {
+        let tx = x + padX;
+        if (align === 'right') tx = x + w - padX - ctx.measureText(l).width;
+        else if (align === 'center') tx = x + (w - ctx.measureText(l).width) / 2;
+        ctx.fillText(l, tx, y + padY + k * lh + (lh - fs) / 2 - 0.5);
+      });
+    };
+    const headCells = () => {
+      d.setFont(fs, true);
+      const cells = header.map((h, i) => d.wrap(h, cols[i].w - 2 * padX, 3));
+      return { cells, h: Math.max.apply(null, cells.map(c => c.length)) * lh + 2 * padY };
+    };
+    const drawHeader = () => {
+      const hc = headCells();
+      d.ctx.fillStyle = '#E6E6E6'; d.ctx.fillRect(M, d.y, totalW, hc.h);
+      d.ctx.fillStyle = '#000000';
+      hc.cells.forEach((lines, i) => {
+        d.ctx.strokeRect(cellX(i), d.y, cols[i].w, hc.h);
+        d.setFont(fs, true);
+        drawLines(lines, cellX(i), cols[i].w, d.y, 'center');
+      });
+      d.y += hc.h;
+    };
+    let needHeader = !!header;
+    rows.forEach(row => {
+      let h, cells;
+      if (row.group !== undefined) {
+        d.setFont(fs + 0.5, true);
+        cells = [d.wrap(row.group, totalW - 2 * padX, 2)];
+        h = cells[0].length * lh + 2 * padY;
+      } else {
+        cells = row.map((c, i) => {
+          d.setFont(fs, !!(opt.boldFirst && i === 0));
+          return d.wrap(c, cols[i].w - 2 * padX, maxLines);
+        });
+        h = Math.max.apply(null, cells.map(c => c.length)) * lh + 2 * padY;
+      }
+      const need = (needHeader ? headCells().h : 0) + h;
+      if (d.y + need > BOTTOM && d.y > M + 40) {
+        d.newPage();
+        if (opt.contHeading) d.heading(opt.contHeading);
+        needHeader = !!header;
+      }
+      if (needHeader) { drawHeader(); needHeader = false; }
+      if (row.group !== undefined) {
+        d.ctx.fillStyle = '#F2F2F2'; d.ctx.fillRect(M, d.y, totalW, h); d.ctx.fillStyle = '#000000';
+        d.ctx.strokeRect(M, d.y, totalW, h);
+        d.setFont(fs + 0.5, true);
+        drawLines(cells[0], M, totalW, d.y, 'left');
+      } else {
+        cells.forEach((lines, i) => {
+          d.ctx.strokeRect(cellX(i), d.y, cols[i].w, h);
+          d.setFont(fs, !!(opt.boldFirst && i === 0));
+          drawLines(lines, cellX(i), cols[i].w, d.y, cols[i].align);
+        });
+      }
+      d.y += h;
+    });
+  };
+  d.finish = genDate => {
+    const n = d.pages.length;
+    d.pages.forEach((p, i) => {
+      const ctx = p.canvas.getContext('2d');
+      ctx.setTransform(S, 0, 0, S, 0, 0);
+      ctx.fillStyle = '#000000'; ctx.strokeStyle = '#000000'; ctx.textBaseline = 'top'; ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(M, PH - 44); ctx.lineTo(PW - M, PH - 44); ctx.stroke();
+      ctx.font = '400 8.5px ' + FONT;
+      const t = '出差紀錄表 ｜ 第 ' + (i + 1) + '／' + n + ' 頁 ｜ 產出於 ' + genDate;
+      ctx.fillText(t, (PW - ctx.measureText(t).width) / 2, PH - 36);
+    });
+  };
+  return d;
+}
+
+function expRecMoney(n) { return 'NT$ ' + Math.round(n).toLocaleString('en-US'); }
+
+// 組出整份紀錄表的頁面（canvas 陣列）。data={ expenses, assets(已篩 inReport), thumbs }
+function expRecBuildPages(t, data, genDate) {
+  const d = expRecDoc();
+  const posts = expSortByDate(expTripPosts(t), 'postDate');
+  const itin = expTripItin(t).slice().sort((a, b) =>
+    String(a.date || '9999').localeCompare(String(b.date || '9999')) || String(a.time || '99:99').localeCompare(String(b.time || '99:99')));
+  const exps = data.expenses.slice().sort((a, b) => String(a.expenseDate || '').localeCompare(String(b.expenseDate || '')));
+  const assets = data.assets;
+
+  // ① 封面
+  d.newPage();
+  d.y = 130;
+  d.setFont(12, false); d.ctx.fillText('雪莉與朵栗', d.M, d.y); d.y += 26;
+  d.setFont(30, true); d.ctx.fillText('出差紀錄表', d.M, d.y); d.y += 52;
+  d.setFont(19, true);
+  d.wrap(t.title || '', d.PW - 2 * d.M).forEach(l => { d.ctx.fillText(l, d.M, d.y); d.y += 28; });
+  d.y += 8;
+  d.ctx.beginPath(); d.ctx.moveTo(d.M, d.y); d.ctx.lineTo(d.PW - d.M, d.y); d.ctx.lineWidth = 1.4; d.ctx.stroke(); d.ctx.lineWidth = 0.6;
+  d.y += 18;
+  const period = (t.startDate || t.endDate) ? (t.startDate || '?') + ' ～ ' + (t.endDate || '?') : '未填';
+  d.table([{ w: 100 }, { w: 415 }], null, [
+    ['出差期間', period],
+    ['地點', t.location || '—'],
+    ['備註', t.note || '—'],
+    ['內容概要', '行程 ' + itin.length + ' 條　花費 ' + exps.length + ' 筆　素材 ' + assets.length + ' 張（本表收錄）　發文與產出 ' + posts.length + ' 筆'],
+    ['製表單位', '雪莉與朵栗'],
+    ['產出日期', genDate]
+  ], { fs: 10.5, boldFirst: true, maxLines: 12 });
+
+  // ② 每日行程
+  d.newPage();
+  d.heading('一、每日行程');
+  if (!itin.length) d.paragraph('（這趟沒有行程資料）', 10);
+  else {
+    const rows = [];
+    let lastDate = null;
+    itin.forEach(it => {
+      const dt = it.date || '';
+      if (dt !== lastDate) {
+        rows.push({ group: dt ? expDayNo(t, dt) + dt + '（' + expWeekday(dt) + '）' : '未填日期' });
+        lastDate = dt;
+      }
+      rows.push([it.time || '—', expKindLabel(EXP_ITIN_CATS, it.cat), it.title || '', it.place || '']);
+    });
+    d.table([{ w: 50 }, { w: 50 }, { w: 245 }, { w: 170 }], ['時間', '類別', '標題', '地點'], rows, { contHeading: '一、每日行程（續）' });
+  }
+
+  // ③ 花費
+  d.newPage();
+  d.heading('二、花費');
+  if (!exps.length) d.paragraph('（這趟沒有掛上的花費）', 10);
+  else {
+    const rows = exps.map(e => {
+      const twd = expTwdOf(e);
+      const payer = e.paidBy === 'personal' ? (e.payerName || '個人') + ' 代墊' : '公司付';
+      const rc = Array.isArray(e.receipts) ? e.receipts.length : 0;
+      return [e.expenseDate || '', expCatLabel(e.category), e.item || '', e.vendor || '', expMoney(e.currency, e.amount),
+        twd === null ? '未換算' : expRecMoney(twd), payer, rc ? rc + ' 張' : '—'];
+    });
+    d.table([{ w: 56 }, { w: 38 }, { w: 112 }, { w: 76 }, { w: 70, align: 'right' }, { w: 62, align: 'right' }, { w: 62 }, { w: 39, align: 'center' }],
+      ['日期', '類別', '項目', '店家', '金額（原幣）', '台幣', '誰付', '收據'], rows, { contHeading: '二、花費（續）' });
+    // 合計與類別小計
+    let total = 0, unconverted = 0;
+    const byCat = {};
+    exps.forEach(e => {
+      const twd = expTwdOf(e);
+      const k = e.category || 'other';
+      byCat[k] = byCat[k] || { n: 0, sum: 0 };
+      byCat[k].n++;
+      if (twd === null) unconverted++; else { total += twd; byCat[k].sum += twd; }
+    });
+    if (d.y + 120 > d.BOTTOM) { d.newPage(); d.heading('二、花費（續）'); }
+    d.y += 12;
+    d.setFont(11, true);
+    d.ctx.fillText('台幣合計：' + expRecMoney(total) + '（共 ' + exps.length + ' 筆）', d.M, d.y); d.y += 18;
+    if (unconverted) { d.setFont(9, false); d.ctx.fillText('另有 ' + unconverted + ' 筆外幣尚未換算台幣，未計入上列合計。', d.M, d.y); d.y += 16; }
+    d.y += 4;
+    const catKeys = EXP_CATEGORIES.map(c => c[0]).filter(k => byCat[k]).concat(Object.keys(byCat).filter(k => !EXP_CATEGORIES.some(c => c[0] === k)));
+    d.table([{ w: 200 }, { w: 100, align: 'center' }, { w: 215, align: 'right' }], ['類別小計', '筆數', '台幣小計'],
+      catKeys.map(k => [expCatLabel(k), byCat[k].n + ' 筆', expRecMoney(byCat[k].sum)]), { contHeading: '二、花費（續）' });
+  }
+
+  // ④ 素材清單：每頁 3×4 格
+  if (!assets.length) {
+    d.newPage();
+    d.heading('三、素材清單');
+    d.paragraph('（這趟沒有放進紀錄表的素材）', 10);
+  } else {
+    const PER = 12;
+    for (let pi = 0; pi < assets.length; pi += PER) {
+      d.newPage(true);
+      d.heading(pi ? '三、素材清單（續）' : '三、素材清單（共 ' + assets.length + ' 張）');
+      const top = d.y, cw = (d.PW - 2 * d.M) / 3, ch = (d.BOTTOM - top) / 4;
+      assets.slice(pi, pi + PER).forEach((a, k) => {
+        expRecDrawAssetCell(d, a, data.thumbs[a.id], posts, d.M + (k % 3) * cw, top + Math.floor(k / 3) * ch, cw, ch);
+      });
+    }
+  }
+
+  // ⑤ 發文與產出
+  d.newPage();
+  d.heading('四、發文與產出');
+  if (!posts.length) d.paragraph('（這趟沒有發文或產出紀錄）', 10);
+  else {
+    const rows = posts.map(p => {
+      const bt = [p.brandName || '未綁品牌'];
+      if (p.eventTitle) bt.push('團：' + p.eventTitle);
+      return [p.postDate || '', expKindLabel(EXP_POST_KINDS, p.kind), p.title || '', bt.join('\n'), p.url || '',
+        p.closedAt || '未結案', String(expPostInsightCount(t, p)) + ' 張'];
+    });
+    d.table([{ w: 52 }, { w: 38 }, { w: 112 }, { w: 108 }, { w: 109 }, { w: 54 }, { w: 42, align: 'center' }],
+      ['日期', '類型', '標題', '品牌／團', '網址', '結案日', '成效截圖'], rows, { maxLines: 5, contHeading: '四、發文與產出（續）' });
+  }
+
+  d.finish(genDate);
+  return d.pages;
+}
+
+// 素材格：縮圖＋日期類型＋品牌產品＋用途（發文標題）＋備註
+function expRecDrawAssetCell(d, a, thumb, posts, cx, cy, cw, ch) {
+  const ctx = d.ctx;
+  ctx.strokeRect(cx, cy, cw, ch);
+  const bx = cx + 4, by = cy + 4, bw = cw - 8, bh = 96;
+  ctx.fillStyle = '#F2F2F2'; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = '#000000';
+  if (thumb) {
+    const sc = Math.min(bw / thumb.width, bh / thumb.height);
+    const iw = thumb.width * sc, ih = thumb.height * sc;
+    ctx.drawImage(thumb, bx + (bw - iw) / 2, by + (bh - ih) / 2, iw, ih);
+  } else {
+    d.setFont(9, false);
+    ctx.fillStyle = '#666666';
+    const msg = a.path ? '圖片載入失敗' : '無圖檔';
+    ctx.fillText(msg, bx + (bw - ctx.measureText(msg).width) / 2, by + bh / 2 - 5);
+    ctx.fillStyle = '#000000';
+  }
+  ctx.strokeStyle = '#999999'; ctx.strokeRect(bx, by, bw, bh); ctx.strokeStyle = '#000000';
+  const fs = 8, lh = 10.2, tw = cw - 10, tx = cx + 5, limit = cy + ch - 3;
+  let y = by + bh + 4;
+  const put = (text, bold, maxLines) => {
+    d.setFont(fs, bold);
+    d.wrap(text, tw, maxLines).forEach(l => { if (y + lh <= limit) { ctx.fillText(l, tx, y); y += lh; } });
+  };
+  put((a.assetDate || '未填日期') + '・' + expKindLabel(EXP_ASSET_KINDS, a.kind), true, 1);
+  put((a.brandId ? (a.brandName || '') : '未綁品牌') + (a.product ? '・' + a.product : ''), false, 2);
+  const post = a.postId ? posts.find(p => p.id === a.postId) : null;
+  if (post) put('用途：' + expKindLabel(EXP_POST_KINDS, post.kind) + '「' + (post.title || '') + '」', false, 2);
+  if (a.note) put('備註：' + a.note, false, 2);
+}
+
+// 把頁面 canvas 組成 PDF bytes（含圖的頁面用 JPEG，純文字頁用 PNG）
+async function expRecPagesToPdf(pages, title) {
+  await expPdfEnsureLib();
+  const pdf = await PDFLib.PDFDocument.create();
+  for (const p of pages) {
+    const blob = await new Promise(res => p.canvas.toBlob(res, p.img ? 'image/jpeg' : 'image/png', 0.9));
+    if (!blob) throw new Error('頁面轉圖失敗');
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const im = p.img ? await pdf.embedJpg(bytes) : await pdf.embedPng(bytes);
+    const pg = pdf.addPage([595, 842]);
+    pg.drawImage(im, { x: 0, y: 0, width: 595, height: 842 });
+    p.canvas.width = 1; p.canvas.height = 1;
+  }
+  try { pdf.setTitle(title); pdf.setCreator('雪莉與朵栗後台'); } catch (e) { /* 標題只是中繼資料，失敗不影響 */ }
+  return await pdf.save();
+}
+
+function expRecSafeName(s) { return String(s || '').replace(/[\\/:*?"<>|\r\n]+/g, '_').trim().slice(0, 60) || '出差'; }
+
+async function expGenerateRecordPdf() {
+  if (EXP_PDF_BUSY) return;
+  const tripId = EXP_TRIP_EDIT_ID;
+  if (!tripId || !expCurTrip()) { alert('請先儲存這趟出差，再產出紀錄表。'); return; }
+  if (EXP_TRIP_UP.busy()) { alert('附件還在上傳中，請稍候再產出。'); return; }
+  const btn = document.getElementById('exptPdfBtn');
+  const out = document.getElementById('exptPdfRes');
+  const oldHtml = btn.innerHTML;
+  const say = msg => { btn.textContent = msg; };
+  EXP_PDF_BUSY = true;
+  btn.disabled = true;
+  out.innerHTML = '';
+  let bytes = null, fileName = '';
+  try {
+    say('讀取最新資料…');
+    await expRefreshOpenTrip();   // 以最新資料產出（花費、素材、發文）
+    const t = expCurTrip();
+    if (!t) throw new Error('找不到這趟出差');
+    const assets = expSortByDate(expTripAssets(t), 'assetDate').filter(a => a.inReport !== false);
+    const expenses = EXP_LIST.filter(e => e.tripId === t.id);
+    say('抓圖 0／' + assets.length);
+    const thumbs = await expRecFetchThumbs(assets, (n, m) => say('抓圖 ' + n + '／' + m));
+    const failed = assets.filter(a => !thumbs[a.id]).length;
+    say('組版中…');
+    await new Promise(r => setTimeout(r, 30));   // 讓按鈕文字先畫出來
+    const genDate = expToday();
+    const pages = expRecBuildPages(t, { expenses, assets, thumbs }, genDate);
+    say('轉成 PDF…');
+    bytes = await expRecPagesToPdf(pages, '出差紀錄表 ' + t.title);
+    fileName = '出差紀錄表-' + expRecSafeName(t.title) + '-' + genDate.replace(/-/g, '') + '.pdf';
+    const info = '共 ' + pages.length + ' 頁' + (failed ? '，有 ' + failed + ' 張素材圖載入失敗（以灰框代替）' : '') + '。';
+
+    // 上傳成出差附件（只在既有已存附件後面追加，不動其他附件）
+    say('上傳附件…');
+    try {
+      const file = new File([bytes], fileName, { type: 'application/pdf' });
+      const up = await expUploadOne(file, 'trip', t.id);
+      const keep = (Array.isArray(t.attachments) ? t.attachments : []).map(x => ({ path: x.path, name: x.name, size: x.size, uploadedAt: x.uploadedAt }));
+      keep.push({ path: up.path, name: up.name, size: up.size, uploadedAt: up.uploadedAt });
+      const res = await expApiPost('expense-trip-upsert', { id: t.id, attachments: keep });
+      if (!expIsOk(res)) throw new Error((res && res.error) || '寫入附件失敗');
+      await expRefreshOpenTrip();
+      const t2 = expCurTrip();
+      if (t2) EXP_TRIP_UP.setItems(t2.attachments);
+      out.innerHTML = '<div>已產出並存進附件：' + expEsc(fileName) + '</div><div class="exp-hint">' + expEsc(info) + '</div>';
+      expToast('出差紀錄表已存進附件');
+    } catch (upErr) {
+      expRecDownload(bytes, fileName);
+      out.innerHTML = '<div style="color:#B5485A;">PDF 已產出，但存進附件失敗：' + expEsc(upErr.message) + '。已改為下載到本機（' + expEsc(fileName) + '），請自行補傳。</div><div class="exp-hint">' + expEsc(info) + '</div>';
+      expToast('附件上傳失敗，已改為下載到本機', true);
+    }
+  } catch (err) {
+    out.innerHTML = '<span style="color:#B5485A;">產出失敗：' + expEsc(err.message) + '</span>';
+    expToast('產出紀錄表失敗：' + err.message, true);
+  }
+  btn.innerHTML = oldHtml;
+  btn.disabled = false;
+  EXP_PDF_BUSY = false;
+}
+function expRecDownload(bytes, fileName) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
 // 就地重新抓資料（不關視窗）：更新清單與出差視窗各區；基本區日期欄是空的才補（匯入可能補了期間）
 async function expRefreshOpenTrip() {
   const data = await expApiGet();
@@ -1500,6 +2070,26 @@ function expWireRecords() {
   document.getElementById('expaDeleteBtn').addEventListener('click', expDeleteAsset);
   document.getElementById('exppSaveBtn').addEventListener('click', expSavePost);
   document.getElementById('exppDeleteBtn').addEventListener('click', expDeletePost);
+  document.getElementById('exppInsFile').addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length) expUploadInsights(files);
+  });
+  document.getElementById('exppIns').addEventListener('click', e => {
+    const rm = e.target.closest('[data-rm]');
+    if (rm) { e.stopPropagation(); expRemoveInsight(rm.dataset.rm); return; }
+    const tile = e.target.closest('.exp-as');
+    if (!tile) return;
+    const rec = expTripAssets(expCurTrip()).find(a => a.id === tile.dataset.id);
+    if (rec && rec.path) expOpenFile({ path: rec.path });
+  });
+  document.getElementById('exppClosed').addEventListener('change', e => {
+    const dt = document.getElementById('exppClosedAt');
+    dt.disabled = !e.target.checked;
+    if (e.target.checked && !dt.value) dt.value = expToday();
+    if (!e.target.checked) dt.value = '';
+  });
+  document.getElementById('exptPdfBtn').addEventListener('click', expGenerateRecordPdf);
 }
 
 // 支出列可用鍵盤 Enter 開啟（列是 role=button）

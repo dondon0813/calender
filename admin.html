@@ -8051,7 +8051,7 @@
 <script src="report.js?v=8"></script>
 <script src="accounting.js?v=21"></script>
 <!-- expenses.js（帳務頁「公司支出」子分頁）必須排在 admin.js 之前：開機還原分頁若停在帳務頁，只有 expenseEdit 的人會同步呼叫 acctSwitchTab('expenses') → loadExpensesView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="expenses.js?v=3"></script>
+<script src="expenses.js?v=4"></script>
 <!-- signdocs.js（帳務頁「文件簽署」子分頁）同樣必須排在 admin.js 之前，理由同 expenses.js：開機還原分頁可能同步呼叫 acctSwitchTab('signdocs') → loadSigndocsView() -->
 <script src="signdocs.js?v=5"></script>
 <!-- books.js 必須排在 admin.js 之前：開機還原分頁若停在 books，會同步呼叫 loadBooksView()，順序錯了整頁變磚 -->
