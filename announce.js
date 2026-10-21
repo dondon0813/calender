@@ -16,6 +16,13 @@
     '.ann-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}',
     '.ann-form{background:var(--c-surface,#fff);border:1px solid var(--c-line);border-radius:12px;padding:12px 14px;margin-bottom:14px;}',
     '.ann-form input[type=text],.ann-form textarea{width:100%;box-sizing:border-box;margin-bottom:8px;border:1px solid var(--c-line);border-radius:10px;padding:8px 10px;font-family:var(--font-body);font-size:14px;background:var(--c-input-bg,#fff);color:var(--c-text);}',
+    '.ann-item-limit{font-size:12px;color:var(--c-text-soft);margin-bottom:6px;}',
+    '.ann-perm-box{margin:0 0 10px;}',
+    '.ann-perm-title{font-size:13px;font-weight:700;color:var(--c-text);margin-bottom:6px;}',
+    '.ann-perm-opts{display:flex;flex-wrap:wrap;gap:6px 14px;}',
+    '.ann-perm-opt{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--c-text);cursor:pointer;}',
+    '.ann-perm-opt input{margin:0;width:auto;}',
+    '.ann-perm-note{font-size:12px;color:var(--c-text-soft);margin-top:6px;}',
     '.ann-empty{color:var(--c-muted,#a89888);font-size:13px;padding:12px 0;}',
     '#annModal .modal-box{max-width:480px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto;}',
     '#annModal .ann-item{margin-bottom:8px;}',
@@ -28,7 +35,14 @@
   var autoShown = false;
   var lastCheckAt = 0;
   var unreadCount = 0;
-  var listState = { items: [], canEdit: false, tableReady: true, editingId: null };
+  var listState = { items: [], canEdit: false, tableReady: true, editingId: null, permChoices: [], permReady: true };
+
+  // 權限 key → 顯示名稱（沒對到就印 key）
+  function permLabel(key) {
+    var cs = listState.permChoices || [];
+    for (var i = 0; i < cs.length; i++) if (cs[i].key === key) return cs[i].label || key;
+    return key;
+  }
 
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -118,6 +132,10 @@
     var meta = fmtDate(it.createdAt) + (it.createdBy ? '　' + it.createdBy : '');
     head.appendChild(el('span', 'ann-item-meta', meta));
     box.appendChild(head);
+    // 只有能發公告的人看得到「限：…」（員工端拿不到權限名稱對照，不印內部 key）
+    if (listState.canEdit && it.permKeys && it.permKeys.length) {
+      box.appendChild(el('div', 'ann-item-limit', '限：' + it.permKeys.map(permLabel).join('、')));
+    }
     box.appendChild(el('div', 'ann-item-body', it.body || ''));
     if (!withAdmin) return box;
 
@@ -167,6 +185,26 @@
     t.style.marginTop = '8px';
     var b = el('textarea'); b.rows = 5; b.maxLength = 2000; b.placeholder = '內容（2000 字內，可換行）';
     if (editItem) { t.value = editItem.title || ''; b.value = editItem.body || ''; }
+
+    // 只給有這些權限的員工看（都不勾＝全員）
+    var permBox = el('div', 'ann-perm-box');
+    permBox.appendChild(el('div', 'ann-perm-title', '只給有這些權限的員工看（都不勾＝全員）'));
+    var permOpts = el('div', 'ann-perm-opts');
+    var permInputs = [];
+    var picked = (editItem && editItem.permKeys) || [];
+    var permOff = listState.permReady === false;
+    (listState.permChoices || []).forEach(function (c) {
+      var lab = el('label', 'ann-perm-opt');
+      var cb = el('input'); cb.type = 'checkbox'; cb.value = c.key;
+      cb.checked = picked.indexOf(c.key) >= 0;
+      cb.disabled = permOff;
+      lab.appendChild(cb);
+      lab.appendChild(el('span', null, c.label || c.key));
+      permOpts.appendChild(lab);
+      permInputs.push(cb);
+    });
+    permBox.appendChild(permOpts);
+    if (permOff) permBox.appendChild(el('div', 'ann-perm-note', '待資料庫更新後啟用'));
     var status = el('div', 'form-status');
     var btn = el('button', 'task-submit-btn', editItem ? '儲存修改' : '發布');
     btn.type = 'button';
@@ -177,12 +215,15 @@
       try {
         var p = { type: 'announce-upsert', title: title, body: body };
         if (editItem) p.id = editItem.id;
+        if (!permOff) {
+          p.permKeys = permInputs.filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+        }
         await postTask(p);
         listState.editingId = null;
         loadAnnounceView();
       } catch (e) { btn.disabled = false; status.textContent = '失敗：' + e.message; }
     });
-    f.appendChild(t); f.appendChild(b); f.appendChild(btn);
+    f.appendChild(t); f.appendChild(b); f.appendChild(permBox); f.appendChild(btn);
     if (editItem) {
       var cb = el('button', 'task-mini-btn', '取消');
       cb.type = 'button'; cb.style.marginLeft = '8px';
@@ -220,6 +261,8 @@
       var r = await postTask({ type: 'announce-list' });
       listState.tableReady = r.tableReady !== false;
       listState.canEdit = !!r.canEdit;
+      listState.permReady = r.permReady !== false;
+      listState.permChoices = r.permChoices || listState.permChoices || [];
       listState.items = r.items || [];
       if (listState.tableReady) setBadge(listState.items.filter(function (i) { return i.read === false; }).length);
       renderView();
