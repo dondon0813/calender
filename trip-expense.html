@@ -181,6 +181,25 @@
   .pl .s a { color: var(--primary-dark); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; margin-right: 8px; }
   .pl .s a svg { width: 13px; height: 13px; }
   .pl .who { font-size: .72rem; color: var(--placeholder); margin-top: 3px; }
+  /* 綁品牌選擇器（bp*，與 trip.html 同一份邏輯） */
+  .bp-box { position: relative; }
+  .bp-cur { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .bp-cur:empty { display: none; }
+  .bp-in { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px; background: #fff; color: var(--text); font-family: inherit; -webkit-appearance: none; appearance: none; }
+  .bp-in::-webkit-search-cancel-button { -webkit-appearance: none; }
+  .bp-list { position: absolute; left: 0; right: 0; z-index: 6; margin-top: 4px; max-height: 220px; overflow-y: auto; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; box-shadow: 0 6px 18px rgba(90,74,66,.15); }
+  .bp-list[hidden] { display: none; }
+  .bp-opt { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border: none; background: none; font: inherit; font-size: .92rem; color: var(--text); text-align: left; cursor: pointer; }
+  .bp-opt:hover { background: var(--surface); }
+  .bp-opt img, .bp-ph { width: 24px; height: 24px; object-fit: contain; flex: none; }
+  .bp-empty { padding: 10px 12px; font-size: .85rem; color: var(--soft); }
+  .bp-tag { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 700; color: var(--soft); background: #fff; border-radius: 999px; padding: 2px 9px 2px 3px; margin-top: 4px; max-width: 100%; }
+  .bp-tag img { width: 18px; height: 18px; object-fit: contain; flex: none; }
+  .bp-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bp-cur .bp-tag { margin-top: 0; background: var(--surface); }
+  .bp-clear { display: inline-flex; align-items: center; gap: 3px; border: none; background: none; color: var(--muted, #B3A49B); font: inherit; font-size: .78rem; cursor: pointer; padding: 2px 4px; }
+  .bp-clear svg { width: 12px; height: 12px; }
+  .bp-clear:hover { color: var(--text); }
   .dayhead .cnt { font-size: .8rem; color: var(--muted); }
 
   /* 相片 */
@@ -376,6 +395,8 @@
     <input type="text" id="pPlace" placeholder="例：東京都台東区浅草2-3-1" maxlength="100">
     <label for="pUrl">網址（選填：Google 地圖、訂位、官網）</label>
     <input type="url" id="pUrl" placeholder="https://" maxlength="500" inputmode="url">
+    <label for="pBrandBoxIn">綁品牌（選填：發布成範本後，粉絲會看到這個品牌的開團狀態）</label>
+    <div id="pBrandBox"></div>
     <label for="pNote">備註（選填）</label>
     <textarea id="pNote" rows="2" placeholder="例：09:00 開門、記得帶護照" maxlength="300"></textarea>
     <div class="err" id="planErr"></div>
@@ -637,6 +658,77 @@ function setSync(msg, isErr) { const el = document.getElementById('sync'); el.te
 
 /* ---------- 資料合併 ---------- */
 const PATH_RE = /^trip\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+/* ---------- 綁品牌選擇器 bp*（trip.html 與 trip-expense.html 各放一份逐字相同的複本，改一處要兩處一起改） ----------
+   存的值＝品牌 uuid（brandId）；範本發布後粉絲版行程頁會自動帶該品牌的開團狀態。
+   品牌清單：POST trip-brand-choices（僅需登入；id／name／thumbUrl），開站載一次、記在記憶體。 */
+const BP_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const BP_TAG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>';
+const BP_X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const BP = { brands: [], map: new Map(), state: 'idle', cbs: [] };   // state: idle | loading | ok | fail
+function bpUuidOrNull(v) { v = typeof v === 'string' ? v.trim() : ''; return BP_UUID_RE.test(v) ? v.toLowerCase() : null; }
+function bpLoad(cb, retry) {
+  if (cb) BP.cbs.push(cb);
+  if (BP.state === 'loading' || BP.state === 'ok') return;
+  if (BP.state === 'fail' && !retry) return;
+  const tk = getToken();
+  if (!tk) { BP.state = 'idle'; return; }
+  BP.state = 'loading';
+  fetch(API, { method: 'POST', body: JSON.stringify({ type: 'trip-brand-choices', token: tk }) }).then(r => r.json()).then(r => {
+    if (r && r.success === true && Array.isArray(r.brands)) {
+      BP.brands = r.brands.map(b => ({ id: bpUuidOrNull(b && b.id), name: String((b && b.name) || '').slice(0, 60), thumbUrl: /^https?:\/\//i.test(String((b && b.thumbUrl) || '')) ? String(b.thumbUrl) : '' })).filter(b => b.id && b.name);
+      BP.map = new Map(BP.brands.map(b => [b.id, b]));
+      BP.state = 'ok';
+    } else BP.state = 'fail';
+  }).catch(() => { BP.state = 'fail'; }).then(() => { BP.cbs.splice(0).forEach(fn => { try { fn(); } catch (e) {} }); });
+}
+// 清單列上的小標：品牌小圖＋名稱；沒綁或品牌清單還沒載入回空字串
+function bpTagHtml(id) {
+  const b = id ? BP.map.get(id) : null;
+  if (!b) return '';
+  return '<span class="bp-tag">' + (b.thumbUrl ? '<img src="' + esc(b.thumbUrl) + '" alt="" loading="lazy">' : '') + '<span>' + esc(b.name) + '</span></span>';
+}
+function bpRenderCur(host) {
+  const v = host._bp.value, cur = host.querySelector('.bp-cur');
+  if (!v) { cur.innerHTML = ''; return; }
+  const b = BP.map.get(v);
+  cur.innerHTML = (b ? bpTagHtml(v) : '<span class="bp-tag"><span>（已綁定的品牌）</span></span>') +
+    '<button type="button" class="bp-clear" aria-label="清除品牌">' + BP_X_ICON + '清除</button>';
+}
+function bpRenderList(host) {
+  const list = host.querySelector('.bp-list'), q = host.querySelector('.bp-in').value.trim().toLowerCase();
+  if (BP.state === 'loading' || BP.state === 'idle') { list.innerHTML = '<div class="bp-empty">品牌清單載入中…</div>'; return; }
+  if (BP.state === 'fail') { list.innerHTML = '<div class="bp-empty">品牌清單載入失敗，請重新整理或重新登入</div>'; return; }
+  const hit = (q ? BP.brands.filter(b => b.name.toLowerCase().includes(q)) : BP.brands).slice(0, 60);
+  list.innerHTML = hit.length ? hit.map(b => '<button type="button" class="bp-opt" data-bid="' + esc(b.id) + '">' + (b.thumbUrl ? '<img src="' + esc(b.thumbUrl) + '" alt="" loading="lazy">' : '<span class="bp-ph"></span>') + '<span>' + esc(b.name) + '</span></button>').join('') : '<div class="bp-empty">沒有符合的品牌</div>';
+}
+// 在 host 元素裡建選擇器：input(type=search) 打字過濾、點選取用、已選顯示小圖＋名稱＋✕ 清除
+function bpMount(host, value, onChange) {
+  host._bp = { value: bpUuidOrNull(value) };
+  host.classList.add('bp-box');
+  const inId = (host.id || ('bp' + Math.random().toString(36).slice(2, 7))) + 'In';
+  host.innerHTML = '<div class="bp-cur"></div><input type="search" class="bp-in" id="' + inId + '" placeholder="搜尋品牌名稱…" autocomplete="off" maxlength="40"><div class="bp-list" hidden></div>';
+  const inp = host.querySelector('.bp-in'), list = host.querySelector('.bp-list');
+  const pick = id => {
+    host._bp.value = id; inp.value = ''; list.hidden = true;
+    bpRenderCur(host);
+    if (onChange) onChange(id);
+  };
+  const show = () => { bpRenderList(host); list.hidden = false; };
+  inp.addEventListener('focus', () => { if (BP.state === 'fail') bpLoad(() => { if (!list.hidden) bpRenderList(host); }, true); show(); });
+  inp.addEventListener('input', show);
+  inp.addEventListener('blur', () => { list.hidden = true; });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { list.hidden = true; return; }
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); const first = list.querySelector('[data-bid]'); if (first) pick(first.dataset.bid); }
+  });
+  list.addEventListener('mousedown', e => e.preventDefault());   // 點選項時不要先觸發 input blur 把清單收掉
+  list.addEventListener('click', e => { const o = e.target.closest('[data-bid]'); if (o) pick(o.dataset.bid); });
+  host.querySelector('.bp-cur').addEventListener('click', e => { if (e.target.closest('.bp-clear')) pick(null); });
+  bpRenderCur(host);
+  bpLoad(() => { if (host.isConnected) { bpRenderCur(host); if (!list.hidden) bpRenderList(host); } });
+}
+function bpGet(host) { return host && host._bp ? host._bp.value : null; }
+
 // 分攤設定 {mode:'even'|'custom'|'none', among:[名字], amounts:{名字:金額}}；舊資料沒這欄＝全員均分
 function cleanSplit(raw) {
   const sp = raw && typeof raw === 'object' ? raw : {};
@@ -662,11 +754,11 @@ function normalize(raw) {
   s.rates = rates;
   if (!Array.isArray(s.photos)) s.photos = [];
   if (!Array.isArray(s.plan)) s.plan = [];
-  // 行程：{id, date, time 'HH:MM' 或空, cat, title, place, url, note, by, at, del}
+  // 行程：{id, date, time 'HH:MM' 或空, cat, title, place, url, note, brandId(品牌 uuid 或 null), by, at, del}
   s.plan = s.plan.filter(p => p && p.id).map(p => ({
     id: String(p.id), date: String(p.date || ''), time: /^\d{2}:\d{2}$/.test(String(p.time || '')) ? String(p.time) : '',
     cat: PCAT_MAP[p.cat] ? p.cat : 'other', title: String(p.title || '').slice(0, 60),
-    place: String(p.place || '').slice(0, 100), url: safeUrl(String(p.url || '')), note: String(p.note || '').slice(0, 300),
+    place: String(p.place || '').slice(0, 100), url: safeUrl(String(p.url || '')), note: String(p.note || '').slice(0, 300), brandId: bpUuidOrNull(p.brandId),
     by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
   }));
   s.items = s.items.filter(i => i && i.id).map(i => ({
@@ -798,6 +890,7 @@ function showApp() {
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('fabs').classList.remove('hidden');
   render();
+  bpLoad(() => { try { render(); } catch (e) {} });
 }
 
 /* ---------- 照片：縮圖＋上傳 ---------- */
@@ -1143,7 +1236,7 @@ function planItemHtml(p) {
   return '<div class="pl" data-id="' + esc(p.id) + '">' +
     '<span class="tm' + (p.time ? '' : ' none') + '">' + (p.time || '—') + '</span>' +
     '<span class="ic" style="background:' + c.color + '">' + c.icon + '</span>' +
-    '<div class="m"><div class="n">' + esc(p.title || c.name) + '</div>' +
+    '<div class="m"><div class="n">' + esc(p.title || c.name) + '</div>' + bpTagHtml(p.brandId) +
     (links.length || p.note ? '<div class="s">' + links.join('') + (p.note ? (links.length ? '<br>' : '') + esc(p.note) : '') + '</div>' : '') +
     (p.by ? '<div class="who">' + esc(p.by) + ' 排的</div>' : '') + '</div></div>';
 }
@@ -1193,6 +1286,7 @@ function openPlan(id) {
   document.getElementById('pPlace').value = p ? p.place : '';
   document.getElementById('pUrl').value = p ? p.url : '';
   document.getElementById('pNote').value = p ? p.note : '';
+  bpMount(document.getElementById('pBrandBox'), p ? p.brandId : null);
   document.getElementById('planErr').textContent = '';
   document.getElementById('planDelBtn').classList.toggle('hidden', !p);
   openModal('planModal');
@@ -1211,6 +1305,7 @@ document.getElementById('planSaveBtn').addEventListener('click', () => {
   const rec = {
     id: PLAN_EDITING_ID || uid(), date, time: document.getElementById('pTime').value || '', cat: PLAN_CAT, title,
     place: document.getElementById('pPlace').value.trim(), url, note: document.getElementById('pNote').value.trim(),
+    brandId: bpGet(document.getElementById('pBrandBox')),
     by: getUser(), at: Date.now(), del: false,
   };
   const idx = STATE.plan.findIndex(x => x.id === rec.id);
