@@ -671,8 +671,11 @@
     gap: 6px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 0 10px 6px;
+    padding: 0 10px 5px;
   }
+  /* 團名只一行、超過用「…」（雪莉 10-22 選 B，與新站橫滑列同規則）：長團名不再把整排撐高；外框底部留白縮小 */
+  #openGroupBuyBar .ogb-items .ogb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #openGroupBuyBar.ogb-bar { padding-bottom: 6px; }
   #openGroupBuyBar .ogb-item,
   #openGroupBuyBar .ogb-items.ogb-grid4 .ogb-item,
   #openGroupBuyBar .ogb-items.ogb-grid5 .ogb-item { width: 80px; flex: 0 0 auto; }
