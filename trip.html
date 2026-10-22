@@ -419,7 +419,6 @@
     <div class="sec-h"><span class="ic" style="background:var(--green)" data-icon="bag"></span>出發前準備</div>
     <div id="prepLists"></div>
     <div class="savemsg" id="saveMsg"></div>
-    <div class="panel" id="stayPanel" hidden><h3>住宿</h3><div id="stayList"></div></div>
   </section>
 
   <section id="album" hidden>
@@ -979,7 +978,6 @@ function render() {
   renderSteps();
   renderDay(0);
   renderPrep();
-  renderStays();
   renderAlbum();
 }
 
@@ -1370,22 +1368,6 @@ async function queueSave() {
   }
 }
 
-function renderStays() {
-  const hs = liveHotels();
-  if (hs.length) {
-    document.getElementById('stayPanel').hidden = false;
-    document.getElementById('stayList').innerHTML = hs.map(h => '<div class="stay"><span>' + esc(h.name || '飯店') + (h.address ? '<span class="sp">' + esc(h.address) + '</span>' : '') + '</span><span class="sd">' + (isoOk(h.checkin) ? md(h.checkin) : '') + (isoOk(h.checkout) ? '－' + md(h.checkout) : '') + '</span></div>').join('');
-    return;
-  }
-  // 住宿：排行程裡「住宿」類的項目，入住日～下一間入住日（或最後一天）
-  const stays = DATA.plan.filter(p => p.cat === 'stay' && p.date).sort((a, b) => a.date.localeCompare(b.date));
-  document.getElementById('stayPanel').hidden = !stays.length;
-  const last = DAYS[DAYS.length - 1] || '';
-  document.getElementById('stayList').innerHTML = stays.map((s, i) => {
-    const end = stays[i + 1] ? stays[i + 1].date : last;
-    return '<div class="stay"><span>' + esc(stayName(s)) + (s.place && s.place !== stayName(s) ? '<span class="sp">' + esc(s.place) + '</span>' : '') + '</span><span class="sd">' + md(s.date) + (end && end !== s.date ? '－' + md(end) : '') + '</span></div>';
-  }).join('');
-}
 function renderAlbum() {
   const has = DATA.photos.length > 0;
   document.getElementById('album').hidden = !has;
@@ -1899,7 +1881,7 @@ const ED_FORMS = {
     html(rec, ctx) {
       const r = rec || { cat: 'sight', date: ctx.date || DAYS[CUR] || '', time: '', title: '', place: '', url: '', note: '', brandId: null };
       const mode = r.ref ? r.ref.kind : r.cat;   // 'flight' | 'hotel' = 引用航班／住宿；其餘是一般行程類型
-      ED.seg.cat = mode; ED.planR = r; ED.refMode = mode === 'flight' || mode === 'hotel' ? mode : '';
+      ED.seg.cat = mode; ED.planR = r; ED.baseDate = r.date; ED.refMode = mode === 'flight' || mode === 'hotel' ? mode : '';
       // 類型：一般類型＋「航班」「住宿」（引用）；舊的文字型「住宿」只在編輯既有那種行程點時保留，改叫「住宿（文字）」
       const types = ['transport', 'sight', 'food'].map(id => [id, CAT[id].name, CAT[id].icon]).concat([['flight', '航班', ICON.plane], ['hotel', '住宿', ICON.stay]],
         mode === 'stay' ? [['stay', '住宿（文字）', CAT.stay.icon]] : [], ['shop', 'other'].map(id => [id, CAT[id].name, CAT[id].icon]));
@@ -1911,6 +1893,7 @@ const ED_FORMS = {
       const nowRef = v === 'flight' || v === 'hotel' ? v : '';
       if (nowRef === ED.refMode) return;   // 一般類型之間切換、或同一種引用：欄位不動
       const keep = { date: edVal('edDate'), time: edVal('edTime'), note: edVal('edNote') };
+      if (ED.refMode && nowRef) { keep.date = ED.baseDate; keep.time = ''; }   // 航班↔住宿：先前自動帶入的日期／時間清掉，等選了新對象再帶入
       const t = document.getElementById('edText'); if (t) ED.planR = Object.assign({}, ED.planR, { title: t.value.trim() });
       ED.planR = Object.assign({}, ED.planR, keep);
       ED.refMode = nowRef;
