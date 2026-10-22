@@ -729,6 +729,7 @@ function bpMount(host, value, onChange) {
 }
 function bpGet(host) { return host && host._bp ? host._bp.value : null; }
 
+/* ⚠ cleanSplit／cleanPaths／normalize／mergeList／merge／loadRemote 與 trip.html（編輯模式的雲端合併存檔）逐字相同，兩份要一起改 */
 // 分攤設定 {mode:'even'|'custom'|'none', among:[名字], amounts:{名字:金額}}；舊資料沒這欄＝全員均分
 function cleanSplit(raw) {
   const sp = raw && typeof raw === 'object' ? raw : {};
@@ -778,6 +779,8 @@ function normalize(raw) {
   }));
   s.rate = Number(s.rate) || 0;
   s.metaAt = Number(s.metaAt) || 0;
+  // 頁首插畫鍵（trip.html 編輯、這頁不改）：根層未知欄位要原封保留，格式不對才丟掉
+  if (typeof s.hero !== 'string' || !/^[a-z]{2,20}$/.test(s.hero)) delete s.hero;
   return s;
 }
 // 依 id 合併兩份清單：同 id 取 at 較大者、只在一邊的都保留、墓碑留 30 天
@@ -796,6 +799,7 @@ function merge(local, remote) {
   if ((local.metaAt || 0) > (out.metaAt || 0)) {
     out.title = local.title; out.start = local.start; out.end = local.end; out.rate = local.rate; out.metaAt = local.metaAt;
     out.members = local.members; out.autoRate = local.autoRate;
+    if (local.hero) out.hero = local.hero;
   }
   // 每日匯率：兩邊聯集，同一天雲端那份優先（先抓到的為準，大家算出來一致）
   out.rates = Object.assign({}, local.rates || {}, out.rates || {});

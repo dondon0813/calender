@@ -14,7 +14,9 @@
   /* 員工旅遊「成品頁」（2026-10-14）：行程資料＝trip-expense.html 排行程那份（只讀）；
      航班＋準備清單另存 trip_extra_<trip>（航班在編輯頁改、準備清單在這頁打勾／新增）。
      版面參考雪莉交件匣「旅遊網站參考」：頂列 航班｜行程｜準備，往下滑依序出現。
-     色系 2026-10-14 雪莉選 A（藕粉奶茶・柔線），?palette=b|c|d 仍可預覽其他三款。 */
+     色系 2026-10-14 雪莉選 A（藕粉奶茶・柔線），?palette=b|c|d 仍可預覽其他三款。
+     2026-10-22 起這頁可直接編輯：頂列「編輯」→ 每區塊鉛筆＋小視窗（行程點／標題日期／頁首插畫→trip_ledger_<trip>，航班／住宿／準備→trip_extra_<trip>）；
+     頁首插畫 12 款來自 trip-hero.js（新 repo scripts/gen-trip-heroes.mjs 產生，勿手改）；雲端合併存檔函式與 trip-expense.html 逐字相同，兩份要一起改。 */
   :root {
     --bg: #FBF6F0; --ink: #6E5852; --soft: #8A766E; --muted: #B3A49B;
     --card: #FFFFFF; --pink: #D7A9A8; --pink-bg: #F4E4E1; --yellow: #E9D3A6; --yellow-bg: #F7EEDC;
@@ -297,11 +299,74 @@
   /* 手機頂列縮排（放在最後才蓋得過前面的一般規則） */
 @media (max-width: 460px) { .nav .logo { display: none; } .nav .links a { padding: 6px 6px; font-size: .95rem; } .calc-fab { width: 34px; height: 34px; margin-left: 0; } .back { padding-right: 9px; } }
   @media (max-width: 340px) { .back-t { display: none; } .back { padding: 5px 7px; } }
+
+  /* 頁首插畫（trip-hero.js 由新 repo 產生；hl-b 強調線、hl-sun 太陽、hl-mask 遮罩） */
+  .hero svg { color: var(--ink); }
+  .hero .hl-b { stroke: var(--pink); }
+  .hero .hl-sun { stroke: var(--yellow); }
+  .hero .hl-mask { fill: var(--card); }
+
+  /* 編輯模式（2026-10-22）：畫面維持成品頁長相，只多鉛筆與「＋ 新增」。鉛筆一律絕對定位、不改版面（長文字容器另留右邊空間） */
+  .back.ed-toggle { cursor: pointer; font: inherit; font-size: .9rem; padding: 5px 12px 5px 9px; gap: 5px; color: var(--ink); }
+  .back.ed-toggle[hidden] { display: none; }
+  .back.ed-toggle svg { width: 16px; height: 16px; }
+  @media (max-width: 460px) { .back.ed-toggle svg { display: none; } .back.ed-toggle { padding: 5px 11px; } }
+  .back.ed-toggle.on { background: var(--pink); }
+  .titlebox { position: relative; }
+  .hero { position: relative; }
+  .ed-pencil { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink); background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; z-index: 3; }
+  .ed-pencil svg { width: 20px; height: 20px; }
+  .ed-pencil.sm { width: 34px; height: 34px; top: 50%; right: 0; transform: translateY(-50%); }
+  .ed-pencil.sm svg { width: 17px; height: 17px; }
+  .ed-pencil.at-title { top: 0; right: 0; }
+  .ed-pencil.at-hero { top: 10px; left: 26px; right: auto; }
+  .ed-add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 10px 12px; border: 2px dashed var(--soft); border-radius: 16px; background: transparent; color: var(--soft); font: inherit; font-size: .95rem; cursor: pointer; }
+  .ed-add svg { width: 16px; height: 16px; }
+  body.editing .flight { position: relative; }
+  body.editing .flight .fh { padding-right: 54px; }
+  body.editing .ev .bd { position: relative; }
+  body.editing .ev .bd .ed-pencil + .box { padding-right: 54px; }
+  body.editing .ev .bd .ed-pencil + .move { padding-right: 50px; }
+  body.editing .titlebox .title, body.editing .titlebox .range { padding: 0 48px; }
+  body.editing .ck { position: relative; padding-right: 42px; }
+  body.editing .ck .x-btn { display: none; }
+  body.editing .addrow { display: none; }
+  body.editing .cat-list { min-height: 0; }
+  .ed-sec { margin: 14px 0 6px; font-size: .88rem; color: var(--soft); }
+  .ed-sec small { color: var(--muted); }
+  .ed-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }
+  .ed-2 > div { min-width: 0; }
+  .ed-2 .tpl-in, #edBody .tpl-in { min-width: 0; max-width: 100%; }
+  .ed-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ed-seg button { flex: 1 1 auto; font: inherit; font-size: .9rem; padding: 7px 10px; border: 2px solid var(--ink); border-radius: 999px; background: var(--card); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
+  .ed-seg button svg { width: 15px; height: 15px; }
+  .ed-seg button.on { background: var(--pink); }
+  .ed-priv { background: var(--yellow-bg); border-radius: 12px; padding: 6px 10px; font-size: .78rem; color: var(--soft); margin: 14px 0 2px; line-height: 1.5; }
+  .ed-files { margin-top: 6px; }
+  .ed-file { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .ed-file input { flex: 1; min-width: 0; }
+  .ed-file span { flex: 1; min-width: 0; font-size: .85rem; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ed-upbtn { font: inherit; font-size: .85rem; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 999px; background: var(--card); color: var(--ink); cursor: pointer; margin-top: 8px; }
+  .ed-upbtn:disabled { opacity: .5; }
+  .hero-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hero-opt { font: inherit; padding: 4px; border: 2px solid transparent; border-radius: 14px; background: var(--bg); color: var(--ink); cursor: pointer; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+  .hero-opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .hero-opt .art { display: block; background: var(--card); border-radius: 10px; overflow: hidden; }
+  .hero-opt .art svg { display: block; width: 100%; height: auto; color: var(--ink); }
+  .hero-opt .art .hl-b { stroke: var(--pink); }
+  .hero-opt .art .hl-sun { stroke: var(--yellow); }
+  .hero-opt .art .hl-mask { fill: var(--card); }
+  .hero-opt .nm { font-size: .82rem; text-align: center; }
+  .hero-opt.on .nm { color: var(--accent); }
+  .ed-panel { max-height: 92vh; }
+  .ed-save-note { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 8px; min-height: 1.1em; }
 </style>
+<script src="modalGuard.js?v=1"></script>
+<script src="trip-hero.js?v=1"></script>
 </head>
 <body>
 <nav class="nav"><div class="wrap">
-  <div class="navl"><a class="back" id="backBtn" href="trip-expense.html" aria-label="回編輯頁"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span class="back-t">編輯</span></a><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
+  <div class="navl"><button type="button" class="back ed-toggle" id="edToggle" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/></svg><span id="edToggleT">編輯</span></button><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
   <div class="nav-r"><div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#stay" data-sec="stay">住宿</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div><button type="button" class="calc-fab" id="calcFab" aria-label="日幣計算機">¥</button></div>
 </div></nav>
 
@@ -316,9 +381,11 @@
 
 <main id="app" class="wrap" hidden>
   <div id="top" class="hero"></div>
-  <h1 class="title" id="tTitle"></h1>
-  <div class="range" id="tRange"></div>
-  <div class="count" id="tCount"></div>
+  <div class="titlebox" id="titleBox">
+    <h1 class="title" id="tTitle"></h1>
+    <div class="range" id="tRange"></div>
+    <div class="count" id="tCount"></div>
+  </div>
 
   <section id="flights">
     <div class="sec-h"><span class="ic" style="background:var(--blue)" data-icon="plane"></span>航班</div>
@@ -351,7 +418,7 @@
     <div class="pgrid" id="pgrid"></div>
   </section>
 
-  <div class="foot">要改行程或航班請到 <a id="editLink" href="trip-expense.html">排行程／記帳頁</a></div>
+  <div class="foot"><a id="ledgerLink" href="trip-expense.html">記帳頁 ›</a></div>
 </main>
 <div class="status" id="status">載入中…</div>
 <div class="lb" id="lb"><img id="lbImg" alt=""><div class="cap" id="lbCap"></div></div>
@@ -504,23 +571,7 @@ function trainSvg() {
     '<circle cx="15" cy="34" r="3.6" fill="#fff"/><circle cx="46" cy="34" r="3.6" fill="#fff"/>' +
     '</g><circle cx="57.5" cy="28.5" r="1.6" fill="#EFCB6E"/></svg>';
 }
-const HERO = '<svg viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg" stroke="#3B3330" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
-  '<path d="M20 26 q14 -6 28 0 M58 18 q8 -4 16 0" fill="none" stroke-width="2"/>' +
-  '<circle cx="336" cy="44" r="24" fill="#EFCB6E"/>' +
-  '<path d="M336 8v-6M372 44h6M362 18l4-4M362 70l4 4M300 44h-6" fill="none" stroke-width="2.5"/>' +
-  '<path d="M40 150 L120 62 Q128 54 136 62 L216 150 Z" fill="#DCEAF2"/>' +
-  '<path d="M100 84 L120 62 Q128 54 136 62 L156 84 L144 92 L128 82 L112 92 Z" fill="#fff"/>' +
-  '<path d="M262 150 V70 M278 150 V70 M270 70 V30 M262 70 h16 M258 98 h24 M266 70 L262 150 M274 70 L278 150" fill="none"/>' +
-  '<rect x="260" y="56" width="20" height="10" rx="3" fill="#E8A49C"/>' +
-  '<path d="M300 150 v-34 h22 v34 M330 150 v-22 h18 v22" fill="#F8EDCB"/>' +
-  '<path d="M-5 150 H405" fill="none"/>' +
-  '<path d="M-5 150 H405 V200 H-5 Z" fill="#E1ECD6" stroke="none"/>' +
-  '<path d="M-5 166 H405" fill="none" stroke-width="2.5"/>' +
-  '<path d="M20 166 v8 M60 166 v8 M100 166 v8 M140 166 v8 M180 166 v8 M220 166 v8 M260 166 v8 M300 166 v8 M340 166 v8 M380 166 v8" fill="none" stroke-width="2"/>' +
-  '<g transform="translate(150 118)"><rect x="0" y="0" width="96" height="40" rx="14" fill="#E8A49C"/>' +
-  '<rect x="12" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/><rect x="36" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/><rect x="60" y="9" width="16" height="13" rx="4" fill="#EFCB6E"/>' +
-  '<circle cx="22" cy="44" r="6" fill="#fff"/><circle cx="74" cy="44" r="6" fill="#fff"/></g>' +
-  '</svg>';
+// 頁首插畫：12 款由新 repo scripts/gen-trip-heroes.mjs 產生 trip-hero.js（window.TRIP_HEROES），依 ledger.hero 選（預設 tokyo）
 // 當日卡小插圖：依當天內容挑（回程飛機／遊樂園／動物園／燒肉螃蟹），都沒對到就輪流用通用圖
 const G = '<svg viewBox="0 0 96 74" stroke="#3B3330" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">';
 const SCENE = {
@@ -591,7 +642,7 @@ function toDate(iso) { const [y, m, d] = iso.split('-').map(Number); return new 
 function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function md(iso) { const d = toDate(iso); return (d.getMonth() + 1) + '/' + d.getDate(); }
 function mdw(iso) { return md(iso) + '（' + WEEK[toDate(iso).getDay()] + '）'; }
-function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s]+$/i.test(u) ? u : ''; }
+function safeUrl(u) { u = String(u || '').trim().slice(0, 500); return /^https?:\/\/[^\s]+$/i.test(u) ? u : ''; }
 function mapsUrl(place) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(place); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 // 備註文字裡的網址變成可點連結（先跳脫再換）
@@ -693,17 +744,18 @@ function bpGet(host) { return host && host._bp ? host._bp.value : null; }
 /* ---------- 資料 ---------- */
 let DATA = null, DAYS = [], CUR = 0;
 let EXTRA = { v: 1, flights: [], hotels: [], prep: [] };
+let EXTRA_DIRTY = false;   // 本機有還沒存上去的航班／住宿／準備清單變更
 function clean(raw) {
   const s = raw || {};
   const plan = (Array.isArray(s.plan) ? s.plan : []).filter(p => p && p.id && !p.del).map(p => ({
-    date: isoOk(p.date) ? p.date : '', time: /^\d{2}:\d{2}$/.test(p.time || '') ? p.time : '',
+    id: String(p.id), date: isoOk(p.date) ? p.date : '', time: /^\d{2}:\d{2}$/.test(p.time || '') ? p.time : '',
     cat: CAT[p.cat] ? p.cat : 'other', title: String(p.title || ''), place: String(p.place || ''),
     url: safeUrl(p.url), note: String(p.note || ''), brandId: bpUuidOrNull(p.brandId), by: String(p.by || ''), at: Number(p.at) || 0,
   }));
   const photos = [];
   for (const p of (Array.isArray(s.photos) ? s.photos : [])) if (p && !p.del && PATH_RE.test(p.path || '')) photos.push({ date: p.date || '', path: p.path, caption: p.caption || '', at: p.at || 0 });
   photos.sort((a, b) => (a.date + String(a.at).padStart(15, '0')).localeCompare(b.date + String(b.at).padStart(15, '0')));
-  return { title: String(s.title || '我們的旅行'), start: isoOk(s.start) ? s.start : '', end: isoOk(s.end) ? s.end : '', plan, photos };
+  return { title: String(s.title || '我們的旅行'), hero: typeof s.hero === 'string' ? s.hero : '', start: isoOk(s.start) ? s.start : '', end: isoOk(s.end) ? s.end : '', plan, photos };
 }
 function cleanExtra(raw) {
   const s = raw && typeof raw === 'object' ? raw : {};
@@ -732,10 +784,163 @@ function liveFlights() {
   return EXTRA.flights.filter(f => !f.del).sort((a, b) => ((a.date || '') + (a.dep || '')).localeCompare((b.date || '') + (b.dep || '')));
 }
 
+/* ---------- 行程雲端合併存檔（編輯模式用，key＝trip_ledger_<trip>） ----------
+   下面 COMPANY…loadRemote 的同名函式與 trip-expense.html 逐字相同（兩份要一起改）：
+   先 setting-get 最新 → 依 id 合併（同 id 取 at 較新）→ 刪除留墓碑 → setting-set。
+   航班／住宿／準備清單存另一把 trip_extra_<trip>（見 queueSave）。 */
+const COMPANY = '公司';
+const MAX_ITEM_PHOTOS = 12;
+const CAT_MAP = { food: 1, transport: 1, fun: 1, shop: 1, stay: 1, other: 1 };   // 記帳分類 id（normalize 只用到鍵名）
+const PCAT_MAP = CAT;                                                            // 行程類型 id（交通／景點／美食／住宿／購物／其他）
+// 分攤設定 {mode:'even'|'custom'|'none', among:[名字], amounts:{名字:金額}}；舊資料沒這欄＝全員均分
+function cleanSplit(raw) {
+  const sp = raw && typeof raw === 'object' ? raw : {};
+  const mode = sp.mode === 'custom' || sp.mode === 'none' ? sp.mode : 'even';
+  const among = (Array.isArray(sp.among) ? sp.among : []).map(n => String(n || '').trim().slice(0, 20)).filter(Boolean).slice(0, 30);
+  const amounts = {};
+  for (const [k, v] of Object.entries(sp.amounts && typeof sp.amounts === 'object' ? sp.amounts : {})) {
+    const n = String(k).trim().slice(0, 20); const a = Number(v);
+    if (n && a > 0) amounts[n] = a;
+  }
+  return { mode, among, amounts };
+}
+function cleanPaths(arr) {
+  return (Array.isArray(arr) ? arr : []).map(p => String(p || '')).filter(p => PATH_RE.test(p)).slice(0, MAX_ITEM_PHOTOS);
+}
+function normalize(raw) {
+  const s = Object.assign({ v: 1, title: '日本員工旅遊', start: '', end: '', rate: 0.22, metaAt: 0, items: [], photos: [], plan: [], members: [], rates: {}, autoRate: true }, raw || {});
+  if (!Array.isArray(s.items)) s.items = [];
+  s.members = (Array.isArray(s.members) ? s.members : []).map(m => String(m || '').trim().slice(0, 20)).filter(m => m && m !== COMPANY).filter((m, i, a) => a.indexOf(m) === i).slice(0, 30);
+  s.autoRate = s.autoRate !== false;
+  const rates = {};
+  for (const [k, v] of Object.entries(s.rates && typeof s.rates === 'object' ? s.rates : {})) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Number(v) > 0) rates[k] = Number(v);
+  s.rates = rates;
+  if (!Array.isArray(s.photos)) s.photos = [];
+  if (!Array.isArray(s.plan)) s.plan = [];
+  // 行程：{id, date, time 'HH:MM' 或空, cat, title, place, url, note, brandId(品牌 uuid 或 null), by, at, del}
+  s.plan = s.plan.filter(p => p && p.id).map(p => ({
+    id: String(p.id), date: String(p.date || ''), time: /^\d{2}:\d{2}$/.test(String(p.time || '')) ? String(p.time) : '',
+    cat: PCAT_MAP[p.cat] ? p.cat : 'other', title: String(p.title || '').slice(0, 60),
+    place: String(p.place || '').slice(0, 100), url: safeUrl(String(p.url || '')), note: String(p.note || '').slice(0, 300), brandId: bpUuidOrNull(p.brandId),
+    by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
+  }));
+  s.items = s.items.filter(i => i && i.id).map(i => ({
+    id: String(i.id), date: String(i.date || ''), cat: CAT_MAP[i.cat] ? i.cat : 'other',
+    name: String(i.name || '').slice(0, 60), amount: Number(i.amount) || 0, cur: i.cur === 'TWD' ? 'TWD' : 'JPY',
+    payer: String(i.payer || '').slice(0, 20), note: String(i.note || '').slice(0, 100),
+    company: Math.max(0, Number(i.company) || 0),
+    split: cleanSplit(i.split),
+    photos: cleanPaths(i.photos),
+    by: String(i.by || '').slice(0, 20), at: Number(i.at) || 0, del: !!i.del,
+  }));
+  // 隨手拍：一張一筆 {id, date, path, caption, by, at, del}
+  s.photos = s.photos.filter(p => p && p.id && (p.del || PATH_RE.test(String(p.path || '')))).map(p => ({
+    id: String(p.id), date: String(p.date || ''), path: String(p.path || ''),
+    caption: String(p.caption || '').slice(0, 60),
+    by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
+  }));
+  s.rate = Number(s.rate) || 0;
+  s.metaAt = Number(s.metaAt) || 0;
+  // 頁首插畫鍵（trip.html 編輯、這頁不改）：根層未知欄位要原封保留，格式不對才丟掉
+  if (typeof s.hero !== 'string' || !/^[a-z]{2,20}$/.test(s.hero)) delete s.hero;
+  return s;
+}
+// 依 id 合併兩份清單：同 id 取 at 較大者、只在一邊的都保留、墓碑留 30 天
+function mergeList(localList, remoteList) {
+  const byId = new Map(remoteList.map(i => [i.id, i]));
+  for (const li of localList) {
+    const ri = byId.get(li.id);
+    if (!ri || (li.at || 0) > (ri.at || 0)) byId.set(li.id, li);
+  }
+  const cutoff = Date.now() - 30 * 86400000;
+  return [...byId.values()].filter(i => !(i.del && i.at < cutoff));
+}
+function merge(local, remote) {
+  const out = normalize(remote);
+  // 旅遊名稱／日期／匯率：誰改得晚就用誰的
+  if ((local.metaAt || 0) > (out.metaAt || 0)) {
+    out.title = local.title; out.start = local.start; out.end = local.end; out.rate = local.rate; out.metaAt = local.metaAt;
+    out.members = local.members; out.autoRate = local.autoRate;
+    if (local.hero) out.hero = local.hero;
+  }
+  // 每日匯率：兩邊聯集，同一天雲端那份優先（先抓到的為準，大家算出來一致）
+  out.rates = Object.assign({}, local.rates || {}, out.rates || {});
+  out.items = mergeList(local.items, out.items);
+  out.photos = mergeList(local.photos || [], out.photos);
+  out.plan = mergeList(local.plan || [], out.plan);
+  return out;
+}
+async function loadRemote() {
+  const res = await apiPost('setting-get', { key: KEY });
+  if (res && res.needLogin) return { needLogin: true };
+  if (!res || res.success !== true) throw new Error((res && res.error) || '讀取失敗');
+  let remote = null;
+  if (res.value) { try { remote = JSON.parse(res.value); } catch (e) { remote = null; } }
+  return { remote };
+}
+
+let LEDGER = null;   // 完整行程資料（與 trip-expense.html 的 STATE 同形狀）；DATA 由它整理出來給畫面用
+const LSYNC = { busy: false, dirty: false, unsynced: false, timer: null, retry: null };
+function ledgerCacheSave() { try { localStorage.setItem(LS_KEY, JSON.stringify(LEDGER)); } catch (e) {} }
+// LEDGER 變動後：重算畫面用的 DATA 與天數，停在原本那天（jumpIso 有值就跳到那天）
+function ledgerAdopt(jumpIso) {
+  const keep = jumpIso || DAYS[CUR];
+  DATA = clean(LEDGER); DAYS = buildDays(DATA);
+  CUR = keep && DAYS.includes(keep) ? DAYS.indexOf(keep) : Math.min(CUR, Math.max(DAYS.length - 1, 0));
+}
+function ledgerCommit(jumpIso) { ledgerAdopt(jumpIso); render(); scheduleLedgerSync(); }
+function ledgerSetMeta(patch) { Object.assign(LEDGER, patch, { metaAt: Date.now() }); ledgerCommit(); }
+function scheduleLedgerSync() {
+  LSYNC.dirty = true; LSYNC.unsynced = true; ledgerCacheSave();
+  clearTimeout(LSYNC.timer); clearTimeout(LSYNC.retry);
+  LSYNC.timer = setTimeout(runLedgerSync, 400);
+}
+async function runLedgerSync() {
+  if (LSYNC.busy) { LSYNC.dirty = true; return; }
+  LSYNC.busy = true; LSYNC.dirty = false;
+  edToast('儲存中…');
+  try {
+    const got = await loadRemote();
+    if (got.needLogin) { edToast('登入過期，請重新整理後登入（改的內容先留在這支手機）'); return; }
+    LEDGER = merge(LEDGER, got.remote);
+    const res = await apiPost('setting-set', { key: KEY, value: JSON.stringify(LEDGER) });
+    if (!res || res.success !== true) throw new Error((res && res.error) || '寫入失敗');
+    ledgerCacheSave();
+    if (!LSYNC.dirty) LSYNC.unsynced = false;
+    const before = JSON.stringify(DATA);
+    ledgerAdopt();
+    if (JSON.stringify(DATA) !== before) render();
+    edToast('已儲存');
+  } catch (err) {
+    edToast('沒存成功（已先存在這支手機，稍後會再試）：' + err.message);
+    LSYNC.retry = setTimeout(() => { if (LSYNC.unsynced && !LSYNC.busy) runLedgerSync(); }, 15000);
+  } finally {
+    LSYNC.busy = false;
+    if (LSYNC.dirty) { clearTimeout(LSYNC.timer); LSYNC.timer = setTimeout(runLedgerSync, 400); }
+  }
+}
+
+/* ---------- 編輯模式的鉛筆與「＋ 新增」鈕（只在 EDIT 時輸出；表單與存檔在檔案最後面的 ed* 函式） ---------- */
+let EDIT = false;
+const ED_ICON = {
+  pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+};
+function edPencil(kind, id, cls, label) {
+  return EDIT ? '<button type="button" class="ed-pencil' + (cls ? ' ' + cls : '') + '" data-ed="' + kind + '" data-id="' + esc(id || '') + '" aria-label="' + esc(label) + '">' + ED_ICON.pencil + '</button>' : '';
+}
+function edAddBtn(kind, label, attrs) {
+  return EDIT ? '<button type="button" class="ed-add" data-ed-add="' + kind + '"' + (attrs || '') + '>' + ED_ICON.plus + '<span>' + esc(label) + '</span></button>' : '';
+}
+function heroKey() { const k = DATA && DATA.hero; return window.TRIP_HEROES && window.TRIP_HEROES[k] ? k : 'tokyo'; }
+
+
 /* ---------- 畫面 ---------- */
 function render() {
   const d = DATA;
-  document.getElementById('top').innerHTML = paint(HERO);
+  document.getElementById('top').innerHTML = (window.TRIP_HEROES ? window.TRIP_HEROES[heroKey()].svg : '') + edPencil('hero', '', 'at-hero', '選擇頁首插畫');
+  const tb = document.getElementById('titleBox'); tb.querySelectorAll(':scope > .ed-pencil').forEach(n => n.remove());
+  if (EDIT) tb.insertAdjacentHTML('afterbegin', edPencil('meta', '', 'at-title', '編輯標題與日期'));
   document.title = d.title + '｜雪莉與朵栗';
   document.getElementById('tTitle').textContent = d.title;
   const first = DAYS[0], last = DAYS[DAYS.length - 1];
@@ -776,18 +981,18 @@ function flightDuration(f) {
 function renderFlights() {
   const list = liveFlights();
   const box = document.getElementById('flightList');
-  if (!list.length) { box.innerHTML = '<div class="panel"><div class="empty" style="padding:8px 0">還沒有航班，到編輯頁「加航班」就會出現在這裡</div></div>'; return; }
+  if (!list.length) { box.innerHTML = '<div class="panel"><div class="empty" style="padding:8px 0">還沒有航班</div></div>' + edAddBtn('flight', '新增航班'); return; }
   const DIR = { out: ['去程', 'var(--blue)'], back: ['回程', 'var(--green)'], other: ['航班', 'var(--yellow)'] };
   box.innerHTML = list.map(f => {
     const dir = DIR[f.dir] || DIR.other;
     const term = (ap, t) => esc([ap, t].filter(Boolean).join(' '));
     const dur = flightDuration(f);
-    return '<div class="flight"><div class="fh" style="background:' + dir[1] + '"><span>' + (isoOk(f.date) ? esc(mdw(f.date)) + ' ' : '') + dir[0] + '</span><span>' + esc(f.flightNo || '') + '</span></div>' +
+    return '<div class="flight">' + edPencil('flight', f.id, '', '編輯航班') + '<div class="fh" style="background:' + dir[1] + '"><span>' + (isoOk(f.date) ? esc(mdw(f.date)) + ' ' : '') + dir[0] + '</span><span>' + esc(f.flightNo || '') + '</span></div>' +
       '<div class="fb"><div class="row"><span class="t">' + esc(f.dep || '--:--') + '</span><span class="mid">' + esc(dur) + '</span><span class="t">' + esc(f.arr || '--:--') + '</span></div>' +
       '<div class="ap"><span>' + term(f.from, f.fromTerm) + '</span><span>' + term(f.to, f.toTerm) + '</span></div>' +
       (f.airline ? '<div class="air">' + esc(f.airline) + '</div>' : '') +
       (f.note ? '<div class="fn">' + linkify(f.note) + '</div>' : '') + ticketsHtml(f) + '</div></div>';
-  }).join('');
+  }).join('') + edAddBtn('flight', '新增航班');
 }
 
 // 電子機票：存私有儲存區，點了才用登入換 10 分鐘的檔案連結
@@ -825,7 +1030,7 @@ function liveHotels() { return (EXTRA.hotels || []).filter(h => !h.del).sort((a,
 function nights(a, b) { return isoOk(a) && isoOk(b) ? Math.round((toDate(b) - toDate(a)) / 86400000) : 0; }
 function renderHotels() {
   const list = liveHotels();
-  if (!list.length) { document.getElementById('hotelList').innerHTML = '<div class="panel"><div class="empty" style="padding:8px 0">還沒有住宿資料</div></div>'; return; }
+  if (!list.length) { document.getElementById('hotelList').innerHTML = '<div class="panel"><div class="empty" style="padding:8px 0">還沒有住宿資料</div></div>' + edAddBtn('hotel', '新增住宿'); return; }
   document.getElementById('hotelList').innerHTML = list.map(h => {
     const n = nights(h.checkin, h.checkout);
     const kv = (k, v, copy) => v ? '<div class="kv"><span>' + k + '</span><span' + (copy ? ' class="code"' : '') + '>' + esc(v) + (copy ? '<button type="button" class="copy" data-copy="' + esc(v) + '">複製</button>' : '') + '</span></div>' : '';
@@ -833,14 +1038,14 @@ function renderHotels() {
     const acts = [];
     if (url) acts.push('<a href="' + esc(url) + '" target="_blank" rel="noopener">' + ICON.link + '<span>開啟線上 Check-in</span></a>');
     if (h.address) acts.push('<a href="' + esc(mapsUrl(h.address)) + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + esc(h.address) + '</span></a>');
-    return '<div class="flight hotel"><div class="fh"><span>' + (isoOk(h.checkin) ? esc(mdw(h.checkin)) : '') + (isoOk(h.checkout) ? '－' + esc(mdw(h.checkout)) : '') + '</span><span>' + (n ? n + ' 晚' : '住宿') + '</span></div>' +
+    return '<div class="flight hotel">' + edPencil('hotel', h.id, '', '編輯住宿') + '<div class="fh"><span>' + (isoOk(h.checkin) ? esc(mdw(h.checkin)) : '') + (isoOk(h.checkout) ? '－' + esc(mdw(h.checkout)) : '') + '</span><span>' + (n ? n + ' 晚' : '住宿') + '</span></div>' +
       '<div class="fb"><div class="hn">' + esc(h.name || '飯店') + '</div>' + (h.nameJa ? '<div class="hj">' + esc(h.nameJa) + '</div>' : '') +
       '<div class="io"><div><small>入住</small><b>' + esc(h.checkinTime || '--:--') + '</b> 以後</div><div><small>退房</small><b>' + esc(h.checkoutTime || '--:--') + '</b> 以前</div></div>' +
       (TICKET_RE.test(h.qr || '') ? '<div class="qrbox"><img data-qr="' + esc(h.qr) + '" alt="Check-in QR code"><small>到飯店出示這個 QR code（點一下放大）</small></div>' : '') +
       kv('Check-in Code', h.code, true) + kv('PIN Code', h.pin, true) + kv('訂房編號', h.booking) + kv('房型', h.room) + kv('人數', h.guests) +
       (h.note ? '<div class="fn">' + linkify(h.note) + '</div>' : '') +
       (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') + '</div></div>';
-  }).join('');
+  }).join('') + edAddBtn('hotel', '新增住宿');
   loadHotelQr();
 }
 // QR code 存私人區：用登入換 10 分鐘網址（同電子機票），同一頁面期間只換一次
@@ -943,13 +1148,13 @@ function evHtml(p) {
       (acts.length ? '<div class="acts">' + acts.join('') + '</div>' : '') +
       (p.by ? '<div class="who">' + esc(p.by) + ' 排的</div>' : '') + '</div>';
   }
-  return '<div class="ev"><span class="tm">' + (p.time || '') + '</span><span class="nd"></span><div class="bd">' + body + '</div></div>';
+  return '<div class="ev"><span class="tm">' + (p.time || '') + '</span><span class="nd"></span><div class="bd">' + edPencil('plan', p.id, '', '編輯行程') + body + '</div></div>';
 }
 function renderDay(dir) {
   const box = document.getElementById('day');
   if (!DAYS.length) {
     const undated = DATA.plan.slice().sort(planSort);
-    box.innerHTML = undated.length ? '<div class="tl" style="margin-top:20px">' + undated.map(evHtml).join('') + '</div>' : '<div class="empty">還沒有行程，到排行程頁加第一個吧</div>';
+    box.innerHTML = (undated.length ? '<div class="tl" style="margin-top:20px">' + undated.map(evHtml).join('') + '</div>' : '<div class="empty">還沒有行程</div>') + edAddBtn('plan', '新增行程');
     return;
   }
   const iso = DAYS[CUR];
@@ -960,6 +1165,7 @@ function renderDay(dir) {
   let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENE[sceneFor(iso, items.filter(p => p.cat !== '_flight'), CUR)]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
     '<div class="dt">' + esc(dayTitle(titleItems)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
   html += items.length ? '<div class="tl">' + items.map(evHtml).join('') + '</div>' : '<div class="empty">這天還沒安排，自由活動</div>';
+  html += edAddBtn('plan', '新增行程', ' data-date="' + iso + '"');
   if (CUR === DAYS.length - 1) {
     const undated = DATA.plan.filter(p => !p.date).sort(planSort);
     if (undated.length) html += '<div class="sub-h">還沒排日期</div><div class="tl">' + undated.map(evHtml).join('') + '</div>';
@@ -1020,7 +1226,7 @@ function renderPrep() {
     const ph = isTodo ? PREP_CAT_MAP[PREP_CAT].ph : g.ph;
     const tabs = isTodo ? '<div class="cat-tabs">' + PREP_CATS.map(c => { const l = all.filter(p => p.cat === c.id); return '<button type="button" data-cat="' + c.id + '" class="' + (c.id === PREP_CAT ? 'on' : '') + '">' + c.name + (l.length ? '<small>' + l.filter(p => p.done).length + '/' + l.length + '</small>' : '') + '</button>'; }).join('') + '</div>' : '';
     return '<div class="panel" data-g="' + g.id + '"><h3>' + g.name + (all.length ? '<small>' + done + ' / ' + all.length + '</small>' : '') + '</h3>' + tabs + '<div class="cat-list">' +
-      (items.length ? items.map(p => '<label class="ck' + (p.done ? ' done' : '') + '" data-id="' + esc(p.id) + '"><input type="checkbox"' + (p.done ? ' checked' : '') + '><span class="box2">' + ICON.check + '</span><span class="tx">' + esc(p.text) + (p.brandId && BP.map.get(p.brandId) ? '<br>' + bpTagHtml(p.brandId) : '') + '</span><button type="button" class="x-btn bp-open' + (p.brandId ? ' on' : '') + '" data-bp="' + esc(p.id) + '" aria-label="' + (p.brandId ? '更換綁定的品牌' : '綁定品牌') + '">' + BP_TAG_ICON + '</button><button type="button" class="x-btn" data-del="' + esc(p.id) + '" aria-label="刪除">' + ICON.x + '</button></label>').join('') : '<div class="empty" style="padding:6px 0">還沒有項目</div>') + '</div>' +
+      (items.length ? items.map(p => '<label class="ck' + (p.done ? ' done' : '') + '" data-id="' + esc(p.id) + '"><input type="checkbox"' + (p.done ? ' checked' : '') + '><span class="box2">' + ICON.check + '</span><span class="tx">' + esc(p.text) + (p.brandId && BP.map.get(p.brandId) ? '<br>' + bpTagHtml(p.brandId) : '') + '</span>' + edPencil('prep', p.id, 'sm', '編輯準備項目') + '<button type="button" class="x-btn bp-open' + (p.brandId ? ' on' : '') + '" data-bp="' + esc(p.id) + '" aria-label="' + (p.brandId ? '更換綁定的品牌' : '綁定品牌') + '">' + BP_TAG_ICON + '</button><button type="button" class="x-btn" data-del="' + esc(p.id) + '" aria-label="刪除">' + ICON.x + '</button></label>').join('') : '<div class="empty" style="padding:6px 0">還沒有項目</div>') + '</div>' + edAddBtn('prep', isTodo ? '新增準備項目' : '新增待買項目', ' data-group="' + g.id + '"') +
       '<div class="addrow"><input data-add="' + g.id + '" placeholder="' + ph + '" maxlength="80"><button type="button" data-addbtn="' + g.id + '">新增</button></div></div>';
   }).join('');
   document.querySelectorAll('#prepLists [data-who]').forEach(b => b.addEventListener('click', () => {
@@ -1114,12 +1320,14 @@ async function queueSave() {
     const raw = got.value ? JSON.parse(got.value) : {};
     const remote = cleanExtra(raw);
     // 以伺服器那份為底只換 prep：航班、住宿與之後加的欄位原封保留
-    const merged = Object.assign({}, raw && typeof raw === 'object' ? raw : {}, { v: 1, prep: mergeById(remote.prep, EXTRA.prep) });
+    const merged = Object.assign({}, raw && typeof raw === 'object' ? raw : {}, { v: 1, prep: mergeById(remote.prep, EXTRA.prep), flights: mergeById(remote.flights, EXTRA.flights), hotels: mergeById(remote.hotels, EXTRA.hotels) });
     const res = await apiPost('setting-set', { key: EXTRA_KEY, value: JSON.stringify(merged) });
     if (!res || res.success !== true) throw new Error((res && res.error) || '儲存失敗');
     EXTRA = cleanExtra(merged);
+    if (!SAVE.again) EXTRA_DIRTY = false;
     try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
     setSaveMsg('已儲存');
+    if (EDIT) edToast('已儲存');
     setTimeout(() => { if (!SAVE.busy) setSaveMsg(''); }, 1500);
     renderPrep(); renderFlights(); renderHotels();
   } catch (err) {
@@ -1191,10 +1399,11 @@ function syncNav() {
 window.addEventListener('scroll', syncNav, { passive: true });
 
 /* ---------- 讀取 ---------- */
-function show(data) {
+function show(data, keepLocal) {
   calcPickRate(data);
   const keepDay = DATA ? DAYS[CUR] : null;
-  DATA = clean(data);
+  LEDGER = keepLocal && LEDGER ? merge(LEDGER, data) : normalize(data);
+  DATA = clean(LEDGER);
   DAYS = buildDays(DATA);
   if (keepDay && DAYS.includes(keepDay)) CUR = DAYS.indexOf(keepDay);
   else {
@@ -1207,8 +1416,11 @@ function show(data) {
   document.getElementById('app').hidden = false;
   render();
   syncNav();
+  edSyncToggle();
 }
 function showLogin() {
+  if (EDIT) edSetMode(false);
+  document.getElementById('edToggle').hidden = true;
   document.getElementById('status').style.display = 'none';
   document.getElementById('app').hidden = true;
   document.getElementById('loginBox').style.display = 'block';
@@ -1225,11 +1437,12 @@ async function load() {
     if (ex && ex.success === true) {
       const remoteEx = cleanExtra(ex.value ? JSON.parse(ex.value) : {});
       // 還沒存上去的本機勾選保留（較新的 at 勝出）
-      EXTRA = { v: 1, flights: remoteEx.flights, hotels: remoteEx.hotels, prep: SAVE.busy ? mergeById(remoteEx.prep, EXTRA.prep) : remoteEx.prep };
+      const keepEx = SAVE.busy || EXTRA_DIRTY;
+      EXTRA = { v: 1, flights: keepEx ? mergeById(remoteEx.flights, EXTRA.flights) : remoteEx.flights, hotels: keepEx ? mergeById(remoteEx.hotels, EXTRA.hotels) : remoteEx.hotels, prep: keepEx ? mergeById(remoteEx.prep, EXTRA.prep) : remoteEx.prep };
       try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
     }
-    // 行程只讀不寫；行程快取交給編輯頁（避免蓋掉編輯頁還沒上傳的變更）
-    show(res.value ? JSON.parse(res.value) : {});
+    // 行程：本機有還沒存上去的編輯（LSYNC.unsynced）就跟雲端合併，否則直接用雲端那份；快取只在編輯存檔時寫（與編輯頁同一份）
+    show(res.value ? JSON.parse(res.value) : {}, LSYNC.unsynced || LSYNC.busy);
     tplRefresh();
   } catch (err) {
     if (!DATA) { document.getElementById('status').textContent = '讀取失敗：' + err.message + '（請確認網路後重新整理）'; }
@@ -1253,15 +1466,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 });
 document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
 document.getElementById('logoLink').innerHTML = paint(trainSvg()).replace('<svg ', '<svg class="logo" ');
-// 上一頁：從編輯頁點進來就直接返回（保留編輯頁原本的捲動位置），否則開編輯頁
-(function () {
-  const b = document.getElementById('backBtn');
-  b.href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
-  b.addEventListener('click', e => {
-    if (document.referrer && /trip-expense\.html/.test(document.referrer) && history.length > 1) { e.preventDefault(); history.back(); }
-  });
-})();
-document.getElementById('editLink').href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
+document.getElementById('ledgerLink').href = 'trip-expense.html?trip=' + encodeURIComponent(TRIP) + '&view=plan';
 // 回到頁面時重抓一次（別人剛改了行程、勾了清單）
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && getToken()) load(); });
 window.addEventListener('resize', () => { if (DATA) renderSteps(); });
@@ -1515,6 +1720,378 @@ async function tplUnpublish() {
   document.getElementById('tplSave').onclick = () => tplPublish(false);
   document.getElementById('tplUnpub').onclick = tplUnpublish;
   document.getElementById('tplCopy').onclick = tplCopyUrl;
+})();
+
+/* ---------- 編輯模式（2026-10-22 雪莉定）：畫面維持成品頁長相，每區塊鉛筆 → 小視窗 ----------
+   欄位＝trip-expense.html 該區塊的全部欄位（含員工專用私密欄：Check-in 代碼／PIN／訂房編號／線上 Check-in 連結／QR／電子機票）。
+   行程點／標題日期／頁首插畫 → trip_ledger_<trip>（ledgerCommit → runLedgerSync，與 trip-expense.html 同一套合併）；
+   航班／住宿／準備清單 → trip_extra_<trip>（extraCommit → queueSave）。 */
+const TICKET_PATH_RE = TICKET_RE;
+const FL_DIR_NAME = { out: '去程', back: '回程', other: '其他' };
+// 與 trip-expense.html 的 cleanFlights 逐字相同
+function cleanFlights(arr) {
+  return (Array.isArray(arr) ? arr : []).filter(f => f && f.id).map(f => ({
+    id: String(f.id), dir: FL_DIR_NAME[f.dir] ? f.dir : 'other', date: String(f.date || ''),
+    flightNo: String(f.flightNo || '').slice(0, 20), airline: String(f.airline || '').slice(0, 30),
+    from: String(f.from || '').slice(0, 30), fromTerm: String(f.fromTerm || '').slice(0, 10),
+    to: String(f.to || '').slice(0, 30), toTerm: String(f.toTerm || '').slice(0, 10),
+    dep: /^\d{2}:\d{2}$/.test(String(f.dep || '')) ? String(f.dep) : '', arr: /^\d{2}:\d{2}$/.test(String(f.arr || '')) ? String(f.arr) : '',
+    note: String(f.note || '').slice(0, 300), at: Number(f.at) || 0, del: !!f.del,
+    tickets: (Array.isArray(f.tickets) ? f.tickets : []).filter(t => t && TICKET_PATH_RE.test(String(t.path || ''))).slice(0, 20)
+      .map(t => ({ name: String(t.name || '').slice(0, 40), path: String(t.path) })),
+  }));
+}
+const PLAN_TYPES = ['transport', 'sight', 'food', 'stay', 'shop', 'other'];
+function edToast(msg) { tplToast(msg); }
+function edVal(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function edSegHtml(name, items, cur) {
+  return '<div class="ed-seg" data-seg="' + name + '">' + items.map(it => '<button type="button" data-v="' + esc(it[0]) + '" class="' + (it[0] === cur ? 'on' : '') + '">' + (it[2] || '') + esc(it[1]) + '</button>').join('') + '</div>';
+}
+function edIn(label, id, type, val, attrs) {
+  return '<label class="tpl-lb" for="' + id + '">' + label + '</label><input class="tpl-in" id="' + id + '" type="' + type + '" value="' + esc(val == null ? '' : val) + '"' + (attrs ? ' ' + attrs : '') + '>';
+}
+function edTa(label, id, val, attrs) {
+  return '<label class="tpl-lb" for="' + id + '">' + label + '</label><textarea class="tpl-in" id="' + id + '"' + (attrs ? ' ' + attrs : '') + '>' + esc(val == null ? '' : val) + '</textarea>';
+}
+function ed2(a, b) { return '<div class="ed-2"><div>' + a + '</div><div>' + b + '</div></div>'; }
+function heroPickerHtml(cur) {
+  const T = window.TRIP_HEROES || {};
+  return '<div class="hero-picker" id="edHeroPicker">' + Object.keys(T).map(k =>
+    '<button type="button" class="hero-opt' + (k === cur ? ' on' : '') + '" data-hero="' + esc(k) + '" aria-label="' + esc(T[k].label) + '"><span class="art">' + T[k].svg + '</span><span class="nm">' + esc(T[k].label) + '</span></button>').join('') + '</div>';
+}
+// 電子機票／QR 上傳（私有儲存區，與 trip-expense.html 的 uploadTicket 相同流程）
+async function edUploadFile(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const init = await apiPost('trip-file-upload-url', { trip: TRIP, ext, size: file.size });
+  if (init && init.needLogin) throw new Error('請重新整理後登入');
+  if (!init || init.success !== true) throw new Error((init && init.error) || '取得上傳網址失敗');
+  const put = await fetch(init.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+  if (!put.ok) throw new Error('上傳失敗（' + put.status + '）');
+  return init.path;
+}
+function edRenderTickets() {
+  const box = document.getElementById('edFiles'); if (!box) return;
+  box.innerHTML = ED.tickets.length ? ED.tickets.map((t, i) =>
+    '<div class="ed-file"><input class="tpl-in" data-tkname="' + i + '" value="' + esc(t.name) + '" placeholder="誰的機票" maxlength="40"><button type="button" class="x-btn" data-tkdel="' + i + '" aria-label="移除">' + ICON.x + '</button></div>').join('') : '<div class="tpl-hint">還沒有上傳</div>';
+}
+function edRenderQr() {
+  const box = document.getElementById('edFiles'); if (!box) return;
+  box.innerHTML = ED.qr ? '<div class="ed-file"><span>已上傳 QR code 圖片</span><button type="button" class="x-btn" data-qrdel="1" aria-label="移除">' + ICON.x + '</button></div>' : '<div class="tpl-hint">還沒有上傳</div>';
+}
+
+const ED_FORMS = {
+  meta: {
+    title: () => '標題與日期',
+    html() {
+      ED.hero = heroKey();
+      return edIn('旅遊名稱', 'edTitle', 'text', DATA.title, 'maxlength="30"') +
+        ed2(edIn('出發日', 'edStart', 'date', DATA.start), edIn('回程日', 'edEnd', 'date', DATA.end)) +
+        '<span class="tpl-lb">頁首插畫</span>' + heroPickerHtml(ED.hero);
+    },
+    collect() {
+      const title = edVal('edTitle'), start = edVal('edStart'), end = edVal('edEnd');
+      if (!title) return { error: '請填旅遊名稱' };
+      if (start && end && end < start) return { error: '回程日不能早於出發日' };
+      const hero = ED.hero;
+      return { apply() { ledgerSetMeta({ title, start, end, hero }); } };
+    },
+  },
+  hero: {
+    title: () => '選擇頁首插畫',
+    html() { ED.hero = heroKey(); return '<div class="tpl-hint" style="margin:0 0 8px">點一張就會換</div>' + heroPickerHtml(ED.hero); },
+    collect() { return { error: '' }; },
+  },
+  plan: {
+    title: rec => rec ? '編輯行程' : '新增行程',
+    find: id => LEDGER.plan.find(x => x.id === id && !x.del),
+    canDelete: true,
+    html(rec, ctx) {
+      const r = rec || { cat: 'sight', date: ctx.date || DAYS[CUR] || '', time: '', title: '', place: '', url: '', note: '', brandId: null };
+      ED.seg.cat = r.cat;
+      return '<span class="tpl-lb">類型</span>' + edSegHtml('cat', PLAN_TYPES.map(id => [id, CAT[id].name, CAT[id].icon]), r.cat) +
+        ed2(edIn('日期', 'edDate', 'date', r.date), edIn('時間（選填）', 'edTime', 'time', r.time)) +
+        edIn('行程', 'edText', 'text', r.title, 'maxlength="60" placeholder="例：淺草寺、搭 JR 到新宿、晚餐 燒肉"') +
+        edIn('地點（選填）', 'edPlace', 'text', r.place, 'maxlength="100" placeholder="會變成 Google 地圖連結"') +
+        edIn('網址（選填）', 'edUrl', 'url', r.url, 'maxlength="500" inputmode="url" placeholder="https://"') +
+        edTa('備註（選填）', 'edNote', r.note, 'rows="2" maxlength="300"') +
+        '<span class="tpl-lb">綁定品牌（選填）</span><div id="edBrand"></div>';
+    },
+    after(rec) { bpMount(document.getElementById('edBrand'), rec ? rec.brandId : null); },
+    collect() {
+      const title = edVal('edText');
+      if (!title) return { error: '請填行程' };
+      const urlRaw = edVal('edUrl'), url = safeUrl(urlRaw);
+      if (urlRaw && !url) return { error: '網址要以 http:// 或 https:// 開頭' };
+      const rec = Object.assign({}, ED.rec || {}, {
+        id: ED.id || uid(), date: edVal('edDate'), time: edVal('edTime'), cat: ED.seg.cat, title,
+        place: edVal('edPlace'), url, note: edVal('edNote'), brandId: bpGet(document.getElementById('edBrand')),
+        by: getUser(), at: Date.now(), del: false,
+      });
+      return { apply() {
+        const i = LEDGER.plan.findIndex(x => x.id === rec.id);
+        if (i >= 0) LEDGER.plan[i] = rec; else LEDGER.plan.push(rec);
+        ledgerCommit(rec.date);
+      } };
+    },
+    remove(id) {
+      const i = LEDGER.plan.findIndex(x => x.id === id);
+      if (i >= 0) LEDGER.plan[i] = Object.assign({}, LEDGER.plan[i], { del: true, at: Date.now() });
+      ledgerCommit();
+    },
+    confirmText: '確定刪除這個行程？',
+  },
+  flight: {
+    title: rec => rec ? '編輯航班' : '新增航班',
+    find: id => (EXTRA.flights || []).find(x => x.id === id && !x.del),
+    canDelete: true,
+    html(rec) {
+      const f = rec ? cleanFlights([rec])[0] : { dir: 'out', date: (DATA && DATA.start) || isoOf(new Date()), flightNo: '', airline: '', from: '', fromTerm: '', to: '', toTerm: '', dep: '', arr: '', note: '', tickets: [] };
+      ED.seg.dir = f.dir;
+      ED.tickets = f.tickets.map(t => Object.assign({}, t)); ED.ticketsOrig = ED.tickets.map(t => t.path);
+      return '<span class="tpl-lb">方向</span>' + edSegHtml('dir', [['out', '去程'], ['back', '回程'], ['other', '其他']], f.dir) +
+        ed2(edIn('日期', 'edDate', 'date', f.date), edIn('航班號', 'edNo', 'text', f.flightNo, 'maxlength="20" placeholder="例：BR198"')) +
+        edIn('航空公司', 'edAirline', 'text', f.airline, 'maxlength="30"') +
+        ed2(edIn('出發機場', 'edFrom', 'text', f.from, 'maxlength="30" placeholder="例：桃園 TPE"'), edIn('出發航廈', 'edFromTerm', 'text', f.fromTerm, 'maxlength="10" placeholder="例：T2"')) +
+        ed2(edIn('抵達機場', 'edTo', 'text', f.to, 'maxlength="30" placeholder="例：成田 NRT"'), edIn('抵達航廈', 'edToTerm', 'text', f.toTerm, 'maxlength="10"')) +
+        ed2(edIn('起飛時間', 'edDep', 'time', f.dep), edIn('抵達時間', 'edArr', 'time', f.arr)) +
+        edTa('備註（選填）', 'edNote', f.note, 'rows="2" maxlength="300" placeholder="例：出發前 2 天網路報到"') +
+        '<div class="ed-priv">電子機票存在私有儲存區，登入的人點了才看得到，不會公開。</div>' +
+        '<span class="tpl-lb">電子機票</span><div class="ed-files" id="edFiles"></div>' +
+        '<button type="button" class="ed-upbtn" id="edUpBtn">上傳電子機票</button><input type="file" id="edFile" accept="application/pdf,image/*" multiple hidden>';
+    },
+    after() { edRenderTickets(); },
+    collect() {
+      if (!edVal('edDate')) return { error: '請填日期' };
+      if (!edVal('edNo') && !edVal('edFrom') && !edVal('edTo')) return { error: '請至少填航班號或機場' };
+      const rec = cleanFlights([Object.assign({}, ED.rec || {}, {
+        id: ED.id || uid(), dir: ED.seg.dir, date: edVal('edDate'), flightNo: edVal('edNo'), airline: edVal('edAirline'),
+        from: edVal('edFrom'), fromTerm: edVal('edFromTerm'), to: edVal('edTo'), toTerm: edVal('edToTerm'),
+        dep: edVal('edDep'), arr: edVal('edArr'), note: edVal('edNote'), at: Date.now(), del: false, tickets: ED.tickets,
+      })])[0];
+      const origTickets = ED.ticketsOrig;
+      return { apply() {
+        const i = EXTRA.flights.findIndex(x => x.id === rec.id);
+        if (i >= 0) EXTRA.flights[i] = rec; else EXTRA.flights.push(rec);
+        const keep = new Set(rec.tickets.map(t => t.path));
+        for (const p of origTickets) if (!keep.has(p)) apiPost('trip-file-delete', { path: p }).catch(() => {});
+        extraCommit();
+      } };
+    },
+    remove(id) {
+      const i = EXTRA.flights.findIndex(x => x.id === id);
+      if (i >= 0) EXTRA.flights[i] = Object.assign({}, EXTRA.flights[i], { del: true, at: Date.now() });
+      extraCommit();
+    },
+    confirmText: '確定刪除這個航班？',
+  },
+  hotel: {
+    title: rec => rec ? '編輯住宿' : '新增住宿',
+    find: id => (EXTRA.hotels || []).find(x => x.id === id && !x.del),
+    canDelete: true,
+    html(rec) {
+      const h = rec || { name: '', nameJa: '', checkin: '', checkout: '', checkinTime: '', checkoutTime: '', code: '', pin: '', booking: '', room: '', guests: '', address: '', url: '', note: '', qr: '' };
+      ED.qr = TICKET_RE.test(h.qr || '') ? h.qr : ''; ED.qrOrig = ED.qr;
+      return edIn('住宿名稱', 'edName', 'text', h.name, 'maxlength="60"') +
+        edIn('日文／別名（選填）', 'edNameJa', 'text', h.nameJa, 'maxlength="80"') +
+        ed2(edIn('入住日', 'edIn', 'date', h.checkin), edIn('退房日', 'edOut', 'date', h.checkout)) +
+        ed2(edIn('入住時間（以後）', 'edInT', 'time', h.checkinTime), edIn('退房時間（以前）', 'edOutT', 'time', h.checkoutTime)) +
+        edIn('地址（選填）', 'edAddr', 'text', h.address, 'maxlength="150" placeholder="會變成 Google 地圖連結"') +
+        edIn('房型（選填）', 'edRoom', 'text', h.room, 'maxlength="60"') +
+        edIn('人數（選填）', 'edGuests', 'text', h.guests, 'maxlength="30" placeholder="例：2 位大人"') +
+        '<div class="ed-priv">以下是員工專用私密欄，發布成範本時不會帶出去。</div>' +
+        edIn('線上 Check-in 連結', 'edUrl', 'url', h.url, 'maxlength="500" inputmode="url" placeholder="https://"') +
+        ed2(edIn('Check-in Code', 'edCode', 'text', h.code, 'maxlength="40"'), edIn('PIN Code', 'edPin', 'text', h.pin, 'maxlength="40"')) +
+        edIn('訂房編號', 'edBooking', 'text', h.booking, 'maxlength="60"') +
+        edTa('備註（選填）', 'edNote', h.note, 'rows="2" maxlength="300"') +
+        '<span class="tpl-lb">Check-in QR code</span><div class="ed-files" id="edFiles"></div>' +
+        '<button type="button" class="ed-upbtn" id="edUpBtn">上傳 QR code 圖片</button><input type="file" id="edFile" accept="image/*" hidden>';
+    },
+    after() { edRenderQr(); },
+    collect() {
+      const name = edVal('edName');
+      if (!name) return { error: '請填住宿名稱' };
+      const urlRaw = edVal('edUrl'), url = safeUrl(urlRaw);
+      if (urlRaw && !url) return { error: '線上 Check-in 連結要以 http:// 或 https:// 開頭' };
+      const ci = edVal('edIn'), co = edVal('edOut');
+      if (ci && co && co < ci) return { error: '退房日不能早於入住日' };
+      const rec = Object.assign({}, ED.rec || {}, {
+        id: ED.id || uid(), name, nameJa: edVal('edNameJa'), checkin: ci, checkout: co, checkinTime: edVal('edInT'), checkoutTime: edVal('edOutT'),
+        address: edVal('edAddr'), room: edVal('edRoom'), guests: edVal('edGuests'), url, code: edVal('edCode'), pin: edVal('edPin'),
+        booking: edVal('edBooking'), note: edVal('edNote'), qr: ED.qr || '', at: Date.now(), del: false,
+      });
+      const qrOrig = ED.qrOrig;
+      return { apply() {
+        const i = EXTRA.hotels.findIndex(x => x.id === rec.id);
+        if (i >= 0) EXTRA.hotels[i] = rec; else EXTRA.hotels.push(rec);
+        if (qrOrig && qrOrig !== rec.qr) apiPost('trip-file-delete', { path: qrOrig }).catch(() => {});
+        extraCommit();
+      } };
+    },
+    remove(id) {
+      const i = EXTRA.hotels.findIndex(x => x.id === id);
+      if (i >= 0) EXTRA.hotels[i] = Object.assign({}, EXTRA.hotels[i], { del: true, at: Date.now() });
+      extraCommit();
+    },
+    confirmText: '確定刪除這個住宿？',
+  },
+  prep: {
+    title: rec => rec ? '編輯準備項目' : '新增準備項目',
+    find: id => EXTRA.prep.find(x => x.id === id && !x.del),
+    canDelete: true,
+    html(rec, ctx) {
+      const group = rec ? rec.group : (ctx.group === 'buy' ? 'buy' : 'todo');
+      const p = rec || { group, cat: group === 'todo' ? PREP_CAT : 'key', owner: PREP_WHO, text: '', brandId: null };
+      ED.seg.group = p.group; ED.seg.cat = PREP_CAT_MAP[p.cat] ? p.cat : 'key'; ED.seg.owner = p.owner || '';
+      return edIn('項目', 'edText', 'text', p.text, 'maxlength="80" placeholder="例：護照、網卡"') +
+        '<span class="tpl-lb">清單</span>' + edSegHtml('group', PREP_GROUPS.map(g => [g.id, g.name]), ED.seg.group) +
+        '<div id="edCatWrap"' + (ED.seg.group === 'todo' ? '' : ' hidden') + '><span class="tpl-lb">分類</span>' + edSegHtml('cat', PREP_CATS.map(c => [c.id, c.name]), ED.seg.cat) + '</div>' +
+        '<span class="tpl-lb">誰要準備</span>' + edSegHtml('owner', [['', '兩人共用']].concat(PREP_PEOPLE.map(n => [n, n])), ED.seg.owner) +
+        '<span class="tpl-lb">綁定品牌（選填）</span><div id="edBrand"></div>';
+    },
+    after(rec) { bpMount(document.getElementById('edBrand'), rec ? rec.brandId : null); },
+    onSeg(name, v) { if (name === 'group') document.getElementById('edCatWrap').hidden = v !== 'todo'; },
+    collect() {
+      const text = edVal('edText').slice(0, 80);
+      if (!text) return { error: '請填項目' };
+      const group = ED.seg.group;
+      const rec = Object.assign({ id: uid(), done: false, ord: null, by: getUser() }, ED.rec || {}, {
+        group, owner: ED.seg.owner, cat: group === 'todo' ? ED.seg.cat : 'key', text,
+        brandId: bpGet(document.getElementById('edBrand')), at: Date.now(), del: false,
+      });
+      return { apply() {
+        const i = EXTRA.prep.findIndex(x => x.id === rec.id);
+        if (i >= 0) EXTRA.prep[i] = rec; else EXTRA.prep.push(rec);
+        if (rec.group === 'todo' && PREP_CAT_MAP[rec.cat]) { PREP_CAT = rec.cat; try { localStorage.setItem(LS_PREP_CAT, PREP_CAT); } catch (e) {} }
+        if (rec.owner && PREP_PEOPLE.includes(rec.owner)) { PREP_WHO = rec.owner; try { localStorage.setItem(LS_PREP_WHO, PREP_WHO); } catch (e) {} }
+        extraCommit();
+      } };
+    },
+    remove(id) {
+      const i = EXTRA.prep.findIndex(x => x.id === id);
+      if (i >= 0) EXTRA.prep[i] = Object.assign({}, EXTRA.prep[i], { del: true, at: Date.now() });
+      extraCommit();
+    },
+    confirmText: '確定刪除這個項目？',
+  },
+};
+let ED = null;
+function rebuildDays() {
+  const keep = DAYS[CUR];
+  DAYS = buildDays(DATA);
+  CUR = keep && DAYS.includes(keep) ? DAYS.indexOf(keep) : Math.min(CUR, Math.max(DAYS.length - 1, 0));
+}
+function extraCommit() {
+  try { localStorage.setItem(LS_EXTRA, JSON.stringify(EXTRA)); } catch (e) {}
+  EXTRA_DIRTY = true;
+  rebuildDays(); render(); queueSave();
+}
+function edOpen(kind, id, ctx) {
+  const form = ED_FORMS[kind];
+  if (!EDIT || !LEDGER || !form) return;
+  const rec = id && form.find ? form.find(id) : null;
+  if (id && !rec) return;
+  ED = { kind, id: id || null, rec, seg: {}, up: 0, tickets: [], ticketsOrig: [], qr: '', qrOrig: '', hero: '' };
+  document.getElementById('edTitleT').textContent = form.title(rec);
+  document.getElementById('edBody').innerHTML = form.html(rec, ctx || {});
+  document.getElementById('edErr').textContent = '';
+  document.getElementById('edDel').hidden = !(rec && form.canDelete);
+  document.getElementById('edSave').hidden = kind === 'hero';
+  document.getElementById('edCancel').textContent = kind === 'hero' ? '關閉' : '取消';
+  document.getElementById('edOverlay').classList.add('on');
+  document.getElementById('edPanel').scrollTop = 0;
+  if (form.after) form.after(rec);
+}
+function edClose() { document.getElementById('edOverlay').classList.remove('on'); ED = null; }
+function edSave() {
+  if (!ED) return;
+  if (ED.up > 0) { document.getElementById('edErr').textContent = '檔案上傳中，請稍等一下'; return; }
+  const r = ED_FORMS[ED.kind].collect();
+  if (r.error) { document.getElementById('edErr').textContent = r.error; return; }
+  const apply = r.apply; edClose(); apply();
+}
+function edDelete() {
+  if (!ED || !ED.id) return;
+  const form = ED_FORMS[ED.kind];
+  if (!confirm(form.confirmText || '確定刪除？')) return;
+  const id = ED.id; edClose(); form.remove(id);
+}
+function edSetMode(on) {
+  EDIT = !!on && !!getToken() && !!LEDGER;
+  document.body.classList.toggle('editing', EDIT);
+  const b = document.getElementById('edToggle');
+  b.classList.toggle('on', EDIT); b.setAttribute('aria-pressed', EDIT ? 'true' : 'false');
+  document.getElementById('edToggleT').textContent = EDIT ? '完成' : '編輯';
+  if (DATA) render();
+}
+function edSyncToggle() { document.getElementById('edToggle').hidden = !(getToken() && LEDGER); }
+(function edInit() {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = '' +
+    '<div class="tpl-overlay" id="edOverlay"><div class="tpl-panel ed-panel" id="edPanel" role="dialog" aria-label="編輯">' +
+    '<div class="tpl-h"><h3 id="edTitleT"></h3><button type="button" class="x-btn" id="edClose" aria-label="關閉">' + ICON.x + '</button></div>' +
+    '<div id="edBody"></div><div class="tpl-err" id="edErr"></div>' +
+    '<div class="tpl-btns"><button type="button" class="main" id="edSave">儲存</button><button type="button" id="edCancel">取消</button><button type="button" class="danger" id="edDel" hidden>刪除</button></div>' +
+    '</div></div>';
+  document.body.appendChild(wrap);
+  const ov = document.getElementById('edOverlay'); let downOnOv = false;
+  ov.addEventListener('pointerdown', e => { downOnOv = e.target === ov; });
+  ov.addEventListener('click', e => { if (e.target === ov && downOnOv) edClose(); downOnOv = false; });
+  document.getElementById('edClose').onclick = edClose;
+  document.getElementById('edCancel').onclick = edClose;
+  document.getElementById('edSave').onclick = edSave;
+  document.getElementById('edDel').onclick = edDelete;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && ED) edClose(); });
+  document.getElementById('edToggle').onclick = () => edSetMode(!EDIT);
+  // 表單裡的點擊：分段按鈕、頁首插畫、機票／QR 上傳與移除
+  document.getElementById('edBody').addEventListener('click', e => {
+    const sg = e.target.closest('.ed-seg button');
+    if (sg && ED) {
+      const name = sg.parentNode.dataset.seg; ED.seg[name] = sg.dataset.v;
+      sg.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === sg));
+      const f = ED_FORMS[ED.kind]; if (f.onSeg) f.onSeg(name, sg.dataset.v);
+      return;
+    }
+    const h = e.target.closest('[data-hero]');
+    if (h && ED) {
+      ED.hero = h.dataset.hero;
+      document.querySelectorAll('#edHeroPicker .hero-opt').forEach(b => b.classList.toggle('on', b === h));
+      if (ED.kind === 'hero') { const hero = ED.hero; edClose(); ledgerSetMeta({ hero }); }
+      return;
+    }
+    if (e.target.closest('#edUpBtn')) { document.getElementById('edFile').click(); return; }
+    const td = e.target.closest('[data-tkdel]');
+    if (td && ED) { ED.tickets.splice(+td.dataset.tkdel, 1); edRenderTickets(); return; }
+    if (e.target.closest('[data-qrdel]') && ED) { ED.qr = ''; edRenderQr(); }
+  });
+  document.getElementById('edBody').addEventListener('input', e => {
+    const n = e.target.closest('[data-tkname]');
+    if (n && ED) ED.tickets[+n.dataset.tkname].name = n.value.trim().slice(0, 40);
+  });
+  document.getElementById('edBody').addEventListener('change', async e => {
+    if (e.target.id !== 'edFile' || !ED) return;
+    const files = [...e.target.files]; e.target.value = '';
+    const cur = ED, kind = ED.kind, btn = document.getElementById('edUpBtn'), errEl = document.getElementById('edErr');
+    const label = btn.textContent;
+    btn.disabled = true; errEl.textContent = ''; cur.up++;
+    for (const file of (kind === 'hotel' ? files.slice(0, 1) : files)) {
+      btn.textContent = '上傳中…（' + file.name + '）';
+      try {
+        const path = await edUploadFile(file);
+        if (ED !== cur) { apiPost('trip-file-delete', { path }).catch(() => {}); continue; }   // 視窗已關：上傳的檔不留孤兒
+        if (kind === 'hotel') { if (cur.qr && cur.qr !== cur.qrOrig) apiPost('trip-file-delete', { path: cur.qr }).catch(() => {}); cur.qr = path; edRenderQr(); }
+        else { cur.tickets.push({ name: file.name.replace(/\.[^.]+$/, '').slice(0, 40), path }); edRenderTickets(); }
+      } catch (err) { if (ED === cur) errEl.textContent = file.name + '：' + err.message; }
+    }
+    cur.up--;
+    if (ED === cur) { btn.textContent = label; btn.disabled = false; }
+  });
+  // 頁面上的鉛筆與「＋ 新增」
+  document.addEventListener('click', e => {
+    const p = e.target.closest('[data-ed]');
+    if (p) { e.preventDefault(); e.stopPropagation(); edOpen(p.dataset.ed, p.dataset.id || null, {}); return; }
+    const a = e.target.closest('[data-ed-add]');
+    if (a) { e.preventDefault(); edOpen(a.dataset.edAdd, null, { date: a.dataset.date || '', group: a.dataset.group || '' }); }
+  });
 })();
 
 load();
