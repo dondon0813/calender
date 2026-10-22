@@ -54,6 +54,15 @@
   .count b { font-size: 1.7rem; font-weight: 400; margin: 0 6px; vertical-align: -2px; }
 
   section { scroll-margin-top: calc(var(--nav-h) + 8px); }
+  /* 2026-10-22 內容分頁：行程｜航班｜住宿｜準備（頂列四格切換，body[data-sec] 決定顯示哪一區） */
+  #flights, #stay, #plan, #prep, #album { display: none; }
+  body[data-sec="plan"] #plan, body[data-sec="flights"] #flights, body[data-sec="stay"] #stay, body[data-sec="prep"] #prep { display: block; }
+  body[data-sec="plan"] #album:not([hidden]) { display: block; }
+  @keyframes refflash { 0%, 60% { box-shadow: 0 0 0 4px var(--pink); } 100% { box-shadow: 0 0 0 4px transparent; } }
+  .flash { animation: refflash 1.6s ease-out; }
+  .ev.ref .bd { cursor: pointer; }
+  .ev.ref.gone .bd { cursor: default; }
+  .ev.ref.gone .move, .ev.ref.gone .sub { opacity: .55; }
   .sec-h { display: flex; align-items: center; gap: 14px; margin: 44px 0 20px; font-size: 1.6rem; }
   .sec-h .ic { width: 52px; height: 52px; border-radius: 50%; border: var(--line) solid var(--ink); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   .sec-h .ic svg { width: 28px; height: 28px; }
@@ -102,9 +111,9 @@
 
   /* 日期軌道（電車沿軌道開到選中的那天；捲動時黏在頂列下方） */
   .stepper { position: sticky; top: calc(var(--nav-h) + var(--line)); z-index: 20; background: var(--bg); margin: 0 -16px; padding: 6px 16px 8px; }
-  .track { position: relative; height: 46px; }
-  .rail { position: absolute; top: 40px; height: var(--line); background: var(--ink); }
-  .sleepers { position: absolute; top: calc(40px + var(--line)); height: 5px; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 12px); opacity: .45; }
+  .track { position: relative; height: 56px; }   /* 2026-10-22 小火車抬高 10px：車輪底緣落在日期圓點頂端上方 */
+  .rail { position: absolute; top: 50px; height: var(--line); background: var(--ink); }
+  .sleepers { position: absolute; top: calc(50px + var(--line)); height: 5px; background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 12px); opacity: .45; }
   .train { position: absolute; top: 2px; left: 0; width: 64px; height: 40px; transform: translateX(-50%); transition: left .9s cubic-bezier(.45,.05,.3,1); z-index: 2; pointer-events: none; }
   .train svg { width: 64px; height: 40px; transition: transform .2s; }
   .train.flip svg { transform: scaleX(-1); }
@@ -314,12 +323,12 @@
   .back.ed-toggle.on { background: var(--pink); }
   .titlebox { position: relative; }
   .hero { position: relative; }
-  .ed-pencil { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink); background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; z-index: 3; }
+  .ed-pencil { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--muted); box-shadow: 0 1px 4px rgba(60,45,40,.18); background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; z-index: 3; }
   .ed-pencil svg { width: 20px; height: 20px; }
-  .ed-pencil.sm { width: 34px; height: 34px; top: 50%; right: 0; transform: translateY(-50%); }
+  .ed-pencil.sm { width: 34px; height: 34px; top: 4px; right: 0; }
   .ed-pencil.sm svg { width: 17px; height: 17px; }
   .ed-pencil.at-title { top: 0; right: 0; }
-  .ed-pencil.at-hero { top: 10px; left: 26px; right: auto; }
+  .ed-pencil.at-hero { top: 10px; right: 10px; left: auto; }
   .ed-add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 10px 12px; border: 2px dashed var(--soft); border-radius: 16px; background: transparent; color: var(--soft); font: inherit; font-size: .95rem; cursor: pointer; }
   .ed-add svg { width: 16px; height: 16px; }
   body.editing .flight { position: relative; }
@@ -364,10 +373,10 @@
 <script src="modalGuard.js?v=1"></script>
 <script src="trip-hero.js?v=1"></script>
 </head>
-<body>
+<body data-sec="plan">
 <nav class="nav"><div class="wrap">
   <div class="navl"><button type="button" class="back ed-toggle" id="edToggle" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/></svg><span id="edToggleT">編輯</span></button><a href="#top" aria-label="回到最上面" id="logoLink"></a></div>
-  <div class="nav-r"><div class="links"><a href="#flights" data-sec="flights">航班</a><a href="#stay" data-sec="stay">住宿</a><a href="#plan" data-sec="plan">行程</a><a href="#prep" data-sec="prep">準備</a></div><button type="button" class="calc-fab" id="calcFab" aria-label="日幣計算機">¥</button></div>
+  <div class="nav-r"><div class="links"><a href="?sec=plan" data-sec="plan">行程</a><a href="?sec=flights" data-sec="flights">航班</a><a href="?sec=hotels" data-sec="stay">住宿</a><a href="?sec=prep" data-sec="prep">準備</a></div><button type="button" class="calc-fab" id="calcFab" aria-label="日幣計算機">¥</button></div>
 </div></nav>
 
 <div id="loginBox" class="login">
@@ -745,12 +754,18 @@ function bpGet(host) { return host && host._bp ? host._bp.value : null; }
 let DATA = null, DAYS = [], CUR = 0;
 let EXTRA = { v: 1, flights: [], hotels: [], prep: [] };
 let EXTRA_DIRTY = false;   // 本機有還沒存上去的航班／住宿／準備清單變更
+// 行程點可選的「引用」：{kind:'flight'|'hotel', id}＝時間軸上這一列代表某筆航班／住宿（資料仍存在 trip_extra 的 flights／hotels）
+function cleanRef(r) {
+  if (!r || typeof r !== 'object' || (r.kind !== 'flight' && r.kind !== 'hotel')) return null;
+  const id = String(r.id || '').slice(0, 60);
+  return id ? { kind: r.kind, id } : null;
+}
 function clean(raw) {
   const s = raw || {};
   const plan = (Array.isArray(s.plan) ? s.plan : []).filter(p => p && p.id && !p.del).map(p => ({
     id: String(p.id), date: isoOk(p.date) ? p.date : '', time: /^\d{2}:\d{2}$/.test(p.time || '') ? p.time : '',
     cat: CAT[p.cat] ? p.cat : 'other', title: String(p.title || ''), place: String(p.place || ''),
-    url: safeUrl(p.url), note: String(p.note || ''), brandId: bpUuidOrNull(p.brandId), by: String(p.by || ''), at: Number(p.at) || 0,
+    url: safeUrl(p.url), note: String(p.note || ''), brandId: bpUuidOrNull(p.brandId), ref: cleanRef(p.ref), by: String(p.by || ''), at: Number(p.at) || 0,
   }));
   const photos = [];
   for (const p of (Array.isArray(s.photos) ? s.photos : [])) if (p && !p.del && PATH_RE.test(p.path || '')) photos.push({ date: p.date || '', path: p.path, caption: p.caption || '', at: p.at || 0 });
@@ -822,6 +837,7 @@ function normalize(raw) {
     id: String(p.id), date: String(p.date || ''), time: /^\d{2}:\d{2}$/.test(String(p.time || '')) ? String(p.time) : '',
     cat: PCAT_MAP[p.cat] ? p.cat : 'other', title: String(p.title || '').slice(0, 60),
     place: String(p.place || '').slice(0, 100), url: safeUrl(String(p.url || '')), note: String(p.note || '').slice(0, 300), brandId: bpUuidOrNull(p.brandId),
+    ...(cleanRef(p.ref) ? { ref: cleanRef(p.ref) } : {}),
     by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
   }));
   s.items = s.items.filter(i => i && i.id).map(i => ({
@@ -987,7 +1003,7 @@ function renderFlights() {
     const dir = DIR[f.dir] || DIR.other;
     const term = (ap, t) => esc([ap, t].filter(Boolean).join(' '));
     const dur = flightDuration(f);
-    return '<div class="flight">' + edPencil('flight', f.id, '', '編輯航班') + '<div class="fh" style="background:' + dir[1] + '"><span>' + (isoOk(f.date) ? esc(mdw(f.date)) + ' ' : '') + dir[0] + '</span><span>' + esc(f.flightNo || '') + '</span></div>' +
+    return '<div class="flight" id="fl-' + esc(f.id) + '">' + edPencil('flight', f.id, '', '編輯航班') + '<div class="fh" style="background:' + dir[1] + '"><span>' + (isoOk(f.date) ? esc(mdw(f.date)) + ' ' : '') + dir[0] + '</span><span>' + esc(f.flightNo || '') + '</span></div>' +
       '<div class="fb"><div class="row"><span class="t">' + esc(f.dep || '--:--') + '</span><span class="mid">' + esc(dur) + '</span><span class="t">' + esc(f.arr || '--:--') + '</span></div>' +
       '<div class="ap"><span>' + term(f.from, f.fromTerm) + '</span><span>' + term(f.to, f.toTerm) + '</span></div>' +
       (f.airline ? '<div class="air">' + esc(f.airline) + '</div>' : '') +
@@ -1038,7 +1054,7 @@ function renderHotels() {
     const acts = [];
     if (url) acts.push('<a href="' + esc(url) + '" target="_blank" rel="noopener">' + ICON.link + '<span>開啟線上 Check-in</span></a>');
     if (h.address) acts.push('<a href="' + esc(mapsUrl(h.address)) + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + esc(h.address) + '</span></a>');
-    return '<div class="flight hotel">' + edPencil('hotel', h.id, '', '編輯住宿') + '<div class="fh"><span>' + (isoOk(h.checkin) ? esc(mdw(h.checkin)) : '') + (isoOk(h.checkout) ? '－' + esc(mdw(h.checkout)) : '') + '</span><span>' + (n ? n + ' 晚' : '住宿') + '</span></div>' +
+    return '<div class="flight hotel" id="ht-' + esc(h.id) + '">' + edPencil('hotel', h.id, '', '編輯住宿') + '<div class="fh"><span>' + (isoOk(h.checkin) ? esc(mdw(h.checkin)) : '') + (isoOk(h.checkout) ? '－' + esc(mdw(h.checkout)) : '') + '</span><span>' + (n ? n + ' 晚' : '住宿') + '</span></div>' +
       '<div class="fb"><div class="hn">' + esc(h.name || '飯店') + '</div>' + (h.nameJa ? '<div class="hj">' + esc(h.nameJa) + '</div>' : '') +
       '<div class="io"><div><small>入住</small><b>' + esc(h.checkinTime || '--:--') + '</b> 以後</div><div><small>退房</small><b>' + esc(h.checkoutTime || '--:--') + '</b> 以前</div></div>' +
       (TICKET_RE.test(h.qr || '') ? '<div class="qrbox"><img data-qr="' + esc(h.qr) + '" alt="Check-in QR code"><small>到飯店出示這個 QR code（點一下放大）</small></div>' : '') +
@@ -1121,18 +1137,33 @@ function stayFor(iso) {
   }
   return '';
 }
-// 這天的航班也排進時間軸（去程那天 13:10 起飛之類）
-function flightEvents(iso) {
-  return liveFlights().filter(f => f.date === iso).map(f => ({
-    cat: '_flight', time: /^\d{2}:\d{2}$/.test(f.dep || '') ? f.dep : '', at: 0,
-    title: [f.flightNo, (f.from || '') + (f.to ? ' → ' + f.to : '')].filter(Boolean).join('　'),
-    note: f.arr ? f.arr + ' 抵達' + (f.toTerm ? ' ' + f.toTerm : '') : '',
-  }));
+// 引用航班／住宿的行程點（2026-10-22）：用被引用那筆的資料畫飛機／床圖示＋摘要行；點整列跳到對應分頁那一筆
+function refEvHtml(p) {
+  const isF = p.ref.kind === 'flight';
+  const tg = isF ? liveFlights().find(x => x.id === p.ref.id) : liveHotels().find(x => x.id === p.ref.id);
+  const pillBg = isF ? 'var(--blue)' : 'var(--pink)', pillT = isF ? '航班' : '住宿', ic = isF ? ICON.plane : ICON.stay;
+  const pen = edPencil('plan', p.id, '', '編輯行程');
+  const tm = '<span class="tm">' + (p.time || '') + '</span><span class="nd"></span>';
+  if (!tg) {
+    return '<div class="ev ref gone">' + tm + '<div class="bd">' + pen + '<div class="move"><span class="pill" style="background:' + pillBg + '">' + ic + pillT + '</span>' + esc(noEmoji(p.title) || pillT) + '</div><div class="sub">（已刪除的' + pillT + '）</div></div></div>';
+  }
+  let head, sub;
+  if (isF) {
+    head = [tg.flightNo, tg.airline].filter(Boolean).join('　') || pillT;
+    const ap = (a, t) => [a, t].filter(Boolean).join(' ');
+    const route = [ap(tg.from, tg.fromTerm), ap(tg.to, tg.toTerm)].filter(Boolean).join(' → ');
+    const times = [tg.dep, tg.arr].filter(Boolean).join(' → ');
+    sub = [route, times].filter(Boolean).join('　');
+  } else {
+    head = tg.name || '住宿';
+    sub = [tg.address, tg.checkinTime ? '入住 ' + tg.checkinTime + ' 以後' : ''].filter(Boolean).join('　');
+  }
+  const go = (isF ? 'flight:' : 'hotel:') + tg.id;
+  return '<div class="ev ref">' + tm + '<div class="bd" data-goref="' + esc(go) + '">' + pen + '<div class="move"><span class="pill" style="background:' + pillBg + '">' + ic + pillT + '</span>' + esc(noEmoji(head)) + '</div>' +
+    (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + (p.note ? '<div class="sub">' + linkify(p.note) + '</div>' : '') + '</div></div>';
 }
 function evHtml(p) {
-  if (p.cat === '_flight') {
-    return '<div class="ev"><span class="tm">' + esc(p.time) + '</span><span class="nd"></span><div class="bd"><div class="move"><span class="pill" style="background:var(--blue)">' + ICON.plane + '飛機</span>' + esc(noEmoji(p.title)) + '</div>' + (p.note ? '<div class="sub">' + esc(p.note) + '</div>' : '') + '</div></div>';
-  }
+  if (p.ref) return refEvHtml(p);
   const c = CAT[p.cat];
   const acts = [];
   if (p.place) acts.push('<a href="' + esc(mapsUrl(p.place)) + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + esc(p.place) + '</span></a>');
@@ -1158,11 +1189,11 @@ function renderDay(dir) {
     return;
   }
   const iso = DAYS[CUR];
-  const items = DATA.plan.filter(p => p.date === iso).concat(flightEvents(iso)).sort(planSort);
+  const items = DATA.plan.filter(p => p.date === iso).sort(planSort);
   const tone = TONES[CUR % TONES.length];
   const stay = stayFor(iso);
-  const titleItems = items.filter(p => p.cat !== '_flight');
-  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENE[sceneFor(iso, items.filter(p => p.cat !== '_flight'), CUR)]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
+  const titleItems = items;
+  let html = '<div class="daycard" style="background:' + tone[0] + '"><div class="pic">' + paint(SCENE[sceneFor(iso, items, CUR)]) + '</div><div><div class="dn">Day ' + (CUR + 1) + '</div>' +
     '<div class="dt">' + esc(dayTitle(titleItems)) + '</div>' + (stay ? '<div class="ds">住 ' + esc(stay) + '</div>' : '') + '</div></div>';
   html += items.length ? '<div class="tl">' + items.map(evHtml).join('') + '</div>' : '<div class="empty">這天還沒安排，自由活動</div>';
   html += edAddBtn('plan', '新增行程', ' data-date="' + iso + '"');
@@ -1388,15 +1419,44 @@ document.getElementById('lb').addEventListener('click', () => document.getElemen
   }, { passive: true });
 })();
 
-// 頂列「航班／行程／準備」依捲動位置亮起
-function syncNav() {
-  const line = document.querySelector('.nav').offsetHeight + 120;
-  let cur = '';
-  for (const id of ['flights', 'stay', 'plan', 'prep']) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < line) cur = id; }
-  if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = 'prep';
-  document.querySelectorAll('.nav .links a').forEach(a => a.classList.toggle('on', a.dataset.sec === cur));
+// 內容分頁（2026-10-22）：頂列「行程｜航班｜住宿｜準備」四格，同頁切換不重載；網址 ?sec=flights|hotels|prep 記分頁（行程不帶）
+const SEC_QS = { plan: '', flights: 'flights', stay: 'hotels', prep: 'prep' };
+function secFromUrl() {
+  const v = (new URLSearchParams(location.search).get('sec') || '').toLowerCase();
+  return v === 'flights' ? 'flights' : v === 'hotels' ? 'stay' : v === 'prep' ? 'prep' : 'plan';
 }
-window.addEventListener('scroll', syncNav, { passive: true });
+let SEC = secFromUrl();
+function syncNav() {
+  document.body.dataset.sec = SEC;
+  document.querySelectorAll('.nav .links a').forEach(a => a.classList.toggle('on', a.dataset.sec === SEC));
+}
+function setSec(sec, scroll) {
+  if (!SEC_QS.hasOwnProperty(sec)) sec = 'plan';
+  SEC = sec; syncNav();
+  try {
+    const u = new URL(location.href);
+    if (SEC_QS[sec]) u.searchParams.set('sec', SEC_QS[sec]); else u.searchParams.delete('sec');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  } catch (e) {}
+  if (scroll) {
+    const el = document.getElementById(sec);
+    const y = el.getBoundingClientRect().top + scrollY - document.querySelector('.nav').offsetHeight - 8;
+    if (scrollY > y) window.scrollTo({ top: Math.max(y, 0) });
+  }
+}
+document.querySelectorAll('.nav .links a[data-sec]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); setSec(a.dataset.sec, true); }));
+// 時間軸上引用航班／住宿的列：點整列跳到對應分頁那一筆
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-goref]');
+  if (!g || e.target.closest('[data-ed], a, button')) return;
+  const [kind, id] = g.dataset.goref.split(':');
+  setSec(kind === 'flight' ? 'flights' : 'stay', false);
+  const el = document.getElementById((kind === 'flight' ? 'fl-' : 'ht-') + id);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1700);
+});
 
 /* ---------- 讀取 ---------- */
 function show(data, keepLocal) {
@@ -1779,6 +1839,37 @@ function edRenderQr() {
   box.innerHTML = ED.qr ? '<div class="ed-file"><span>已上傳 QR code 圖片</span><button type="button" class="x-btn" data-qrdel="1" aria-label="移除">' + ICON.x + '</button></div>' : '<div class="tpl-hint">還沒有上傳</div>';
 }
 
+// 行程點視窗內容：一般類型＝日期／時間／行程／地點／網址／備註／品牌；航班、住宿＝下拉挑已建好的那筆＋日期／時間／備註
+function planRefLabel(kind, x) {
+  if (kind === 'flight') return ({ out: '去程', back: '回程' }[x.dir] || '航班') + ' ' + (x.flightNo || ((x.from || '') + '→' + (x.to || ''))) + (isoOk(x.date) ? '　' + md(x.date) + (x.dep ? ' ' + x.dep : '') : '');
+  return (x.name || '住宿') + (isoOk(x.checkin) ? '　' + md(x.checkin) + ' 入住' : '');
+}
+function planBodyHtml(mode, r) {
+  if (mode !== 'flight' && mode !== 'hotel') {
+    ED.noRef = false;
+    return ed2(edIn('日期', 'edDate', 'date', r.date), edIn('時間（選填）', 'edTime', 'time', r.time)) +
+      edIn('行程', 'edText', 'text', r.title, 'maxlength="60" placeholder="例：淺草寺、搭 JR 到新宿、晚餐 燒肉"') +
+      edIn('地點（選填）', 'edPlace', 'text', r.place, 'maxlength="100" placeholder="會變成 Google 地圖連結"') +
+      edIn('網址（選填）', 'edUrl', 'url', r.url, 'maxlength="500" inputmode="url" placeholder="https://"') +
+      edTa('備註（選填）', 'edNote', r.note, 'rows="2" maxlength="300"') +
+      '<span class="tpl-lb">綁定品牌（選填）</span><div id="edBrand"></div>';
+  }
+  const noun = mode === 'flight' ? '航班' : '住宿';
+  const list = mode === 'flight' ? liveFlights() : liveHotels();
+  const curId = r.ref && r.ref.kind === mode ? r.ref.id : '';
+  const gone = curId && !list.some(x => x.id === curId);
+  ED.noRef = !list.length && !gone;
+  const opts = '<option value="">請選擇' + noun + '</option>' + (gone ? '<option value="' + esc(curId) + '" selected>（已刪除的' + noun + '）</option>' : '') +
+    list.map(x => '<option value="' + esc(x.id) + '"' + (x.id === curId ? ' selected' : '') + '>' + esc(planRefLabel(mode, x)) + '</option>').join('');
+  return '<label class="tpl-lb" for="edRef">選擇' + noun + '</label>' +
+    (ED.noRef ? '<div class="tpl-hint">請先到「航班」「住宿」分頁新增' + noun + '</div>' : '<select class="tpl-in" id="edRef">' + opts + '</select>') +
+    ed2(edIn('日期', 'edDate', 'date', r.date), edIn('時間（選填）', 'edTime', 'time', r.time)) +
+    edTa('備註（選填）', 'edNote', r.note, 'rows="2" maxlength="300"');
+}
+function planBodyAfter(rec) {
+  document.getElementById('edSave').disabled = !!ED.noRef;
+  if (!ED.refMode) bpMount(document.getElementById('edBrand'), rec ? rec.brandId : null);
+}
 const ED_FORMS = {
   meta: {
     title: () => '標題與日期',
@@ -1807,17 +1898,45 @@ const ED_FORMS = {
     canDelete: true,
     html(rec, ctx) {
       const r = rec || { cat: 'sight', date: ctx.date || DAYS[CUR] || '', time: '', title: '', place: '', url: '', note: '', brandId: null };
-      ED.seg.cat = r.cat;
-      return '<span class="tpl-lb">類型</span>' + edSegHtml('cat', PLAN_TYPES.map(id => [id, CAT[id].name, CAT[id].icon]), r.cat) +
-        ed2(edIn('日期', 'edDate', 'date', r.date), edIn('時間（選填）', 'edTime', 'time', r.time)) +
-        edIn('行程', 'edText', 'text', r.title, 'maxlength="60" placeholder="例：淺草寺、搭 JR 到新宿、晚餐 燒肉"') +
-        edIn('地點（選填）', 'edPlace', 'text', r.place, 'maxlength="100" placeholder="會變成 Google 地圖連結"') +
-        edIn('網址（選填）', 'edUrl', 'url', r.url, 'maxlength="500" inputmode="url" placeholder="https://"') +
-        edTa('備註（選填）', 'edNote', r.note, 'rows="2" maxlength="300"') +
-        '<span class="tpl-lb">綁定品牌（選填）</span><div id="edBrand"></div>';
+      const mode = r.ref ? r.ref.kind : r.cat;   // 'flight' | 'hotel' = 引用航班／住宿；其餘是一般行程類型
+      ED.seg.cat = mode; ED.planR = r; ED.refMode = mode === 'flight' || mode === 'hotel' ? mode : '';
+      // 類型：一般類型＋「航班」「住宿」（引用）；舊的文字型「住宿」只在編輯既有那種行程點時保留，改叫「住宿（文字）」
+      const types = ['transport', 'sight', 'food'].map(id => [id, CAT[id].name, CAT[id].icon]).concat([['flight', '航班', ICON.plane], ['hotel', '住宿', ICON.stay]],
+        mode === 'stay' ? [['stay', '住宿（文字）', CAT.stay.icon]] : [], ['shop', 'other'].map(id => [id, CAT[id].name, CAT[id].icon]));
+      return '<span class="tpl-lb">類型</span>' + edSegHtml('cat', types, mode) + '<div id="edPlanBody">' + planBodyHtml(mode, r) + '</div>';
     },
-    after(rec) { bpMount(document.getElementById('edBrand'), rec ? rec.brandId : null); },
+    after(rec) { planBodyAfter(rec); },
+    onSeg(name, v) {
+      if (name !== 'cat') return;
+      const nowRef = v === 'flight' || v === 'hotel' ? v : '';
+      if (nowRef === ED.refMode) return;   // 一般類型之間切換、或同一種引用：欄位不動
+      const keep = { date: edVal('edDate'), time: edVal('edTime'), note: edVal('edNote') };
+      const t = document.getElementById('edText'); if (t) ED.planR = Object.assign({}, ED.planR, { title: t.value.trim() });
+      ED.planR = Object.assign({}, ED.planR, keep);
+      ED.refMode = nowRef;
+      document.getElementById('edPlanBody').innerHTML = planBodyHtml(v, ED.planR);
+      planBodyAfter(ED.rec);
+    },
     collect() {
+      if (ED.refMode) {
+        const kind = ED.refMode, id = edVal('edRef'), noun = kind === 'flight' ? '航班' : '住宿';
+        if (!id) return { error: '請選擇' + noun };
+        const tg = (kind === 'flight' ? liveFlights() : liveHotels()).find(x => x.id === id);
+        let title;
+        if (tg) title = kind === 'flight' ? (tg.flightNo || ((tg.from || '') + ' → ' + (tg.to || ''))) : (tg.name || '住宿');
+        else if (ED.rec && ED.rec.ref && ED.rec.ref.id === id) title = ED.rec.title;   // 引用對象已刪除：只改日期／備註照樣能存
+        else return { error: '找不到這筆' + noun + '，請重新選擇' };
+        const rec = Object.assign({}, ED.rec || {}, {
+          id: ED.id || uid(), date: edVal('edDate'), time: edVal('edTime'), cat: kind === 'flight' ? 'transport' : 'stay', title,
+          place: '', url: '', note: edVal('edNote'), brandId: null, ref: { kind, id },
+          by: getUser(), at: Date.now(), del: false,
+        });
+        return { apply() {
+          const i = LEDGER.plan.findIndex(x => x.id === rec.id);
+          if (i >= 0) LEDGER.plan[i] = rec; else LEDGER.plan.push(rec);
+          ledgerCommit(rec.date);
+        } };
+      }
       const title = edVal('edText');
       if (!title) return { error: '請填行程' };
       const urlRaw = edVal('edUrl'), url = safeUrl(urlRaw);
@@ -1827,6 +1946,7 @@ const ED_FORMS = {
         place: edVal('edPlace'), url, note: edVal('edNote'), brandId: bpGet(document.getElementById('edBrand')),
         by: getUser(), at: Date.now(), del: false,
       });
+      delete rec.ref;   // 改成一般類型＝解除引用
       return { apply() {
         const i = LEDGER.plan.findIndex(x => x.id === rec.id);
         if (i >= 0) LEDGER.plan[i] = rec; else LEDGER.plan.push(rec);
@@ -1995,6 +2115,7 @@ function edOpen(kind, id, ctx) {
   document.getElementById('edBody').innerHTML = form.html(rec, ctx || {});
   document.getElementById('edErr').textContent = '';
   document.getElementById('edDel').hidden = !(rec && form.canDelete);
+  document.getElementById('edSave').disabled = false;
   document.getElementById('edSave').hidden = kind === 'hero';
   document.getElementById('edCancel').textContent = kind === 'hero' ? '關閉' : '取消';
   document.getElementById('edOverlay').classList.add('on');
@@ -2068,6 +2189,15 @@ function edSyncToggle() { document.getElementById('edToggle').hidden = !(getToke
     if (n && ED) ED.tickets[+n.dataset.tkname].name = n.value.trim().slice(0, 40);
   });
   document.getElementById('edBody').addEventListener('change', async e => {
+    if (e.target.id === 'edRef' && ED) {   // 選了航班／住宿：自動帶日期與時間（可再改）
+      const tg = (ED.refMode === 'flight' ? liveFlights() : liveHotels()).find(x => x.id === e.target.value);
+      if (tg) {
+        const d = ED.refMode === 'flight' ? tg.date : tg.checkin, t = ED.refMode === 'flight' ? tg.dep : tg.checkinTime;
+        if (isoOk(d)) document.getElementById('edDate').value = d;
+        document.getElementById('edTime').value = /^\d{2}:\d{2}$/.test(t || '') ? t : '';
+      }
+      return;
+    }
     if (e.target.id !== 'edFile' || !ED) return;
     const files = [...e.target.files]; e.target.value = '';
     const cur = ED, kind = ED.kind, btn = document.getElementById('edUpBtn'), errEl = document.getElementById('edErr');

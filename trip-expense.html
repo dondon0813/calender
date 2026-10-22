@@ -731,6 +731,12 @@ function bpGet(host) { return host && host._bp ? host._bp.value : null; }
 
 /* ⚠ cleanSplit／cleanPaths／normalize／mergeList／merge／loadRemote 與 trip.html（編輯模式的雲端合併存檔）逐字相同，兩份要一起改 */
 // 分攤設定 {mode:'even'|'custom'|'none', among:[名字], amounts:{名字:金額}}；舊資料沒這欄＝全員均分
+// 行程點可選的「引用」（trip.html 編輯、這頁不改但要保留）：{kind:'flight'|'hotel', id}
+function cleanRef(r) {
+  if (!r || typeof r !== 'object' || (r.kind !== 'flight' && r.kind !== 'hotel')) return null;
+  const id = String(r.id || '').slice(0, 60);
+  return id ? { kind: r.kind, id } : null;
+}
 function cleanSplit(raw) {
   const sp = raw && typeof raw === 'object' ? raw : {};
   const mode = sp.mode === 'custom' || sp.mode === 'none' ? sp.mode : 'even';
@@ -760,6 +766,7 @@ function normalize(raw) {
     id: String(p.id), date: String(p.date || ''), time: /^\d{2}:\d{2}$/.test(String(p.time || '')) ? String(p.time) : '',
     cat: PCAT_MAP[p.cat] ? p.cat : 'other', title: String(p.title || '').slice(0, 60),
     place: String(p.place || '').slice(0, 100), url: safeUrl(String(p.url || '')), note: String(p.note || '').slice(0, 300), brandId: bpUuidOrNull(p.brandId),
+    ...(cleanRef(p.ref) ? { ref: cleanRef(p.ref) } : {}),
     by: String(p.by || '').slice(0, 20), at: Number(p.at) || 0, del: !!p.del,
   }));
   s.items = s.items.filter(i => i && i.id).map(i => ({
@@ -1312,6 +1319,8 @@ document.getElementById('planSaveBtn').addEventListener('click', () => {
     brandId: bpGet(document.getElementById('pBrandBox')),
     by: getUser(), at: Date.now(), del: false,
   };
+  const oldRef = (STATE.plan.find(x => x.id === rec.id) || {}).ref;   // 引用航班／住宿的行程點：這頁改文字不洗掉引用
+  if (oldRef) rec.ref = oldRef;
   const idx = STATE.plan.findIndex(x => x.id === rec.id);
   if (idx >= 0) STATE.plan[idx] = rec; else STATE.plan.push(rec);
   if (SELECTED_DAY !== 'all' && date && date !== SELECTED_DAY) SELECTED_DAY = date;
