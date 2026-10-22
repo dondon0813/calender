@@ -784,14 +784,17 @@ async function faToggleCustDetail(row) {
 // 一次抓全部狀態（後端上限 500 筆）在前端分狀態，切 chip 不用重抓。
 // ===================================================================
 let FAN_CLAIMS_LIST = [];
-let FAN_CLAIMS_STATS = { pending: 0, matched: 0, rejected: 0 };
+let FAN_CLAIMS_STATS = { pending: 0, matched: 0, rejected: 0, need_info: 0 };
+let FAN_CLAIMS_NEED_INFO_READY = false; // 「請會員補資料」欄位已 push（後端 needInfoReady）
 let FAN_CLAIMS_FILTER = 'pending';
 let FAN_CLAIMS_LOADED = false;
 let FAN_CLAIMS_BUSY = false;
 let FAN_CLAIMS_ACT_ONLY = false;
 try { FAN_CLAIMS_ACT_ONLY = localStorage.getItem('fan_claims_act_only') === '1'; } catch (e) {}
 
-const FAN_CLAIMS_FILTER_DEFS = [['pending', '待核對'], ['matched', '已加入'], ['rejected', '已駁回'], ['all', '全部']];
+const FAN_CLAIMS_FILTER_DEFS = [['pending', '待核對'], ['need_info', '待補資料'], ['matched', '已加入'], ['rejected', '已駁回'], ['all', '全部']];
+const FAN_CLAIMS_SUPPLY_LABELS = { order_date: '下單日期', image: '上傳圖片' };
+const FAN_CLAIMS_REQUEST_DEFAULT = '系統後台查無此訂單，請提供訂單截圖進行確認';
 const FAN_CLAIMS_PLATFORM_LABELS = { gbf: '跟團買', shopline: 'Shopline', oneshop: '1shop', vendor: '廠商名單', manual: '人工建立' };
 
 function renderFanClaimsBadge() {
@@ -816,7 +819,8 @@ async function faLoadClaimReports(force) {
       return;
     }
     FAN_CLAIMS_LIST = Array.isArray(data.reports) ? data.reports : [];
-    FAN_CLAIMS_STATS = Object.assign({ pending: 0, matched: 0, rejected: 0 }, data.stats || {});
+    FAN_CLAIMS_STATS = Object.assign({ pending: 0, matched: 0, rejected: 0, need_info: 0 }, data.stats || {});
+    FAN_CLAIMS_NEED_INFO_READY = data.needInfoReady === true;
     FAN_CLAIMS_LOADED = true;
     renderFanClaimsBadge();
     renderFanClaimsFilters();
@@ -829,7 +833,7 @@ async function faLoadClaimReports(force) {
 function renderFanClaimsFilters() {
   const box = document.getElementById('fanClaimsFilters');
   const s = FAN_CLAIMS_STATS;
-  const counts = { pending: s.pending, matched: s.matched, rejected: s.rejected, all: s.pending + s.matched + s.rejected };
+  const counts = { pending: s.pending, need_info: s.need_info || 0, matched: s.matched, rejected: s.rejected, all: s.pending + (s.need_info || 0) + s.matched + s.rejected };
   box.innerHTML = FAN_CLAIMS_FILTER_DEFS.map(([key, label]) =>
     '<button type="button" class="task-mini-btn fa-claims-filter" data-key="' + key + '"' +
     (FAN_CLAIMS_FILTER === key ? ' style="background:var(--c-primary); color:#fff;"' : '') + '>' + label + ' ' + counts[key] + '</button>'
@@ -878,7 +882,10 @@ function faClaimsStatusBadge(r) {
     return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F3E3E1; color:#B5485A; font-size:11px;">已駁回' +
       (r.resolvedBy ? '（' + faEscapeHtml(r.resolvedBy) + '）' : '') + '</span>';
   }
-  return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F5EFE9; color:#8B6E5E; font-size:11px;">待核對</span>';
+  if (r.status === 'need_info') {
+    return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#FFF3D6; color:#8B6E5E; font-size:11px;">待補資料（等客人）</span>';
+  }
+  return '<span style="display:inline-block; padding:1px 7px; border-radius:999px; background:#F5EFE9; color:#8B6E5E; font-size:11px;">待核對' + (r.suppliedAt ? '（客人已補資料）' : '') + '</span>';
 }
 
 // 2026-09-23 雪莉需求：系統裡沒這筆訂單、但找廠商核對過確認正確 → 也要能「加入這筆」。
@@ -900,7 +907,7 @@ function faClaimsCardHtml(r) {
       let who = '';
       if (c.claimedBySelf) who = '已歸到這位會員';
       else if (c.claimedByMemberNo) who = '已歸到 ' + c.claimedByMemberNo;
-      const canMatch = r.status === 'pending' && (!c.claimedByMemberNo || c.claimedBySelf);
+      const canMatch = (r.status === 'pending' || r.status === 'need_info') && (!c.claimedByMemberNo || c.claimedBySelf);
       return '<tr style="border-top:1px solid var(--c-line);">' +
         '<td style="padding:6px 8px; white-space:nowrap;">' + (c.fullMatch ? '<span title="四項全部相符" style="color:#1e7a3c; font-weight:600;">★ 全符</span>' : '<span style="color:var(--c-text-light);">不符</span>') + '</td>' +
         '<td style="padding:6px 8px;">' + faEscapeHtml(c.eventTitle || '') + '<div style="font-size:11px; color:var(--c-text-light);">' + faEscapeHtml(FAN_CLAIMS_PLATFORM_LABELS[c.platform] || c.platform || '') + '｜' + faEscapeHtml(faDate(c.orderedAt)) + '｜' + (c.paid ? '已付款' : '未付款') + '</div></td>' +
@@ -918,6 +925,7 @@ function faClaimsCardHtml(r) {
 
   let actions = '';
   if (r.status === 'pending') actions = '<button type="button" class="task-mini-btn fa-claims-reject" data-id="' + faEscapeHtml(r.id) + '">駁回</button>';
+  else if (r.status === 'need_info') actions = '<button type="button" class="task-mini-btn fa-claims-reject" data-id="' + faEscapeHtml(r.id) + '">駁回／改要求</button> <button type="button" class="task-mini-btn fa-claims-reopen" data-id="' + faEscapeHtml(r.id) + '">退回待核對</button>';
   else if (r.status === 'rejected') actions = '<button type="button" class="task-mini-btn fa-claims-reopen" data-id="' + faEscapeHtml(r.id) + '">退回待核對</button>';
 
   return '<div style="border:1px solid var(--c-border-light); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fff;">' +
@@ -931,8 +939,27 @@ function faClaimsCardHtml(r) {
     '<div style="font-size:13px; margin-bottom:6px;">客人填的：<b>' + faEscapeHtml(faMoney(r.amount)) + '</b>｜' + faEscapeHtml(r.buyerName) + '｜' + faEscapeHtml(r.buyerEmail) + '</div>' +
     (r.hint ? '<div style="font-size:12px; color:#8B6E5E; margin-bottom:6px;">系統線索：' + faEscapeHtml(r.hint) + '</div>' : '') +
     (r.note ? '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:6px;">備註（客人看得到）：' + faEscapeHtml(r.note) + '</div>' : '') +
+    faClaimsSupplyHtml(r) +
     candHtml +
     '</div>';
+}
+
+// 請會員補資料（2026-10-22）：要求內容＋客人補的日期／圖片（圖片網址 10 分鐘有效）
+function faClaimsSupplyHtml(r) {
+  let html = '';
+  const fields = Array.isArray(r.requestFields) ? r.requestFields : [];
+  if (r.requestNote && (r.status === 'need_info' || r.suppliedAt)) {
+    html += '<div style="font-size:12px; color:var(--c-text-soft); margin-bottom:6px;">已請客人補資料' +
+      (r.requestedBy ? '（' + faEscapeHtml(r.requestedBy) + '，' + faEscapeHtml(faDate(r.requestedAt)) + '）' : '') + '：' + faEscapeHtml(r.requestNote) +
+      (fields.length ? '｜要補：' + fields.map(f => FAN_CLAIMS_SUPPLY_LABELS[f] || f).join('、') : '') + '</div>';
+  }
+  if (r.suppliedAt) {
+    const parts = [];
+    if (r.supplyDate) parts.push('下單日期 <b>' + faEscapeHtml(r.supplyDate) + '</b>');
+    if (/^https?:\/\//i.test(r.supplyImageUrl || '')) parts.push('<button type="button" class="task-mini-btn fa-claims-supply-img" data-url="' + faEscapeHtml(r.supplyImageUrl) + '" title="網址 10 分鐘內有效，過期請重新整理">看客人上傳的圖片</button>');
+    html += '<div style="font-size:13px; margin-bottom:6px; padding:6px 8px; border-radius:8px; background:var(--c-surface);">客人補充（' + faEscapeHtml(faDate(r.suppliedAt)) + '）：' + (parts.join('｜') || '—') + '</div>';
+  }
+  return html;
 }
 
 function renderFanClaimsList() {
@@ -956,13 +983,14 @@ function renderFanClaimsList() {
     g.items.map(faClaimsCardHtml).join('')
   ).join('');
 
-  area.querySelectorAll('.fa-claims-shot').forEach(btn => btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank', 'noopener')));
+  area.querySelectorAll('.fa-claims-shot, .fa-claims-supply-img').forEach(btn => btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank', 'noopener')));
   area.querySelectorAll('.fa-claims-match').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'match', btn.dataset.order)));
   area.querySelectorAll('.fa-claims-create').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'create')));
-  area.querySelectorAll('.fa-claims-reject').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reject')));
+  area.querySelectorAll('.fa-claims-reject').forEach(btn => btn.addEventListener('click', () => faOpenClaimRejectModal(btn.dataset.id)));
   area.querySelectorAll('.fa-claims-reopen').forEach(btn => btn.addEventListener('click', () => faResolveClaimReport(btn.dataset.id, 'reopen')));
 }
 
+// opts：match＝訂單 id 字串；reject／request＝駁回視窗帶入的 { note, fields }
 async function faResolveClaimReport(id, action, orderId) {
   if (FAN_CLAIMS_BUSY) return;
   const r = FAN_CLAIMS_LIST.find(x => x.id === id);
@@ -975,15 +1003,15 @@ async function faResolveClaimReport(id, action, orderId) {
     extra.orderId = orderId;
   } else if (action === 'create') {
     if (!confirm('系統裡沒有這筆訂單。確定廠商已核對無誤，要用客人填的資料建立訂單嗎？\n\n訂單 ' + r.orderNo + '｜' + faMoney(r.amount) + '｜' + r.buyerName + '｜' + r.buyerEmail + '\n團購：' + (r.eventTitle || '（未選團）') + '\n加入會員 ' + r.member + ' 名下（會同時入點；沒有品項＝不會發兌換碼）。\n\n建立後這個訂單編號就被使用掉，其他人不能再用同一編號回報。')) return;
-  } else if (action === 'reject') {
-    const note = prompt('駁回原因（客人在「我的訂單」看得到，可留空）：', '');
-    if (note === null) return;
-    extra.note = note.trim();
+  } else if (action === 'reject' || action === 'request') {
+    extra.note = String((orderId && orderId.note) || '').trim();
+    if (action === 'request') extra.fields = (orderId && orderId.fields) || [];
   }
   FAN_CLAIMS_BUSY = true;
   try {
     const res = await faApiPost('fan-admin-claim-report-resolve', extra);
     if (!res || !res.success) throw new Error((res && res.error) || '處理失敗');
+    if (action === 'reject' || action === 'request') faCloseClaimRejectModal();
     if (action === 'match' || action === 'create') { FAN_ADMIN_LOADED = false; } // 未歸戶清單少了一筆，下次切回去重抓
     await faLoadClaimReports(true);
   } catch (err) {
@@ -991,6 +1019,70 @@ async function faResolveClaimReport(id, action, orderId) {
   } finally {
     FAN_CLAIMS_BUSY = false;
   }
+}
+
+// ===== 駁回視窗（2026-10-22）：直接駁回／駁回並請會員提供資料確認（說明＋勾下單日期、上傳圖片）=====
+function faOpenClaimRejectModal(id) {
+  const r = FAN_CLAIMS_LIST.find(x => x.id === id);
+  if (!r) return;
+  let box = document.getElementById('fanClaimRejectModal');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'fanClaimRejectModal';
+    box.className = 'modal-backdrop';
+    box.addEventListener('click', e => { if (e.target === box) faCloseClaimRejectModal(); });
+    document.body.appendChild(box);
+  }
+  const ready = FAN_CLAIMS_NEED_INFO_READY;
+  const startRequest = r.status === 'need_info' && ready;
+  const fields = startRequest && Array.isArray(r.requestFields) && r.requestFields.length ? r.requestFields : ['image'];
+  box.innerHTML = '<div class="modal-box" style="max-width:460px;">' +
+    '<button type="button" class="modal-close" id="fanClaimRejectClose">✕</button>' +
+    '<h3 style="margin-top:0;">駁回這筆回報</h3>' +
+    '<div style="font-size:12px; color:var(--c-text-light); margin-bottom:10px;">訂單 ' + faEscapeHtml(r.orderNo) + '｜會員 ' + faEscapeHtml(r.member) + '</div>' +
+    '<label style="display:block; margin-bottom:6px;"><input type="radio" name="fanClaimRejectMode" value="reject"' + (startRequest ? '' : ' checked') + '> 直接駁回</label>' +
+    '<label style="display:block; margin-bottom:4px;' + (ready ? '' : ' color:var(--c-text-light);') + '"><input type="radio" name="fanClaimRejectMode" value="request"' + (startRequest ? ' checked' : '') + (ready ? '' : ' disabled') + '> 駁回並請會員提供資料確認</label>' +
+    (ready ? '' : '<div style="font-size:11px; color:#B5485A; margin:0 0 6px 22px;">這個選項待 db push 後才能使用</div>') +
+    '<div id="fanClaimRejectNoteLabel" style="font-size:12px; font-weight:600; margin:10px 0 4px;"></div>' +
+    '<textarea id="fanClaimRejectNote" rows="3" maxlength="300" style="width:100%; box-sizing:border-box; padding:8px; border-radius:8px; border:1px solid #E6DCD2; background:#fff; font:inherit;"></textarea>' +
+    '<div id="fanClaimRejectFields" style="margin-top:8px;">' +
+      '<div style="font-size:12px; font-weight:600; margin-bottom:4px;">要客人補的資料（可複選）</div>' +
+      Object.keys(FAN_CLAIMS_SUPPLY_LABELS).map(k => '<label style="margin-right:14px;"><input type="checkbox" class="fan-claim-reject-field" value="' + k + '"' + (fields.indexOf(k) !== -1 ? ' checked' : '') + '> ' + FAN_CLAIMS_SUPPLY_LABELS[k] + '</label>').join('') +
+    '</div>' +
+    '<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">' +
+      '<button type="button" class="task-mini-btn" id="fanClaimRejectCancel">取消</button>' +
+      '<button type="button" class="task-mini-btn" id="fanClaimRejectOk" style="background:var(--c-primary); color:#fff;">確定</button>' +
+    '</div></div>';
+  const noteEl = document.getElementById('fanClaimRejectNote');
+  const drafts = { reject: '', request: startRequest ? (r.requestNote || FAN_CLAIMS_REQUEST_DEFAULT) : FAN_CLAIMS_REQUEST_DEFAULT };
+  let mode = startRequest ? 'request' : 'reject';
+  const apply = () => {
+    document.getElementById('fanClaimRejectNoteLabel').textContent = mode === 'request' ? '給客人的說明（必填，客人在「我的訂單」看得到）' : '駁回原因（客人在「我的訂單」看得到，可留空）';
+    document.getElementById('fanClaimRejectFields').style.display = mode === 'request' ? '' : 'none';
+    noteEl.value = drafts[mode];
+  };
+  apply();
+  noteEl.addEventListener('input', () => { drafts[mode] = noteEl.value; });
+  box.querySelectorAll('input[name="fanClaimRejectMode"]').forEach(el => el.addEventListener('change', () => { mode = el.value; apply(); }));
+  document.getElementById('fanClaimRejectClose').addEventListener('click', faCloseClaimRejectModal);
+  document.getElementById('fanClaimRejectCancel').addEventListener('click', faCloseClaimRejectModal);
+  document.getElementById('fanClaimRejectOk').addEventListener('click', () => {
+    const note = noteEl.value.trim();
+    if (mode === 'request') {
+      const picked = Array.from(box.querySelectorAll('.fan-claim-reject-field')).filter(el => el.checked).map(el => el.value);
+      if (!note) { alert('請填寫給客人的說明'); return; }
+      if (!picked.length) { alert('請至少勾選一項要客人補的資料'); return; }
+      faResolveClaimReport(id, 'request', { note, fields: picked });
+    } else {
+      faResolveClaimReport(id, 'reject', { note });
+    }
+  });
+  box.classList.add('show');
+}
+
+function faCloseClaimRejectModal() {
+  const box = document.getElementById('fanClaimRejectModal');
+  if (box) box.classList.remove('show');
 }
 
 async function faSyncClaimReports() {
@@ -1022,7 +1114,7 @@ function faExportClaimReports() {
     return '"' + s.replace(/"/g, '""') + '"';
   };
   const lines = [['團購', '訂單編號', '金額', '姓名', 'email', '回報日', '狀態'].map(cell).join(',')];
-  const statusLabel = { pending: '待核對', matched: '已加入', rejected: '已駁回' };
+  const statusLabel = { pending: '待核對', need_info: '待補資料', matched: '已加入', rejected: '已駁回' };
   list.forEach(r => lines.push([r.eventTitle, r.orderNo, r.amount, r.buyerName, r.buyerEmail, faDate(r.createdAt), statusLabel[r.status] || r.status].map(cell).join(',')));
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
