@@ -22,6 +22,7 @@
     --card: #FFFFFF; --pink: #D7A9A8; --pink-bg: #F4E4E1; --yellow: #E9D3A6; --yellow-bg: #F7EEDC;
     --green: #C7CFB4; --green-bg: #ECEFE2; --blue: #C0CDD3; --blue-bg: #E8EEF0; --accent: #B5485A; --link: #A0767A; --line: 3px;
     --nav-h: 64px;
+    --hl-f1: var(--blue-bg); --hl-f2: var(--pink-bg); --hl-f3: var(--yellow-bg); --hl-f4: var(--green-bg);   /* 頁首插畫色塊 */
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -313,6 +314,12 @@
   .hero svg { color: var(--ink); }
   .hero .hl-b { stroke: var(--pink); }
   .hero .hl-sun { stroke: var(--yellow); }
+  /* 插畫色塊（不透明＝兼遮線）：淡藍／淡珊瑚／淡黃／淡綠／白，用這頁調色盤的淡色 */
+  .hero .hl-f1, .hero-opt .art .hl-f1 { fill: var(--hl-f1); }
+  .hero .hl-f2, .hero-opt .art .hl-f2 { fill: var(--hl-f2); }
+  .hero .hl-f3, .hero-opt .art .hl-f3 { fill: var(--hl-f3); }
+  .hero .hl-f4, .hero-opt .art .hl-f4 { fill: var(--hl-f4); }
+  .hero .hl-fw, .hero-opt .art .hl-fw { fill: var(--card); }
   .hero .hl-mask { fill: var(--bg); }
 
   /* 編輯模式（2026-10-22）：畫面維持成品頁長相，只多鉛筆與「＋ 新增」。鉛筆一律絕對定位、不改版面（長文字容器另留右邊空間） */
