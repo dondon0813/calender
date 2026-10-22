@@ -45,7 +45,7 @@
   .nav .links a.on { background: var(--pink); border-color: var(--ink); }
 
   /* 主視覺 */
-  .hero { border: var(--line) solid var(--ink); border-top: none; border-radius: 0 0 34px 34px; overflow: hidden; background: var(--card); margin: 0 -16px; }
+  .hero { overflow: hidden; margin: 0 -16px; }   /* 2026-10-22 無底色、無框、無陰影：插畫直接畫在頁面底色上 */
   .hero svg { width: 100%; height: auto; }
   .title { text-align: center; margin: 22px 0 6px; font-size: clamp(2rem, 10vw, 2.8rem); letter-spacing: .12em; font-weight: 400; }
   .range { text-align: center; color: var(--soft); font-size: 1.05rem; letter-spacing: .04em; }
@@ -313,7 +313,7 @@
   .hero svg { color: var(--ink); }
   .hero .hl-b { stroke: var(--pink); }
   .hero .hl-sun { stroke: var(--yellow); }
-  .hero .hl-mask { fill: var(--card); }
+  .hero .hl-mask { fill: var(--bg); }
 
   /* 編輯模式（2026-10-22）：畫面維持成品頁長相，只多鉛筆與「＋ 新增」。鉛筆一律絕對定位、不改版面（長文字容器另留右邊空間） */
   .back.ed-toggle { cursor: pointer; font: inherit; font-size: .9rem; padding: 5px 12px 5px 9px; gap: 5px; color: var(--ink); }
@@ -328,7 +328,8 @@
   .ed-pencil.sm { width: 34px; height: 34px; top: 4px; right: 0; }
   .ed-pencil.sm svg { width: 17px; height: 17px; }
   .ed-pencil.at-title { top: 0; right: 0; }
-  .ed-pencil.at-hero { top: 10px; right: 10px; left: auto; }
+  .ed-pencil.at-hero { top: 10px; right: 10px; left: auto; background: none; border: none; box-shadow: none; color: var(--blue); }
+  .ed-pencil.at-hero svg { width: 22px; height: 22px; }
   .ed-add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 10px 12px; border: 2px dashed var(--soft); border-radius: 16px; background: transparent; color: var(--soft); font: inherit; font-size: .95rem; cursor: pointer; }
   .ed-add svg { width: 16px; height: 16px; }
   body.editing .flight { position: relative; }
