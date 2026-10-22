@@ -333,10 +333,29 @@
   .ed-pencil { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border-radius: 50%; border: none; box-shadow: none; background: none; color: var(--ink); -webkit-appearance: none; appearance: none; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; z-index: 3; }
   .ed-pencil svg { width: 22px; height: 22px; }
   /* 頁首插畫手畫進場（heroDraw；與新站 trips.css .hl-draw 同一套） */
-  .hl-draw > svg :is(path, circle, ellipse, line, polyline, polygon, rect) { stroke-dasharray: 1 1; stroke-dashoffset: 1; fill-opacity: 0; }
-  .hl-draw.go > svg :is(path, circle, ellipse, line, polyline, polygon, rect) { animation: hl-line 1.1s ease-out var(--hl-d, 0ms) forwards, hl-fill .6s ease 1.3s forwards; }
+  .hl-draw > svg :is(path, circle, ellipse, line, polyline, polygon, rect):not([stroke-dasharray]) { stroke-dasharray: 1 1; stroke-dashoffset: 1; fill-opacity: 0; }
+  .hl-draw.go > svg :is(path, circle, ellipse, line, polyline, polygon, rect):not([stroke-dasharray]) { animation: hl-line 1.1s ease-out var(--hl-d, 0ms) forwards, hl-fill .6s ease 1.3s forwards; }
+  .hl-draw > svg [stroke-dasharray] { opacity: 0; }
+  .hl-draw.go > svg [stroke-dasharray] { animation: hl-fade .8s ease .9s forwards; }
   @keyframes hl-line { to { stroke-dashoffset: 0; } }
   @keyframes hl-fill { to { fill-opacity: 1; } }
+  @keyframes hl-fade { to { opacity: 1; } }
+  /* 畫完之後的慢速小動畫（hl-idle）：與新站 trips.css 同一份，兩份要一起改 */
+  .hl-idle > svg .hl-a-cloud { animation: hl-a-cloud 9s ease-in-out infinite alternate; }
+  .hl-idle > svg .hl-a-spin { transform-box: view-box; transform-origin: 296px 44px; animation: hl-a-spin 40s linear infinite; }
+  .hl-idle > svg .hl-a-float { animation: hl-a-float 3.6s ease-in-out infinite alternate; }
+  .hl-idle > svg .hl-a-bob { animation: hl-a-bob 1.8s ease-in-out infinite alternate; }
+  .hl-idle > svg .hl-a-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: hl-a-sway 4s ease-in-out infinite; }
+  .hl-idle > svg .hl-a-twinkle { animation: hl-a-twinkle 2.6s ease-in-out infinite alternate; }
+  .hl-idle > svg .hl-a-glow { animation: hl-a-glow 4.5s ease-in-out infinite alternate; }
+  @keyframes hl-a-cloud { to { transform: translateX(12px); } }
+  @keyframes hl-a-spin { to { transform: rotate(360deg); } }
+  @keyframes hl-a-float { to { transform: translateY(-5px); } }
+  @keyframes hl-a-bob { to { transform: translateY(-1.5px); } }
+  @keyframes hl-a-sway { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+  @keyframes hl-a-twinkle { to { opacity: .3; } }
+  @keyframes hl-a-glow { to { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .hl-idle > svg * { animation: none !important; } }
   .ed-pencil.sm { width: 34px; height: 34px; top: 4px; right: 0; }
   .ed-pencil.sm svg { width: 19px; height: 19px; }
   .ed-pencil.at-title { top: 0; right: 0; }
@@ -384,7 +403,7 @@
   .ed-save-note { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 8px; min-height: 1.1em; }
 </style>
 <script src="modalGuard.js?v=1"></script>
-<script src="trip-hero.js?v=1"></script>
+<script src="trip-hero.js?v=2"></script>
 </head>
 <body data-sec="plan">
 <nav class="nav"><div class="wrap">
@@ -965,9 +984,9 @@ function edAddBtn(kind, label, attrs) {
 let heroDrawTimer = 0;
 function heroDraw(host) {
   clearTimeout(heroDrawTimer);
-  host.classList.remove('hl-draw', 'go');
+  host.classList.remove('hl-draw', 'go', 'hl-idle');
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const els = Array.from(host.querySelectorAll(':scope > svg :is(path, circle, ellipse, line, polyline, polygon, rect)'));
+  const els = Array.from(host.querySelectorAll(':scope > svg :is(path, circle, ellipse, line, polyline, polygon, rect):not([stroke-dasharray])'));
   if (!els.length) return;
   els.forEach((el, i) => { el.setAttribute('pathLength', '1'); el.style.setProperty('--hl-d', Math.round(i / Math.max(1, els.length - 1) * 900) + 'ms'); });
   host.classList.add('hl-draw');
@@ -976,6 +995,7 @@ function heroDraw(host) {
   heroDrawTimer = setTimeout(() => {
     host.classList.remove('hl-draw', 'go');
     els.forEach(el => { el.removeAttribute('pathLength'); el.style.removeProperty('--hl-d'); });
+    host.classList.add('hl-idle');   // 播完轉慢速小動畫（雲飄、飛機上下飄…）
   }, 2400);
 }
 function heroKey() { const k = DATA && DATA.hero; return window.TRIP_HEROES && window.TRIP_HEROES[k] ? k : 'tokyo'; }
