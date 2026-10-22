@@ -359,6 +359,7 @@
   .hl-idle > svg .hl-a-wheel { animation: hl-a-spin 28s linear infinite; }
   .hl-idle > svg .hl-a-wag { transform-box: view-box; transform-origin: 132px 130px; animation: hl-a-wag 2.4s ease-in-out infinite; }
   .hl-a-snow { opacity: 0; }
+  .hl-flake { stroke: color-mix(in srgb, var(--blue) 45%, transparent); }
   .hl-idle > svg .hl-a-snow { opacity: 1; }
   .hl-idle > svg .hl-a-snow > * { opacity: 0; animation: hl-a-fall 8s linear infinite; }
   .hl-idle > svg .hl-a-snow > :nth-child(3n+1) { animation-duration: 9.5s; }
@@ -373,6 +374,10 @@
   @keyframes hl-a-wave { to { transform: translateX(-20px); } }
   @keyframes hl-a-wag { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(10deg); } }
   @keyframes hl-a-fall { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translate(6px, 80px); } 85% { opacity: 1; } 100% { transform: translate(0, 165px); opacity: 0; } }
+  .hl-idle > svg .hl-a-ray { transform-box: view-box; transform-origin: 296px 44px; animation: hl-a-ray 3.2s ease-in-out infinite; }
+  .hl-idle > svg .hl-a-drive { animation: hl-a-drive 16s linear infinite; }
+  @keyframes hl-a-ray { 0%, 100% { transform: scale(.9); opacity: .55; } 50% { transform: scale(1.1); opacity: 1; } }
+  @keyframes hl-a-drive { 0% { transform: translateX(0); } 75% { transform: translateX(-390px); } 75.01% { transform: translateX(70px); } 100% { transform: translateX(0); } }
   @media (prefers-reduced-motion: reduce) { .hl-idle > svg * { animation: none !important; } }
   .ed-pencil.sm { width: 34px; height: 34px; top: 4px; right: 0; }
   .ed-pencil.sm svg { width: 19px; height: 19px; }
@@ -421,7 +426,7 @@
   .ed-save-note { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 8px; min-height: 1.1em; }
 </style>
 <script src="modalGuard.js?v=1"></script>
-<script src="trip-hero.js?v=3"></script>
+<script src="trip-hero.js?v=5"></script>
 </head>
 <body data-sec="plan">
 <nav class="nav"><div class="wrap">
