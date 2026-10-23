@@ -3211,7 +3211,9 @@ function renderMaterials(book) {
 
   const notice = document.createElement('div');
   notice.className = 'pb-materials-notice';
-  notice.textContent = '本教材僅供個人使用，請勿轉傳、販售、改作、用於 AI 生成、商業使用或作為行銷贈品等。';
+  // 2026-10-23 雪莉：所有教材最下面加智慧財產權聲明（同教材館 CopyrightNote 文字）
+  notice.style.whiteSpace = 'pre-line';
+  notice.textContent = '請尊重智慧財產權\n所有教材禁止販售、商用\n分享請直接使用社群小飛機分享原貼文，或分享網址\n本教材僅供個人使用，請勿轉傳、販售、改作、用於 AI 生成、商業使用或作為行銷贈品等。';
   panel.appendChild(notice);
 
   toggle.onclick = () => panel.classList.toggle('show');
