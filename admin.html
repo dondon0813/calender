@@ -14,6 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="團購後台">
 
+<!-- 被嵌入新後台框框（dondon-platform /admin）時才動作：只有網址帶 embed=1 且放在 iframe 裡才生效，否則第一行就 return -->
+<script src="adminEmbed.js?v=1"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
   /* admin.html 專屬樣式。共用的 reset / 版面 / 控制項 / 狀態列 / modal / 頁尾在 shared.css。
@@ -8130,7 +8132,7 @@
 <script src="lottery.js?v=63"></script>
 <script src="harvestStatus.js?v=1"></script>
 <script src="homeLayout.js?v=7"></script>
-<script src="admin.js?v=123"></script>
+<script src="admin.js?v=124"></script>
 <script src="memo.js?v=8"></script>
 
 </body>

@@ -1620,6 +1620,9 @@ function updatePermissionUI() {
   // 線上合約用印：只有管理員（雪莉）看得到入口
   const csIcon = document.getElementById('toolIconContractSign');
   if (csIcon) csIcon.style.display = isAdmin ? '' : 'none';
+
+  // 被嵌入新後台框框時（adminEmbed.js）：把登入者與權限回報給外框，外框的選單才知道哪些項目要藏。非嵌入模式 admEmbHook 不存在
+  if (window.admEmbHook) window.admEmbHook('auth');
 }
 
 async function tryUnlock() {
@@ -2772,6 +2775,8 @@ function syncPaneRightPicker() {
   const toggleLabel = document.getElementById('sideNavRightToggleLabel');
   if (toggleLabel) toggleLabel.textContent = currentRightView ? '關閉右欄' : '開啟右欄';
   else if (toggleBtn) toggleBtn.textContent = currentRightView ? '關閉右欄' : '開啟右欄';
+  // 被嵌入新後台框框時（admin.html?embed=1，adminEmbed.js）：把目前左右欄分頁回報給外框，外框的選單 active 才會跟著動。非嵌入模式 admEmbHook 不存在
+  if (window.admEmbHook) window.admEmbHook('view');
 }
 
 // 側邊欄的右欄開關：右欄關著時開啟（挑一個不跟左欄撞的分頁），開著時關閉。

@@ -371,6 +371,11 @@
   --trip-c3-soft: #f6e6a6;    /* 成品頁四色之三淡底 */
   --trip-c4: #5fb3a3;         /* 成品頁四色之四（湖水綠）：第 4 天 */
   --trip-c4-soft: #c3e5dc;    /* 成品頁四色之四淡底 */
+
+  /* ---------- 新後台框框（/admin）專屬色 ---------- */
+  --adm-urgent-border: #D9A3A8;  /* 新後台框框 /admin：緊急任務橫幅邊框（逐字沿用舊 admin.html .urgent-banner 的寫死色，舊後台不隨色系換） */
+  --adm-newtask-bg: #E4F5DF;     /* 新後台框框 /admin：新任務橫幅底色（同上，沿用舊 .newtask-banner） */
+  --adm-newtask-text: #5C9147;   /* 新後台框框 /admin：新任務橫幅文字色（同上） */
 }
 /* END GENERATED */
 
