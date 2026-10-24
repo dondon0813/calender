@@ -422,6 +422,7 @@ async function loadData() {
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
     const data = JSON.parse(jsonStr);
     const rows = data.table.rows;
+    calUiApply_(data.calendarUi);
 
     const events = [];
     rows.forEach((row) => {
@@ -2449,19 +2450,71 @@ document.getElementById('copyMemoBtn').addEventListener('click', (e) => {
   copyText(document.getElementById('memoText').value, e.currentTarget);
 });
 
-// 顯示模式按鈕列（2026-10-04 與前台統一：原本是下拉選單）；前台四顆＋後台專用「工作表」
-const MODE_TABS = [
-  { v: 'list', t: '現正開團中' },
-  { v: 'start', t: '開團日' },
-  { v: 'end', t: '結團日' },
-  { v: 'all', t: '顯示全部' },
-  { v: 'mytasks', t: '工作表' },
-];
+// 顯示模式按鈕列與圖例：名稱正本在後端 lib/shared/calendar-modes.mjs，經 scope=calendar 的 calendarUi 下發。
+// 取用順序：本次 API 回應 > localStorage 快取 > 下方備援（備援，正本在 lib/shared/calendar-modes.mjs）。
+// 後台專用：「工作表」模式、「尚未確認顯示」圖例項目。
+const CAL_UI_CACHE_KEY = 'admin_calendar_ui';
+const CAL_UI_FALLBACK = { // 備援，正本在 lib/shared/calendar-modes.mjs
+  modes: [
+    { v: 'list', t: '現正開團中' },
+    { v: 'start', t: '開團預告' },
+    { v: 'end', t: '結團日' },
+    { v: 'all', t: '顯示全部' },
+  ],
+  legend: [
+    { key: 'upcoming', t: '開團預告' },
+    { key: 'active', t: '開團中' },
+    { key: 'closingSoon', t: '即將結單' },
+    { key: 'ended', t: '已結單' },
+    { key: 'frozen', t: '冷凍團' },
+  ],
+};
+function calUiValid_(u) {
+  return !!u && Array.isArray(u.modes) && u.modes.length > 0 && Array.isArray(u.legend) && u.legend.length > 0
+    && u.modes.every(m => m && typeof m.v === 'string' && typeof m.t === 'string')
+    && u.legend.every(l => l && /^[A-Za-z0-9_-]+$/.test(String(l.key)) && typeof l.t === 'string');
+}
+function calUiLoadCache_() {
+  try {
+    const u = JSON.parse(localStorage.getItem(CAL_UI_CACHE_KEY) || 'null');
+    return calUiValid_(u) ? u : null;
+  } catch (e) { return null; }
+}
+let calUiCurrent = calUiLoadCache_() || CAL_UI_FALLBACK;
+// 後端回應的 calendarUi 套用＋存快取，並重畫按鈕列與圖例
+function calUiApply_(ui) {
+  if (!calUiValid_(ui)) return;
+  calUiCurrent = { modes: ui.modes, legend: ui.legend };
+  try { localStorage.setItem(CAL_UI_CACHE_KEY, JSON.stringify(calUiCurrent)); } catch (e) {}
+  renderModeTabs();
+  calUiRenderLegend_();
+}
+function calUiModeTabs_() {
+  return calUiCurrent.modes.concat([{ v: 'mytasks', t: '工作表' }]);
+}
+function calUiRenderLegend_() {
+  const el = document.getElementById('legend');
+  if (!el) return;
+  el.innerHTML = '';
+  calUiCurrent.legend.forEach(l => {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'legend-dot legend-' + l.key;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(l.t));
+    el.appendChild(item);
+  });
+  const extra = document.createElement('span');
+  extra.className = 'legend-item';
+  extra.innerHTML = '<span class="legend-dot" style="background:#E4F5DF; border: 1px solid #9ACB85;"></span>尚未確認顯示';
+  el.appendChild(extra);
+}
 function renderModeTabs() {
   const el = document.getElementById('modeTabs');
   if (!el) return;
   el.innerHTML = '';
-  MODE_TABS.forEach(m => {
+  calUiModeTabs_().forEach(m => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('role', 'tab');
@@ -2477,6 +2530,7 @@ function renderModeTabs() {
   });
 }
 renderModeTabs();
+calUiRenderLegend_();
 
 /* ===== 清單卡品牌小圖 =====
    2026-10-05 起小圖由後端算好放在 scope=calendar 的 c[31] THUMB_RESOLVED（ev.thumbResolved；團圖優先、
