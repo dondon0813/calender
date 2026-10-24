@@ -236,6 +236,32 @@
         if (typeof openSettingsHubModal === 'function') openSettingsHubModal();
       } else if (d.type === 'setWide') {
         admEmbSetWide(d.wide);
+      } else if (d.type === 'calAction' && d.action === 'editEvent') {
+        // 段 1b：新編輯視窗裡還沒搬的區塊（團購優惠 promo／公關品狀態 pr／去背小圖選擇器 thumb）：重抓資料後開這一團的舊編輯視窗，再依 focus 捲到該區塊或開選圖器
+        var evId = String(d.eventId);
+        var focus = d.focus;
+        Promise.resolve(typeof loadData === 'function' ? loadData() : null).then(function () {
+          var ev = (typeof allEvents !== 'undefined' ? allEvents : []).filter(function (e) { return String(e.id) === evId; })[0];
+          if (!ev) { alert('舊版找不到這一團，請按「回新版行事曆」、重新整理後再試一次。'); return; }
+          openEventEditModal(ev);
+          setTimeout(function () {
+            try {
+              if (focus === 'thumb') {
+                var more = document.getElementById('evMoreToggle');
+                if (more && !more.classList.contains('open')) more.click();
+                document.getElementById('evThumbPickBtn').click();
+              } else if (focus === 'promo') {
+                var mt = document.getElementById('evMoreToggle');
+                if (mt && !mt.classList.contains('open')) mt.click();
+                var pb = document.getElementById('evPromoBox');
+                if (pb) pb.scrollIntoView({ block: 'center' });
+              } else if (focus === 'pr') {
+                var pp = document.getElementById('prPanel');
+                if (pp) pp.scrollIntoView({ block: 'center' });
+              }
+            } catch (e2) { console.error('admEmb editEvent focus', e2); }
+          }, 80);
+        }).catch(function (e3) { console.error('admEmb editEvent', e3); });
       } else if (d.type === 'calAction') {
         // 段 1a：新行事曆清單模式的按鈕交給舊版：先確保在「現正開團中」清單（看得到結果），再呼叫對應的舊函式
         var tab = [].slice.call(document.querySelectorAll('.mode-tab')).filter(function (b) { return b.textContent.trim() === '現正開團中'; })[0];

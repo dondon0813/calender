@@ -389,6 +389,9 @@
   --adm-cal-save-disabled: #CFD8C9;     /* 後台行事曆（docs/22 段1a）：儲存鈕停用底色 */
   --adm-cal-empty-text: #A3948A;        /* 後台行事曆（docs/22 段1a）：清單「目前沒有進行中的團購」文字 */
   --adm-cal-social-icon: #3a2f28;       /* 後台行事曆（docs/22 段1a）：品牌社群圖示預設底色（舊後台寫死的深棕；與前台 --ix-social-icon-default 不同） */
+  --adm-cal-checklist-text: #b25a76;    /* 後台行事曆（docs/22 段1b）：編輯視窗「開團前檢查清單」框文字色（舊後台行內寫死） */
+  --adm-cal-linked-bad: #c0392b;        /* 後台行事曆（docs/22 段1b）：編輯視窗合併品牌團「目前綁定的團找不到了」紅字（舊後台行內寫死） */
+  --adm-cal-cs-hint: #8a7a70;           /* 後台行事曆（docs/22 段1b）：編輯視窗「目前沿用品牌客服」提示小字（舊後台行內寫死） */
 }
 /* END GENERATED */
 
