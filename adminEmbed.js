@@ -156,6 +156,32 @@
     post(msg);
   }
 
+  var lastLayout = '';
+  function admEmbReportLayout() {
+    var pl = document.getElementById('paneLeft');
+    var sw = document.getElementById('splitWorkspace');
+    if (!pl) return;
+    var r = pl.getBoundingClientRect();
+    var msg = {
+      type: 'paneLayout',
+      left: Math.round(r.left),
+      width: Math.round(r.width),
+      rightOpen: !!(sw && !sw.classList.contains('right-closed'))
+    };
+    var key = JSON.stringify(msg);
+    if (key === lastLayout) return;
+    lastLayout = key;
+    post(msg);
+  }
+  var lastCalEdit = '';
+  function admEmbReportCalEdit() {
+    var btn = document.getElementById('calEditToggleBtn');
+    var on = !!(btn && btn.classList.contains('on'));
+    if (String(on) === lastCalEdit) return;
+    lastCalEdit = String(on);
+    post({ type: 'calEditChanged', on: on });
+  }
+
   function admEmbWatch() {
     try {
       var mo = new MutationObserver(admEmbReportStatus);
@@ -166,6 +192,15 @@
       // 強制改密碼視窗關掉後，把 mustChangePassword 的新狀態再報一次
       var sm = document.getElementById('settingsModal');
       if (sm) new MutationObserver(admEmbReportAuth).observe(sm, { attributes: true, attributeFilter: ['class'] });
+      // 段 1a：新行事曆疊在左欄上，需要知道左欄位置／大小（paneLayout）；編輯模式開關狀態變動回報（calEditChanged）
+      var pl = document.getElementById('paneLeft');
+      var sw = document.getElementById('splitWorkspace');
+      if (pl && typeof ResizeObserver === 'function') new ResizeObserver(admEmbReportLayout).observe(pl);
+      if (sw) new MutationObserver(admEmbReportLayout).observe(sw, { attributes: true, attributeFilter: ['class'] });
+      window.addEventListener('resize', admEmbReportLayout);
+      admEmbReportLayout();
+      var et = document.getElementById('calEditToggleBtn');
+      if (et) new MutationObserver(admEmbReportCalEdit).observe(et, { attributes: true, attributeFilter: ['class'] });
       // 登入失效：舊程式清掉 token 後會把登入畫面顯示出來（admin.js fetchMemos／postTask）→ 通知外框回登入畫面
       var gate = document.getElementById('passwordGate');
       if (gate) new MutationObserver(function () {
@@ -201,6 +236,23 @@
         if (typeof openSettingsHubModal === 'function') openSettingsHubModal();
       } else if (d.type === 'setWide') {
         admEmbSetWide(d.wide);
+      } else if (d.type === 'calAction') {
+        // 段 1a：新行事曆清單模式的按鈕交給舊版：先確保在「現正開團中」清單（看得到結果），再呼叫對應的舊函式
+        var tab = [].slice.call(document.querySelectorAll('.mode-tab')).filter(function (b) { return b.textContent.trim() === '現正開團中'; })[0];
+        if (tab && !tab.classList.contains('on')) tab.click();
+        var blk = null;
+        if (d.blockId && typeof customBlocks !== 'undefined') blk = customBlocks.filter(function (b) { return String(b.id) === String(d.blockId); })[0] || null;
+        if (d.action === 'copyGen' && typeof openCopyGenModal === 'function') openCopyGenModal();
+        else if (d.action === 'blockNew' && typeof openBlockEditModal === 'function') openBlockEditModal(null);
+        else if (d.action === 'socialLinks' && typeof openSocialLinkEditor === 'function') openSocialLinkEditor();
+        else if (blk && d.action === 'blockEdit') openBlockEditModal(blk);
+        else if (blk && d.action === 'blockDup') duplicateCustomBlock(blk);
+        else if (blk && d.action === 'blockDel') deleteCustomBlock(blk);
+        else if (blk && d.action === 'blockToggle') toggleCustomBlock(blk);
+      } else if (d.type === 'calEdit') {
+        // 段 1a：新行事曆按「編輯」時，叫舊行事曆進入／離開編輯模式（點舊的開關，一路沿用舊流程）
+        var wrap = document.getElementById('calEditToggleWrap');
+        if (wrap && typeof calendarEditMode !== 'undefined' && !!calendarEditMode !== !!d.on) wrap.click();
       }
     } catch (err) { console.error('admEmb message', err); }
   });

@@ -373,9 +373,22 @@
   --trip-c4-soft: #c3e5dc;    /* 成品頁四色之四淡底 */
 
   /* ---------- 新後台框框（/admin）專屬色 ---------- */
-  --adm-urgent-border: #D9A3A8;  /* 新後台框框 /admin：緊急任務橫幅邊框（逐字沿用舊 admin.html .urgent-banner 的寫死色，舊後台不隨色系換） */
-  --adm-newtask-bg: #E4F5DF;     /* 新後台框框 /admin：新任務橫幅底色（同上，沿用舊 .newtask-banner） */
-  --adm-newtask-text: #5C9147;   /* 新後台框框 /admin：新任務橫幅文字色（同上） */
+  --adm-urgent-border: #D9A3A8;         /* 新後台框框 /admin：緊急任務橫幅邊框（逐字沿用舊 admin.html .urgent-banner 的寫死色，舊後台不隨色系換） */
+  --adm-newtask-bg: #E4F5DF;            /* 新後台框框 /admin：新任務橫幅底色（同上，沿用舊 .newtask-banner） */
+  --adm-newtask-text: #5C9147;          /* 新後台框框 /admin：新任務橫幅文字色（同上） */
+  --adm-cal-pr-picking-bg: #FFE0B2;     /* 後台行事曆（docs/22 段1a）：公關品狀態「選品中」底色 */
+  --adm-cal-pr-picking-text: #9A5F14;   /* 後台行事曆（docs/22 段1a）：公關品狀態「選品中」文字 */
+  --adm-cal-pr-picked-text: #2F6BB3;    /* 後台行事曆（docs/22 段1a）：公關品狀態「已選品」文字 */
+  --adm-cal-pr-sent-text: #4F7A3A;      /* 後台行事曆（docs/22 段1a）：公關品狀態「已寄出」文字（也用於工作表工作／未確認顯示團的文字） */
+  --adm-cal-pr-received-text: #B04068;  /* 後台行事曆（docs/22 段1a）：公關品狀態「已收到」文字 */
+  --adm-cal-pr-shot-bg: #E4D9FF;        /* 後台行事曆（docs/22 段1a）：公關品狀態「已拍攝」底色 */
+  --adm-cal-pr-shot-text: #6A4FB0;      /* 後台行事曆（docs/22 段1a）：公關品狀態「已拍攝」文字 */
+  --adm-cal-urgent-text: #A8291F;       /* 後台行事曆（docs/22 段1a）：工作表緊急任務文字 */
+  --adm-cal-stats-border: #C9DEFB;      /* 後台行事曆（docs/22 段1a）：活動視窗統計框邊線 */
+  --adm-cal-save-hover: #85BC6E;        /* 後台行事曆（docs/22 段1a）：儲存鈕 hover 底色 */
+  --adm-cal-save-disabled: #CFD8C9;     /* 後台行事曆（docs/22 段1a）：儲存鈕停用底色 */
+  --adm-cal-empty-text: #A3948A;        /* 後台行事曆（docs/22 段1a）：清單「目前沒有進行中的團購」文字 */
+  --adm-cal-social-icon: #3a2f28;       /* 後台行事曆（docs/22 段1a）：品牌社群圖示預設底色（舊後台寫死的深棕；與前台 --ix-social-icon-default 不同） */
 }
 /* END GENERATED */
 
