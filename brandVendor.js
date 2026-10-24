@@ -318,7 +318,7 @@ function openVendorEditModal(vendor) {
   setFormStatus('vendorEditStatus', '', '');
   document.getElementById('vendorNameInput').value = vendor ? vendor.name : '';
   document.getElementById('vendorTypeSelect').value = vendor ? (vendor.type || '廠商') : '廠商';
-  document.getElementById('vendorRemitMethodInput').value = vendor ? vendor.remittanceMethod : '';
+  document.getElementById('vendorRemitMethodInput').value = vendor ? (vendor.remittanceMethod || '') : '';
   document.getElementById('vendorRemitRuleInput').value = vendor ? vendor.remittanceRule : '';
   document.getElementById('vendorContactInput').value = vendor ? vendor.contact : '';
   document.getElementById('vendorCompanyNamesInput').value = vendor ? (vendor.companyNames || '') : '';
