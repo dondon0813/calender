@@ -478,6 +478,14 @@ function openBrandEditModal(brand) {
   document.getElementById('brandNoteInput').value = brand ? brand.note : '';
   document.getElementById('brandShowInRecipeInput').checked = brand ? !!brand.showInRecipe : false;
   document.getElementById('brandIntroInput').value = brand ? (brand.intro || '') : '';
+  // 比對關鍵字（別名）；後台包 matchKeysReady === false＝欄位未 push，停用不送
+  const mkReady = !brandDb.some(b => b.matchKeysReady === false);
+  const mkInput = document.getElementById('brandMatchKeysInput');
+  mkInput.value = brand && Array.isArray(brand.matchKeys) ? brand.matchKeys.join('、') : '';
+  mkInput.disabled = !mkReady;
+  document.getElementById('brandMatchKeysHint').textContent = mkReady
+    ? '團名含任一個就算這個品牌（品牌名本身一定算）；多個用「、」或逗號分隔'
+    : '「比對關鍵字」欄位待 db push 後才能設定';
   document.getElementById('brandShopeeInput').value = brand ? (brand.shopeeUrl || '') : '';
   document.getElementById('brandPostTemplateInput').value = brand ? (brand.postTemplate || '') : '';
   document.getElementById('brandOpenChecklistInput').value = brand ? (brand.openChecklist || '') : '';
@@ -728,6 +736,11 @@ document.getElementById('brandSaveBtn').addEventListener('click', async () => {
   if (catBox.dataset.ready === '1') {
     payload.categories = Array.from(catBox.querySelectorAll('input[type=checkbox]:checked')).map(el => el.value);
   }
+  // 比對關鍵字：欄位未 push 時停用、不送
+  const mkEl = document.getElementById('brandMatchKeysInput');
+  if (!mkEl.disabled) {
+    payload.matchKeys = mkEl.value.split(/[、,，\n]/).map(s => s.trim()).filter(Boolean);
+  }
   // 欄位未 push 時下拉停用，不送（避免後端回「待 db push」擋掉整筆儲存）
   if (!document.getElementById('brandOrderListSelect').disabled) {
     payload.orderListPolicy = document.getElementById('brandOrderListSelect').value;
@@ -862,20 +875,26 @@ function bvNormBrandKey_(s) {
 
 // 找出標題裡包含的所有品牌（一團可對到多品牌，例：聯名團標題同時含兩個品牌名）。
 // 若比對到的某品牌名是另一個比對到品牌名的一部分（例：B21 vs B21pro），只留長的那個，避免誤配。
+// 品牌可有「比對關鍵字」matchKeys（別名）：比對名＝[品牌名, ...matchKeys]，任一個被團名包含即命中；
+// 長名吃短名改以各品牌「命中的最長那個 key」比較。
+function bvBrandKeys_(b) {
+  const out = [];
+  [b && b.name].concat(Array.isArray(b && b.matchKeys) ? b.matchKeys : []).forEach(k => {
+    const nk = bvNormBrandKey_(k);
+    if (nk && out.indexOf(nk) === -1) out.push(nk);
+  });
+  return out;
+}
 function bvBrandsInTitle_(title) {
   const key = bvNormBrandKey_(title);
   if (!key) return [];
-  const matched = brandDb.filter(b => {
-    const bk = bvNormBrandKey_(b.name);
-    return bk && key.indexOf(bk) !== -1;
+  const hits = [];   // [{b, k}] k＝該品牌命中的最長 key
+  brandDb.forEach(b => {
+    let best = '';
+    bvBrandKeys_(b).forEach(k => { if (key.indexOf(k) !== -1 && k.length > best.length) best = k; });
+    if (best) hits.push({ b, k: best });
   });
-  return matched.filter(b => {
-    const bk = bvNormBrandKey_(b.name);
-    return !matched.some(o => {
-      const ok = bvNormBrandKey_(o.name);
-      return ok.length > bk.length && ok.indexOf(bk) !== -1;
-    });
-  });
+  return hits.filter(h => !hits.some(o => o.k.length > h.k.length && o.k.indexOf(h.k) !== -1)).map(h => h.b);
 }
 
 function bvEventMatchesBrand_(ev, brand) {

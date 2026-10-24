@@ -7906,6 +7906,9 @@
       <select id="brandVendorSelect" multiple size="5"></select>
       <label for="brandNameInput">品牌名稱（要跟排行事曆的團名完全一致才會自動比對到）</label>
       <input type="text" id="brandNameInput" placeholder="例如：林貝兒">
+      <label for="brandMatchKeysInput">比對關鍵字（選填）</label>
+      <input type="text" id="brandMatchKeysInput" placeholder="例如：奧地利滑步車、Scoot&amp;Ride">
+      <div id="brandMatchKeysHint" style="font-size:11.5px; color:var(--c-text-soft); margin-top:4px;">團名含任一個就算這個品牌（品牌名本身一定算）；多個用「、」或逗號分隔</div>
       <label for="brandThumbInput">去背小圖（行事曆／開學清單的小圖預設值，單一檔期要換圖可在該活動另外設定）</label>
       <input type="text" id="brandThumbInput" placeholder="貼上去背圖網址（建議正方形、透明背景 PNG/WebP）">
       <label for="brandBrandImageInput">品牌圖片（大合照／品牌介紹頁用）</label>
@@ -8059,7 +8062,7 @@
 <script src="vendor/html2canvas.min.js"></script>
 <!-- prItems.js 必須排在 admin.js 之前：開機還原分頁會同步呼叫 loadPrItems()，順序錯了整頁變磚 -->
 <script src="prItems.js?v=2"></script>
-<script src="brandVendor.js?v=34"></script>
+<script src="brandVendor.js?v=35"></script>
 <script src="imageLibrary.js?v=1"></script>
 <script src="calculator.js?v=1"></script>
 <script src="todoList.js?v=3"></script>

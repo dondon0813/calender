@@ -1371,7 +1371,9 @@ function loadBrandCategories(force) {
       const out = await res.json();
       if (!out || !out.success) throw new Error((out && out.error) || '讀取失敗');
       const items = out.items || [];
-      BRAND_CATS = items.map(b => ({ key: normalizeBrandKey(b.name), name: b.name, cats: Array.isArray(b.categories) ? b.categories : [] })).filter(b => b.key);
+      BRAND_CATS = items.map(b => ({ key: normalizeBrandKey(b.name), name: b.name, cats: Array.isArray(b.categories) ? b.categories : [],
+        // 比對名＝品牌名＋matchKeys（別名），去重
+        keys: [b.name].concat(Array.isArray(b.matchKeys) ? b.matchKeys : []).map(normalizeBrandKey).filter((k, i, a) => k && a.indexOf(k) === i) })).filter(b => b.key);
       BRAND_CATS_STATE = items.some(b => b.categoriesReady === false) ? 'notready' : '';
     } catch (e) {
       BRAND_CATS = []; BRAND_CATS_STATE = 'error';
@@ -1382,8 +1384,13 @@ function loadBrandCategories(force) {
 }
 function brandsInTitle(title) {
   const key = normalizeBrandKey(title);
-  const hit = (BRAND_CATS || []).filter(b => key.includes(b.key));
-  return hit.filter(b => !hit.some(o => o.key.length > b.key.length && o.key.includes(b.key)));
+  const hit = [];   // 每個品牌取命中的最長 key（含 matchKeys）放進 mk
+  (BRAND_CATS || []).forEach(b => {
+    let best = '';
+    (b.keys || [b.key]).forEach(k => { if (key.includes(k) && k.length > best.length) best = k; });
+    if (best) hit.push(Object.assign({}, b, { mk: best }));
+  });
+  return hit.filter(b => !hit.some(o => o.mk.length > b.mk.length && o.mk.includes(b.mk)));
 }
 function isDondonEvent(ev) {
   return brandsInTitle(ev.title).some(b => b.cats.some(c => SHERI_DONDON_CATEGORIES.indexOf(c) !== -1));
