@@ -2224,6 +2224,30 @@ function lotShipTagHtml(w, draw) {
   }
   return '<span class="lot-ship-tag vendor">廠商寄</span>';
 }
+// 回填連結標籤（10-26 雪莉：已產生連結、已回填要看得出來）：
+// 已回填 M/D（綠）＋改過 N 次（紅，對方透過連結送出 ≥2 次）；還沒回填時：已發連結 M/D／連結已過期（灰）。
+// 已重抽／放棄的不標；寄出後只留「已回填」。
+function lotFillMd(iso) {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d.getTime()) ? (d.getMonth() + 1) + '/' + d.getDate() : '';
+}
+function lotFillTagHtml(w) {
+  if (lotIsClosed(w)) return '';
+  const tags = [];
+  if (w.fillSubmittedAt) {
+    tags.push('<span class="lot-ship-tag lot-fill-tag done" title="得獎人透過回填連結送出資料">已回填 ' + lotFillMd(w.fillSubmittedAt) + '</span>');
+    const n = Number(w.fillSubmitCount || 0);
+    if (n >= 2) tags.push('<span class="lot-ship-tag lot-fill-tag warn" title="得獎人填完又改過資料，寄出／匯款前請再確認">改過 ' + n + ' 次</span>');
+  } else if (['pending', 'awaiting_info', 'info_ready'].includes(w.status)) {
+    if (w.fillLinkActive) {
+      const md = lotFillMd(w.fillLinkAt);
+      tags.push('<span class="lot-ship-tag lot-fill-tag" title="連結有效到 ' + lotFillMd(w.fillLinkExpiresAt) + '">已發連結' + (md ? ' ' + md : '') + '</span>');
+    } else if (w.fillLinkExpiresAt) {
+      tags.push('<span class="lot-ship-tag lot-fill-tag off">連結已過期</span>');
+    }
+  }
+  return tags.join('');
+}
 // 廠商寄且還沒轉給廠商 → 「已轉給廠商」鈕
 function lotVendorHandBtnHtml(w, draw) {
   if (!LOTTERY_CAN_EDIT || w.status !== 'info_ready' || !lotIsVendorShip(draw) || w.vendorHandedAt) return '';
@@ -2311,7 +2335,7 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
     '<div class="lot-wl-main">' +
       '<span class="lot-wl-prize" title="' + lotEscapeHtml(w.prize) + '">' + lotEscapeHtml(w.prize) + typeTag + '</span>' +
       '<span class="lot-wl-who">' + (w.winnerHandle ? lotEscapeHtml(w.winnerHandle) : empty) + '</span>' +
-      '<span class="lot-wl-status">' + statusSel + shipTag + '</span>' +
+      '<span class="lot-wl-status">' + statusSel + shipTag + lotFillTagHtml(w) + '</span>' +
       '<span class="lot-wl-name">' + (w.name ? lotEscapeHtml(w.name) : (orderName || empty)) + '</span>' +
       '<span class="lot-wl-memo">' + (w.memo ? lotEscapeHtml(w.memo) : empty) + '</span>' +
       '<span class="lot-wl-ops">' + actions + '</span>' +
@@ -3540,10 +3564,6 @@ function openLotteryWinnerModal(drawId, winner) {
 // ===== 回填連結（2026-10-25）：產生專屬網址傳給得獎人，免登入填收件／匯款資料（後端 lotteryfill.ts）=====
 // 7 天有效；重新產生＝舊連結失效。透過連結填過又改（fillSubmitCount ≥ 2）的現金獎要提醒匯款前再確認。
 const LOT_FILL_EDITABLE = ['pending', 'awaiting_info', 'info_ready'];
-function lotFillMd(iso) {
-  const d = iso ? new Date(iso) : null;
-  return d && !isNaN(d.getTime()) ? (d.getMonth() + 1) + '/' + d.getDate() : '';
-}
 let LOT_FILL_NEED_RELOAD = false; // 產生連結改了狀態：關視窗時重載清單
 function lotRenderWinnerFillBox(winner, prizeType) {
   const box = document.getElementById('lotWinnerFillBox');
@@ -3591,6 +3611,7 @@ async function lotFillRequest(renew, confirmed) {
       lotSetStatus('lotWinnerFormStatus', (res && res.error) || '產生連結失敗', 'error'); return;
     }
     w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
+    if (res.renewed) { w.fillLinkAt = new Date().toISOString(); LOT_FILL_NEED_RELOAD = true; } // 清單標籤「已發連結」要重畫
     // 後端會把待聯絡轉成待回填：視窗下拉同步，關視窗後重載清單
     if (res.status && res.status !== w.status) {
       w.status = res.status;
@@ -3658,7 +3679,7 @@ async function lotRowFillLink(winnerId, btn) {
     const changed = res.status && res.status !== w.status;
     w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
     if (changed) { w.status = res.status; setTimeout(() => loadLotteryView(true), copied ? 1500 : 0); }
-    else btn.classList.add('lot-fill-on');
+    else { btn.classList.add('lot-fill-on'); if (res.renewed) { w.fillLinkAt = new Date().toISOString(); setTimeout(() => loadLotteryView(true), copied ? 1500 : 0); } }
   } catch (err) {
     alert('產生連結失敗：' + err.message);
   } finally {
