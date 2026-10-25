@@ -760,6 +760,10 @@ body:not(.remstyle-icon) .rem-icon-only { display: none !important; }
   word-break: keep-all; overflow-wrap: break-word;
 }
 .remg-name-line { display: block; }   /* 一行一個 div：｜斷行；超過「名稱寬度」才自動換行 */
+/* 圖上直接改團名：點團名＝編輯（同介紹框的虛線框） */
+.remg-name-ev { cursor: text; }
+.remg-name-ev.editing, .remg-name-ev:focus { outline: 3px dashed rgba(255, 255, 255, 0.85); outline-offset: 2px; }
+body.rem-drag .remg-name-ev { pointer-events: none; }
 /* 簡短介紹：白色底色框（直角，雪莉指定不要圓角），字色用「團字色」色票。
    斷行刻意「不用」keep-all——那是給英文品牌名用的；中文句子套 keep-all 會把
    整句當成一個拆不開的長詞，塞不下時瀏覽器只好硬拆，拆在哪各引擎不同
@@ -2438,6 +2442,40 @@ function buildEditableNote(ev, note) {
   return p;
 }
 
+/* 圖上直接改團名（2026-10-25 雪莉：想把兩行併成一行）：跟介紹框同一套操作，
+   點團名＝編輯、Enter＝換行（存成「｜」）、點旁邊＝儲存。
+   存在「列表」那套顯示名稱（o.list.name）——結單提醒本來就吃這套，開團列表／貼文團名一起跟著變。
+   清空或改回原名＝刪掉覆寫、回到行事曆原名。 */
+function buildEditableName(ev) {
+  const cur = displayName(ev, 'list');
+  const box = document.createElement('div');
+  box.className = 'remg-name-ev';
+  remNameLines(cur).forEach(line => {
+    const d = document.createElement('div');
+    d.className = 'remg-name-line';
+    d.textContent = line;
+    box.appendChild(d);
+  });
+  box.contentEditable = 'plaintext-only';
+  if (box.contentEditable !== 'plaintext-only') box.contentEditable = 'true';
+  box.spellcheck = false;
+  box.addEventListener('focus', () => { remNoteEditing = true; box.classList.add('editing'); });
+  box.addEventListener('blur', () => {
+    remNoteEditing = false;
+    box.classList.remove('editing');
+    const typed = box.innerText.split('\n').map(s => s.trim()).filter(Boolean).join('｜');
+    const next = (!typed || typed === ev.title) ? '' : typed;
+    const o = ovOf(ev.id).list;
+    if (next === (o.name || '')) { renderPoster(); return; }
+    o.name = next;
+    saveEvents();
+    renderEvList();
+    renderPoster();
+    renderCaption();
+  });
+  return box;
+}
+
 /* 圖案式：實色底＋白粗體兩區標題——上「今日結單」（今天結單的團）、
    下「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期。 */
 function buildReminderIcons() {
@@ -2504,14 +2542,7 @@ function buildReminderIcons() {
       item.appendChild(thumbs);
       const name = document.createElement('div');
       name.className = 'remg-name';
-      group.forEach(ev => {
-        remNameLines(displayName(ev, 'list')).forEach(line => {
-          const d = document.createElement('div');
-          d.className = 'remg-name-line';
-          d.textContent = line;
-          name.appendChild(d);
-        });
-      });
+      group.forEach(ev => name.appendChild(buildEditableName(ev)));
       item.appendChild(name);
       // 簡短介紹（貼文 👉🏻 同一個庫；本月手動覆寫優先）。
       // 直接在圖上編輯（2026-09-06 雪莉要求）：點文字就能改、Enter＝換行、
