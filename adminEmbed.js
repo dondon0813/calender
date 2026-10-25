@@ -11,6 +11,8 @@
 //     所以改成外框說了算——蓋掉 matchMedia，並把樣式表裡 (min-width:1200px) 的規則整段開關。
 //  6. 段 1c：新行事曆的抽獎區（新增抽獎／編輯／這團不抽／還原）請舊頁打開對應的抽獎視窗（lotAction，白名單四個動作），做完回報 lotDone。
 //     （段 1a／1b 的 calEdit／calAction／editEvent 交接動作在段 1c 已原生化，v=5 移除。）
+//  7. 第 2 波（v=6）：paneLayout 多回報右欄內容區位置（right）與左欄右內距（padRight），讓新元件（行事曆、品牌廠商）也能疊在右欄上；
+//     新增 refreshData（新品牌廠商頁存檔後叫舊頁重抓資料）。
 // 訊息格式與外框那端（dondon-platform lib/admin/protocol.ts）一起改；一律帶 src／v，並驗 origin 與來源視窗。
 (function () {
   'use strict';
@@ -166,10 +168,26 @@
     var r = pl.getBoundingClientRect();
     var msg = {
       type: 'paneLayout',
-      left: Math.round(r.left),
-      width: Math.round(r.width),
-      rightOpen: !!(sw && !sw.classList.contains('right-closed'))
+      left: Math.round(r.left * 100) / 100,
+      width: Math.round(r.width * 100) / 100,
+      rightOpen: !!(sw && !sw.classList.contains('right-closed')),
+      // 左欄右側的內距（桌機雙欄版型 14px）：新元件疊在左欄上時要留同樣的右內距，內容寬度才跟舊版一樣
+      padRight: Math.round(parseFloat(window.getComputedStyle(pl).paddingRight) || 0)
     };
+    // 第 2 波：右欄也可能放新元件 → 多報右欄「內容區」（右欄下拉選單以下）的位置：left 從左內距之後算起、寬度一路到右緣（含捲軸）
+    var pr = document.getElementById('paneRight');
+    var pk = document.getElementById('paneRightPicker');
+    if (msg.rightOpen && pr) {
+      var rr = pr.getBoundingClientRect();
+      var cs = window.getComputedStyle(pr);
+      var contentLeft = rr.left + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0);
+      var top = rr.top;
+      if (pk) {
+        var kr = pk.getBoundingClientRect();
+        top = kr.bottom + (parseFloat(window.getComputedStyle(pk).marginBottom) || 0);
+      }
+      msg.right = { left: Math.round(contentLeft * 100) / 100, top: Math.round(top * 100) / 100, width: Math.round((rr.right - contentLeft) * 100) / 100 };
+    }
     var key = JSON.stringify(msg);
     if (key === lastLayout) return;
     lastLayout = key;
@@ -189,6 +207,12 @@
       var pl = document.getElementById('paneLeft');
       var sw = document.getElementById('splitWorkspace');
       if (pl && typeof ResizeObserver === 'function') new ResizeObserver(admEmbReportLayout).observe(pl);
+      // 第 2 波：右欄放新元件，右欄內容區的位置也要回報（右欄大小變、被捲動而下拉選單移位時都重報）
+      var prr = document.getElementById('paneRight');
+      if (prr) {
+        if (typeof ResizeObserver === 'function') new ResizeObserver(admEmbReportLayout).observe(prr);
+        prr.addEventListener('scroll', admEmbReportLayout, { passive: true });
+      }
       if (sw) new MutationObserver(admEmbReportLayout).observe(sw, { attributes: true, attributeFilter: ['class'] });
       window.addEventListener('resize', admEmbReportLayout);
       admEmbReportLayout();
@@ -229,6 +253,9 @@
         admEmbSetWide(d.wide);
       } else if (d.type === 'lotAction') {
         admEmbLotAction(d);
+      } else if (d.type === 'refreshData') {
+        // 第 2 波：新品牌廠商頁改了資料，舊頁其他分頁讀的品牌／廠商資料要重抓（同舊 brandVendor.js 存檔後的 fetchMemos）
+        if (typeof fetchMemos === 'function') Promise.resolve(fetchMemos()).catch(function () { /* 靜默 */ });
       }
     } catch (err) { console.error('admEmb message', err); }
   });
