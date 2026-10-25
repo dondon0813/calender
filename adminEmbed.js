@@ -9,6 +9,8 @@
 //  4. 公告彈窗改由外框做：這裡把舊 checkStaffAnnouncements 關掉（外框自己查、自己彈）。
 //  5. 「寬螢幕」判斷改聽外框：iframe 比視窗窄（扣掉側欄），舊的 (min-width:1200px) 媒體查詢會誤判，
 //     所以改成外框說了算——蓋掉 matchMedia，並把樣式表裡 (min-width:1200px) 的規則整段開關。
+//  6. 段 1c：新行事曆的抽獎區（新增抽獎／編輯／這團不抽／還原）請舊頁打開對應的抽獎視窗（lotAction，白名單四個動作），做完回報 lotDone。
+//     （段 1a／1b 的 calEdit／calAction／editEvent 交接動作在段 1c 已原生化，v=5 移除。）
 // 訊息格式與外框那端（dondon-platform lib/admin/protocol.ts）一起改；一律帶 src／v，並驗 origin 與來源視窗。
 (function () {
   'use strict';
@@ -173,15 +175,6 @@
     lastLayout = key;
     post(msg);
   }
-  var lastCalEdit = '';
-  function admEmbReportCalEdit() {
-    var btn = document.getElementById('calEditToggleBtn');
-    var on = !!(btn && btn.classList.contains('on'));
-    if (String(on) === lastCalEdit) return;
-    lastCalEdit = String(on);
-    post({ type: 'calEditChanged', on: on });
-  }
-
   function admEmbWatch() {
     try {
       var mo = new MutationObserver(admEmbReportStatus);
@@ -192,15 +185,13 @@
       // 強制改密碼視窗關掉後，把 mustChangePassword 的新狀態再報一次
       var sm = document.getElementById('settingsModal');
       if (sm) new MutationObserver(admEmbReportAuth).observe(sm, { attributes: true, attributeFilter: ['class'] });
-      // 段 1a：新行事曆疊在左欄上，需要知道左欄位置／大小（paneLayout）；編輯模式開關狀態變動回報（calEditChanged）
+      // 段 1a：新行事曆疊在左欄上，需要知道左欄位置／大小（paneLayout）
       var pl = document.getElementById('paneLeft');
       var sw = document.getElementById('splitWorkspace');
       if (pl && typeof ResizeObserver === 'function') new ResizeObserver(admEmbReportLayout).observe(pl);
       if (sw) new MutationObserver(admEmbReportLayout).observe(sw, { attributes: true, attributeFilter: ['class'] });
       window.addEventListener('resize', admEmbReportLayout);
       admEmbReportLayout();
-      var et = document.getElementById('calEditToggleBtn');
-      if (et) new MutationObserver(admEmbReportCalEdit).observe(et, { attributes: true, attributeFilter: ['class'] });
       // 登入失效：舊程式清掉 token 後會把登入畫面顯示出來（admin.js fetchMemos／postTask）→ 通知外框回登入畫面
       var gate = document.getElementById('passwordGate');
       if (gate) new MutationObserver(function () {
@@ -236,50 +227,89 @@
         if (typeof openSettingsHubModal === 'function') openSettingsHubModal();
       } else if (d.type === 'setWide') {
         admEmbSetWide(d.wide);
-      } else if (d.type === 'calAction' && d.action === 'editEvent') {
-        // 段 1b：新編輯視窗裡還沒搬的區塊（團購優惠 promo／公關品狀態 pr／去背小圖選擇器 thumb）：重抓資料後開這一團的舊編輯視窗，再依 focus 捲到該區塊或開選圖器
-        var evId = String(d.eventId);
-        var focus = d.focus;
-        Promise.resolve(typeof loadData === 'function' ? loadData() : null).then(function () {
-          var ev = (typeof allEvents !== 'undefined' ? allEvents : []).filter(function (e) { return String(e.id) === evId; })[0];
-          if (!ev) { alert('舊版找不到這一團，請按「回新版行事曆」、重新整理後再試一次。'); return; }
-          openEventEditModal(ev);
-          setTimeout(function () {
-            try {
-              if (focus === 'thumb') {
-                var more = document.getElementById('evMoreToggle');
-                if (more && !more.classList.contains('open')) more.click();
-                document.getElementById('evThumbPickBtn').click();
-              } else if (focus === 'promo') {
-                var mt = document.getElementById('evMoreToggle');
-                if (mt && !mt.classList.contains('open')) mt.click();
-                var pb = document.getElementById('evPromoBox');
-                if (pb) pb.scrollIntoView({ block: 'center' });
-              } else if (focus === 'pr') {
-                var pp = document.getElementById('prPanel');
-                if (pp) pp.scrollIntoView({ block: 'center' });
-              }
-            } catch (e2) { console.error('admEmb editEvent focus', e2); }
-          }, 80);
-        }).catch(function (e3) { console.error('admEmb editEvent', e3); });
-      } else if (d.type === 'calAction') {
-        // 段 1a：新行事曆清單模式的按鈕交給舊版：先確保在「現正開團中」清單（看得到結果），再呼叫對應的舊函式
-        var tab = [].slice.call(document.querySelectorAll('.mode-tab')).filter(function (b) { return b.textContent.trim() === '現正開團中'; })[0];
-        if (tab && !tab.classList.contains('on')) tab.click();
-        var blk = null;
-        if (d.blockId && typeof customBlocks !== 'undefined') blk = customBlocks.filter(function (b) { return String(b.id) === String(d.blockId); })[0] || null;
-        if (d.action === 'copyGen' && typeof openCopyGenModal === 'function') openCopyGenModal();
-        else if (d.action === 'blockNew' && typeof openBlockEditModal === 'function') openBlockEditModal(null);
-        else if (d.action === 'socialLinks' && typeof openSocialLinkEditor === 'function') openSocialLinkEditor();
-        else if (blk && d.action === 'blockEdit') openBlockEditModal(blk);
-        else if (blk && d.action === 'blockDup') duplicateCustomBlock(blk);
-        else if (blk && d.action === 'blockDel') deleteCustomBlock(blk);
-        else if (blk && d.action === 'blockToggle') toggleCustomBlock(blk);
-      } else if (d.type === 'calEdit') {
-        // 段 1a：新行事曆按「編輯」時，叫舊行事曆進入／離開編輯模式（點舊的開關，一路沿用舊流程）
-        var wrap = document.getElementById('calEditToggleWrap');
-        if (wrap && typeof calendarEditMode !== 'undefined' && !!calendarEditMode !== !!d.on) wrap.click();
+      } else if (d.type === 'lotAction') {
+        admEmbLotAction(d);
       }
     } catch (err) { console.error('admEmb message', err); }
   });
+
+  // ---------- 6. 段 1c：新行事曆檢視／編輯視窗抽獎區的動作，改在舊版打開對應的抽獎視窗 ----------
+  // 白名單四個動作：add＝新增這團的抽獎、edit＝編輯某一場（drawId）、nlSet＝這團不抽、nlClear＝還原。
+  // 做法：不直接依賴 currentModalEv／eventEditCtx 這類全域，而是用舊版「行事曆視窗的抽獎區塊」同一份程式（lotRenderEventLotteryBox）
+  // 在一個不顯示的暫時容器裡畫出該團的抽獎區塊，再點它裡面對應的按鈕——按鈕的處理函式（開抽獎視窗、預填團／帳務／品牌、這團不抽）就是舊版原本那支，一個字都沒複製。
+  // 做完回報 lotDone：視窗關閉（存檔後 closeLotteryDrawModal）、「這團不抽」資料重載完成、或使用者取消確認。
+  function admEmbLotDone() { post({ type: 'lotDone' }); }
+  function admEmbLotAction(d) {
+    var act = d.action;
+    if (act !== 'add' && act !== 'edit' && act !== 'nlSet' && act !== 'nlClear') { admEmbLotDone(); return; }
+    if (typeof lotRenderEventLotteryBox !== 'function') { alert('舊版抽獎功能載入失敗，請重新整理後再試。'); admEmbLotDone(); return; }
+    var box = document.createElement('div');
+    // 先重抓一次抽獎資料：iframe 內舊頁的抽獎資料只在第一次用到時載入，期間別人（或新版）新增的抽獎／團購選項不會自己進來
+    Promise.resolve(typeof loadLotteryView === 'function' ? loadLotteryView(true) : null).catch(function () { /* 失敗就用舊資料 */ }).then(function () {
+      return lotRenderEventLotteryBox(box, String(d.eventId), {});
+    }).then(function () {
+      var role = act === 'add' ? 'ev-add-draw' : act === 'edit' ? 'ev-edit-draw' : 'ev-nl-set';
+      var no = act === 'nlSet' ? '1' : act === 'nlClear' ? '0' : null;
+      var btns = [].slice.call(box.querySelectorAll('[data-role]')).filter(function (b) {
+        if (b.dataset.role !== role) return false;
+        if (no !== null && b.dataset.no !== no) return false;
+        if (act === 'edit' && String(b.dataset.drawId) !== String(d.drawId)) return false;
+        return true;
+      });
+      if (!btns.length && act === 'nlClear' && typeof LOTTERY_EVENT_CHOICES !== 'undefined' && typeof lotSetEventNoLottery === 'function') {
+        // 「還原」按鈕只出現在舊版「已標不抽」清單（只含已發布的團）；未發布的團舊版畫不出按鈕，但新版看得到標記 → 直接用舊版同一支函式還原（等同按鈕的動作）
+        var choice = LOTTERY_EVENT_CHOICES.filter(function (c) { return String(c.legacyId) === String(d.eventId); })[0];
+        if (choice && choice.eventId && typeof LOT_DATA_CHANGED_CBS !== 'undefined') {
+          var once2 = function () {
+            var k = LOT_DATA_CHANGED_CBS.indexOf(once2);
+            if (k >= 0) LOT_DATA_CHANGED_CBS.splice(k, 1);
+            admEmbLotDone();
+          };
+          LOT_DATA_CHANGED_CBS.push(once2);
+          lotSetEventNoLottery(choice.eventId, false);
+          if (typeof LOT_EVBOX_REG !== 'undefined') LOT_EVBOX_REG.delete(box);
+          return;
+        }
+      }
+      if (!btns.length) {
+        alert('舊版找不到對應的抽獎動作（資料可能剛被改過），請回到新版行事曆重新整理後再試一次。');
+        if (typeof LOT_EVBOX_REG !== 'undefined') LOT_EVBOX_REG.delete(box);
+        admEmbLotDone();
+        return;
+      }
+      if (act === 'nlSet' || act === 'nlClear') {
+        // 沒有視窗：舊版是 confirm（只有「設為不抽」會問）→ 打 API → loadLotteryView(true)。取消確認就直接回；否則等資料重載完成（LOT_DATA_CHANGED_CBS）再回
+        var asked = false;
+        var answered = true;
+        var realConfirm = window.confirm;
+        window.confirm = function (msg) { asked = true; answered = realConfirm.call(window, msg); return answered; };
+        var armed = false;
+        if (typeof LOT_DATA_CHANGED_CBS !== 'undefined') {
+          var once = function () {
+            var i = LOT_DATA_CHANGED_CBS.indexOf(once);
+            if (i >= 0) LOT_DATA_CHANGED_CBS.splice(i, 1);
+            admEmbLotDone();
+          };
+          LOT_DATA_CHANGED_CBS.push(once);
+          armed = true;
+        }
+        try { btns[0].click(); } finally { window.confirm = realConfirm; }
+        if (typeof LOT_EVBOX_REG !== 'undefined') LOT_EVBOX_REG.delete(box);
+        if (asked && !answered) {
+          if (armed) { var j = LOT_DATA_CHANGED_CBS.indexOf(once); if (j >= 0) LOT_DATA_CHANGED_CBS.splice(j, 1); }
+          admEmbLotDone();
+        }
+        return;
+      }
+      // add / edit：舊版開 #lotteryDrawModal；等它關掉（class show 被移除）就回報
+      var modal = document.getElementById('lotteryDrawModal');
+      btns[0].click();
+      if (typeof LOT_EVBOX_REG !== 'undefined') LOT_EVBOX_REG.delete(box);
+      if (!modal || !modal.classList.contains('show')) { admEmbLotDone(); return; }
+      var mo = new MutationObserver(function () {
+        if (!modal.classList.contains('show')) { mo.disconnect(); admEmbLotDone(); }
+      });
+      mo.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    }).catch(function (err) { console.error('admEmb lotAction', err); admEmbLotDone(); });
+  }
 })();
