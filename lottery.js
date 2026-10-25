@@ -3539,6 +3539,7 @@ function lotFillMd(iso) {
   const d = iso ? new Date(iso) : null;
   return d && !isNaN(d.getTime()) ? (d.getMonth() + 1) + '/' + d.getDate() : '';
 }
+let LOT_FILL_NEED_RELOAD = false; // 產生連結改了狀態：關視窗時重載清單
 function lotRenderWinnerFillBox(winner, prizeType) {
   const box = document.getElementById('lotWinnerFillBox');
   if (!box) return;
@@ -3579,6 +3580,13 @@ document.getElementById('lotWinnerFillCopyBtn').addEventListener('click', async 
     const res = await lotApiPost('lottery-winner-fill-link', { id: w.id });
     if (!res || !res.success) { lotSetStatus('lotWinnerFormStatus', (res && res.error) || '產生連結失敗', 'error'); return; }
     w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
+    // 產生連結時後端會把待聯絡轉成待回填：視窗下拉同步，關視窗後重載清單
+    if (res.status && res.status !== w.status) {
+      w.status = res.status;
+      const sel = document.getElementById('lotWinnerStatusSel');
+      if (sel) sel.value = res.status;
+      LOT_FILL_NEED_RELOAD = true;
+    }
     lotRenderWinnerFillBox(w, lotFillCurrentType(w));
     const urlEl = document.getElementById('lotWinnerFillUrl');
     urlEl.value = res.url; urlEl.style.display = '';
@@ -3608,6 +3616,7 @@ document.getElementById('lotWinnerFillVoidBtn').addEventListener('click', async 
 function closeLotteryWinnerModal() {
   document.getElementById('lotteryWinnerModal').classList.remove('show');
   LOTTERY_WINNER_EDIT = null;
+  if (LOT_FILL_NEED_RELOAD) { LOT_FILL_NEED_RELOAD = false; loadLotteryView(true); }
 }
 lotBindOrderLookup(document.getElementById('lotWinnerOrderNoInput'), document.getElementById('lotWinnerOrderHint'),
   () => (LOTTERY_WINNER_EDIT ? { drawId: LOTTERY_WINNER_EDIT.drawId } : {}));
