@@ -6221,6 +6221,7 @@
     .lot-ic-btn{ appearance:none; border:none; width:26px; height:26px; border-radius:7px; background:#F5EFE9; color:var(--c-text-soft); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
     .lot-ic-btn svg{ width:14px; height:14px; }
     .lot-ic-btn:hover{ background:#EDE4DB; color:var(--c-text); }
+    .lot-ic-btn.lot-fill-on{ color:var(--c-primary-dark, #B5485A); } /* 已有有效回填連結 */
     .lot-ic-btn.danger{ color:var(--c-danger); }
     .lot-eye svg{ width:13px; height:13px; vertical-align:-2px; }
     /* 抽獎區所有小按鈕裡的線條圖示（含待配對／未開團卡的「結案」、綁定列按鈕）統一尺寸，不然沒吃到規則的會撐成大圖 */
@@ -8143,7 +8144,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=66"></script>
+<script src="lottery.js?v=67"></script>
 <script src="harvestStatus.js?v=1"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=124"></script>

@@ -2200,6 +2200,7 @@ function lotIcon(name) {
     check: '<path d="M20 6L9 17l-5-5"/>',
     redo: '<path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/>',
     copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
+    link: '<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>',
     trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
     note: '<path d="M13.5 3.5H6.5A1.5 1.5 0 0 0 5 5v14a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V9z"/><path d="M13.5 3.5V9H19"/><path d="M8.5 13h7M8.5 16.5h4.5"/>',
     sheet: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10"/>',
@@ -2255,6 +2256,7 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
   const shipTag = lotShipTagHtml(w, rowDraw);
   const actions = LOTTERY_CAN_EDIT
     ? '<button class="lot-ic-btn" title="編輯" aria-label="編輯" data-role="edit-winner" data-winner-id="' + lotEscapeHtml(w.id) + '" data-draw-id="' + lotEscapeHtml(drawId) + '">' + lotIcon('edit') + '</button>' +
+      lotFillRowBtnHtml(w) +
       lotVendorHandBtnHtml(w, rowDraw) +
       (!lotIsSettled(w) ? '<button class="lot-ic-btn" title="' + shipActionLabel + '" aria-label="' + shipActionLabel + '" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('check') + '</button>' : '') +
       (!lotIsClosed(w) ? '<button class="lot-ic-btn danger" title="重抽" aria-label="重抽" data-role="redraw-winner" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('redo') + '</button>' : '')
@@ -2444,6 +2446,9 @@ function lotBindSectionEvents(box) {
   });
   box.querySelectorAll('[data-role="mark-shipped"]').forEach(el => {
     el.addEventListener('click', ev => { ev.stopPropagation(); lotMarkShipped(el.dataset.winnerId); });
+  });
+  box.querySelectorAll('[data-role="fill-link"]').forEach(el => {
+    el.addEventListener('click', ev => { ev.stopPropagation(); lotRowFillLink(el.dataset.winnerId, el); });
   });
   box.querySelectorAll('[data-role="mark-vendor-handed"]').forEach(el => {
     el.addEventListener('click', ev => { ev.stopPropagation(); lotMarkVendorHanded(el.dataset.winnerId, true); });
@@ -3572,15 +3577,19 @@ function lotFillCurrentType(w) {
   return lotWinnerType(w, (draw && draw.prizeType) || 'physical');
 }
 // 複製連結（renew=false）：有效連結還在就拿回同一條、不會讓已傳出去的失效；重新產生（renew=true）才換新網址
-async function lotFillRequest(renew) {
+async function lotFillRequest(renew, confirmed) {
   const w = lotFillCurrentWinner();
   if (!w) return;
-  if (renew && !confirm('重新產生後，之前傳出去的連結就不能用了。確定要重新產生？')) return;
+  if (renew && !confirmed && !confirm('重新產生後，之前傳出去的連結就不能用了。確定要重新產生？')) return;
   const btns = ['lotWinnerFillCopyBtn', 'lotWinnerFillRenewBtn'].map(id => document.getElementById(id));
   btns.forEach(b => { b.disabled = true; });
   try {
     const res = await lotApiPost('lottery-winner-fill-link', { id: w.id, renew: !!renew });
-    if (!res || !res.success) { lotSetStatus('lotWinnerFormStatus', (res && res.error) || '產生連結失敗', 'error'); return; }
+    if (!res || !res.success) {
+      if (res && res.needRenew && !renew && confirm('這條連結是較早的版本，無法再複製。\n要重新產生一條新的嗎？（之前傳出去的會失效）')) { btns.forEach(b => { b.disabled = false; }); return lotFillRequest(true, true); }
+      if (res && res.needRenew && !renew) { lotSetStatus('lotWinnerFormStatus', '已取消，連結沒有變動', ''); return; }
+      lotSetStatus('lotWinnerFormStatus', (res && res.error) || '產生連結失敗', 'error'); return;
+    }
     w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
     // 後端會把待聯絡轉成待回填：視窗下拉同步，關視窗後重載清單
     if (res.status && res.status !== w.status) {
@@ -3618,6 +3627,44 @@ document.getElementById('lotWinnerFillVoidBtn').addEventListener('click', async 
     lotSetStatus('lotWinnerFormStatus', '作廢失敗：' + err.message, 'error');
   }
 });
+// 清單列上的「回填連結」鈕（10-25 雪莉：不用點進編輯就能產生／複製）：
+// 有效連結在就複製同一條；沒有就產生新的；舊版亂數連結算不回來 → 問要不要重新產生。待聯絡會被後端轉成待回填 → 重載清單。
+function lotFillRowBtnHtml(w) {
+  if (!LOTTERY_CAN_EDIT || !LOT_FILL_EDITABLE.includes(w.status)) return '';
+  const label = w.fillLinkActive ? '複製回填連結' : '產生並複製回填連結';
+  return '<button class="lot-ic-btn' + (w.fillLinkActive ? ' lot-fill-on' : '') + '" title="' + label + '" aria-label="' + label + '" data-role="fill-link" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('link') + '</button>';
+}
+async function lotRowFillLink(winnerId, btn) {
+  let w = null;
+  for (const d of LOTTERY_DRAWS) { w = (d.winners || []).find(x => x.id === winnerId); if (w) break; }
+  if (!w || btn.disabled) return;
+  btn.disabled = true;
+  try {
+    let res = await lotApiPost('lottery-winner-fill-link', { id: winnerId, renew: false });
+    if (res && !res.success && res.needRenew) {
+      if (!confirm('這位的回填連結是較早的版本，無法再複製。\n要重新產生一條新的嗎？（之前傳出去的會失效）')) return;
+      res = await lotApiPost('lottery-winner-fill-link', { id: winnerId, renew: true });
+    }
+    if (!res || !res.success) { alert((res && res.error) || '產生連結失敗'); return; }
+    let copied = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(res.url); copied = true; } } catch (e) { /* 退回手動複製 */ }
+    if (!copied) window.prompt('請複製這條回填連結：', res.url);
+    else {
+      const old = btn.innerHTML;
+      btn.innerHTML = lotIcon('check'); btn.title = '已複製';
+      const oldTitle = btn.getAttribute('aria-label') || '';
+      setTimeout(() => { btn.innerHTML = old; btn.title = oldTitle; }, 1500);
+    }
+    const changed = res.status && res.status !== w.status;
+    w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
+    if (changed) { w.status = res.status; setTimeout(() => loadLotteryView(true), copied ? 1500 : 0); }
+    else btn.classList.add('lot-fill-on');
+  } catch (err) {
+    alert('產生連結失敗：' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
 function closeLotteryWinnerModal() {
   document.getElementById('lotteryWinnerModal').classList.remove('show');
   LOTTERY_WINNER_EDIT = null;
