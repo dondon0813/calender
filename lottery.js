@@ -3558,7 +3558,8 @@ function lotRenderWinnerFillBox(winner, prizeType) {
   if (n >= 2 && prizeType === 'cash') { warn.style.display = ''; warn.textContent = '對方透過連結改過匯款資料（共送出 ' + n + ' 次），匯款前請再跟本人確認帳號'; }
   else if (n >= 2) { warn.style.display = ''; warn.textContent = '對方透過連結改過資料（共送出 ' + n + ' 次）'; }
   else warn.style.display = 'none';
-  document.getElementById('lotWinnerFillCopyBtn').textContent = winner.fillLinkActive ? '重新產生並複製' : '產生並複製連結';
+  document.getElementById('lotWinnerFillCopyBtn').textContent = winner.fillLinkActive ? '複製連結' : '產生並複製連結';
+  document.getElementById('lotWinnerFillRenewBtn').style.display = winner.fillLinkActive ? '' : 'none';
   document.getElementById('lotWinnerFillVoidBtn').style.display = winner.fillLinkActive ? '' : 'none';
 }
 function lotFillCurrentWinner() {
@@ -3570,17 +3571,18 @@ function lotFillCurrentType(w) {
   const draw = LOTTERY_DRAWS.find(d => LOTTERY_WINNER_EDIT && d.id === LOTTERY_WINNER_EDIT.drawId);
   return lotWinnerType(w, (draw && draw.prizeType) || 'physical');
 }
-document.getElementById('lotWinnerFillCopyBtn').addEventListener('click', async () => {
+// 複製連結（renew=false）：有效連結還在就拿回同一條、不會讓已傳出去的失效；重新產生（renew=true）才換新網址
+async function lotFillRequest(renew) {
   const w = lotFillCurrentWinner();
   if (!w) return;
-  if (w.fillLinkActive && !confirm('重新產生後，之前傳出去的連結就不能用了。確定要重新產生？')) return;
-  const btn = document.getElementById('lotWinnerFillCopyBtn');
-  btn.disabled = true;
+  if (renew && !confirm('重新產生後，之前傳出去的連結就不能用了。確定要重新產生？')) return;
+  const btns = ['lotWinnerFillCopyBtn', 'lotWinnerFillRenewBtn'].map(id => document.getElementById(id));
+  btns.forEach(b => { b.disabled = true; });
   try {
-    const res = await lotApiPost('lottery-winner-fill-link', { id: w.id });
+    const res = await lotApiPost('lottery-winner-fill-link', { id: w.id, renew: !!renew });
     if (!res || !res.success) { lotSetStatus('lotWinnerFormStatus', (res && res.error) || '產生連結失敗', 'error'); return; }
     w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
-    // 產生連結時後端會把待聯絡轉成待回填：視窗下拉同步，關視窗後重載清單
+    // 後端會把待聯絡轉成待回填：視窗下拉同步，關視窗後重載清單
     if (res.status && res.status !== w.status) {
       w.status = res.status;
       const sel = document.getElementById('lotWinnerStatusSel');
@@ -3593,13 +3595,16 @@ document.getElementById('lotWinnerFillCopyBtn').addEventListener('click', async 
     let copied = false;
     try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(res.url); copied = true; } } catch (e) { /* 改用下方手動選取 */ }
     if (!copied) { urlEl.focus(); urlEl.select(); }
-    lotSetStatus('lotWinnerFormStatus', copied ? '連結已複製，可以貼給得獎人了' : '請長按上方網址複製', 'ok');
+    const what = res.renewed ? '新連結' : '連結';
+    lotSetStatus('lotWinnerFormStatus', copied ? what + '已複製，可以貼給得獎人了' : '請長按上方網址複製', 'ok');
   } catch (err) {
     lotSetStatus('lotWinnerFormStatus', '產生連結失敗：' + err.message, 'error');
   } finally {
-    btn.disabled = false;
+    btns.forEach(b => { b.disabled = false; });
   }
-});
+}
+document.getElementById('lotWinnerFillCopyBtn').addEventListener('click', () => lotFillRequest(false));
+document.getElementById('lotWinnerFillRenewBtn').addEventListener('click', () => lotFillRequest(true));
 document.getElementById('lotWinnerFillVoidBtn').addEventListener('click', async () => {
   const w = lotFillCurrentWinner();
   if (!w || !confirm('作廢後，傳出去的連結就不能再填了。確定作廢？')) return;
