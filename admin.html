@@ -7371,6 +7371,19 @@
         <option value="virtual">虛擬贈品</option>
       </select>
       <p id="lotWinnerTypeReadyWarn" class="hint" style="display:none; font-size:12px; color:#8B6E5E; margin:-4px 0 10px;">得獎人獎品類型欄位還沒 db push（migration 20260925130000），儲存時「跟活動一樣」以外的選擇會被擋下</p>
+      <!-- 回填連結（2026-10-25）：產生專屬網址傳給得獎人，免登入填收件／匯款資料；7 天有效，重新產生＝舊連結失效 -->
+      <div id="lotWinnerFillBox" style="display:none; margin:0 0 12px; padding:10px 12px; border-radius:10px; background:var(--c-surface);">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <b style="font-size:13px; color:var(--c-brown);">回填連結</b>
+          <span id="lotWinnerFillInfo" style="font-size:12px; color:var(--c-text-soft);"></span>
+        </div>
+        <div id="lotWinnerFillWarn" style="display:none; margin-top:6px; font-size:12px; color:#B5485A;"></div>
+        <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+          <button type="button" class="task-mini-btn" id="lotWinnerFillCopyBtn">產生並複製連結</button>
+          <button type="button" class="task-mini-btn" id="lotWinnerFillVoidBtn" style="display:none;">作廢連結</button>
+        </div>
+        <input type="text" id="lotWinnerFillUrl" readonly style="display:none; margin-top:8px; font-size:12px;">
+      </div>
       <label for="lotWinnerOrderNoInput">訂單編號</label>
       <input type="text" id="lotWinnerOrderNoInput" placeholder="中獎的那筆訂單編號（抽出來就先填）">
       <div class="lot-order-hint" id="lotWinnerOrderHint"></div>
@@ -8129,7 +8142,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=63"></script>
+<script src="lottery.js?v=64"></script>
 <script src="harvestStatus.js?v=1"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=124"></script>

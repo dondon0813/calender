@@ -3528,9 +3528,83 @@ function openLotteryWinnerModal(drawId, winner) {
     orderHint.innerHTML = (hasNo && LOTTERY_ORDERS_READY && (winner.order || !lotIsSettled(winner))) ? lotOrderInfoHtml(winner.order) : '';
   }
   lotSyncWinnerModalFields(prizeType);
+  lotRenderWinnerFillBox(winner, prizeType);
   lotSetStatus('lotWinnerFormStatus', '', '');
   document.getElementById('lotteryWinnerModal').classList.add('show');
 }
+// ===== 回填連結（2026-10-25）：產生專屬網址傳給得獎人，免登入填收件／匯款資料（後端 lotteryfill.ts）=====
+// 7 天有效；重新產生＝舊連結失效。透過連結填過又改（fillSubmitCount ≥ 2）的現金獎要提醒匯款前再確認。
+const LOT_FILL_EDITABLE = ['pending', 'awaiting_info', 'info_ready'];
+function lotFillMd(iso) {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d.getTime()) ? (d.getMonth() + 1) + '/' + d.getDate() : '';
+}
+function lotRenderWinnerFillBox(winner, prizeType) {
+  const box = document.getElementById('lotWinnerFillBox');
+  if (!box) return;
+  const urlEl = document.getElementById('lotWinnerFillUrl');
+  urlEl.style.display = 'none'; urlEl.value = '';
+  // 新增中（還沒存）、已重抽／放棄／寄出、沒有編輯權限 → 不顯示
+  if (!winner || !LOTTERY_CAN_EDIT || !LOT_FILL_EDITABLE.includes(winner.status)) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const info = [];
+  if (winner.fillLinkActive) info.push('連結有效到 ' + lotFillMd(winner.fillLinkExpiresAt));
+  else if (winner.fillLinkExpiresAt) info.push('連結已過期');
+  if (winner.fillSubmittedAt) info.push(lotFillMd(winner.fillSubmittedAt) + ' 已透過連結填寫');
+  document.getElementById('lotWinnerFillInfo').textContent = info.length ? '（' + info.join('，') + '）' : '對方不用登入就能填，7 天有效';
+  const warn = document.getElementById('lotWinnerFillWarn');
+  const n = Number(winner.fillSubmitCount || 0);
+  if (n >= 2 && prizeType === 'cash') { warn.style.display = ''; warn.textContent = '對方透過連結改過匯款資料（共送出 ' + n + ' 次），匯款前請再跟本人確認帳號'; }
+  else if (n >= 2) { warn.style.display = ''; warn.textContent = '對方透過連結改過資料（共送出 ' + n + ' 次）'; }
+  else warn.style.display = 'none';
+  document.getElementById('lotWinnerFillCopyBtn').textContent = winner.fillLinkActive ? '重新產生並複製' : '產生並複製連結';
+  document.getElementById('lotWinnerFillVoidBtn').style.display = winner.fillLinkActive ? '' : 'none';
+}
+function lotFillCurrentWinner() {
+  if (!LOTTERY_WINNER_EDIT || !LOTTERY_WINNER_EDIT.winnerId) return null;
+  const draw = LOTTERY_DRAWS.find(d => d.id === LOTTERY_WINNER_EDIT.drawId);
+  return draw ? (draw.winners || []).find(w => w.id === LOTTERY_WINNER_EDIT.winnerId) || null : null;
+}
+function lotFillCurrentType(w) {
+  const draw = LOTTERY_DRAWS.find(d => LOTTERY_WINNER_EDIT && d.id === LOTTERY_WINNER_EDIT.drawId);
+  return lotWinnerType(w, (draw && draw.prizeType) || 'physical');
+}
+document.getElementById('lotWinnerFillCopyBtn').addEventListener('click', async () => {
+  const w = lotFillCurrentWinner();
+  if (!w) return;
+  if (w.fillLinkActive && !confirm('重新產生後，之前傳出去的連結就不能用了。確定要重新產生？')) return;
+  const btn = document.getElementById('lotWinnerFillCopyBtn');
+  btn.disabled = true;
+  try {
+    const res = await lotApiPost('lottery-winner-fill-link', { id: w.id });
+    if (!res || !res.success) { lotSetStatus('lotWinnerFormStatus', (res && res.error) || '產生連結失敗', 'error'); return; }
+    w.fillLinkActive = true; w.fillLinkExpiresAt = res.expiresAt;
+    lotRenderWinnerFillBox(w, lotFillCurrentType(w));
+    const urlEl = document.getElementById('lotWinnerFillUrl');
+    urlEl.value = res.url; urlEl.style.display = '';
+    let copied = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(res.url); copied = true; } } catch (e) { /* 改用下方手動選取 */ }
+    if (!copied) { urlEl.focus(); urlEl.select(); }
+    lotSetStatus('lotWinnerFormStatus', copied ? '連結已複製，可以貼給得獎人了' : '請長按上方網址複製', 'ok');
+  } catch (err) {
+    lotSetStatus('lotWinnerFormStatus', '產生連結失敗：' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+document.getElementById('lotWinnerFillVoidBtn').addEventListener('click', async () => {
+  const w = lotFillCurrentWinner();
+  if (!w || !confirm('作廢後，傳出去的連結就不能再填了。確定作廢？')) return;
+  try {
+    const res = await lotApiPost('lottery-winner-fill-link-void', { id: w.id });
+    if (!res || !res.success) { lotSetStatus('lotWinnerFormStatus', (res && res.error) || '作廢失敗', 'error'); return; }
+    w.fillLinkActive = false; w.fillLinkExpiresAt = '';
+    lotRenderWinnerFillBox(w, lotFillCurrentType(w));
+    lotSetStatus('lotWinnerFormStatus', '連結已作廢', 'ok');
+  } catch (err) {
+    lotSetStatus('lotWinnerFormStatus', '作廢失敗：' + err.message, 'error');
+  }
+});
 function closeLotteryWinnerModal() {
   document.getElementById('lotteryWinnerModal').classList.remove('show');
   LOTTERY_WINNER_EDIT = null;
