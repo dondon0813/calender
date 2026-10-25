@@ -2464,7 +2464,7 @@ function buildReminderIcons() {
     if (url) {
       const img = document.createElement('img');
       img.crossOrigin = 'anonymous';   // 下載 PNG 的 useCORS 需要（同列表式的說明）
-      img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=1';
+      img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=2';
       img.alt = '';
       img.addEventListener('error', fallback);
       fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
@@ -2604,7 +2604,7 @@ function buildReminderList() {
              加 crossorigin＋固定的 calposter 參數（快取 key 跟別頁分開），
              預覽與出圖都用同一份帶 CORS 的快取。 */
           img.crossOrigin = 'anonymous';
-          img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=1';
+          img.src = url + (url.includes('?') ? '&' : '?') + 'calposter=2';
           img.alt = '';
           img.addEventListener('error', () => {
             tb.innerHTML = '';
