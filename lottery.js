@@ -2326,7 +2326,9 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
     const d = LOTTERY_DRAWS.find(x => x.id === drawId);
     if (d && d.section === 'groupbuy') orderParts.push('<span class="lot-ord lot-ord-warn">還沒填訂單編號</span>');
   }
-  const subHtml = orderParts.join('') + (subParts.length ? subParts.join('') : '<span class="lot-sub-empty">' + emptyMsg + '</span>');
+  // 得獎人自填備註（回填連結／會員中心，10-26 雪莉：出國不在之類）→ 下行最前面、粉底醒目
+  const noteHtml = w.winnerNote ? '<span class="lot-winner-note" title="得獎人自己填的備註"><b>得獎人備註</b>' + lotEscapeHtml(w.winnerNote) + '</span>' : '';
+  const subHtml = noteHtml + orderParts.join('') + (subParts.length ? subParts.join('') : '<span class="lot-sub-empty">' + emptyMsg + '</span>');
   // 姓名還沒回填時，先淡字顯示訂單上的姓名（僅供辨識，不會寫回資料）
   const orderName = (!w.name && w.order && w.order.customerName)
     ? '<span class="lot-ord-name" title="訂單上的姓名（還沒回填）">' + lotEscapeHtml(w.order.customerName) + '</span>' : '';
@@ -3578,6 +3580,8 @@ function lotRenderWinnerFillBox(winner, prizeType) {
   else if (winner.fillLinkExpiresAt) info.push('連結已過期');
   if (winner.fillSubmittedAt) info.push(lotFillMd(winner.fillSubmittedAt) + ' 已透過連結填寫');
   document.getElementById('lotWinnerFillInfo').textContent = info.length ? '（' + info.join('，') + '）' : '對方不用登入就能填，7 天有效';
+  const noteEl = document.getElementById('lotWinnerFillNote');
+  if (noteEl) { noteEl.style.display = winner.winnerNote ? '' : 'none'; noteEl.textContent = winner.winnerNote ? '得獎人備註：' + winner.winnerNote : ''; }
   const warn = document.getElementById('lotWinnerFillWarn');
   const n = Number(winner.fillSubmitCount || 0);
   if (n >= 2 && prizeType === 'cash') { warn.style.display = ''; warn.textContent = '對方透過連結改過匯款資料（共送出 ' + n + ' 次），匯款前請再跟本人確認帳號'; }
