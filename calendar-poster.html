@@ -803,6 +803,13 @@ body.rem-drag .remg-note { pointer-events: none; }
 .poster.rem-serif .remg-note, .poster.rem-serif .rem-note {
   font-family: 'Noto Serif TC', 'EB Garamond', serif;
 }
+/* 團名／介紹各自選字體（2026-10-25 雪莉：團名和介紹各自選，標題維持粗線體）。
+   粗線體只有一種字重，不能再加粗（會被瀏覽器假加粗變糊），所以要把 font-weight 歸 normal。 */
+.poster.rem-tf-sans .remg-note, .poster.rem-tf-sans .rem-note,
+.poster.rem-nf-sans .remg-name, .poster.rem-nf-sans .rem-name { font-family: 'Noto Sans TC', sans-serif; }
+.poster.rem-nf-serif .remg-name, .poster.rem-nf-serif .rem-name { font-family: 'Noto Serif TC', 'EB Garamond', serif; }
+.poster.rem-tf-thick .remg-note, .poster.rem-tf-thick .rem-note,
+.poster.rem-nf-thick .remg-name, .poster.rem-nf-thick .rem-name { font-family: 'Tsuhsianti', var(--font-display); font-weight: normal; }
 
 /* 面板：各團簡短介紹輸入列（含每團自己的格寬欄） */
 .remnote-item { margin-bottom: 8px; }
@@ -861,10 +868,20 @@ body.rem-drag .remg-note { pointer-events: none; }
           <button data-v="icon">圖案式</button>
         </div>
       </div>
-      <div class="row"><label>說明字體</label>
-        <div class="seg" id="segRemFont">
-          <button data-v="default" class="on">預設（圓體）</button>
+      <div class="row"><label>團名字體</label>
+        <div class="seg" id="segRemNameFont">
+          <button data-v="default" class="on">圓體</button>
+          <button data-v="sans">黑體</button>
           <button data-v="serif">明體</button>
+          <button data-v="thick">粗線體</button>
+        </div>
+      </div>
+      <div class="row"><label>介紹字體</label>
+        <div class="seg" id="segRemFont">
+          <button data-v="default" class="on">圓體</button>
+          <button data-v="sans">黑體</button>
+          <button data-v="serif">明體</button>
+          <button data-v="thick">粗線體</button>
         </div>
       </div>
       <div class="row rem-list-only"><label>右側說明</label>
@@ -1209,7 +1226,8 @@ const DEFAULTS = {
   remNoteFs: 0.48,               // 圖案式：簡短介紹字級（em）——預設從 0.42 調大
   remNotePadX: 0.7,              // 圖案式：介紹底色框左右留空（em，2026-10-04 雪莉要可調）
   remThumb: 3.1,                 // 圖案式：小圖高度（em）——想要文字更大就把圖縮小騰空間
-  remFont: 'default',            // 結單提醒字體：'default'＝粗線體標題＋圓體｜'serif'＝明體（IG Literature 風，思源宋體＋EB Garamond）
+  remFont: 'default',            // 結單提醒「介紹」字體：'default'＝圓體｜'sans'＝黑體｜'serif'＝明體（IG Literature 風，思源宋體＋EB Garamond）｜'thick'＝粗線體
+  remNameFont: 'default',        // 結單提醒「團名」字體（2026-10-25 雪莉）：同上四種；標題一律粗線體不受影響
   remListNote: 'on',             // 列表式：每列右側顯示簡短介紹
   remgTitleOff: {},              // 圖案式拖曳模式：兩區標題的位移 {today:[dx,dy], open:[dx,dy]}
   remCols: 0,                    // 圖案式：每排固定幾個；0＝自動（放不下才換排）
@@ -1727,7 +1745,12 @@ function renderPoster() {
   poster.classList.toggle('has-bg', !!ASSETS.bg);
   // 結單提醒圖案式：整張一個實色底、不畫奶油色面板
   poster.classList.toggle('rem-solid', S.mode === 'reminder' && S.remStyle === 'icon');
+  // 團名／介紹各自選字體（class 名 rem-nf-*／rem-tf-*；舊的 rem-serif 等同 rem-tf-serif，保留給舊設定）
   poster.classList.toggle('rem-serif', S.mode === 'reminder' && S.remFont === 'serif');
+  ['sans', 'serif', 'thick'].forEach(f => {
+    poster.classList.toggle('rem-tf-' + f, S.mode === 'reminder' && S.remFont === f);
+    poster.classList.toggle('rem-nf-' + f, S.mode === 'reminder' && S.remNameFont === f);
+  });
   poster.style.setProperty('--p-rem-bg', S.remBg || '#F2707E');
   poster.style.setProperty('--p-rem-gapx', (typeof S.remGapX === 'number' ? S.remGapX : 24) + 'px');
   poster.style.setProperty('--p-rem-itemw', (typeof S.remItemW === 'number' ? S.remItemW : 260) + 'px');
@@ -3747,6 +3770,7 @@ function syncControls() {
   segSet('segRemStyle', S.remStyle || 'list');
   segSet('segRemCols', parseInt(S.remCols, 10) || 0);
   segSet('segRemFont', S.remFont || 'default');
+  segSet('segRemNameFont', S.remNameFont || 'default');
   segSet('segRemListNote', S.remListNote || 'on');
   segSet('segMode', S.mode);
   segSet('segCapMode', S.capMode || 'full');
@@ -3862,6 +3886,7 @@ function init() {
   bindRange('rRemThumb', 'remThumb', 'vRemThumb');
   bindSeg('segRemCols', v => { S.remCols = parseInt(v, 10) || 0; });
   bindSeg('segRemFont', v => { S.remFont = v; });
+  bindSeg('segRemNameFont', v => { S.remNameFont = v; });
   bindSeg('segRemDrag', v => { REM_DRAG = (v === 'on'); document.body.classList.toggle('rem-drag', REM_DRAG); });
   document.getElementById('btnRemResetPos').addEventListener('click', () => {
     if (!confirm('把圖上所有組別和標題的位置都恢復成自動排列？')) return;
@@ -4033,7 +4058,7 @@ function init() {
     if (!S.modes) S.modes = {};
     S.modes[S.mode] = Object.assign({}, src);
     if (S.mode === 'reminder') {
-      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remNotePadX', 'remThumb', 'remFont', 'remListNote', 'remgTitleOff', 'remCols', 'remgToday', 'remgOpen']
+      ['remStyle', 'remTitle', 'remSub', 'remBg', 'remGapX', 'remItemW', 'remNameFs', 'remNoteFs', 'remNotePadX', 'remThumb', 'remFont', 'remNameFont', 'remListNote', 'remgTitleOff', 'remCols', 'remgToday', 'remgOpen']
         .forEach(k => { S[k] = base[k]; });
     }
     saveSettings(); syncControls(); renderAll();
