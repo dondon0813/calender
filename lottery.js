@@ -1037,8 +1037,8 @@ function lotWinnersRows(draws) {
         contact = [bank, w.bankAccount ? '帳號 ' + lotMaskAccount(w.bankAccount) : '', (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join('　');
         // 歷史匯入的現金得獎人常把銀行資料整串放在地址／電話欄：銀行欄位都空就退回顯示那些文字
         if (!contact) contact = [w.phone, w.address].filter(v => v && v !== '-').join('　').replace(/\s+/g, ' ');
-        // copy＝複製鈕用的完整文字（帳號不遮罩；其餘同 contact）
-        copy = w.bankAccount ? contact.replace('帳號 ' + lotMaskAccount(w.bankAccount), '帳號 ' + w.bankAccount) : contact;
+        // 複製鈕只複製帳號（純數字，貼到網銀直接能用；雪莉 10-26）；沒帳號欄（歷史整串資料）才複製整段
+        copy = lotAccountCopy(w.bankAccount) || contact;
       } else if (pt === 'virtual') {
         contact = w.email || '';
         copy = contact;
@@ -1053,6 +1053,13 @@ function lotWinnersRows(draws) {
     });
   });
   return rows;
+}
+// 匯款帳號複製用：去掉空白與 - 只留數字；沒有數字就回原字串
+function lotAccountCopy(acc) {
+  const raw = (acc == null ? '' : String(acc)).trim();
+  if (!raw || /^[-－—]+$/.test(raw)) return '';
+  const digits = raw.replace(/\D/g, '');
+  return digits || raw;
 }
 function lotBriefCol(rows, field) {
   if (!rows.length) return field === 'who' ? '<span class="lot-empty-cell">尚未抽出</span>' : '';
@@ -4270,20 +4277,22 @@ function lotShipContact(w, draw) {
   const name = (t === 'cash' ? v(w.accountName) : '') || v(w.name) || v(w.order && w.order.customerName);
   const phone = v(w.phone);
   let addr = '';
+  let copy = '';
   if (t === 'cash') {
     addr = [[v(w.bankName), v(w.bankCode), v(w.bankBranch)].filter(Boolean).join(' '), v(w.bankAccount) ? '帳號 ' + v(w.bankAccount) : '',
       (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join(' ');
     if (!addr) addr = v(w.address);
+    copy = lotAccountCopy(w.bankAccount); // 現金：複製鈕只複製帳號（雪莉 10-26）
   } else if (t === 'virtual') addr = v(w.email);
   else addr = [v(w.zip), v(w.address)].filter(Boolean).join(' ');
-  return { name, phone, addr, type: t };
+  return { name, phone, addr, copy: copy || addr, type: t };
 }
 // 寄出視窗顯示收件人姓名（雪莉 10-14：要姓名不是暱稱）；沒填姓名才退回暱稱
 function lotShipNameOf(p) { return lotShipContact(p.w, p.draw).name || lotWinnerWho(p.w); }
-function lotShipCopyCell(txt, cls) {
+function lotShipCopyCell(txt, cls, copyTxt) {
   if (!txt) return '<td class="' + cls + '"><span class="lot-empty-cell">—</span></td>';
   return '<td class="' + cls + '">' + lotEscapeHtml(txt) +
-    '<button type="button" class="lot-copy-btn" data-role="ship-copy" data-copy="' + lotEscapeHtml(txt) + '" title="複製">' + lotIcon('copy') + '</button></td>';
+    '<button type="button" class="lot-copy-btn" data-role="ship-copy" data-copy="' + lotEscapeHtml(copyTxt || txt) + '" title="' + (copyTxt && copyTxt !== txt ? '複製帳號' : '複製') + '">' + lotIcon('copy') + '</button></td>';
 }
 // 收件人名字可點：開「下單紀錄」視窗（下單幾次、總金額；lottery-buyer-history，2026-10-14 雪莉）
 function lotShipNameCell(name, winnerId, subText) {
@@ -4340,7 +4349,7 @@ function lotShipPackRowHtml(w, checked, draw) {
     '<td class="lot-ann-td-cb"><input type="checkbox" data-role="ship-bcheck" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (checked ? ' checked' : '') + '></td>' +
     '<td class="lot-td-prize">' + lotEscapeHtml(w.prize || '') + '<div class="lot-ship-sub">' + lotEscapeHtml(lotWinnerWho(w)) + '・' + lotShipTypeLabel(w, draw) +
       (w.status !== 'info_ready' ? '・' + lotEscapeHtml(lotStatusLabel(w.status, c.type)) : '') + '</div></td>' +
-    lotShipNameCell(c.name, w.id) + lotShipCopyCell(c.phone, 'lot-ship-td-phone') + lotShipCopyCell(c.addr, 'lot-ship-td-addr') +
+    lotShipNameCell(c.name, w.id) + lotShipCopyCell(c.phone, 'lot-ship-td-phone') + lotShipCopyCell(c.addr, 'lot-ship-td-addr', c.copy) +
   '</tr>';
 }
 function lotShipPackAllText(people) {
@@ -4386,7 +4395,7 @@ function lotShipRowHtml(w, checked, role, draw, withTrack) {
     '<td class="lot-ann-td-cb"><input type="checkbox" data-role="' + role + '" data-winner-id="' + lotEscapeHtml(w.id) + '"' + (checked ? ' checked' : '') + '></td>' +
     lotShipNameCell(lotShipContact(w, draw).name || lotWinnerWho(w), w.id, sub) +
     '<td class="lot-td-date">' + lotShipTypeLabel(w, draw) + '</td>' +
-    (withTrack ? lotShipCopyCell(lotShipContact(w, draw).phone, 'lot-ship-td-phone') + lotShipCopyCell(lotShipContact(w, draw).addr, 'lot-ship-td-addr') +
+    (withTrack ? lotShipCopyCell(lotShipContact(w, draw).phone, 'lot-ship-td-phone') + lotShipCopyCell(lotShipContact(w, draw).addr, 'lot-ship-td-addr', lotShipContact(w, draw).copy) +
       '<td class="lot-td-date">' + lotEscapeHtml(w.courier || '') + '</td><td class="lot-td-date">' + lotEscapeHtml(w.trackingNo || '') + '</td>' : '') +
   '</tr>';
 }
