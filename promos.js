@@ -599,7 +599,7 @@ function pmBuildTeamCard(team, tableReady) {
     promos: team.promos || [],
     tableReady,
     tagReady: PROMOS_TAG_READY,
-    withLong: false,
+    withLong: true,
     getEndDate: () => team.displayEnd || team.endDate || ''
   });
   return card;
