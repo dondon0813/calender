@@ -188,6 +188,10 @@ function lotNormalizeWinner(w) {
 }
 // 廠商寄／團主寄（看抽獎的 shipBy；none 視同團主）
 function lotIsVendorShip(draw) { return !!draw && draw.shipBy === 'vendor'; }
+// 逐位判斷（雪莉 10-26）：現金／免單一律團購主自己匯，就算這場的實體獎是廠商寄也一樣
+// （獎品名寫「免單」但類型沒設成現金的也算，同後端 lottery-ship-batch-create）
+function lotWinnerIsCash(w, draw) { return lotWinnerType(w, draw) === 'cash' || /免單/.test(String((w && w.prize) || '')); }
+function lotWinnerVendorShip(w, draw) { return lotIsVendorShip(draw) && !lotWinnerIsCash(w, draw); }
 // 目前篩選（狀態＋待寄出的廠商/團主切換）是否放行這位；「廠商寄送中」＝待寄出且已轉廠商
 function lotWinnerStatusMatch(w, draw, s) {
   s = s || LOTTERY_FILTER.status;
@@ -198,8 +202,8 @@ function lotWinnerStatusMatch(w, draw, s) {
   } else {
     return w.status === s;
   }
-  if (LOTTERY_SHIP_FILTER === 'vendor') return lotIsVendorShip(draw);
-  if (LOTTERY_SHIP_FILTER === 'self') return !lotIsVendorShip(draw);
+  if (LOTTERY_SHIP_FILTER === 'vendor') return lotWinnerVendorShip(w, draw);
+  if (LOTTERY_SHIP_FILTER === 'self') return !lotWinnerVendorShip(w, draw);
   return true;
 }
 // 顯示名稱（2026-10-10 docs/16）：值不變，只改文字
@@ -2223,7 +2227,7 @@ function lotIcon(name) {
 // 待寄出的小標籤：廠商寄／團主寄；已轉給廠商 → 「已轉廠商 M/D」（可編輯者點一下可取消）
 function lotShipTagHtml(w, draw) {
   if (w.status !== 'info_ready' || !draw) return '';
-  if (!lotIsVendorShip(draw)) return '<span class="lot-ship-tag">團主寄</span>';
+  if (!lotWinnerVendorShip(w, draw)) return '<span class="lot-ship-tag">團主寄</span>';
   if (w.vendorHandedAt) {
     const m = String(w.vendorHandedAt).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
     const md = m ? (Number(m[2]) + '/' + Number(m[3])) : '';
@@ -2257,7 +2261,7 @@ function lotFillTagHtml(w) {
 }
 // 廠商寄且還沒轉給廠商 → 「已轉給廠商」鈕
 function lotVendorHandBtnHtml(w, draw) {
-  if (!LOTTERY_CAN_EDIT || w.status !== 'info_ready' || !lotIsVendorShip(draw) || w.vendorHandedAt) return '';
+  if (!LOTTERY_CAN_EDIT || w.status !== 'info_ready' || !lotWinnerVendorShip(w, draw) || w.vendorHandedAt) return '';
   return '<button class="lot-ic-btn" title="已轉給廠商" aria-label="已轉給廠商" data-role="mark-vendor-handed" data-winner-id="' + lotEscapeHtml(w.id) + '">' + lotIcon('send') + '</button>';
 }
 function lotMarkVendorHanded(winnerId, on) {
@@ -2397,7 +2401,7 @@ function renderLotteryTodo() {
       } else if (w.status === 'info_ready') {
         const wt = lotWinnerType(w, draw);
         const shipLabel = wt === 'cash' ? '標記已匯款（今天）›' : (wt === 'virtual' ? '標記已發送（今天）›' : '標記已寄出（今天）›');
-        nextBtns = (lotIsVendorShip(draw) && !w.vendorHandedAt
+        nextBtns = (lotWinnerVendorShip(w, draw) && !w.vendorHandedAt
           ? '<button class="lot-next-btn" data-role="mark-vendor-handed" data-winner-id="' + lotEscapeHtml(w.id) + '">已轉給廠商 ›</button>' : '') +
           '<button class="lot-next-btn" data-role="mark-shipped" data-winner-id="' + lotEscapeHtml(w.id) + '">' + shipLabel + '</button>';
       }
@@ -4262,8 +4266,9 @@ const LOT_SHIP_OPEN = {};             // batchId → true／false（沒設定＝
 function lotShipPendingGroups() {
   const groups = [];
   LOTTERY_DRAWS.forEach(d => {
-    if (d.archived || lotIsVendorShip(d)) return;
-    const list = (d.winners || []).filter(w => w.status === 'info_ready' && !w.shipBatchId); // 已打包的人在「打包中」那包裡
+    if (d.archived) return;
+    // 已打包的人在「打包中」那包裡；廠商寄的場次只留現金／免單（團購主自己匯，雪莉 10-26）
+    const list = (d.winners || []).filter(w => w.status === 'info_ready' && !w.shipBatchId && !lotWinnerVendorShip(w, d));
     if (list.length) groups.push({ draw: d, list });
   });
   return lotApplyDir(groups);
