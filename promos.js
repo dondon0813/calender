@@ -63,6 +63,28 @@ function pmDateInput(value) {
   return inp;
 }
 
+// 小標籤輸入（常用下拉＋可自己打字；選填，最多 6 字）。label 與 input 一起回傳給呼叫端放進 row
+const PM_TAG_PRESETS = ['早鳥禮', '雙11加碼', '週年慶'];
+function pmTagInput(value, disabled) {
+  let dl = document.getElementById('pmTagPresets');
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = 'pmTagPresets';
+    PM_TAG_PRESETS.forEach(v => { const o = document.createElement('option'); o.value = v; dl.appendChild(o); });
+    document.body.appendChild(dl);
+  }
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = 'promo-date';
+  inp.style.width = '120px';
+  inp.setAttribute('list', 'pmTagPresets');
+  inp.maxLength = 6;
+  inp.placeholder = '選填';
+  inp.value = value || '';
+  inp.disabled = !!disabled;
+  return inp;
+}
+
 function pmTextarea(rows, placeholder, value) {
   const ta = document.createElement('textarea');
   ta.rows = rows;
@@ -162,6 +184,7 @@ function promoMountPanel(container, opts) {
     eventId: opts.eventId,
     promos: opts.promos || [],
     tableReady: opts.tableReady !== false,
+    tagReady: opts.tagReady !== false,
     getEndDate: opts.getEndDate || (() => ''),
     withLong: !!opts.withLong,
     editingId: null,
@@ -224,6 +247,7 @@ async function promoReload(container) {
     if (container._pm !== state) return; // 視窗已換成別的事件
     state.promos = res.promos || [];
     state.tableReady = res.tableReady !== false;
+    state.tagReady = res.tagReady !== false;
     state.loaded = true;
     pmApplyReady(state);
     pmRenderList(container);
@@ -247,6 +271,9 @@ function pmBuildWeeklyForm(state) {
   row.appendChild(from);
   row.appendChild(pmEl('span', 'promo-form-label', '到'));
   row.appendChild(to);
+  row.appendChild(pmEl('span', 'promo-form-label', '小標籤'));
+  const tagInp = pmTagInput('', !state.tagReady);
+  row.appendChild(tagInp);
   const btn = pmBtn('新增這週', 'plus', 'promo-add-btn');
   row.appendChild(btn);
   box.appendChild(row);
@@ -265,9 +292,11 @@ function pmBuildWeeklyForm(state) {
     try {
       const res = await promoApi('promo-upsert', {
         eventId: state.eventId, kind: 'weekly', text,
-        promoFrom: from.value || null, promoTo: to.value || null
+        promoFrom: from.value || null, promoTo: to.value || null,
+        ...(state.tagReady ? { tag: tagInp.value.trim() } : {})
       });
       ta.value = '';
+      tagInp.value = '';
       await pmAfterChange(state, '已新增本週優惠（還沒通知粉絲，要通知請按該筆的「確認並通知」）');
       if (res.warning) alert('注意：' + res.warning);
     } catch (err) {
@@ -285,6 +314,9 @@ function pmBuildLongForm(state) {
   const ta = pmTextarea(2, '例如：滿 1000 免運（整團期間都有效，不帶日期）');
   box.appendChild(ta);
   const row = pmEl('div', 'promo-form-row');
+  row.appendChild(pmEl('span', 'promo-form-label', '小標籤'));
+  const tagInp = pmTagInput('', !state.tagReady);
+  row.appendChild(tagInp);
   const btn = pmBtn('新增', 'plus', 'promo-add-btn');
   row.appendChild(btn);
   box.appendChild(row);
@@ -296,8 +328,9 @@ function pmBuildLongForm(state) {
     btn.disabled = true;
     pmSetStatus(state, '新增中…');
     try {
-      const res = await promoApi('promo-upsert', { eventId: state.eventId, kind: 'long', text });
+      const res = await promoApi('promo-upsert', { eventId: state.eventId, kind: 'long', text, ...(state.tagReady ? { tag: tagInp.value.trim() } : {}) });
       ta.value = '';
+      tagInp.value = '';
       await pmAfterChange(state, '已新增整團優惠');
       if (res.warning) alert('注意：' + res.warning);
     } catch (err) {
@@ -334,6 +367,7 @@ function pmBuildRow(state, p) {
 
   const main = pmEl('div', 'promo-row-main');
   main.appendChild(pmEl('span', 'promo-when promo-when-' + (p.kind === 'long' ? 'long' : 'weekly'), pmWhenText(p)));
+  if (p.tag) main.appendChild(pmEl('span', 'promo-state promo-state-showing', p.tag));
   main.appendChild(pmEl('span', 'promo-text', p.text || ''));
   // 優惠日超過結團日（後端 beyondEnd）：前台永遠不會顯示，狀態改標紅字提醒
   main.appendChild(p.beyondEnd
@@ -423,6 +457,12 @@ function pmBuildEditRow(state, p) {
     row.appendChild(r2);
   }
 
+  const rTag = pmEl('div', 'promo-form-row');
+  rTag.appendChild(pmEl('span', 'promo-form-label', '小標籤'));
+  const tagInp = pmTagInput(p.tag, !state.tagReady);
+  rTag.appendChild(tagInp);
+  row.appendChild(rTag);
+
   const actions = pmEl('div', 'promo-row-actions');
   const saveBtn = pmBtn('儲存', 'check');
   const cancelBtn = pmBtn('取消', 'close');
@@ -448,7 +488,8 @@ function pmBuildEditRow(state, p) {
         showFrom: showFrom ? (showFrom.value || null) : (p.showFrom || null),
         promoFrom: from ? (from.value || null) : (p.promoFrom || null),
         promoTo: to ? (to.value || null) : (p.promoTo || null),
-        sort: p.sort
+        sort: p.sort,
+        ...(state.tagReady ? { tag: tagInp.value.trim() } : {})
       });
       state.editingId = null;
       await pmAfterChange(state, '已儲存修改（已發出的通知內容不會跟著變）');
@@ -482,6 +523,7 @@ function promoMountEventPanel(ev, isNew) {
 }
 
 // ---- 優惠總覽分頁 ----
+let PROMOS_TAG_READY = true;
 async function loadPromosView(force) {
   const area = document.getElementById('promosListArea');
   if (!area) return;
@@ -493,6 +535,7 @@ async function loadPromosView(force) {
     const res = await promoApi('promo-overview');
     if (notReady) notReady.style.display = res.tableReady === false ? 'block' : 'none';
     PROMOS_LOADED = true;
+    PROMOS_TAG_READY = res.tagReady !== false;
     renderPromosOverview(res.teams || [], res.tableReady !== false);
   } catch (err) {
     area.textContent = '';
@@ -555,6 +598,7 @@ function pmBuildTeamCard(team, tableReady) {
     eventId: team.eventLegacyId,
     promos: team.promos || [],
     tableReady,
+    tagReady: PROMOS_TAG_READY,
     withLong: false,
     getEndDate: () => team.displayEnd || team.endDate || ''
   });
