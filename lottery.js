@@ -196,7 +196,7 @@ function lotWinnerVendorShip(w, draw) { return lotIsVendorShip(draw) && !lotWinn
 function lotWinnerStatusMatch(w, draw, s) {
   s = s || LOTTERY_FILTER.status;
   if (s === 'handed_to_vendor') {
-    if (!(w.status === 'info_ready' && w.vendorHandedAt)) return false;
+    if (!(w.status === 'info_ready' && w.vendorHandedAt && lotWinnerVendorShip(w, draw))) return false; // 現金／免單算團主寄，不列廠商寄送中
   } else if (s === 'info_ready') {
     if (w.status !== 'info_ready') return false;
   } else {
@@ -4252,7 +4252,7 @@ function lotBindAnnounceEvents(box) {
 
 // =====================================================================
 // 寄出分頁＝打包寄出＋寄出紀錄（2026-10-11，docs/16 §10.6；版面與互動完全比照上面的打包公告）
-// 待寄出：status=info_ready、團主寄（shipBy!=='vendor'）、非結案；勾選只動記憶體。
+// 待寄出：status=info_ready、團主寄（lotWinnerVendorShip=false：團主寄場次，或廠商寄場次裡的現金／免單）、非結案；勾選只動記憶體。
 // 「打包寄出」開視窗填寄出日期／貨運／寄件編號 → lottery-ship-batch-create。寄出紀錄＝一包一張，可移出、取消。
 // 2026-10-14 雪莉改兩段式：「打包」先把勾的人包成一包（打包中、還沒寄出），包內列出收件人／電話／地址可複製，
 // 包貨寄件後在包上按「寄出」才填寄出日期／貨運／寄件編號（lottery-ship-batch-ship）。
