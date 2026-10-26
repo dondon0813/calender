@@ -1038,7 +1038,7 @@ function lotWinnersRows(draws) {
       let copy = '';
       if (pt === 'cash') {
         const bank = [w.bankName, w.bankCode, w.bankBranch].filter(Boolean).join(' ');
-        contact = [bank, w.bankAccount ? '帳號 ' + lotMaskAccount(w.bankAccount) : '', (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join('　');
+        contact = [bank, w.bankAccount ? '帳號 ' + lotMaskAccount(w.bankAccount) : '', lotCashAmountText(w, d)].filter(Boolean).join('　');
         // 歷史匯入的現金得獎人常把銀行資料整串放在地址／電話欄：銀行欄位都空就退回顯示那些文字
         if (!contact) contact = [w.phone, w.address].filter(v => v && v !== '-').join('　').replace(/\s+/g, ' ');
         // 複製鈕只複製帳號（純數字，貼到網銀直接能用；雪莉 10-26）；沒帳號欄（歷史整串資料）才複製整段
@@ -1064,6 +1064,14 @@ function lotAccountCopy(acc) {
   if (!raw || /^[-－—]+$/.test(raw)) return '';
   const digits = raw.replace(/\D/g, '');
   return digits || raw;
+}
+// 現金獎金額：得獎人自己的 → 這場抽獎設定的 → 免單＝對到的訂單金額（客人自填資料不會帶金額，雪莉 10-26）
+function lotCashAmountText(w, draw) {
+  const has = (x) => x || x === 0;
+  if (has(w && w.cashAmount)) return '$' + w.cashAmount;
+  if (has(draw && draw.cashAmount)) return '$' + draw.cashAmount;
+  if (w && /免單/.test(String(w.prize || '')) && w.order && Number(w.order.amount) > 0) return '$' + Math.round(Number(w.order.amount)).toLocaleString('en-US') + '（訂單金額）';
+  return '';
 }
 function lotBriefCol(rows, field) {
   if (!rows.length) return field === 'who' ? '<span class="lot-empty-cell">尚未抽出</span>' : '';
@@ -2179,7 +2187,7 @@ function lotCardSummaryHtml(draws) {
         const bank = [w.bankName, w.bankCode, w.bankBranch].filter(Boolean).join(' ');
         if (bank) info.push(bank);
         if (w.bankAccount) info.push('帳號 ' + lotMaskAccount(w.bankAccount));
-        if (w.cashAmount || w.cashAmount === 0) info.push('$' + w.cashAmount);
+        { const amt = lotCashAmountText(w, d); if (amt) info.push(amt); }
       } else if (pt === 'virtual') {
         if (w.email) info.push(w.email);
       } else {
@@ -2306,7 +2314,7 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
     if (w.accountName) subParts.push(sub('戶名', lotEscapeHtml(w.accountName)));
     if (bankLine) subParts.push(sub('銀行', lotEscapeHtml(bankLine)));
     if (w.bankAccount) subParts.push(sub('帳號', maskCell(w.bankAccount, lotMaskAccount(w.bankAccount))));
-    if (w.cashAmount || w.cashAmount === 0) subParts.push(sub('金額', lotEscapeHtml(w.cashAmount)));
+    { const amt = lotCashAmountText(w, (LOTTERY_DRAWS || []).find(x => x.id === drawId)); if (amt) subParts.push(sub('金額', lotEscapeHtml(amt))); }
     if (w.shippedAt) subParts.push(sub('匯款日', lotEscapeHtml(w.shippedAt)));
     if (!subParts.length) { // 歷史匯入：銀行資料整串在地址／電話欄
       const legacy = [w.phone, w.address].filter(v => v && v !== '-').join('　');
@@ -4285,7 +4293,7 @@ function lotShipContact(w, draw) {
   let copy = '';
   if (t === 'cash') {
     addr = [[v(w.bankName), v(w.bankCode), v(w.bankBranch)].filter(Boolean).join(' '), v(w.bankAccount) ? '帳號 ' + v(w.bankAccount) : '',
-      (w.cashAmount || w.cashAmount === 0) ? '$' + w.cashAmount : ''].filter(Boolean).join(' ');
+      lotCashAmountText(w, draw)].filter(Boolean).join(' ');
     if (!addr) addr = v(w.address);
     copy = lotAccountCopy(w.bankAccount); // 現金：複製鈕只複製帳號（雪莉 10-26）
   } else if (t === 'virtual') addr = v(w.email);
