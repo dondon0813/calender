@@ -268,7 +268,7 @@
       row.className = 'ogbgc-promo-item';
       const text = document.createElement('div');
       text.className = 'ogbgc-promo-text';
-      text.textContent = '本週優惠尚未公布，訂閱就會通知你';
+      text.textContent = '優惠尚未公布，訂閱就會通知你';
       row.appendChild(text);
       gc.promoList.appendChild(row);
       gc.promo.classList.add('show');

@@ -326,7 +326,7 @@
       }
       var label = document.createElement('div');
       label.className = 'ddpn-label';
-      label.textContent = '本週優惠';
+      label.textContent = '限時優惠';
       item.appendChild(label);
       var body = document.createElement('div');
       body.className = 'ddpn-body';

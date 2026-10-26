@@ -1,5 +1,5 @@
 // ===================================================================
-// promos.js — 團購優惠（本週優惠／整團優惠）後台：事件視窗「優惠」區 ＋ 「優惠總覽」分頁
+// promos.js — 團購優惠（限時優惠／整團優惠）後台：事件視窗「優惠」區 ＋ 「優惠總覽」分頁
 // 設計正本：dondon-platform docs/15-event-promos-design.md（§0 定案、§1 名詞、§4 後台）
 //
 // 載入順序鐵律：本檔必須排在 admin.html 裡的 admin.js「之前」（同 changelog.js）。
@@ -8,7 +8,7 @@
 // 本檔最外層只有「宣告」與「DOM 事件掛載」；執行期才會用到 admin.js 的 postTask／hasEditPerm。
 //
 // 事件視窗與總覽頁共用同一組函式：promoMountPanel(container, opts) 負責
-// 「快速新增（本週／整團）＋ 優惠清單（通知／編輯／刪除）」，admin.js 的事件視窗呼叫
+// 「快速新增（限時／整團）＋ 優惠清單（通知／編輯／刪除）」，admin.js 的事件視窗呼叫
 // promoMountEventPanel；總覽頁每張團卡呼叫 promoMountPanel。優惠筆的存取獨立（promo-* API），
 // 不進 event-update 的 payload。使用者文字一律 textContent／textNode，不進 innerHTML。
 // ===================================================================
@@ -260,8 +260,8 @@ async function promoReload(container) {
 
 function pmBuildWeeklyForm(state) {
   const box = pmEl('div', 'promo-form');
-  box.appendChild(pmEl('div', 'promo-form-title', '本週優惠'));
-  const ta = pmTextarea(2, '例如：本週六日奶酥買一送一（一行一段，前台保留換行）');
+  box.appendChild(pmEl('div', 'promo-form-title', '限時優惠'));
+  const ta = pmTextarea(2, '例如：六日奶酥買一送一／開團前兩天滿千折百（一行一段，前台保留換行）');
   box.appendChild(ta);
   const row = pmEl('div', 'promo-form-row');
   row.appendChild(pmEl('span', 'promo-form-label', '優惠日'));
@@ -274,7 +274,7 @@ function pmBuildWeeklyForm(state) {
   row.appendChild(pmEl('span', 'promo-form-label', '小標籤'));
   const tagInp = pmTagInput('', !state.tagReady);
   row.appendChild(tagInp);
-  const btn = pmBtn('新增這週', 'plus', 'promo-add-btn');
+  const btn = pmBtn('新增限時優惠', 'plus', 'promo-add-btn');
   row.appendChild(btn);
   box.appendChild(row);
   box.appendChild(pmEl('div', 'promo-form-hint', '打上去就開始顯示（預告優惠日有優惠），顯示到優惠日最後一天。'));
@@ -282,10 +282,10 @@ function pmBuildWeeklyForm(state) {
 
   btn.addEventListener('click', async () => {
     const text = ta.value.trim();
-    if (!text) { pmSetStatus(state, '請先輸入本週優惠的內容', true); return; }
+    if (!text) { pmSetStatus(state, '請先輸入限時優惠的內容', true); return; }
     if (from.value && to.value && from.value > to.value) { pmSetStatus(state, '優惠日的起日不能晚於迄日', true); return; }
     if (from.value && state.promos.some(p => p.kind === 'weekly' && p.promoFrom === from.value)) {
-      if (!confirm('這週已有一筆，要另外再加一筆嗎？')) return;
+      if (!confirm('同一天起已有一筆限時優惠，要另外再加一筆嗎？')) return;
     }
     btn.disabled = true;
     pmSetStatus(state, '新增中…');
@@ -297,7 +297,7 @@ function pmBuildWeeklyForm(state) {
       });
       ta.value = '';
       tagInp.value = '';
-      await pmAfterChange(state, '已新增本週優惠（還沒通知粉絲，要通知請按該筆的「確認並通知」）');
+      await pmAfterChange(state, '已新增限時優惠（還沒通知粉絲，要通知請按該筆的「確認並通知」）');
       if (res.warning) alert('注意：' + res.warning);
     } catch (err) {
       pmSetStatus(state, err.message || '新增失敗', true);

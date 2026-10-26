@@ -6051,7 +6051,7 @@
     <div id="promosNotReady" style="display:none; background:#F4ECE3; border:1px solid #F0DBA0; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px;">
       <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5"/><path d="M12 17.3h.01" stroke-width="2.6"/></svg> 優惠資料表還沒建立，要先執行一次 db push 才能新增。
     </div>
-    <div style="font-size:13px; color:#7D6A5F; margin-bottom:10px;">列出開團中與即將開團的團購。每一團可直接在卡片上新增「本週優惠」（優惠日預設本週六日），打上去就開始顯示；要通知粉絲請按該筆的「確認並通知」。</div>
+    <div style="font-size:13px; color:#7D6A5F; margin-bottom:10px;">列出開團中與即將開團的團購。每一團可直接在卡片上新增「限時優惠」（優惠日預設本週六日），打上去就開始顯示；要通知粉絲請按該筆的「確認並通知」。</div>
     <div id="promosListArea"><div class="task-empty">讀取中…</div></div>
   </div><!-- /viewPromos -->
 
@@ -7609,7 +7609,7 @@
         <label for="evEarlyBirdInput">早鳥禮（可不填，一行一個項目）</label>
         <textarea id="evEarlyBirdInput" rows="3" placeholder="例如：&#10;前10名送小禮&#10;滿千贈馬克杯"></textarea>
 
-        <label>優惠（本週優惠／整團優惠；優惠開團後才顯示，早鳥禮開團前後都顯示）</label>
+        <label>優惠（限時優惠／整團優惠；優惠開團後才顯示，早鳥禮開團前後都顯示）</label>
         <div id="evPromoBox"></div>
 
         <label for="evUrlInput">團購網址（可不填）</label>
@@ -8104,7 +8104,7 @@
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=5"></script>
 <!-- promos.js（團購優惠：事件視窗優惠區＋優惠總覽分頁）同樣必須排在 admin.js 之前（開機還原分頁停在 promos 會同步呼叫 loadPromosView） -->
-<script src="promos.js?v=4"></script>
+<script src="promos.js?v=5"></script>
 <script src="announce.js?v=3"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=24"></script>
