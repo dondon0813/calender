@@ -533,8 +533,11 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 .cal-cell.xmas-cell .daynum { color: #B85A62; z-index: 1; }
 .cal-cell.xmas-cell .chip { background: transparent; border-color: transparent; color: #A63A42; }
 .cal-cell.xmas-cell .chip .chip-snowbox { display: none; }
-.chip.xmas { background: #FFF3F1; border-color: transparent; color: #A63A42; position: relative; }
-.chip.xmas .chip-snowbox { display: none; }
+.cal-cell.xmas-mixed .daynum { color: #B85A62; z-index: 1; }
+/* 燈串框從格子頂端（7px）圍到這團下緣，團本身從日期下方才開始，所以團名要往上移半個日期列高度才會在框正中間 */
+.cal-cell.xmas-mixed .chip.xmas { background: transparent; border-color: transparent; color: #A63A42;
+  position: relative; top: calc((8px - var(--p-day-pad)) / 2); margin-bottom: 8px; }
+.cal-cell.xmas-mixed .chip.xmas .chip-snowbox { display: none; }
 .xmas-lights { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .xmas-lights img { position: absolute; left: 0; top: 0; display: block; max-width: none; }
 /* 字型補正：Baloo 2／Huninn 的字框下緣有一大塊用不到的空間（每 100px：字框上108/下52，
@@ -1855,38 +1858,48 @@ function renderPoster() {
    用一張 <img>（SVG）疊在底層，外層 overflow:hidden 切齊圓角；不用 background-image（html2canvas 畫不對）。
    左上角讓出日期數字的位置，燈不會壓到日期。 */
 const XMAS_LIGHT_COLORS = ['#E05A63', '#E2B65A', '#6E9A6A', '#5F97DB'];
-function xmasLightsSvg(w, h, skipX, skipY) {
-  const inset = 7, step = 20, r = 3.6;
+// w,h＝格子大小；ringB＝燈串框下緣（整格＝h-7；同格並排＝圍到聖誕團下緣）；fill＝框內底色（並排時用，整格的底色在 CSS）
+function xmasLightsSvg(w, h, skipX, skipY, ringB, fill) {
+  const inset = 7, step = 20, r = 3.6, R = 9;
+  const L = inset, T = inset, Rx = w - inset, B = ringB;
   let i = 0, dots = '';
   const dot = (x, y) => { dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${XMAS_LIGHT_COLORS[i++ % 4]}"/>`; };
-  for (let x = 16; x <= w - 16; x += step) { if (x > skipX) dot(x, inset); dot(x, h - inset); }
-  for (let y = 16 + step; y <= h - 16 - step / 2; y += step) { if (y > skipY) dot(inset, y); dot(w - inset, y); }
-  // 電線：圓角框，但左上角（日期那段）留空不畫
-  const R = 9, L = inset, T = inset, Rx = w - inset, B = h - inset;
+  for (let x = 16; x <= w - 16; x += step) { if (x > skipX) dot(x, T); dot(x, B); }
+  for (let y = T + step; y <= B - step / 2; y += step) { if (y > skipY) dot(L, y); dot(Rx, y); }
+  // 電線：圓角框，左上角（日期那段）留空不畫
   const x0 = Math.max(skipX, L + R), y0 = Math.max(skipY, T + R);
-  const wire = skipX ? `M${x0} ${T}H${Rx - R}A${R} ${R} 0 0 1 ${Rx} ${T + R}V${B - R}A${R} ${R} 0 0 1 ${Rx - R} ${B}H${L + R}A${R} ${R} 0 0 1 ${L} ${B - R}V${y0}`
-                     : `M${L + R} ${T}H${Rx - R}A${R} ${R} 0 0 1 ${Rx} ${T + R}V${B - R}A${R} ${R} 0 0 1 ${Rx - R} ${B}H${L + R}A${R} ${R} 0 0 1 ${L} ${B - R}V${T + R}A${R} ${R} 0 0 1 ${L + R} ${T}Z`;
+  const wire = `M${x0} ${T}H${Rx - R}A${R} ${R} 0 0 1 ${Rx} ${T + R}V${B - R}A${R} ${R} 0 0 1 ${Rx - R} ${B}H${L + R}A${R} ${R} 0 0 1 ${L} ${B - R}V${y0}`;
+  const bg = fill ? `<rect x="${L}" y="${T}" width="${Rx - L}" height="${B - T}" rx="${R}" fill="${fill}"/>` : '';
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
-    `<path d="${wire}" fill="none" stroke="#7A8A6A" stroke-opacity=".6" stroke-width="1.4"/>${dots}</svg>`);
+    `${bg}<path d="${wire}" fill="none" stroke="#7A8A6A" stroke-opacity=".6" stroke-width="1.4"/>${dots}</svg>`);
 }
+/* 兩種情況（雪莉 2026-10-29 定）：
+   ・整格都是聖誕團（.xmas-cell）：燈串繞整格，從日期數字旁邊開始。
+   ・聖誕團跟一般團同格（.xmas-mixed）：聖誕團排上面，燈串一樣從日期旁邊開始、只圍到聖誕團下緣，
+     框內淡紅底；團名往上移到燈串框正中間（CSS .xmas-mixed .chip.xmas 的 top）。 */
 function drawXmasLights() {
-  const targets = Array.prototype.slice.call(document.querySelectorAll('#poster .cal-cell.xmas-cell'))
-    .concat(Array.prototype.slice.call(document.querySelectorAll('#poster .cal-cell:not(.xmas-cell) .chip.xmas')));
-  targets.forEach(el => {
-    const w = el.clientWidth, h = el.clientHeight;
+  document.querySelectorAll('#poster .cal-cell.xmas-cell, #poster .cal-cell.xmas-mixed').forEach(cell => {
+    const w = cell.clientWidth, h = cell.clientHeight;
     if (w < 30 || h < 30) return;
-    const n = el.classList.contains('cal-cell') ? el.querySelector('.daynum') : null;
+    const n = cell.querySelector('.daynum');
     const skipX = n ? n.offsetLeft + n.offsetWidth + 6 : 0;
     const skipY = n ? n.offsetTop + n.offsetHeight + 6 : 0;
+    let ringB = h - 7, fill = '';
+    if (cell.classList.contains('xmas-mixed')) {
+      const firstPlain = cell.querySelector('.chip:not(.xmas)');
+      if (!firstPlain) return;
+      ringB = firstPlain.offsetTop - 10;  // 燈泡半徑 3.6＋留白：燈串框下緣跟下面那團之間要有空隙，不能貼住
+      fill = '#FFF3F1';
+    }
     const box = document.createElement('span');
     box.className = 'xmas-lights';
     const img = document.createElement('img');
     img.alt = '';
-    img.src = xmasLightsSvg(w, h, skipX, skipY);
+    img.src = xmasLightsSvg(w, h, skipX, skipY, ringB, fill);
     img.style.width = w + 'px'; img.style.height = h + 'px';
     box.appendChild(img);
-    el.prepend(box);   // 放最前面：日期、團名畫在燈串上面
+    cell.prepend(box);   // 放最前面：日期、團名畫在燈串上面
   });
 }
 
@@ -2199,9 +2212,15 @@ function buildCalendar() {
       // 一格幾團會決定字級（分兩格時字要小一點才塞得下）
       if (cell) cell.events.forEach(group => el.appendChild(buildChip(group, cell.events.length)));
       else if (outEvents) outEvents.forEach(group => el.appendChild(buildChip(group, outEvents.length)));
-      // 這格的團全都是聖誕團 → 整格換底＋燈串；跟一般團同格時只有那一團的框套用（.chip.xmas）
-      const chipsHere = el.querySelectorAll('.chip');
-      if (chipsHere.length && Array.prototype.every.call(chipsHere, c => c.classList.contains('xmas'))) el.classList.add('xmas-cell');
+      // 這格的團全都是聖誕團 → 整格換底＋燈串（.xmas-cell）；
+      // 跟一般團同格 → 聖誕團移到上面、燈串只圍住它（.xmas-mixed，見 drawXmasLights）
+      const chipsHere = Array.prototype.slice.call(el.querySelectorAll('.chip'));
+      const xmasHere = chipsHere.filter(c => c.classList.contains('xmas'));
+      if (xmasHere.length && xmasHere.length === chipsHere.length) el.classList.add('xmas-cell');
+      else if (xmasHere.length) {
+        el.classList.add('xmas-mixed');
+        xmasHere.slice().reverse().forEach(c => el.insertBefore(c, el.querySelector('.chip')));
+      }
       grid.appendChild(el);
     }
   });
