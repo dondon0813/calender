@@ -27,6 +27,7 @@ let LOTTERY_LOAD_PROMISE = null;   // 同時觸發（帳務明細小標預抓＋
 let LOTTERY_TABLE_READY = true;
 let LOTTERY_ACCT_READY = true;     // §11.2 三個新欄位（acct_id/section/no_lottery）還沒 push 時 false
 let LOTTERY_PRIZE_READY = true;
+let LOTTERY_SHIP_METHOD_READY = true; // migration 20261029120000（收件方式：宅配／全家店到店）
 let LOTTERY_WINNER_TYPE_READY = true; // migration 20260925130000（得獎人自訂類型）    // 2026-09-23 獎品類型欄位（prize_type/prize/cash_amount 等）還沒 push 時 false
 let LOTTERY_TODAY = '';
 let LOTTERY_ACCT_TEAMS = [];       // 全部帳務根列（continuation_of 為空），legacyId 升冪
@@ -158,6 +159,11 @@ const LOT_PRIZE_TYPE_LABEL = { cash: '現金／免單', physical: '實體贈品'
 // 狀態文字依獎品類型變化：info_ready／done 這兩格在三種類型底下說法不同（待匯款/待寄出/待發送、已匯款/已完成/已發送），
 // 其餘狀態（待聯絡／待回填資料／廠商寄送中／已重抽）三種類型共用同一套文字，直接查 LOT_STATUS_LABEL。
 // 得獎人的有效獎品類型（2026-09-25）：自己有設就用自己的，沒設跟活動；同一場可混現金與實體（雪莉抓到的 bug）
+// 2026-10-29 全家店到店：門市取代地址。回「全家 XX店（店號 123456）」；宅配回 ''
+function lotFamiText(w) {
+  if (!w || w.shipMethod !== 'fami') return '';
+  return ['全家', w.storeName || '', w.storeId ? '（店號 ' + w.storeId + '）' : ''].join(' ').replace(/\s+/g, ' ').replace(' （', '（').trim();
+}
 function lotWinnerType(w, drawOrType) {
   const base = (drawOrType && typeof drawOrType === 'object') ? (drawOrType.prizeType || 'physical') : (drawOrType || 'physical');
   return (w && w.prizeType) || base;
@@ -541,6 +547,7 @@ function loadLotteryView(forceReload) {
     LOTTERY_TABLE_READY = data.tableReady !== false;
     LOTTERY_ACCT_READY = data.acctReady !== false;
     LOTTERY_PRIZE_READY = data.prizeReady !== false;
+    LOTTERY_SHIP_METHOD_READY = data.shipMethodReady !== false;
     LOTTERY_WINNER_TYPE_READY = data.winnerTypeReady !== false; // 得獎人自訂類型欄位（migration 20260925130000）
     LOTTERY_ORDERS_READY = data.ordersReady === true; // 訂單編號對照（舊後端沒這個 key＝不顯示核對結果）
     LOTTERY_TODAY = data.today || lotToday();
@@ -1047,9 +1054,10 @@ function lotWinnersRows(draws) {
         contact = w.email || '';
         copy = contact;
       } else {
-        contact = [v(w.phone), [v(w.zip), v(w.address)].filter(Boolean).join(' ')].filter(Boolean).join('　');
-        // 複製鈕只複製地址（含郵遞區號），不含電話（雪莉 09-29：只要地址就好）
-        copy = [v(w.zip), v(w.address)].filter(Boolean).join(' ');
+        const fami = lotFamiText(w);
+        contact = [v(w.phone), fami || [v(w.zip), v(w.address)].filter(Boolean).join(' ')].filter(Boolean).join('　');
+        // 複製鈕只複製地址（含郵遞區號），不含電話（雪莉 09-29：只要地址就好）；全家＝複製門市
+        copy = fami || [v(w.zip), v(w.address)].filter(Boolean).join(' ');
       }
       // 姓名／暱稱都還沒有時，退回訂單上的姓名或訂單編號（抽出來只先填了訂單編號的階段）
       const who = v(w.name) || v(w.winnerHandle) || v(w.order && w.order.customerName) || (v(w.orderNo) ? '訂單 ' + v(w.orderNo) : '') || '（未填）';
@@ -2192,7 +2200,8 @@ function lotCardSummaryHtml(draws) {
         if (w.email) info.push(w.email);
       } else {
         if (w.phone) info.push(w.phone);
-        if (w.zip || w.address) info.push([w.zip, w.address].filter(Boolean).join(' '));
+        if (lotFamiText(w)) info.push(lotFamiText(w));
+        else if (w.zip || w.address) info.push([w.zip, w.address].filter(Boolean).join(' '));
       }
       rows.push('<div class="lot-sum-row' + (w.status === 'done' ? ' lot-sum-done' : '') + '">' +
         '<span class="lot-sum-prize">' + lotEscapeHtml(w.prize || '') + '</span>' +
@@ -2327,6 +2336,7 @@ function lotWinnerRowHtml(drawId, w, prizeType, drawPrizeType) {
     emptyMsg = '尚未填寫 email';
   } else {
     if (w.phone) subParts.push(sub('電話', lotEscapeHtml(w.phone))); // 不遮罩（雪莉 09-25）
+    if (w.shipMethod === 'fami') subParts.push(sub('全家店到店', lotEscapeHtml(lotFamiText(w).replace(/^全家 ?/, ''))));
     if (w.zip) subParts.push(sub('郵遞區號', lotEscapeHtml(w.zip)));
     if (w.address) subParts.push(sub('地址', lotEscapeHtml(w.address))); // 不遮罩（雪莉 09-25）
     if (w.shippedAt) subParts.push(sub('寄出日', lotEscapeHtml(w.shippedAt)));
@@ -3556,6 +3566,10 @@ function openLotteryWinnerModal(drawId, winner) {
   v('lotWinnerPhoneInput', winner ? winner.phone : '');
   v('lotWinnerAddressInput', winner ? winner.address : '');
   v('lotWinnerZipInput', winner ? winner.zip : '');
+  v('lotWinnerShipMethodSel', winner && winner.shipMethod === 'fami' ? 'fami' : '');
+  v('lotWinnerStoreNameInput', winner ? winner.storeName : '');
+  v('lotWinnerStoreIdInput', winner ? winner.storeId : '');
+  lotWinnerShipMethodSync();
   v('lotWinnerOrderNoInput', winner ? winner.orderNo : '');
   v('lotWinnerShippingFeeInput', winner ? winner.shippingFee : '');
   v('lotWinnerShippedAtInput', winner ? winner.shippedAt : '');
@@ -3751,6 +3765,13 @@ document.getElementById('lotWinnerSaveBtn').addEventListener('click', async () =
     payload.phone = document.getElementById('lotWinnerPhoneInput').value.trim();
     payload.address = document.getElementById('lotWinnerAddressInput').value.trim();
     payload.zip = document.getElementById('lotWinnerZipInput').value.trim();
+    if (LOTTERY_SHIP_METHOD_READY) { // 欄位未 push 時不送（舊行為）
+      const fami = document.getElementById('lotWinnerShipMethodSel').value === 'fami';
+      payload.shipMethod = fami ? 'fami' : '';
+      payload.storeName = fami ? document.getElementById('lotWinnerStoreNameInput').value.trim() : '';
+      payload.storeId = fami ? document.getElementById('lotWinnerStoreIdInput').value.trim() : '';
+      if (fami) { payload.address = ''; payload.zip = ''; }
+    }
     payload.shippingFee = document.getElementById('lotWinnerShippingFeeInput').value.trim();
   }
   if (LOTTERY_WINNER_EDIT.winnerId) payload.id = LOTTERY_WINNER_EDIT.winnerId;
@@ -4297,7 +4318,7 @@ function lotShipContact(w, draw) {
     if (!addr) addr = v(w.address);
     copy = lotAccountCopy(w.bankAccount); // 現金：複製鈕只複製帳號（雪莉 10-26）
   } else if (t === 'virtual') addr = v(w.email);
-  else addr = [v(w.zip), v(w.address)].filter(Boolean).join(' ');
+  else addr = lotFamiText(w) || [v(w.zip), v(w.address)].filter(Boolean).join(' ');
   return { name, phone, addr, copy: copy || addr, type: t };
 }
 // 寄出視窗顯示收件人姓名（雪莉 10-14：要姓名不是暱稱）；沒填姓名才退回暱稱
@@ -4674,4 +4695,14 @@ function lotBindShipEvents(box) {
       shipCall('lottery-ship-batch-delete', { batchId: b.id }, '取消失敗');
     });
   });
+}
+
+// 2026-10-29 得獎人視窗收件方式切換：全家＝顯示門市欄、藏地址／郵遞區號
+function lotWinnerShipMethodSync() {
+  const sel = document.getElementById('lotWinnerShipMethodSel');
+  if (!sel) return;
+  sel.disabled = !LOTTERY_SHIP_METHOD_READY;
+  const fami = sel.value === 'fami';
+  document.getElementById('lotWinnerFamiGroup').style.display = fami ? '' : 'none';
+  document.getElementById('lotWinnerHomeGroup').style.display = fami ? 'none' : '';
 }

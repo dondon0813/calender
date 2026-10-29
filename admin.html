@@ -7431,10 +7431,23 @@
       <div id="lotWinnerPhysicalGroup">
         <label for="lotWinnerPhoneInput">電話</label>
         <input type="text" id="lotWinnerPhoneInput">
-        <label for="lotWinnerZipInput">郵遞區號</label>
-        <input type="text" id="lotWinnerZipInput">
-        <label for="lotWinnerAddressInput">地址</label>
-        <input type="text" id="lotWinnerAddressInput">
+        <label for="lotWinnerShipMethodSel">收件方式</label>
+        <select id="lotWinnerShipMethodSel" onchange="lotWinnerShipMethodSync()">
+          <option value="">宅配到府</option>
+          <option value="fami">全家店到店</option>
+        </select>
+        <div id="lotWinnerHomeGroup">
+          <label for="lotWinnerZipInput">郵遞區號</label>
+          <input type="text" id="lotWinnerZipInput">
+          <label for="lotWinnerAddressInput">地址</label>
+          <input type="text" id="lotWinnerAddressInput">
+        </div>
+        <div id="lotWinnerFamiGroup" style="display:none">
+          <label for="lotWinnerStoreNameInput">全家門市名稱</label>
+          <input type="text" id="lotWinnerStoreNameInput" placeholder="例如：信義松仁店">
+          <label for="lotWinnerStoreIdInput">店號</label>
+          <input type="text" id="lotWinnerStoreIdInput" inputmode="numeric">
+        </div>
         <label for="lotWinnerShippingFeeInput">運費</label>
         <input type="text" id="lotWinnerShippingFeeInput" placeholder="數字／免運／廠商付">
       </div>
@@ -8153,7 +8166,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=75"></script>
+<script src="lottery.js?v=76"></script>
 <script src="harvestStatus.js?v=1"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=124"></script>
