@@ -13,6 +13,8 @@
 //     （段 1a／1b 的 calEdit／calAction／editEvent 交接動作在段 1c 已原生化，v=5 移除。）
 //  7. 第 2 波（v=6）：paneLayout 多回報右欄內容區位置（right）與左欄右內距（padRight），讓新元件（行事曆、品牌廠商）也能疊在右欄上；
 //     新增 refreshData（新品牌廠商頁存檔後叫舊頁重抓資料）。
+//  8. 第 4 波第 3 段（v=7）：帳務。oldTab＝新版帳務把公司支出／文件簽署子分頁交給舊版顯示（白名單 view=accounting、tab 限舊帳務子分頁代號，呼叫舊 acctSwitchTab）；
+//     舊 acctSwitchTab 被呼叫就回報 oldTabChanged（外框據此決定交接中或回新版）；lotJump＝帳務明細抽獎小標點擊，呼叫舊 lotJumpToAcctTeamCard（切到抽獎管理並捲到該團）。
 // 訊息格式與外框那端（dondon-platform lib/admin/protocol.ts）一起改；一律帶 src／v，並驗 origin 與來源視窗。
 (function () {
   'use strict';
@@ -225,7 +227,22 @@
   }
 
   // ---------- 2. 開機與收訊息 ----------
+  // 8. 帳務子分頁切換回報：包住舊 acctSwitchTab（accounting.js 的全域函式；內部呼叫也走全域名稱，所以包了一律回報）
+  function admEmbWrapAcctTab() {
+    if (typeof window.acctSwitchTab !== 'function' || window.acctSwitchTab.__admEmb) return;
+    var orig = window.acctSwitchTab;
+    var wrapped = function (tab) {
+      var r = orig.apply(this, arguments);
+      post({ type: 'oldTabChanged', view: 'accounting', tab: String(tab) });
+      return r;
+    };
+    wrapped.__admEmb = true;
+    window.acctSwitchTab = wrapped;
+  }
+  var ACCT_TABS = ['list', 'trend', 'rank', 'print', 'recon', 'expenses', 'signdocs'];
+
   document.addEventListener('DOMContentLoaded', function () {
+    admEmbWrapAcctTab();
     admEmbWatch();
     if (localStorage.getItem('admin_unlocked') !== '1') post({ type: 'needLogin' }); // 沒登入過：外框直接回登入畫面
     var want = params.get('view');
@@ -253,6 +270,10 @@
         admEmbSetWide(d.wide);
       } else if (d.type === 'lotAction') {
         admEmbLotAction(d);
+      } else if (d.type === 'oldTab') {
+        if (d.view === 'accounting' && ACCT_TABS.indexOf(d.tab) !== -1 && typeof window.acctSwitchTab === 'function') window.acctSwitchTab(d.tab);
+      } else if (d.type === 'lotJump') {
+        if (typeof d.legacyId === 'string' && d.legacyId && typeof lotJumpToAcctTeamCard === 'function') lotJumpToAcctTeamCard(d.legacyId);
       } else if (d.type === 'refreshData') {
         // 第 2 波：新品牌廠商頁改了資料，舊頁其他分頁讀的品牌／廠商資料要重抓（同舊 brandVendor.js 存檔後的 fetchMemos）
         if (typeof fetchMemos === 'function') Promise.resolve(fetchMemos()).catch(function () { /* 靜默 */ });
