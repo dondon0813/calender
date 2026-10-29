@@ -64,7 +64,7 @@ function pmDateInput(value) {
 }
 
 // 小標籤輸入（常用下拉＋可自己打字；選填，最多 6 字）。label 與 input 一起回傳給呼叫端放進 row
-const PM_TAG_PRESETS = ['早鳥禮', '雙11加碼', '週年慶'];
+const PM_TAG_PRESETS = ['早鳥禮', '雪莉加碼', '雙11加碼', '週年慶'];
 function pmTagInput(value, disabled) {
   let dl = document.getElementById('pmTagPresets');
   if (!dl) {
