@@ -1400,6 +1400,7 @@ function loadBrandCategories(force) {
       if (!out || !out.success) throw new Error((out && out.error) || '讀取失敗');
       const items = out.items || [];
       BRAND_CATS = items.map(b => ({ key: normalizeBrandKey(b.name), name: b.name, cats: Array.isArray(b.categories) ? b.categories : [],
+        short: String(b.shortName || '').trim(),   // 品牌簡稱（2026-10-29）：出圖用，見 posterName()
         // 比對名＝品牌名＋matchKeys（別名），去重
         keys: [b.name].concat(Array.isArray(b.matchKeys) ? b.matchKeys : []).map(normalizeBrandKey).filter((k, i, a) => k && a.indexOf(k) === i) })).filter(b => b.key);
       BRAND_CATS_STATE = items.some(b => b.categoriesReady === false) ? 'notready' : '';
@@ -1516,7 +1517,7 @@ async function loadData() {
     statusEl.textContent = `已同步 ${events.length} 檔團購 · ${new Date().toLocaleString('zh-TW')}`;
     await notesPromise;
     await thumbsPromise;
-    if (ACCOUNT === 'dondon') await loadBrandCategories(true); // 重新載入資料時順便重讀分類（剛在後台改過）
+    await loadBrandCategories(true); // 重新載入資料時順便重讀品牌（剛在後台改過）；分類給雪莉咚咚篩團、簡稱兩個帳號出圖都用
     renderAccountNote();
     populateMonths();
     renderAll();
@@ -1646,6 +1647,20 @@ function groupNotes(group) {
 function displayName(ev, mode) {
   return ovRead(ev.id, mode).name || ev.title;
 }
+/* 品牌簡稱（2026-10-29 雪莉：團名太長，圖上打簡稱就好）：後台品牌視窗「簡稱」欄。
+   團名對到的品牌（比對規則同 brandsInTitle）有填簡稱才用；聯名團用「｜」接（圖上會斷行），
+   其中沒填簡稱的品牌用品牌全名。一個品牌都沒填＝回空字串（照舊用團名）。
+   只給「圖上」用（posterName）；貼文文案、品牌介紹比對仍用 displayName（原團名）。 */
+function brandShortFor(ev) {
+  const hits = brandsInTitle(ev.title);
+  if (!hits.some(b => b.short)) return '';
+  return hits.map(b => b.short || b.name).join('｜');
+}
+function posterName(ev, mode) {
+  return ovRead(ev.id, mode).name || brandShortFor(ev) || ev.title;
+}
+function groupPosterNames(group, mode) { return group.map(ev => plainName(posterName(ev, mode))); }
+function groupPosterNamesTight(group, mode) { return group.map(ev => plainNameTight(posterName(ev, mode))); }
 
 /* 團名裡的「｜」＝她指定的斷行點（例：Parakito｜防蚊用品）。
    品牌名本身就含產品的（雪坊優格、韓爸米餅）不會有這個符號，維持一行。
@@ -2070,7 +2085,7 @@ function buildCalendar() {
       const back = d.getDay() === 6 ? 1 : 2;
       const moved = new Date(currentYear, currentMonth, d.getDate() - back);
       if (moved.getMonth() !== currentMonth) return;   // 挪出本月就不畫
-      movedFromWeekend.push({ name: groupNames(group, 'calendar').join('＋'), from: fmtMD(d), to: fmtMD(moved) });
+      movedFromWeekend.push({ name: groupPosterNames(group, 'calendar').join('＋'), from: fmtMD(d), to: fmtMD(moved) });
       d = moved;
       col = colOf(d.getDay(), cols);
     }
@@ -2232,7 +2247,7 @@ function buildBar(group, num, order, s0, e0) {
   bar.appendChild(d);
   const name = document.createElement('span');
   name.className = 'bar-name';
-  name.textContent = group.map(g => plainNameTight(displayName(g, 'calendar'))).join('＋');
+  name.textContent = groupPosterNamesTight(group, 'calendar').join('＋');
   bar.appendChild(name);
   const badge = group.map(g => ovRead(g.id, 'calendar').badge).find(Boolean);
   if (badge) {
@@ -2282,7 +2297,7 @@ function buildChip(group, siblings) {
   chip.style.fontSize = Math.round(base * S.fs) + 'px';
 
   group.forEach(ev => {
-    nameLines(displayName(ev, 'calendar')).forEach(t => {
+    nameLines(posterName(ev, 'calendar')).forEach(t => {
       const name = document.createElement('span');
       name.className = 'chip-name';
       name.textContent = t;
@@ -2366,7 +2381,7 @@ function buildList() {
     // （行事曆模式才需要斷行，那邊格子窄；這裡是橫的一長列，斷行反而醜。）
     const line = document.createElement('span');
     line.className = 'name-line';
-    line.textContent = groupNamesTight(group, 'list').join('＋');
+    line.textContent = groupPosterNamesTight(group, 'list').join('＋');
     name.appendChild(line);
     r.appendChild(name);
 
@@ -2476,7 +2491,7 @@ function buildEditableNote(ev, note) {
    存在「列表」那套顯示名稱（o.list.name）——結單提醒本來就吃這套，開團列表／貼文團名一起跟著變。
    清空或改回原名＝刪掉覆寫、回到行事曆原名。 */
 function buildEditableName(ev) {
-  const cur = displayName(ev, 'list');
+  const cur = posterName(ev, 'list');
   const box = document.createElement('div');
   box.className = 'remg-name-ev';
   remNameLines(cur).forEach(line => {
@@ -2493,7 +2508,8 @@ function buildEditableName(ev) {
     remNoteEditing = false;
     box.classList.remove('editing');
     const typed = box.innerText.split('\n').map(s => s.trim()).filter(Boolean).join('｜');
-    const next = (!typed || typed === ev.title) ? '' : typed;
+    // 打回原團名或品牌簡稱＝不用另存覆寫
+    const next = (!typed || typed === ev.title || typed === brandShortFor(ev)) ? '' : typed;
     const o = ovOf(ev.id).list;
     if (next === (o.name || '')) { renderPoster(); return; }
     o.name = next;
@@ -2525,7 +2541,7 @@ function buildReminderIcons() {
       tb.innerHTML = '';
       const fb = document.createElement('span');
       fb.className = 'remg-thumb-fallback';
-      fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
+      fb.textContent = plainName(posterName(ev, 'list')).charAt(0);
       tb.appendChild(fb);
     };
     if (url) {
@@ -2670,7 +2686,7 @@ function buildReminderList() {
             tb.innerHTML = '';
             const fb = document.createElement('span');
             fb.className = 'rem-thumb-fallback';
-            fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
+            fb.textContent = plainName(posterName(ev, 'list')).charAt(0);
             tb.appendChild(fb);
           });
           fitThumbByArea(img);   // 超寬的圖自動降高，視覺份量一致
@@ -2678,7 +2694,7 @@ function buildReminderList() {
         } else {
           const fb = document.createElement('span');
           fb.className = 'rem-thumb-fallback';
-          fb.textContent = plainName(displayName(ev, 'list')).charAt(0);
+          fb.textContent = plainName(posterName(ev, 'list')).charAt(0);
           tb.appendChild(fb);
         }
         card.appendChild(tb);
@@ -2689,7 +2705,7 @@ function buildReminderList() {
       const name = document.createElement('div');
       name.className = 'rem-name';
       // 跟列表模式同一種寫法：一團一行、｜接回空白、同框用＋串起來
-      name.textContent = groupNames(group, 'list').join('＋');
+      name.textContent = groupPosterNames(group, 'list').join('＋');
       info.appendChild(name);
       const badge = group.map(e => ovRead(e.id, 'list').badge).find(Boolean);
       if (badge) {
@@ -2836,7 +2852,9 @@ function buildEvItem(ev, mk, isOut) {
   const nameIn = document.createElement('input');
   nameIn.type = 'text';
   nameIn.setAttribute('data-pane', 'image');
-  nameIn.placeholder = (mk === 'list' ? '列表用的顯示名稱' : '行事曆用的顯示名稱') + '（留空＝用原名；打｜可斷行）';
+  const autoShort = brandShortFor(ev);
+  nameIn.placeholder = (mk === 'list' ? '列表用的顯示名稱' : '行事曆用的顯示名稱') +
+    (autoShort ? `（留空＝用品牌簡稱「${plainName(autoShort)}」；打｜可斷行）` : '（留空＝用原名；打｜可斷行）');
   nameIn.value = o.name || '';
   nameIn.addEventListener('input', () => {
     o.name = nameIn.value; saveEvents(); renderPoster();
@@ -3679,7 +3697,7 @@ function renderRemNotes() {
     head.className = 'remnote-head';
     const label = document.createElement('div');
     label.className = 'remnote-name';
-    label.textContent = plainName(displayName(ev, 'list'));
+    label.textContent = plainName(posterName(ev, 'list'));
     head.appendChild(label);
     // 這一團自己的格寬（px）：留空＝用「名稱寬度」滑桿的預設值。
     // 例：最後一排只剩一團想單獨拉寬，就填大一點的數字
