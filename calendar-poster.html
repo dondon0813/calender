@@ -624,6 +624,8 @@ body.pane-text  [data-pane="image"] { display: none !important; }
    面板：.rem-only 只在結單提醒模式出現、.rem-hide 在結單提醒模式藏起來
    （都只作用在「產生圖片」這一側；產生貼文照舊，跟模式無關）。 */
 .rem-only { display: none; }
+/* .list-only：只在「開團列表」模式出現（日期與團名間距） */
+body:not(.mode-list) .list-only { display: none !important; }
 body.pane-image.mode-reminder .rem-only { display: block; }
 body.pane-image.mode-reminder .rem-hide { display: none !important; }
 
@@ -1020,6 +1022,7 @@ body.rem-drag .remg-note { pointer-events: none; }
       <div class="row rem-hide"><label>日期上下</label><input type="range" id="rDayTop" min="-6" max="40" step="1"><input type="number" class="val" id="vDayTop"></div>
       <div class="row rem-hide"><label>日期大小</label><input type="range" id="rDaySize" min="12" max="36" step="1"><input type="number" class="val" id="vDaySize"></div>
       <div class="row rem-hide"><label>徽章間距</label><input type="range" id="rBadgeGap" min="0" max="40" step="1"><input type="number" class="val" id="vBadgeGap"></div>
+      <div class="row list-only"><label>日期與團名間距</label><input type="range" id="rNameGap" min="-20" max="80" step="1"><input type="number" class="val" id="vNameGap"></div>
       <div class="row"><label>文字行距</label><input type="range" id="rLineH" min="0.9" max="2.2" step="0.02"><input type="number" class="val" id="vLineH"></div>
       <div class="row rem-hide"><label>文字上下</label><input type="range" id="rTextShift" min="-24" max="24" step="1"><input type="number" class="val" id="vTextShift"></div>
       <p class="hint rem-hide">「文字上下」是把團名整塊往上／往下挪，不會改變框的大小或位置（負的往上）。</p>
@@ -1174,7 +1177,7 @@ const LS_USERDEF  = 'calposter.userdefaults.v1';  // 使用者自己調好的預
 // 顏色、標題文字、文案樣板等其餘設定兩邊共用。
 const PER_MODE_KEYS = ['size', 'insetT', 'insetB', 'insetL', 'insetR',
                        'fs', 'gap', 'radius', 'headH', 'headTop', 'dayTop', 'daySize',
-                       'badgeGap', 'lineH', 'textShift', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS'];
+                       'badgeGap', 'lineH', 'textShift', 'titleImg', 'monthOverlay', 'moX', 'moY', 'moS', 'nameGap'];
 
 /* 初始值＝使用者 2026-07-31 在產生器裡調好、按「複製設定 JSON」給我的那一版。
    兩種版面各自的欄位放在 modes 裡，頂層那幾個是「目前版面（初始是行事曆）」的值，
@@ -1184,19 +1187,19 @@ const DEFAULTS = {
     calendar: {
       size: '4:5', insetT: 198, insetB: 106, insetL: 60, insetR: 60,
       fs: 1.18, gap: 0, radius: 10, headH: 150, headTop: 50,
-      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0,
+      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0, nameGap: 0,
       titleImg: 'on', monthOverlay: false, moX: 90, moY: 60, moS: 92
     },
     list: {
       size: '4:5', insetT: 176, insetB: 105, insetL: 60, insetR: 60,
       fs: 1, gap: 9, radius: 10, headH: 140, headTop: 38,
-      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0,
+      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.02, textShift: 0, nameGap: 0,
       titleImg: 'on', monthOverlay: false, moX: 90, moY: 60, moS: 92
     },
     reminder: {   // 結單提醒：9:16 限動用（標題畫在內容區裡，不用標題／頁尾）
       size: '9:16', insetT: 300, insetB: 220, insetL: 90, insetR: 90,
       fs: 1, gap: 22, radius: 26, headH: 140, headTop: 38,
-      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.1, textShift: 0,
+      dayTop: 4, daySize: 22, badgeGap: 1, lineH: 1.1, textShift: 0, nameGap: 0,
       titleImg: 'off', monthOverlay: false, moX: 90, moY: 60, moS: 92
     }
   },
@@ -1211,6 +1214,7 @@ const DEFAULTS = {
   lineH: 1.02,              // 團名的文字行距（多行時才看得出來）
   textShift: 0,             // 團名在框裡的上下微調（負的往上、正的往下；不影響版面配置）
   badgeGap: 1,              // 徽章與團名的距離（行事曆是上下、列表是左右）
+  nameGap: 0,               // 開團列表：日期與團名之間多加（負的＝拉近）幾 px（2026-10-29 雪莉要的滑桿）
   zoom: 50,                 // 預覽縮放％；0＝自動符合寬度。只影響畫面，不影響下載的圖
   monthOverlay: false, moX: 90, moY: 60, moS: 92,
   fs: 1.18, gap: 0, radius: 10, headH: 150,
@@ -1861,6 +1865,8 @@ function autoFit() {
     // 幾乎貼著團名（日期長度差一位數就差很多，欄寬是照最長的那個算的）
     const rangeFs = parseFloat(getComputedStyle(ranges[0]).fontSize) || 20;
     maxW += 2 + Math.round(rangeFs * 0.45);
+    // 「日期與團名間距」滑桿（舊設定沒有這個值＝0）；最少留 0，日期不會被團名壓到
+    maxW = Math.max(maxW - Math.round(rangeFs * 0.45), maxW + (Number(S.nameGap) || 0));
     ranges.forEach(r => { r.style.width = maxW + 'px'; });
   }
 
@@ -3818,6 +3824,7 @@ async function autoSaveRemNote(ev, note, say) {
 function syncControls() {
   // 結單提醒模式：面板上跟月曆無關的區塊藏起來（.rem-hide）、自己的設定區亮出來（.rem-only）
   document.body.classList.toggle('mode-reminder', S.mode === 'reminder');
+  document.body.classList.toggle('mode-list', S.mode === 'list');
   // 結單提醒的兩種樣式各自的欄位互相隱藏
   document.body.classList.toggle('remstyle-icon', S.remStyle === 'icon');
   segSet('segRemStyle', S.remStyle || 'list');
@@ -3836,7 +3843,7 @@ function syncControls() {
    'rMoX|moX|vMoX', 'rMoY|moY|vMoY', 'rMoS|moS|vMoS',
    'rGap|gap|vGap', 'rRadius|radius|vRadius', 'rHeadH|headH|vHeadH', 'rHeadTop|headTop|vHeadTop',
    'rDayTop|dayTop|vDayTop', 'rDaySize|daySize|vDaySize',
-   'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH',
+   'rBadgeGap|badgeGap|vBadgeGap', 'rLineH|lineH|vLineH', 'rNameGap|nameGap|vNameGap',
    'rTextShift|textShift|vTextShift', 'rFs|fs|vFs',
    'rRemGapX|remGapX|vRemGapX', 'rRemItemW|remItemW|vRemItemW',
    'rRemNameFs|remNameFs|vRemNameFs', 'rRemNoteFs|remNoteFs|vRemNoteFs', 'rRemNotePadX|remNotePadX|vRemNotePadX', 'rRemThumb|remThumb|vRemThumb'].forEach(spec => {
@@ -3909,6 +3916,7 @@ function init() {
   bindRange('rDayTop', 'dayTop', 'vDayTop');
   bindRange('rDaySize', 'daySize', 'vDaySize');
   bindRange('rBadgeGap', 'badgeGap', 'vBadgeGap');
+  bindRange('rNameGap', 'nameGap', 'vNameGap');
   bindRange('rLineH', 'lineH', 'vLineH');
   bindRange('rTextShift', 'textShift', 'vTextShift');
 
