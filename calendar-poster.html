@@ -527,6 +527,16 @@ body.pane-text  [data-pane="image"] { display: none !important; }
 .chip .chip-snow { position: absolute; display: block; max-width: none; }
 .chip .chip-snow.br { width: 46px; height: 46px; right: -8px; bottom: -10px; }
 .chip .chip-snow.tl { width: 28px; height: 28px; left: -6px; top: -7px; }
+/* 聖誕團（燈串邊框，2026-10-29 雪莉選第 6 款）：整格都是聖誕團＝整格淡紅底、團不畫框；
+   跟一般團同格＝只有那一團的框換成淡紅底＋燈串。顏色先寫死，雪莉看過再決定要不要開調色。 */
+.cal-cell.xmas-cell { background: #FFF3F1; }
+.cal-cell.xmas-cell .daynum { color: #B85A62; z-index: 1; }
+.cal-cell.xmas-cell .chip { background: transparent; border-color: transparent; color: #A63A42; }
+.cal-cell.xmas-cell .chip .chip-snowbox { display: none; }
+.chip.xmas { background: #FFF3F1; border-color: transparent; color: #A63A42; position: relative; }
+.chip.xmas .chip-snowbox { display: none; }
+.xmas-lights { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.xmas-lights img { position: absolute; left: 0; top: 0; display: block; max-width: none; }
 /* 字型補正：Baloo 2／Huninn 的字框下緣有一大塊用不到的空間（每 100px：字框上108/下52，
    中文墨水只有上84/下8），純靠 flex 置中會讓字看起來浮在上面約 0.1em。
    這裡用 em 等比往下補，字級再怎麼縮都成立；--p-text-shift 是使用者自己的額外微調。 */
@@ -1579,7 +1589,7 @@ function monthEvents() {
    一筆長這樣：{ note:'', calendar:{name,badge,hidden,mergePrev,cold?}, list:{同左} }
    舊資料是扁的一層，migrateOverrides() 會原封不動複製成兩套，之前調好的東西不會掉。 */
 const OV_MODES = ['calendar', 'list'];
-const OV_FIELDS = ['name', 'badge', 'hidden', 'mergePrev', 'cold'];
+const OV_FIELDS = ['name', 'badge', 'hidden', 'mergePrev', 'cold', 'xmas'];
 const EMPTY_OV = {};
 
 function blankOv() { return { name: '', badge: '', hidden: false, mergePrev: false }; }
@@ -1702,6 +1712,8 @@ function autoCold(ev) {
   const flat = nameLines(ev.title).join('');
   return COLD_KEYWORDS.some(k => flat.indexOf(k) !== -1);
 }
+/* 聖誕團（2026-10-29 雪莉定第 6 款「燈串邊框」）：每團微調手動勾，只有每月行事曆有這個樣式。 */
+function isXmas(ev) { return !!ovRead(ev.id, 'calendar').xmas; }
 function isCold(ev, mode) {
   const o = ovRead(ev.id, mode);
   if (typeof o.cold === 'boolean') return o.cold;
@@ -1832,12 +1844,52 @@ function renderPoster() {
   if (S.mode !== 'reminder') poster.appendChild(buildFoot());
 
   autoFit();
+  drawXmasLights();
   fitScaler();
 }
 
 // 團名長度差很多（「永圻魚湯」vs「快閃！UBMOM 兒童雨衣」），固定字級一定有幾格會爆版。
 // 插進 DOM 之後量一次實際高寬，塞不下就一格一格降字級，降到剛好放得下為止。
 // 使用者仍然可以在左邊改「顯示名稱」把名字縮短，讓字回到大字級。
+/* 聖誕團燈串邊框：要知道格子實際寬高才畫得出等距的燈，所以在版面算完（autoFit）之後才加。
+   用一張 <img>（SVG）疊在底層，外層 overflow:hidden 切齊圓角；不用 background-image（html2canvas 畫不對）。
+   左上角讓出日期數字的位置，燈不會壓到日期。 */
+const XMAS_LIGHT_COLORS = ['#E05A63', '#E2B65A', '#6E9A6A', '#5F97DB'];
+function xmasLightsSvg(w, h, skipX, skipY) {
+  const inset = 7, step = 20, r = 3.6;
+  let i = 0, dots = '';
+  const dot = (x, y) => { dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${XMAS_LIGHT_COLORS[i++ % 4]}"/>`; };
+  for (let x = 16; x <= w - 16; x += step) { if (x > skipX) dot(x, inset); dot(x, h - inset); }
+  for (let y = 16 + step; y <= h - 16 - step / 2; y += step) { if (y > skipY) dot(inset, y); dot(w - inset, y); }
+  // 電線：圓角框，但左上角（日期那段）留空不畫
+  const R = 9, L = inset, T = inset, Rx = w - inset, B = h - inset;
+  const x0 = Math.max(skipX, L + R), y0 = Math.max(skipY, T + R);
+  const wire = skipX ? `M${x0} ${T}H${Rx - R}A${R} ${R} 0 0 1 ${Rx} ${T + R}V${B - R}A${R} ${R} 0 0 1 ${Rx - R} ${B}H${L + R}A${R} ${R} 0 0 1 ${L} ${B - R}V${y0}`
+                     : `M${L + R} ${T}H${Rx - R}A${R} ${R} 0 0 1 ${Rx} ${T + R}V${B - R}A${R} ${R} 0 0 1 ${Rx - R} ${B}H${L + R}A${R} ${R} 0 0 1 ${L} ${B - R}V${T + R}A${R} ${R} 0 0 1 ${L + R} ${T}Z`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+    `<path d="${wire}" fill="none" stroke="#7A8A6A" stroke-opacity=".6" stroke-width="1.4"/>${dots}</svg>`);
+}
+function drawXmasLights() {
+  const targets = Array.prototype.slice.call(document.querySelectorAll('#poster .cal-cell.xmas-cell'))
+    .concat(Array.prototype.slice.call(document.querySelectorAll('#poster .cal-cell:not(.xmas-cell) .chip.xmas')));
+  targets.forEach(el => {
+    const w = el.clientWidth, h = el.clientHeight;
+    if (w < 30 || h < 30) return;
+    const n = el.classList.contains('cal-cell') ? el.querySelector('.daynum') : null;
+    const skipX = n ? n.offsetLeft + n.offsetWidth + 6 : 0;
+    const skipY = n ? n.offsetTop + n.offsetHeight + 6 : 0;
+    const box = document.createElement('span');
+    box.className = 'xmas-lights';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = xmasLightsSvg(w, h, skipX, skipY);
+    img.style.width = w + 'px'; img.style.height = h + 'px';
+    box.appendChild(img);
+    el.prepend(box);   // 放最前面：日期、團名畫在燈串上面
+  });
+}
+
 function autoFit() {
   layoutCalBars();   // 雪莉咚咚橫條：先依格子高度定好每條的高度，下面的縮字才量得準
   // 行事曆模式：格子裡的團
@@ -2147,6 +2199,9 @@ function buildCalendar() {
       // 一格幾團會決定字級（分兩格時字要小一點才塞得下）
       if (cell) cell.events.forEach(group => el.appendChild(buildChip(group, cell.events.length)));
       else if (outEvents) outEvents.forEach(group => el.appendChild(buildChip(group, outEvents.length)));
+      // 這格的團全都是聖誕團 → 整格換底＋燈串；跟一般團同格時只有那一團的框套用（.chip.xmas）
+      const chipsHere = el.querySelectorAll('.chip');
+      if (chipsHere.length && Array.prototype.every.call(chipsHere, c => c.classList.contains('xmas'))) el.classList.add('xmas-cell');
       grid.appendChild(el);
     }
   });
@@ -2305,7 +2360,8 @@ function layoutCalBars() {
 function buildChip(group, siblings) {
   const chip = document.createElement('div');
   // 同框的團只要有一個是冷凍/冷藏，整框就上藍色
-  chip.className = 'chip' + (group.some(ev => isCold(ev, 'calendar')) ? ' hi' : '');
+  chip.className = 'chip' + (group.some(ev => isCold(ev, 'calendar')) ? ' hi' : '') +
+                   (group.some(isXmas) ? ' xmas' : '');
 
   // 一格一團給大字，一格兩團縮到 0.78，三團以上再縮；同框多品牌再讓 autoFit 收尾
   const base = siblings <= 1 ? 30 : (siblings === 2 ? 25 : 20);
@@ -2937,6 +2993,9 @@ function buildEvItem(ev, mk, isOut) {
     const hiWrap = mkCheck('冷凍/冷藏', isCold(ev, mk), v => { o.cold = v; saveEvents(); renderPoster(); });
     hiWrap.setAttribute('data-pane', 'image');
     opts.appendChild(hiWrap);
+    const xmWrap = mkCheck('聖誕團', !!o.xmas, v => { if (v) o.xmas = true; else delete o.xmas; saveEvents(); renderPoster(); });
+    xmWrap.setAttribute('data-pane', 'image');
+    opts.appendChild(xmWrap);
   }
   opts.appendChild(mkCheck('不顯示', o.hidden, v => {
     o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v); renderPoster(); renderCaption();
@@ -3163,14 +3222,14 @@ function renderPresetList(selectName) {
 
 // 只存「真的有改過」的團，沒動過的不佔空間（行事曆／列表兩套都存）
 function ovModeTouched(o) {
-  return !!(o && (o.name || o.badge || o.hidden || o.mergePrev || typeof o.cold === 'boolean'));
+  return !!(o && (o.name || o.badge || o.hidden || o.mergePrev || o.xmas || typeof o.cold === 'boolean'));
 }
 function ovModeSnapshot(o) {
   o = o || {};
   return {
     name: o.name || '', badge: o.badge || '',
     cold: (typeof o.cold === 'boolean' ? o.cold : null),
-    hidden: !!o.hidden, mergePrev: !!o.mergePrev
+    hidden: !!o.hidden, mergePrev: !!o.mergePrev, xmas: !!o.xmas
   };
 }
 function presetEvSnapshot() {
@@ -3229,6 +3288,7 @@ function applyPreset(name) {
       o.badge = s2.badge || '';
       o.hidden = !!s2.hidden;
       o.mergePrev = !!s2.mergePrev;
+      if (s2.xmas) o.xmas = true; else delete o.xmas;
     });
     hit++;
   });
