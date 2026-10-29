@@ -852,6 +852,7 @@ async function hallLoadCodesList() {
     const statusBadge = st => {
       if (st === 'redeemed') return '<span style="background:#E6DCD2; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已使用</span>';
       if (st === 'revoked') return '<span style="background:#F3E3E1; color:#B5485A; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已收回</span>';
+      if (st === 'waived') return '<span style="background:#E6DCD2; color:#555; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">已改領點數</span>';
       return '<span style="background:#e6f4ea; color:#1e7a3c; border-radius:999px; padding:1px 9px; font-size:11px; font-weight:700;">未使用</span>';
     };
     box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px;">' +
