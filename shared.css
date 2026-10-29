@@ -277,6 +277,12 @@
   --cal-legend-frozen-img: none;                                                                                                                                                                                             /* 行事曆頁：圖例「冷凍團」圓點雪花圖 */
   --cal-gs-today-shadow: 0 0 0 3px var(--ix-card-today-ring);                                                                                                                                                                /* 行事曆頁：清單卡「今日截止」卡片外環陰影 */
   --cal-frozen-badge-bg: var(--ix-frozen-border);                                                                                                                                                                            /* 行事曆頁：清單卡「冷藏冷凍團」徽章底色 */
+  --cal-xmas-bg: #FFF3F1;                                                                                                                                                                                                    /* 行事曆頁：聖誕團底色（行事曆圖產生器勾「聖誕團」同步） */
+  --cal-xmas-fg: #A63A42;                                                                                                                                                                                                    /* 行事曆頁：聖誕團字色 */
+  --cal-xmas-l1: #E05A63;                                                                                                                                                                                                    /* 行事曆頁：聖誕團燈串燈泡色 1（紅） */
+  --cal-xmas-l2: #E2B65A;                                                                                                                                                                                                    /* 行事曆頁：聖誕團燈串燈泡色 2（金） */
+  --cal-xmas-l3: #6E9A6A;                                                                                                                                                                                                    /* 行事曆頁：聖誕團燈串燈泡色 3（綠） */
+  --cal-xmas-l4: #5F97DB;                                                                                                                                                                                                    /* 行事曆頁：聖誕團燈串燈泡色 4（藍） */
 
   /* ---------- 繪本館頁（/books）專屬色 ---------- */
   --pb-new-bg: #3ddc84;                                   /* 繪本館：New 徽章綠底（功能色，不隨色系換） */

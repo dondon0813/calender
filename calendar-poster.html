@@ -1534,6 +1534,7 @@ async function loadData() {
         title: String(title).trim(),
         category: c[6] ? String(c[6].v || '').trim() : '',  // G 欄分類：判斷冷凍/冷藏團用（c[25] 沒值時的退路）
         coldFlag: c[25] ? String(c[25].v || '').trim() : '', // 冷凍冷藏雪花（後端算好，2026-10-04 起優先）
+        xmasFlag: c[35] ? String(c[35].v || '').trim() : '', // 聖誕團（events.is_xmas；欄位未 db push＝''）
         color: c[11] ? String(c[11].v || '').trim() : '',      // L 欄自訂顏色：雪莉咚咚橫條用（同官網首頁行事曆，有填就用它）
         thumb: c[22] ? String(c[22].v || '').trim() : ''    // W 欄小圖：結單提醒模式用（優先於品牌庫）
       });
@@ -1544,6 +1545,7 @@ async function loadData() {
     await notesPromise;
     await thumbsPromise;
     await loadBrandCategories(true); // 重新載入資料時順便重讀品牌（剛在後台改過）；分類給雪莉咚咚篩團、簡稱兩個帳號出圖都用
+    syncLocalXmasUp();
     renderAccountNote();
     populateMonths();
     renderAll();
@@ -1715,8 +1717,32 @@ function autoCold(ev) {
   const flat = nameLines(ev.title).join('');
   return COLD_KEYWORDS.some(k => flat.indexOf(k) !== -1);
 }
-/* 聖誕團（2026-10-29 雪莉定第 6 款「燈串邊框」）：每團微調手動勾，只有每月行事曆有這個樣式。 */
-function isXmas(ev) { return !!ovRead(ev.id, 'calendar').xmas; }
+/* 聖誕團（2026-10-29 雪莉定第 6 款「燈串邊框」）：每團微調手動勾，只有每月行事曆有這個樣式。
+   勾選同時寫進後台（event-xmas-set → events.is_xmas），前台團購行事曆也跟著顯示聖誕樣式。
+   正本＝後台：c[35] 有值（是/否）就照後台；欄位還沒 db push（c[35] 空）才看本機勾選。 */
+function isXmas(ev) {
+  if (ev.xmasFlag === '是') return true;
+  if (ev.xmasFlag === '否') return false;
+  return !!ovRead(ev.id, 'calendar').xmas;
+}
+async function pushXmas(ev, v) {
+  const token = getAdminToken();
+  if (!token) { alert('聖誕團只存在這台電腦：要先登入過後台，才能同步到團購行事曆'); return false; }
+  try {
+    const out = await settingCall({ type: 'event-xmas-set', token, id: ev.id, xmas: !!v });
+    if (out && out.success) { ev.xmasFlag = v ? '是' : '否'; return true; }
+    if (out && out.notReady) return false;   // 欄位還沒 db push：先存本機，不吵
+    alert('聖誕團同步到團購行事曆失敗：' + ((out && out.error) || '未知錯誤'));
+  } catch (e) { alert('聖誕團同步到團購行事曆失敗（網路）'); }
+  return false;
+}
+/* 開站／重新載入資料後：這台電腦本機勾過、但後台還是「否」的團，補推上去一次（後台欄位剛建好、或之前沒登入時勾的） */
+function syncLocalXmasUp() {
+  if (!getAdminToken()) return;
+  allEvents.forEach(ev => {
+    if (ev.xmasFlag === '否' && ovRead(ev.id, 'calendar').xmas === true) pushXmas(ev, true).then(ok => { if (ok) renderPoster(); });
+  });
+}
 function isCold(ev, mode) {
   const o = ovRead(ev.id, mode);
   if (typeof o.cold === 'boolean') return o.cold;
@@ -3012,7 +3038,12 @@ function buildEvItem(ev, mk, isOut) {
     const hiWrap = mkCheck('冷凍/冷藏', isCold(ev, mk), v => { o.cold = v; saveEvents(); renderPoster(); });
     hiWrap.setAttribute('data-pane', 'image');
     opts.appendChild(hiWrap);
-    const xmWrap = mkCheck('聖誕團', !!o.xmas, v => { if (v) o.xmas = true; else delete o.xmas; saveEvents(); renderPoster(); });
+    const xmWrap = mkCheck('聖誕團', isXmas(ev), v => {
+      if (v) o.xmas = true; else delete o.xmas;
+      if (ev.xmasFlag) ev.xmasFlag = v ? '是' : '否';   // 先照勾選畫，後台回來失敗也不跳回（本機已記住）
+      saveEvents(); renderPoster();
+      pushXmas(ev, v);
+    });
     xmWrap.setAttribute('data-pane', 'image');
     opts.appendChild(xmWrap);
   }
