@@ -788,19 +788,22 @@ function lotSyncMainTabUI() {
   if (!seg) return;
   seg.querySelectorAll('[data-main-seg]').forEach(el => el.classList.toggle('on', el.dataset.mainSeg === LOTTERY_MAIN_TAB));
 }
+// 切換抽獎管理頂端子分頁（draws／activities／announce／ship）。第 5 波第 1 段起新後台（dondon-platform /admin）把「抽獎」子分頁原生化，
+// 其餘三格交給這一頁顯示：外框用 oldTab 訊息呼叫本函式，adminEmbed.js 包住它並回報 oldTabChanged（行為不變，只多回報）。
+function lotSwitchMainTab(tab) {
+  LOTTERY_MAIN_TAB = (tab === 'activities' || tab === 'announce' || tab === 'ship') ? tab : 'draws';
+  lotSaveMainTab(LOTTERY_MAIN_TAB);
+  lotSyncMainTabUI();
+  if (!LOTTERY_LOADED || !LOTTERY_TABLE_READY) return;
+  // 「待配對」「待抽」是抽獎分頁專屬；切到特殊活動時先重置，免得篩到空
+  if (lotActivitiesTabOn() && (LOTTERY_FILTER.status === 'pending_draw' || LOTTERY_FILTER.status === 'unpaired' || LOTTERY_FILTER.status === 'unopened')) LOTTERY_FILTER.status = 'all';
+  renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
+}
 (function lotBindMainTab() {
   const seg = document.getElementById('lotMainSeg');
   if (!seg) return;
   seg.querySelectorAll('[data-main-seg]').forEach(el => {
-    el.addEventListener('click', () => {
-      LOTTERY_MAIN_TAB = (el.dataset.mainSeg === 'activities' || el.dataset.mainSeg === 'announce' || el.dataset.mainSeg === 'ship') ? el.dataset.mainSeg : 'draws';
-      lotSaveMainTab(LOTTERY_MAIN_TAB);
-      lotSyncMainTabUI();
-      if (!LOTTERY_LOADED || !LOTTERY_TABLE_READY) return;
-      // 「待配對」「待抽」是抽獎分頁專屬；切到特殊活動時先重置，免得篩到空
-      if (lotActivitiesTabOn() && (LOTTERY_FILTER.status === 'pending_draw' || LOTTERY_FILTER.status === 'unpaired' || LOTTERY_FILTER.status === 'unopened')) LOTTERY_FILTER.status = 'all';
-      renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
-    });
+    el.addEventListener('click', () => lotSwitchMainTab(el.dataset.mainSeg));
   });
   lotSyncMainTabUI();
 })();
@@ -3838,13 +3841,7 @@ function lotAnnounceCounts() {
   });
   return c;
 }
-function lotGoAnnounceTab() {
-  LOTTERY_MAIN_TAB = 'announce';
-  lotSaveMainTab('announce');
-  lotSyncMainTabUI();
-  if (!LOTTERY_LOADED || !LOTTERY_TABLE_READY) return;
-  renderLotteryTiles(); renderLotteryFilters(); renderLotteryBody();
-}
+function lotGoAnnounceTab() { lotSwitchMainTab('announce'); }
 function lotAnnTitle(d) { return d.eventTitle || d.title || '(未命名活動)'; }
 // 某種公告的待公告人（依團分組，團順序跟抽獎頁一致）：[{draw, list:[winner]}]
 function lotAnnPendingGroups(kind) {

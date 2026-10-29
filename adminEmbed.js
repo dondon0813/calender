@@ -15,6 +15,8 @@
 //     新增 refreshData（新品牌廠商頁存檔後叫舊頁重抓資料）。
 //  8. 第 4 波第 3 段（v=7）：帳務。oldTab＝新版帳務把公司支出／文件簽署子分頁交給舊版顯示（白名單 view=accounting、tab 限舊帳務子分頁代號，呼叫舊 acctSwitchTab）；
 //     舊 acctSwitchTab 被呼叫就回報 oldTabChanged（外框據此決定交接中或回新版）；lotJump＝帳務明細抽獎小標點擊，呼叫舊 lotJumpToAcctTeamCard（切到抽獎管理並捲到該團）。
+//  9. 第 5 波第 1 段（v=8）：抽獎管理。oldTab 白名單加 view=lottery（tab 限 draws／activities／announce／ship，呼叫舊 lotSwitchMainTab）；
+//     舊 lotSwitchMainTab 被呼叫（含使用者在舊版點頂端子分頁、或點「待公告」磚）就回報 oldTabChanged（view=lottery）。新版只做「抽獎」子分頁，其餘三格交給這一頁。
 // 訊息格式與外框那端（dondon-platform lib/admin/protocol.ts）一起改；一律帶 src／v，並驗 origin 與來源視窗。
 (function () {
   'use strict';
@@ -240,9 +242,23 @@
     window.acctSwitchTab = wrapped;
   }
   var ACCT_TABS = ['list', 'trend', 'rank', 'print', 'recon', 'expenses', 'signdocs'];
+  // 9. 抽獎管理子分頁切換回報：包住舊 lotSwitchMainTab（lottery.js 的全域函式；內部呼叫也走全域名稱，所以包了一律回報）
+  var LOT_TABS = ['draws', 'activities', 'announce', 'ship'];
+  function admEmbWrapLotTab() {
+    if (typeof window.lotSwitchMainTab !== 'function' || window.lotSwitchMainTab.__admEmb) return;
+    var orig = window.lotSwitchMainTab;
+    var wrapped = function (tab) {
+      var r = orig.apply(this, arguments);
+      post({ type: 'oldTabChanged', view: 'lottery', tab: LOT_TABS.indexOf(String(tab)) !== -1 ? String(tab) : 'draws' });
+      return r;
+    };
+    wrapped.__admEmb = true;
+    window.lotSwitchMainTab = wrapped;
+  }
 
   document.addEventListener('DOMContentLoaded', function () {
     admEmbWrapAcctTab();
+    admEmbWrapLotTab();
     admEmbWatch();
     if (localStorage.getItem('admin_unlocked') !== '1') post({ type: 'needLogin' }); // 沒登入過：外框直接回登入畫面
     var want = params.get('view');
@@ -272,6 +288,7 @@
         admEmbLotAction(d);
       } else if (d.type === 'oldTab') {
         if (d.view === 'accounting' && ACCT_TABS.indexOf(d.tab) !== -1 && typeof window.acctSwitchTab === 'function') window.acctSwitchTab(d.tab);
+        else if (d.view === 'lottery' && LOT_TABS.indexOf(d.tab) !== -1 && typeof window.lotSwitchMainTab === 'function') window.lotSwitchMainTab(d.tab);
       } else if (d.type === 'lotJump') {
         if (typeof d.legacyId === 'string' && d.legacyId && typeof lotJumpToAcctTeamCard === 'function') lotJumpToAcctTeamCard(d.legacyId);
       } else if (d.type === 'refreshData') {

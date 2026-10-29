@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="團購後台">
 
 <!-- 被嵌入新後台框框（dondon-platform /admin）時才動作：只有網址帶 embed=1 且放在 iframe 裡才生效，否則第一行就 return -->
-<script src="adminEmbed.js?v=7"></script>
+<script src="adminEmbed.js?v=8"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
   /* admin.html 專屬樣式。共用的 reset / 版面 / 控制項 / 狀態列 / modal / 頁尾在 shared.css。
@@ -8166,7 +8166,7 @@
   </div>
 </div>
 <!-- lottery.js（抽獎管理，獨立分頁 #viewLottery；帳務頁只在背景呼叫 loadLotteryView() 取 🎁 小標資料）必須排在 admin.js 之前：開機還原分頁若停在 lottery/accounting，會同步呼叫 loadLotteryView()／loadAccounting()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
-<script src="lottery.js?v=76"></script>
+<script src="lottery.js?v=77"></script>
 <script src="harvestStatus.js?v=1"></script>
 <script src="homeLayout.js?v=7"></script>
 <script src="admin.js?v=124"></script>
