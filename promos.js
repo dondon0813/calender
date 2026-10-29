@@ -63,26 +63,32 @@ function pmDateInput(value) {
   return inp;
 }
 
-// 小標籤輸入（常用下拉＋可自己打字；選填，最多 6 字）。label 與 input 一起回傳給呼叫端放進 row
-const PM_TAG_PRESETS = ['早鳥禮', '雪莉加碼', '雙11加碼', '週年慶'];
+// 小標籤（2026-10-29 雪莉定）：只能從租戶自己的標籤清單選（後端 promo-list／promo-overview 回 tagPresets）。
+// 清單管理在新後台行事曆活動視窗「優惠」頁籤的「管理標籤」。這筆原本貼著、後來被移出清單的舊標籤照樣列出可保留。
+let PM_TAG_PRESETS = [];
+// 清單比表單晚到（表單先建、promo-list 才回）：拿到清單後把畫面上已建好的下拉重新填一次，保留目前選的值
+function pmSetTagPresets(list) {
+  if (!Array.isArray(list)) return;
+  PM_TAG_PRESETS = list.slice();
+  document.querySelectorAll('select.pm-tag-sel').forEach(pmFillTagSelect);
+}
+function pmFillTagSelect(sel) {
+  const value = sel.options.length ? sel.value : (sel.dataset.cur || '');
+  sel.textContent = '';
+  const add = (v, label) => { const o = document.createElement('option'); o.value = v; o.textContent = label; sel.appendChild(o); };
+  add('', '無標籤');
+  PM_TAG_PRESETS.forEach(v => add(v, v));
+  if (value && !PM_TAG_PRESETS.includes(value)) add(value, value + '（已不在清單）');
+  sel.value = value || '';
+}
 function pmTagInput(value, disabled) {
-  let dl = document.getElementById('pmTagPresets');
-  if (!dl) {
-    dl = document.createElement('datalist');
-    dl.id = 'pmTagPresets';
-    PM_TAG_PRESETS.forEach(v => { const o = document.createElement('option'); o.value = v; dl.appendChild(o); });
-    document.body.appendChild(dl);
-  }
-  const inp = document.createElement('input');
-  inp.type = 'text';
-  inp.className = 'promo-date';
-  inp.style.width = '120px';
-  inp.setAttribute('list', 'pmTagPresets');
-  inp.maxLength = 6;
-  inp.placeholder = '選填';
-  inp.value = value || '';
-  inp.disabled = !!disabled;
-  return inp;
+  const sel = document.createElement('select');
+  sel.className = 'promo-date pm-tag-sel';
+  sel.style.width = '130px';
+  sel.dataset.cur = value || '';
+  pmFillTagSelect(sel);
+  sel.disabled = !!disabled;
+  return sel;
 }
 
 function pmTextarea(rows, placeholder, value) {
@@ -248,6 +254,7 @@ async function promoReload(container) {
     state.promos = res.promos || [];
     state.tableReady = res.tableReady !== false;
     state.tagReady = res.tagReady !== false;
+    pmSetTagPresets(res.tagPresets);
     state.loaded = true;
     pmApplyReady(state);
     pmRenderList(container);
@@ -536,6 +543,7 @@ async function loadPromosView(force) {
     if (notReady) notReady.style.display = res.tableReady === false ? 'block' : 'none';
     PROMOS_LOADED = true;
     PROMOS_TAG_READY = res.tagReady !== false;
+    pmSetTagPresets(res.tagPresets);
     renderPromosOverview(res.teams || [], res.tableReady !== false);
   } catch (err) {
     area.textContent = '';
