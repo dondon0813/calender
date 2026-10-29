@@ -517,7 +517,16 @@ body.pane-text  [data-pane="image"] { display: none !important; }
   background: var(--p-hi-bg);
   border-color: var(--p-hi-border);
   color: var(--p-hi-text);
+  position: relative;
 }
+/* 淺淺雪花浮水印（2026-10-29 雪莉：跟前台行事曆一樣）：同 theme-lotus.css .ebar-wrap.is-frozen 的線條雪花，
+   右下大、左上小，各有一角超出格子被切掉；格子比前台大，尺寸等比放大。
+   用兩個 <img> 疊在角落（buildChip 加），不用 background-image：出圖工具 html2canvas
+   不認「right -8px bottom -10px」這種位移寫法（整張出圖失敗），SVG 背景圖的大小也畫不對。 */
+.chip .chip-snowbox { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.chip .chip-snow { position: absolute; display: block; max-width: none; }
+.chip .chip-snow.br { width: 46px; height: 46px; right: -8px; bottom: -10px; }
+.chip .chip-snow.tl { width: 28px; height: 28px; left: -6px; top: -7px; }
 /* 字型補正：Baloo 2／Huninn 的字框下緣有一大塊用不到的空間（每 100px：字框上108/下52，
    中文墨水只有上84/下8），純靠 flex 置中會讓字看起來浮在上面約 0.1em。
    這裡用 em 等比往下補，字級再怎麼縮都成立；--p-text-shift 是使用者自己的額外微調。 */
@@ -2313,7 +2322,27 @@ function buildChip(group, siblings) {
     b.textContent = badge;
     chip.appendChild(b);
   }
+  if (chip.classList.contains('hi')) chip.prepend(buildChipSnow());   // 放最前面：團名（position:relative）畫在雪花上面
   return chip;
+}
+
+/* 冷凍格的雪花浮水印：外層框自己 overflow:hidden 把超出的角切掉，
+   不讓超出的雪花算進格子的捲動高度（autoFit 量字有沒有塞爆用的就是它）。 */
+const SNOW_SVG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5F97DB" stroke-opacity=".4" stroke-width="1.4" stroke-linecap="round">' +
+  [0, 60, 120, 180, 240, 300].map(a => '<path' + (a ? ` transform="rotate(${a} 12 12)"` : '') +
+    ' d="M12 12V2.2M12 5.6l-2.3-2M12 5.6l2.3-2M12 8.6l-1.7-1.5M12 8.6l1.7-1.5"/>').join('') + '</svg>');
+function buildChipSnow() {
+  const box = document.createElement('span');
+  box.className = 'chip-snowbox';
+  ['br', 'tl'].forEach(pos => {
+    const img = document.createElement('img');
+    img.className = 'chip-snow ' + pos;
+    img.alt = '';
+    img.src = SNOW_SVG;
+    box.appendChild(img);
+  });
+  return box;
 }
 
 function renderMoveWarn() {
