@@ -579,6 +579,19 @@
   --mh-pine-hi1: #5cba8c;                   /* 聖誕樹：下層亮面 */
   --mh-pine-hi2: #66c497;                   /* 聖誕樹：中層亮面 */
   --mh-pine-hi3: #74cda2;                   /* 聖誕樹：上層亮面 */
+  --mh-pl-cobble-d: #cdbba3;                /* 想像力廣場：廣場地磚外緣 */
+  --mh-pl-cobble: #e8dccb;                  /* 想像力廣場：廣場地磚 */
+  --mh-pl-cobble-s: #d6c6b0;                /* 想像力廣場：地磚石塊 */
+  --mh-pl-gold: #f6c453;                    /* 想像力廣場：街屋金黃屋頂 */
+  --mh-pl-mist: #d8e3f0;                    /* 想像力廣場：噴水池緣／淡藍灰街屋 */
+  --mh-pl-mist-d: #9bb0c9;                  /* 想像力廣場：噴水池緣暗面／淡藍灰街屋屋頂 */
+  --mh-pl-pool: #6cc9ec;                    /* 想像力廣場：噴水池水面 */
+  --mh-pl-drop: #e6fbff;                    /* 想像力廣場：噴水水珠 */
+  --mh-pl-lit: #fff4c2;                     /* 想像力廣場：街屋窗燈／閃星 */
+  --mh-pl-fl-1: #ff9ad5;                    /* 想像力廣場：小花粉 */
+  --mh-pl-fl-2: #ffe58a;                    /* 想像力廣場：小花黃 */
+  --mh-pl-fl-3: #9ef0e0;                    /* 想像力廣場：小花薄荷 */
+  --mh-pl-fl-4: #ffb3e6;                    /* 想像力廣場：小花淺粉 */
 }
 /* END GENERATED */
 
