@@ -554,6 +554,10 @@
   --mh-card-line: #ece3f7;                  /* 內容卡分隔線 */
   --mh-card-soft: #f6f0fc;                  /* 內容卡淺底 */
   --mh-err: #b5485a;                        /* 錯誤字 */
+  --mh-crest-bg: #a8457f;                   /* 入口按鈕底（莓紫） */
+  --mh-crest-gold: #f6c453;                 /* 入口按鈕金邊 */
+  --mh-crest-gold-d: #d99a2b;               /* 入口按鈕深金外框 */
+  --mh-crest-ink: #fff8e1;                  /* 入口按鈕字 */
 }
 /* END GENERATED */
 
