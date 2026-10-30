@@ -527,6 +527,13 @@
   --mh-pond: #6cc9ec;                       /* 水池 */
   --mh-pond-hi: #b8ecfa;                    /* 水池亮面；水晶 */
   --mh-fall: #8fdcf5;                       /* 瀑布 */
+  --mh-fall-hi: #d8f4ff;                    /* 瀑布頂端亮水唇 */
+  --mh-fall-mid: #9fdaf0;                   /* 細水簾本體 */
+  --mh-foam: #e6fbff;                       /* 水花／上升泡泡 */
+  --mh-mush-stem: #f6e9ff;                  /* 發光蘑菇梗 */
+  --mh-firefly: #fff4a8;                    /* 螢火蟲 */
+  --mh-cloud-hi: #fbefff;                   /* 瀑布底雲亮面 */
+  --mh-lamp-glass: #fff8e6;                 /* 燈塔燈室玻璃 */
   --mh-gate: #5b3f8f;                       /* 城門 */
   --mh-gate-frame: #fff1d6;                 /* 城門框 */
   --mh-gold: #ffd34d;                       /* 門把金 */
