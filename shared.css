@@ -481,6 +481,79 @@
   --adm-bv-8fa9c7: #8fa9c7;  /* 後台品牌廠商頁：搜尋列範圍按鈕選中底色／搜尋框聚焦邊線（舊後台寫死） */
   --adm-bv-5a9a5a: #5a9a5a;  /* 後台品牌廠商頁：分潤確認「已確認」綠字（舊後台寫死） */
   --adm-bv-cccccc: #cccccc;  /* 後台品牌廠商頁：帳務補進來的過去開團列圓點（舊後台 acctPastGroupBuysForBrand_ 寫死 #cccccc） */
+
+  /* ---------- 磁力片學習館（/magnet）專屬色（夜空場景與內容卡，兩套色系共用） ---------- */
+  --mh-page-bg: #1d1830;                    /* 學習館頁面最底色（載入前） */
+  --mh-sky-top: #2a1d66;                    /* 夜空漸層：上 */
+  --mh-sky-mid: #7a4fc0;                    /* 夜空漸層：中 */
+  --mh-sky-bot: #f2a7d6;                    /* 夜空漸層：下 */
+  --mh-neb-1: #ff8ad8;                      /* 星雲粉 */
+  --mh-neb-2: #6fd3ff;                      /* 星雲藍 */
+  --mh-neb-3: #b18cff;                      /* 星雲紫 */
+  --mh-neb-4: #ffb3e6;                      /* 星雲淡粉；熱氣球 */
+  --mh-aur-1: #9ef0e0;                      /* 極光青綠；發光蘑菇、水池光泡 */
+  --mh-aur-2: #f7b6e8;                      /* 極光粉 */
+  --mh-star-1: #ffffff;                     /* 閃星白 */
+  --mh-star-2: #fff4c2;                     /* 閃星淡黃 */
+  --mh-star-3: #d6f6ff;                     /* 閃星淡藍 */
+  --mh-star-4: #ffd6f2;                     /* 閃星淡粉；水晶 */
+  --mh-moon: #fff4cf;                       /* 彎月 */
+  --mh-cloud: #f3dcff;                      /* 淡紫雲；蘑菇梗；副標字 */
+  --mh-isle-rock: #3a6f8f;                  /* 浮島岩底 */
+  --mh-isle-rock-d: #2f5876;                /* 浮島岩底暗面 */
+  --mh-isle-water: #4aa6a8;                 /* 浮島側帶 */
+  --mh-isle-grass: #9fe0a0;                 /* 浮島草地 */
+  --mh-isle-grass-hi: #c4f0b6;              /* 浮島草地亮面 */
+  --mh-sign-post: #8a5d40;                  /* 木牌柱；樹幹枝 */
+  --mh-sign-bg: #f3d9b1;                    /* 木牌底 */
+  --mh-sign-edge: #b9875f;                  /* 木牌邊 */
+  --mh-sign-text: #6b4329;                  /* 木牌字；果實梗 */
+  --mh-wood: #c99470;                       /* 橋、吊籃木色 */
+  --mh-trunk: #9a6b4f;                      /* 樹幹 */
+  --mh-leaf-1: #3fa39a;                     /* 樹冠深 */
+  --mh-leaf-2: #4bb5aa;                     /* 樹冠中 */
+  --mh-leaf-3: #5cc7bb;                     /* 樹冠淺 */
+  --mh-leaf-hi: #8fe2dc;                    /* 樹冠亮點 */
+  --mh-fruit-1: #ef5b7a;                    /* A 果實 */
+  --mh-fruit-2: #f7a23b;                    /* B 果實 */
+  --mh-fruit-3: #a26bd6;                    /* C 果實 */
+  --mh-fruit-leaf: #7fd67a;                 /* 果實小葉 */
+  --mh-mush-1: #ff9ad5;                     /* 發光蘑菇粉 */
+  --mh-mush-3: #ffe58a;                     /* 發光蘑菇黃；花心 */
+  --mh-stem: #5cc2a0;                       /* 花莖 */
+  --mh-glow: #fff1a8;                       /* 窗戶／橋燈發光 */
+  --mh-glow-soft: #fff6c8;                  /* 塔窗發光 */
+  --mh-balloon-2: #ffe08a;                  /* 熱氣球黃 */
+  --mh-pond: #6cc9ec;                       /* 水池 */
+  --mh-pond-hi: #b8ecfa;                    /* 水池亮面；水晶 */
+  --mh-fall: #8fdcf5;                       /* 瀑布 */
+  --mh-gate: #5b3f8f;                       /* 城門 */
+  --mh-gate-frame: #fff1d6;                 /* 城門框 */
+  --mh-gold: #ffd34d;                       /* 門把金 */
+  --mh-plaza-1: #efe0cc;                    /* 廣場地磚亮 */
+  --mh-plaza-2: #dcc4a8;                    /* 廣場地磚暗 */
+  --mh-fountain: #d6e8f2;                   /* 噴水池池緣 */
+  --mh-fountain-d: #9fc2d6;                 /* 噴水池池緣暗面 */
+  --mh-water: #7fd0ee;                      /* 噴水池水 */
+  --mh-paper: #fffaf0;                      /* 單字卡紙 */
+  --mh-paper-edge: #e5d3b8;                 /* 單字卡邊 */
+  --mh-title: #ffffff;                      /* 入口大標字 */
+  --mh-title-glow: #f7b6dd;                 /* 入口大標光暈 */
+  --mh-title-edge: #7a4fc0;                 /* 入口大標立體邊 */
+  --mh-veil: rgba(31, 23, 71, 0.75);        /* 標題底暈 */
+  --mh-btn-bg: #ffd36b;                     /* 主按鈕底 */
+  --mh-btn-ink: #7a4a1e;                    /* 主按鈕字 */
+  --mh-btn-edge: #e3a93c;                   /* 主按鈕下緣 */
+  --mh-btn-glow: rgba(120, 80, 190, 0.3);   /* 主按鈕陰影 */
+  --mh-chip-bg: rgba(255, 255, 255, 0.22);  /* 半透明膠囊／箭頭底 */
+  --mh-chip-ink: #ffffff;                   /* 半透明膠囊字 */
+  --mh-dot-off: rgba(255, 255, 255, 0.4);   /* 圓點未選 */
+  --mh-card: #ffffff;                       /* 作品卡／內容卡底 */
+  --mh-card-ink: #4a3a66;                   /* 內容卡主字 */
+  --mh-card-mute: #8a7aa6;                  /* 內容卡淡字 */
+  --mh-card-line: #ece3f7;                  /* 內容卡分隔線 */
+  --mh-card-soft: #f6f0fc;                  /* 內容卡淺底 */
+  --mh-err: #b5485a;                        /* 錯誤字 */
 }
 /* END GENERATED */
 
