@@ -565,6 +565,20 @@
   --mh-crest-gold: #f6c453;                 /* 入口按鈕金邊 */
   --mh-crest-gold-d: #d99a2b;               /* 入口按鈕深金外框 */
   --mh-crest-ink: #fff8e1;                  /* 入口按鈕字 */
+  --mh-grass-shade: #7cc58a;                /* 知識之樹：樹下草地陰影 */
+  --mh-trunk-hi: #b9845f;                   /* 知識之樹：樹幹亮紋 */
+  --mh-leaf-dk: #2f8f86;                    /* 知識之樹：樹冠暗面 */
+  --mh-leaf-lt: #62c8bb;                    /* 知識之樹：樹冠亮面 */
+  --mh-leaf-dot: #a8eadf;                   /* 知識之樹：小葉點 */
+  --mh-snow: #f4f8ff;                       /* 知識之樹聖誕版：島上積雪 */
+  --mh-snow-shade: #e3eefc;                 /* 知識之樹聖誕版：樹下雪影 */
+  --mh-pine-d: #1f6b4e;                     /* 聖誕樹：樹冠暗面 */
+  --mh-pine-1: #2f8a64;                     /* 聖誕樹：下層主色 */
+  --mh-pine-2: #359470;                     /* 聖誕樹：中層主色 */
+  --mh-pine-3: #3d9e78;                     /* 聖誕樹：上層主色 */
+  --mh-pine-hi1: #5cba8c;                   /* 聖誕樹：下層亮面 */
+  --mh-pine-hi2: #66c497;                   /* 聖誕樹：中層亮面 */
+  --mh-pine-hi3: #74cda2;                   /* 聖誕樹：上層亮面 */
 }
 /* END GENERATED */
 
