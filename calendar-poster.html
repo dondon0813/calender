@@ -2551,11 +2551,19 @@ function remDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function reminderGroups() {
+// 今天開團中的團（結單提醒的來源；面板在結單提醒模式也列這些，含已移除的，才找得回來）
+function reminderOpenEvents() {
   const today = todayStart();
-  const evs = allEvents
-    .filter(ev => ev.start <= today && today <= ev.displayEnd && !ovRead(ev.id, 'list').hidden && accountKeeps(ev))
+  return allEvents
+    .filter(ev => ev.start <= today && today <= ev.displayEnd && accountKeeps(ev))
     .sort((a, b) => a.displayEnd - b.displayEnd || a.start - b.start || a.title.localeCompare(b.title, 'zh-Hant'));
+}
+// 2026-11-01 雪莉：「移除此團」＝只從結單提醒拿掉（rec.remHide），開團列表／貼文不受影響
+function remHidden(ev) { return !!(EV_OVERRIDES[ev.id] && EV_OVERRIDES[ev.id].remHide); }
+
+function reminderGroups() {
+  const evs = reminderOpenEvents()
+    .filter(ev => !ovRead(ev.id, 'list').hidden && !remHidden(ev));
   const groups = [];
   evs.forEach(ev => {
     const prev = groups[groups.length - 1];
@@ -2949,7 +2957,7 @@ function renderEvList() {
   const tag = document.getElementById('evModeTag');
   if (tag) tag.textContent = S.mode === 'reminder' ? '列表（結單提醒也吃這套）'
                            : mk === 'list' ? '列表' : '行事曆';
-  const evs = monthEvents();
+  const evs = S.mode === 'reminder' ? reminderOpenEvents() : monthEvents();
   // 月初月底補位格裡的鄰月團（只有行事曆版面畫得到它們）
   const outs = mk === 'calendar' ? outMonthEvents() : [];
   if (!evs.length && !outs.length) {
@@ -3047,8 +3055,17 @@ function buildEvItem(ev, mk, isOut) {
     xmWrap.setAttribute('data-pane', 'image');
     opts.appendChild(xmWrap);
   }
+  if (S.mode === 'reminder') {
+    const rmWrap = mkCheck('移除此團（只限結單提醒）', !!rec.remHide, v => {
+      if (v) rec.remHide = true; else delete rec.remHide;
+      saveEvents(); item.classList.toggle('hidden-ev', v || o.hidden); renderPoster();
+    });
+    rmWrap.setAttribute('data-pane', 'image');
+    opts.appendChild(rmWrap);
+    if (rec.remHide) item.classList.add('hidden-ev');
+  }
   opts.appendChild(mkCheck('不顯示', o.hidden, v => {
-    o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v); renderPoster(); renderCaption();
+    o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v || (S.mode === 'reminder' && !!rec.remHide)); renderPoster(); renderCaption();
   }));
 
   const badgeWrap = document.createElement('label');
