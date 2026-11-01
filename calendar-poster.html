@@ -839,7 +839,11 @@ body.rem-drag .remg-note { pointer-events: none; }
 .poster.rem-nf-thick .remg-name, .poster.rem-nf-thick .rem-name { font-family: 'Tsuhsianti', var(--font-display); font-weight: normal; }
 
 /* 面板：各團簡短介紹輸入列（含每團自己的格寬欄） */
-.remnote-item { margin-bottom: 8px; }
+.remnote-item { margin-bottom: 12px; }
+.remnote-item.remnote-off > :not(.remnote-head),
+.remnote-item.remnote-off .remnote-name { opacity: .45; }
+.remnote-item .remnote-rm { flex: none; font-size: 12px; white-space: nowrap; }
+.remnote-item input.remnote-dname { margin-bottom: 4px; }
 .remnote-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .remnote-name { font-size: 12px; font-weight: 700; flex: 1 1 auto; min-width: 0; }
 /* 介紹輸入格滿版；格寬數字欄固定小格（選擇器要壓過下面那條 input 通則） */
@@ -949,8 +953,9 @@ body.rem-drag .remg-note { pointer-events: none; }
       <p class="hint rem-icon-only">拖曳模式開著時，圖上每一組（小圖＋團名＋介紹）和「今日結單／現正開團中」兩個標題都可以直接用手指或滑鼠拖到想要的位置；位置會記住、下載的圖跟預覽一樣。拖曳中暫時不能點介紹編輯，關掉再改。</p>
       <div class="row rem-icon-only"><label>標題（上）</label><input type="text" id="tRemgToday"></div>
       <div class="row rem-icon-only"><label>標題（下）</label><input type="text" id="tRemgOpen"></div>
-      <div class="rem-icon-only">
-        <p class="hint"><b>各團簡短介紹</b>（顯示在圖上團名下方的底色框，跟貼文 👉🏻 那句同一個庫）：留空＝用系統介紹庫的那句；還沒有介紹的團填一句，<b>離開輸入格就自動存進系統</b>，以後每次都自動帶出來（要先在這個瀏覽器登入過後台 admin.html）。團名右邊的「<b>格寬</b>」欄＝這一團自己的格子寬度（px），留空＝用上面「名稱寬度」的值——最後一排只剩一團想單獨拉寬就填這裡（只存這台電腦、只影響這張圖）。<b>介紹想固定在哪裡斷行就打「｜」</b>（例：<code>冰箱收納神器！｜最好用的保鮮盒！</code>），任何裝置都會斷在同一個位置；貼文那邊會自動接回一行。</p>
+      <div>
+        <p class="hint"><b>各團設定</b>（今天開團中的團）：顯示名稱跟「開團列表」共用；勾「<b>移除此團</b>」＝只從結單提醒拿掉，開團列表和貼文不受影響。</p>
+        <p class="hint rem-icon-only"><b>各團簡短介紹</b>（顯示在圖上團名下方的底色框，跟貼文 👉🏻 那句同一個庫）：留空＝用系統介紹庫的那句；還沒有介紹的團填一句，<b>離開輸入格就自動存進系統</b>，以後每次都自動帶出來（要先在這個瀏覽器登入過後台 admin.html）。團名右邊的「<b>格寬</b>」欄＝這一團自己的格子寬度（px），留空＝用上面「名稱寬度」的值——最後一排只剩一團想單獨拉寬就填這裡（只存這台電腦、只影響這張圖）。<b>介紹想固定在哪裡斷行就打「｜」</b>（例：<code>冰箱收納神器！｜最好用的保鮮盒！</code>），任何裝置都會斷在同一個位置；貼文那邊會自動接回一行。</p>
         <div id="remNoteList"></div>
       </div>
       <p class="hint">兩種樣式都自動列出<b>今天還在開團</b>的團（延長過的看延長後日期）。<b>列表式</b>＝一團一條，帶小圖＋結單日（今天「今晚結單」、明天「明天結單」紅字）。<b>圖案式</b>＝整張實色底，白色粗體標題分兩區——上面「今日結單」（今天結單的團）、下面「現正開團中」（其餘開團中的團），每團小圖在上、團名在下，不寫日期；哪一區沒有團就自動不顯示。標題留空＝不顯示那行。小圖跟前台「現正開團中」同一套：行事曆該檔的小圖欄優先，其次品牌庫去背小圖，都沒有就用字首。團名、不顯示、徽章吃「本月團」<b>列表</b>那一套微調。</p>
@@ -1073,7 +1078,7 @@ body.rem-drag .remg-note { pointer-events: none; }
       <div class="btn-row"><button class="btn" id="btnClearPhoto">清除人像照</button></div>
     </fieldset>
 
-    <fieldset>
+    <fieldset class="rem-hide">
       <legend>本月團（逐團微調 · <span id="evModeTag">行事曆</span>）</legend>
       <p class="hint" data-pane="image">行事曆與列表<b>各調各的</b>（跟版面設定一樣）：上面切換版面，這裡就換成那個版面的設定——顯示名稱、冷凍/冷藏、同框、不顯示、徽章。改這裡只影響這張圖，不會動到行事曆資料。留空＝用原本的活動名稱。<b>要在某個位置斷行就打「｜」</b>——例如想讓「安可堡泡泡」分成兩行，就填 <code>安可堡｜泡泡</code>。列表模式一律一行，｜ 會自動變回空白。</p>
       <p class="hint" data-pane="text">這裡改的是貼文裡 👉🏻 那句，只影響這個月，兩種版面共用。留空＝用系統品牌備註庫的那句。貼文的團名與順序是看<b>列表</b>那一套微調。</p>
@@ -2955,9 +2960,9 @@ function renderEvList() {
   box.innerHTML = '';
   const mk = modeKey(S.mode);
   const tag = document.getElementById('evModeTag');
-  if (tag) tag.textContent = S.mode === 'reminder' ? '結單提醒：今天開團中的團；名稱／不顯示跟列表共用'
+  if (tag) tag.textContent = S.mode === 'reminder' ? '列表（結單提醒也吃這套）'
                            : mk === 'list' ? '列表' : '行事曆';
-  const evs = S.mode === 'reminder' ? reminderOpenEvents() : monthEvents();
+  const evs = monthEvents();
   // 月初月底補位格裡的鄰月團（只有行事曆版面畫得到它們）
   const outs = mk === 'calendar' ? outMonthEvents() : [];
   if (!evs.length && !outs.length) {
@@ -3055,17 +3060,8 @@ function buildEvItem(ev, mk, isOut) {
     xmWrap.setAttribute('data-pane', 'image');
     opts.appendChild(xmWrap);
   }
-  if (S.mode === 'reminder') {
-    const rmWrap = mkCheck('移除此團（只限結單提醒）', !!rec.remHide, v => {
-      if (v) rec.remHide = true; else delete rec.remHide;
-      saveEvents(); item.classList.toggle('hidden-ev', v || o.hidden); renderPoster();
-    });
-    rmWrap.setAttribute('data-pane', 'image');
-    opts.appendChild(rmWrap);
-    if (rec.remHide) item.classList.add('hidden-ev');
-  }
   opts.appendChild(mkCheck('不顯示', o.hidden, v => {
-    o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v || (S.mode === 'reminder' && !!rec.remHide)); renderPoster(); renderCaption();
+    o.hidden = v; saveEvents(); item.classList.toggle('hidden-ev', v); renderPoster(); renderCaption();
   }));
 
   const badgeWrap = document.createElement('label');
@@ -3845,27 +3841,36 @@ function renderRemNotes() {
   const box = document.getElementById('remNoteList');
   if (!box) return;
   box.innerHTML = '';
-  const groups = reminderGroups();
-  if (!groups.length) {
+  // 2026-11-01 雪莉：結單提醒只留這一份清單（名稱／介紹／格寬／移除此團整合在一起），
+  // 已移除的團也列出來（變淡），才能取消勾選放回來；「不顯示」（列表那套）的團照舊不列
+  const evs = reminderOpenEvents().filter(ev => !ovRead(ev.id, 'list').hidden);
+  if (!evs.length) {
     box.innerHTML = '<p class="hint">現在沒有開團中的團。</p>';
     return;
   }
-  groups.forEach(group => group.forEach(ev => {
+  evs.forEach(ev => {
     const rec = ovOf(ev.id);
     const item = document.createElement('div');
-    item.className = 'remnote-item';
+    item.className = 'remnote-item' + (rec.remHide ? ' remnote-off' : '');
 
     const head = document.createElement('div');
     head.className = 'remnote-head';
     const label = document.createElement('div');
     label.className = 'remnote-name';
-    label.textContent = plainName(posterName(ev, 'list'));
+    label.textContent = `${fmtMD(ev.start)} ${plainName(ev.title)}`;
     head.appendChild(label);
+    const rmWrap = mkCheck('移除此團', !!rec.remHide, v => {
+      if (v) rec.remHide = true; else delete rec.remHide;
+      item.classList.toggle('remnote-off', v);
+      saveEvents(); renderPoster();
+    });
+    rmWrap.classList.add('remnote-rm');
+    head.appendChild(rmWrap);
     // 這一團自己的格寬（px）：留空＝用「名稱寬度」滑桿的預設值。
     // 例：最後一排只剩一團想單獨拉寬，就填大一點的數字
     const wIn = document.createElement('input');
     wIn.type = 'number';
-    wIn.className = 'remnote-w';
+    wIn.className = 'remnote-w rem-icon-only';
     wIn.placeholder = '格寬';
     wIn.title = '這一團的格寬（px），留空＝用「名稱寬度」預設';
     wIn.value = rec.remW > 0 ? rec.remW : '';
@@ -3876,6 +3881,18 @@ function renderRemNotes() {
     });
     head.appendChild(wIn);
     item.appendChild(head);
+
+    // 顯示名稱：跟開團列表共用同一格（逐團微調「列表」那套的名稱）
+    const nameIn = document.createElement('input');
+    nameIn.type = 'text';
+    nameIn.className = 'remnote-dname';
+    const autoShort = brandShortFor(ev);
+    nameIn.placeholder = '顯示名稱' + (autoShort ? `（留空＝用品牌簡稱「${plainName(autoShort)}」；打｜可斷行）` : '（留空＝用原名；打｜可斷行）');
+    nameIn.value = rec.list.name || '';
+    nameIn.addEventListener('input', () => {
+      rec.list.name = nameIn.value; saveEvents(); renderPoster(); renderCaption();
+    });
+    item.appendChild(nameIn);
 
     const lib = brandNoteFor(plainName(displayName(ev, 'list'))) || brandNoteFor(ev.title);
     const input = document.createElement('input');
@@ -3897,7 +3914,7 @@ function renderRemNotes() {
     item.appendChild(input);
     item.appendChild(state);
     box.appendChild(item);
-  }));
+  });
 }
 
 /* 自動存介紹庫時的品牌與關鍵字推導（2026-09-06 修）：
