@@ -1137,6 +1137,42 @@ function acctUpdateRateHint() {
 }
 document.getElementById('acctBrandSelect').addEventListener('change', acctUpdateRateHint);
 
+// ----- 稅金換算（共用算法：盛爸文字與分潤金額旁的提示都用這支）-----
+// taxAdded=true：填的金額是未稅；false：填的金額已含稅（÷1.05 反推未稅）。金額空白／非數字回 null。
+function acctTaxBreakdown_(commission, taxAdded) {
+  const c = String(commission === undefined || commission === null ? '' : commission).trim();
+  if (c === '' || isNaN(Number(c))) return null;
+  const cv = Number(c);
+  if (taxAdded) {
+    const taxed = Math.round(cv * 1.05);
+    return { untaxed: cv, tax: taxed - cv, taxed: taxed };
+  }
+  const untaxed = Math.round(cv / 1.05);
+  return { untaxed: untaxed, tax: cv - untaxed, taxed: cv };
+}
+
+// 分潤金額欄下方的即時換算小字（只顯示，不改任何輸入值；元素 id=acctTaxHint 由 JS 補建）
+function acctUpdateTaxHint() {
+  const input = document.getElementById('acctCommissionInput');
+  if (!input) return;
+  let el = document.getElementById('acctTaxHint');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'acctTaxHint';
+    el.style.cssText = 'display:none; font-size:11.5px; color:var(--c-muted); margin-top:4px;';
+    input.insertAdjacentElement('afterend', el);
+  }
+  const taxAdded = document.getElementById('acctTaxAddedInput').checked;
+  const bd = acctCan.commission ? acctTaxBreakdown_(input.value, taxAdded) : null;
+  if (!bd) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.textContent = taxAdded
+    ? '未稅 ' + bd.untaxed + '＝含稅 ' + bd.taxed + '（稅 ' + bd.tax + '）'
+    : '含稅 ' + bd.taxed + '＝未稅 ' + bd.untaxed + '＋稅 ' + bd.tax;
+  el.style.display = 'block';
+}
+document.getElementById('acctCommissionInput').addEventListener('input', acctUpdateTaxHint);
+document.getElementById('acctTaxAddedInput').addEventListener('change', acctUpdateTaxHint);
+
 // ----- 複製給盛爸（發票請款用的固定格式文字）-----
 function acctBuildShengbaText_() {
   const val = id => document.getElementById(id).value.trim();
@@ -1151,15 +1187,8 @@ function acctBuildShengbaText_() {
   const rateTxt = numTxt(val('acctRateInput'));
   // 稅金算法：勾「稅外加」＝分潤金額是未稅；沒勾＝分潤金額已含稅（÷1.05 反推未稅）
   let net = '', tax = '', gross = '';
-  const c = val('acctCommissionInput');
-  if (c !== '' && !isNaN(Number(c))) {
-    const cv = Number(c);
-    if (document.getElementById('acctTaxAddedInput').checked) {
-      net = cv; gross = Math.round(cv * 1.05); tax = gross - cv;
-    } else {
-      gross = cv; net = Math.round(cv / 1.05); tax = cv - net;
-    }
-  }
+  const bd = acctTaxBreakdown_(val('acctCommissionInput'), document.getElementById('acctTaxAddedInput').checked);
+  if (bd) { net = bd.untaxed; tax = bd.tax; gross = bd.taxed; }
   const t = acctFindInvoiceTitle(val('acctCompanyInput')) || {};
   return [
     dateTxt + ' 雪莉朵栗 團' + teamName,
@@ -1274,6 +1303,7 @@ function openAcctEditModal(rec) {
   v('acctInvoiceInput', rec ? rec.invoice : '');
   v('acctNoteInput', rec ? rec.note : '');
   document.getElementById('acctTaxAddedInput').checked = rec ? !!rec.taxAdded : false;
+  acctUpdateTaxHint();
   // 自購：欄位還沒 db push 時反灰＋提示（勾了也存不進去）
   const spIn = document.getElementById('acctSelfPurchaseInput');
   spIn.checked = rec ? !!rec.selfPurchase : false;
