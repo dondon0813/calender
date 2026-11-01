@@ -5295,7 +5295,7 @@
       <select id="acctFilterBrand"><option value="">全部品牌</option></select>
       <select id="acctFilterStatus"><option value="">全部狀態</option></select>
       <select id="acctFilterRecon"><option value="">全部對帳狀態</option></select>
-      <input type="search" id="acctFilterText" placeholder="搜尋團名、開票公司…">
+      <input type="search" id="acctFilterText" placeholder="搜尋團名、開票公司、金額…">
       <button class="task-mini-btn" id="acctFilterClear">清除</button>
     </div>
 
@@ -6994,6 +6994,7 @@
       <div data-perm="commission">
         <label for="acctRateInput">分潤 %（只填數字，15 就是 15%；跟品牌資料庫的填法一致）</label>
         <input type="number" id="acctRateInput" step="0.1" min="0" max="100" placeholder="例如：15">
+        <div id="acctRateHint" style="display:none; font-size:11.5px; color:var(--c-muted); margin-top:4px;"></div>
         <label for="acctRateNoteInput">分潤說明（混合成數寫這裡，例如「主商品20%＋加購品15%」）</label>
         <input type="text" id="acctRateNoteInput" placeholder="沒有特殊條件就留空">
       </div>
@@ -7003,6 +7004,10 @@
         <label style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer;">
           <input type="checkbox" id="acctTaxAddedInput" style="width:auto; margin:0;">
           稅外加（分潤另外加 5% 營業稅）
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer;">
+          <input type="checkbox" id="acctSelfPurchaseInput" style="width:auto; margin:0;">
+          自購（內扣分潤）<small id="acctSelfPurchaseHint" style="color:var(--c-muted);"></small>
         </label>
         <label for="acctFeeInput">稿酬（固定業配費，沒有就留空）</label>
         <input type="number" id="acctFeeInput" step="1">
@@ -7029,6 +7034,7 @@
       <div id="acctHistoryBox" style="display:none"></div>
       <div style="display:flex; gap:8px; margin-top:16px;">
         <button class="task-submit-btn" id="acctSaveBtn" style="margin-top:0;">💾 儲存</button>
+        <button class="task-mini-btn" id="acctCopyBtn" type="button" style="display:none; padding:0 14px;"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>複製給盛爸</button>
         <button class="task-mini-btn danger" id="acctDeleteBtn" style="display:none; padding:0 18px;">🗑 刪除</button>
       </div>
       <div class="form-status" id="acctEditStatus"></div>
@@ -8102,7 +8108,7 @@
 <script src="customBlocks.js?v=5"></script>
 <script src="tools.js?v=38"></script>
 <script src="report.js?v=8"></script>
-<script src="accounting.js?v=21"></script>
+<script src="accounting.js?v=22"></script>
 <!-- expenses.js（帳務頁「公司支出」子分頁）必須排在 admin.js 之前：開機還原分頁若停在帳務頁，只有 expenseEdit 的人會同步呼叫 acctSwitchTab('expenses') → loadExpensesView()，順序錯了整頁變磚（同 subscriptions.js 慣例） -->
 <script src="expenses.js?v=4"></script>
 <!-- signdocs.js（帳務頁「文件簽署」子分頁）同樣必須排在 admin.js 之前，理由同 expenses.js：開機還原分頁可能同步呼叫 acctSwitchTab('signdocs') → loadSigndocsView() -->
@@ -8117,7 +8123,7 @@
 <!-- changelog.js（雪莉更新日誌）同樣必須排在 admin.js 之前（開機還原分頁停在 changelog 會同步呼叫 loadChangelogView） -->
 <script src="changelog.js?v=5"></script>
 <!-- promos.js（團購優惠：事件視窗優惠區＋優惠總覽分頁）同樣必須排在 admin.js 之前（開機還原分頁停在 promos 會同步呼叫 loadPromosView） -->
-<script src="promos.js?v=7"></script>
+<script src="promos.js?v=8"></script>
 <script src="announce.js?v=3"></script>
 <!-- fans.js（會員管理）同樣必須排在 admin.js 之前：開機還原分頁若停在 fanAdmin，會同步呼叫 loadFanAdminView() -->
 <script src="fans.js?v=24"></script>

@@ -35,6 +35,13 @@ let acctLoaded = false;
 let acctEditCtx = null;
 let acctTab = 'list';
 let acctMetric = 'commission';
+// 自購欄位（migration 20261101210000）是否已 db push；後端 acct-list 回 selfPurchaseReady，沒回（舊後端）視為就緒
+let acctSelfPurchaseReady = true;
+// 發票抬頭清單（invoice_titles）：開票公司候選＋「複製給盛爸」帶入統編／地址／電話／收件人
+let acctInvoiceTitles = [];
+let acctInvoiceTitlesReady = false;
+// 這次登入期間按過「先不加入」的抬頭，不重複問
+const acctInvoiceTitleDeclined = new Set();
 
 const ACCT_METRIC_LABEL = { commission: '分潤', sales: '銷售金額', fee: '稿酬' };
 
@@ -75,7 +82,9 @@ function loadAccounting(force) {
     acctCan = { revenue: !!res.canRevenue, commission: !!res.canCommission, recon: !!res.canRecon };
     if (Array.isArray(res.statuses) && res.statuses.length) acctStatuses = res.statuses;
     if (Array.isArray(res.reconStatuses) && res.reconStatuses.length) acctReconStatuses = res.reconStatuses;
+    acctSelfPurchaseReady = res.selfPurchaseReady !== false;
     acctLoaded = true;
+    acctLoadInvoiceTitles(); // 不 await：抬頭清單只影響候選與複製文字，不擋帳務清單
     acctFillFilters();
     acctFillPrintScope();
     // 只有對帳權限、沒有業績/分潤權限的助理：其他分頁對她來說是空白頁（沒資料也沒按鈕），
@@ -152,9 +161,15 @@ function acctFiltered() {
     if (rc === '__pending__' && !r.reconStatus) return false;
     if (rc && rc !== '__pending__' && r.reconStatus !== rc) return false;
     if (kw) {
+      // 金額也可搜：銷售金額／分潤金額／費用（沒權限時後端不回這些 key → 自然不在搜尋範圍）。
+      // 同時放「原始數字字串」與「千分位版本」，關鍵字的逗號先去掉再比。
+      const amtParts = [r.sales, r.commission, r.fee]
+        .filter(v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v)))
+        .map(v => String(v) + ' ' + Number(v).toLocaleString('en-US'));
       const hay = [r.rawName, acctBrandName(r.brandId), r.company, r.invoice, r.id]
-        .filter(Boolean).join(' ').toLowerCase();
-      if (hay.indexOf(kw) === -1) return false;
+        .filter(Boolean).concat(amtParts).join(' ').toLowerCase();
+      const kwNoComma = kw.replace(/[,，]/g, '');
+      if (hay.indexOf(kw) === -1 && (!kwNoComma || hay.indexOf(kwNoComma) === -1)) return false;
     }
     return true;
   }).sort((a, b2) => (b2.date || '').localeCompare(a.date || ''));
@@ -217,7 +232,7 @@ function renderAccountingView() {
     return `<div class="acct-row" data-id="${escHtml(r.id)}">
       <span class="acct-date">${escHtml(r.date || '')}</span>
       <span class="acct-name">${escHtml(acctBrandName(r.brandId) || r.rawName)}
-        ${r.contFrom ? '<span class="acct-cont" title="同一團廠商重開表單，業績拆成兩列">續</span>' : ''}${badgeHtml}
+        ${r.contFrom ? '<span class="acct-cont" title="同一團廠商重開表單，業績拆成兩列">續</span>' : ''}${r.selfPurchase ? ' <span class="acct-cont" title="自購（內扣分潤）">自購</span>' : ''}${badgeHtml}
         <small>${escHtml(r.rawName || '')}</small></span>
       <span class="acct-rate">${rate}</span>
       <span class="acct-money">${acctCell(r, 'sales', acctCan.revenue)}</span>
@@ -1008,7 +1023,9 @@ function acctSyncCompanyOptions(autoFill) {
 
   const seen = new Set();
   const ordered = [];
-  [brandComps, vendorRegistered, vendorComps, compsOf(acctData)].forEach(list => {
+  // 抬頭清單（invoice_titles）排在歷史抬頭之後：歷史用過的照舊排前，新建檔但還沒用過的補在最後
+  const titleNames = acctInvoiceTitles.map(x => x.name).filter(Boolean);
+  [brandComps, vendorRegistered, vendorComps, compsOf(acctData), titleNames].forEach(list => {
     list.forEach(c => { if (!seen.has(c)) { seen.add(c); ordered.push(c); } });
   });
   dl.innerHTML = ordered.map(c => `<option value="${escHtml(c)}"></option>`).join('');
@@ -1021,6 +1038,152 @@ function acctSyncCompanyOptions(autoFill) {
 // 選了品牌／廠商就重算候選；.value = 不會觸發 change，所以編輯既有紀錄時不會被蓋掉
 document.getElementById('acctBrandSelect').addEventListener('change', () => acctSyncCompanyOptions(true));
 document.getElementById('acctVendorSelect').addEventListener('change', () => acctSyncCompanyOptions(false));
+
+// ----- 抬頭清單：讀取／新增 -----
+function acctLoadInvoiceTitles() {
+  if (!acctCan.revenue) return Promise.resolve(); // 後端以 revenue 把關；沒權限就不打，避免無謂的錯誤
+  return postTask({ type: 'invoice-title-list' }).then(res => {
+    acctInvoiceTitlesReady = res.tableReady !== false;
+    acctInvoiceTitles = Array.isArray(res.items) ? res.items : [];
+    acctSyncCompanyOptions(false);
+  }).catch(() => { /* 讀不到就維持舊行為（只有歷史抬頭候選） */ });
+}
+
+function acctFindInvoiceTitle(name) {
+  const n = String(name || '').trim();
+  return n ? acctInvoiceTitles.find(x => x.name === n) : null;
+}
+
+// 小視窗：填統編／地址／電話／收件人（都可空）。回傳 Promise，不論加入或略過都 resolve。
+function acctOpenInvoiceTitleDialog(name) {
+  return new Promise(resolve => {
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop show';
+    wrap.id = 'acctInvTitleModal';
+    const f = (id, label) => '<label for="' + id + '">' + label + '</label><input type="text" id="' + id + '" placeholder="可留空" maxlength="200" autocomplete="off">';
+    wrap.innerHTML = '<div class="modal-box" style="width:min(420px, 94vw);">' +
+      '<button class="modal-close" type="button" data-act="skip">✕</button>' +
+      '<h3>加入發票抬頭</h3>' +
+      '<div class="task-form" style="margin:0; padding:0; background:none;">' +
+      '<label for="acctInvName">抬頭</label>' +
+      '<input type="text" id="acctInvName" readonly value="' + escHtml(name) + '">' +
+      f('acctInvTaxId', '統編') + f('acctInvAddress', '地址') + f('acctInvPhone', '電話') + f('acctInvReceiver', '收件人') +
+      '<div style="display:flex; gap:8px; margin-top:16px;">' +
+      '<button class="task-submit-btn" type="button" data-act="save" style="margin-top:0;">加入抬頭清單</button>' +
+      '<button class="task-mini-btn" type="button" data-act="skip" style="padding:0 18px;">先不加入</button>' +
+      '</div>' +
+      '<div class="form-status" id="acctInvStatus"></div>' +
+      '</div></div>';
+    document.body.appendChild(wrap);
+    const close = () => { wrap.remove(); resolve(); };
+    wrap.querySelectorAll('[data-act="skip"]').forEach(b => b.addEventListener('click', () => {
+      acctInvoiceTitleDeclined.add(name);
+      close();
+    }));
+    wrap.querySelector('[data-act="save"]').addEventListener('click', async ev => {
+      const btn = ev.currentTarget;
+      const g = id => document.getElementById(id).value.trim();
+      btn.disabled = true;
+      setFormStatus('acctInvStatus', '儲存中…', '');
+      try {
+        const res = await postTask({
+          type: 'invoice-title-upsert', name,
+          taxId: g('acctInvTaxId'), address: g('acctInvAddress'), phone: g('acctInvPhone'), receiver: g('acctInvReceiver')
+        });
+        if (res && res.item) {
+          acctInvoiceTitles = acctInvoiceTitles.filter(x => x.name !== res.item.name).concat(res.item);
+          acctSyncCompanyOptions(false);
+        }
+        close();
+      } catch (err) {
+        setFormStatus('acctInvStatus', '加入失敗：' + err.message, 'error');
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+// 存檔／複製前：抬頭不在清單裡就問要不要加入（沒建表、沒權限、這次已拒絕過則靜默略過）
+async function acctMaybeAddInvoiceTitle(name) {
+  const n = String(name || '').trim();
+  if (!n || !acctCan.revenue || !acctInvoiceTitlesReady) return;
+  if (acctFindInvoiceTitle(n) || acctInvoiceTitleDeclined.has(n)) return;
+  if (!confirm('抬頭「' + n + '」還沒建檔，要加入抬頭清單嗎？')) {
+    acctInvoiceTitleDeclined.add(n);
+    return;
+  }
+  await acctOpenInvoiceTitleDialog(n);
+}
+
+// ----- 分潤％提示（只提示，絕不自動帶入輸入框）-----
+function acctUpdateRateHint() {
+  const el = document.getElementById('acctRateHint');
+  if (!el) return;
+  const brandId = document.getElementById('acctBrandSelect').value;
+  if (!acctCan.commission || !brandId) { el.style.display = 'none'; el.textContent = ''; return; }
+  const editingId = acctEditCtx && !acctEditCtx.isNew && acctEditCtx.rec ? acctEditCtx.rec.id : null;
+  const prev = acctData
+    .filter(r => !r.isVirtual && r.brandId === brandId && r.id !== editingId
+      && r.rate !== '' && r.rate !== undefined && r.rate !== null && !isNaN(Number(r.rate)))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+  if (!prev) {
+    el.textContent = '這個品牌還沒有分潤紀錄';
+  } else {
+    const d = String(prev.date || '').split('-');
+    const dateTxt = d.length === 3 ? d[0] + '/' + Number(d[1]) + '/' + Number(d[2]) : (prev.date || '');
+    el.textContent = '上一團分潤：' + (Math.round(acctNum(prev.rate) * 1000) / 10) + '%（' + dateTxt + ' ' + (prev.rawName || acctBrandName(prev.brandId)) + '）';
+  }
+  el.style.display = 'block';
+}
+document.getElementById('acctBrandSelect').addEventListener('change', acctUpdateRateHint);
+
+// ----- 複製給盛爸（發票請款用的固定格式文字）-----
+function acctBuildShengbaText_() {
+  const val = id => document.getElementById(id).value.trim();
+  const rec = acctEditCtx && acctEditCtx.rec;
+  const md = s => { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(s || '')); return m ? Number(m[2]) + '/' + Number(m[3]) : ''; };
+  // 綁行事曆團用團的起迄（含延長）；虛擬列用 date／closeDate；都沒有就只有 record_date 當起日
+  const start = (rec && rec.eventStart) || val('acctDateInput');
+  const end = (rec && (rec.eventEnd || rec.closeDate)) || '';
+  const dateTxt = md(start) + (end ? '-' + md(end) : '');
+  const teamName = val('acctRawNameInput') || acctBrandName(document.getElementById('acctBrandSelect').value);
+  const numTxt = s => (s === '' || isNaN(Number(s)) ? '' : String(Number(s)));
+  const rateTxt = numTxt(val('acctRateInput'));
+  // 稅金算法：勾「稅外加」＝分潤金額是未稅；沒勾＝分潤金額已含稅（÷1.05 反推未稅）
+  let net = '', tax = '', gross = '';
+  const c = val('acctCommissionInput');
+  if (c !== '' && !isNaN(Number(c))) {
+    const cv = Number(c);
+    if (document.getElementById('acctTaxAddedInput').checked) {
+      net = cv; gross = Math.round(cv * 1.05); tax = gross - cv;
+    } else {
+      gross = cv; net = Math.round(cv / 1.05); tax = cv - net;
+    }
+  }
+  const t = acctFindInvoiceTitle(val('acctCompanyInput')) || {};
+  return [
+    dateTxt + ' 雪莉朵栗 團' + teamName,
+    '銷售總額： ' + numTxt(val('acctSalesInput')),
+    '分潤抽成： ' + rateTxt + '%',
+    '項目： 廣告行銷費',
+    '發票未稅： ' + net,
+    '稅金： ' + tax,
+    '發票含稅金額： ' + gross,
+    '',
+    '📍 發票與收件資訊',
+    '抬頭： ' + val('acctCompanyInput'),
+    '統編： ' + (t.taxId || ''),
+    '地址： ' + (t.address || ''),
+    '電話： ' + (t.phone || ''),
+    '收件人： ' + (t.receiver || '')
+  ].join('\n');
+}
+document.getElementById('acctCopyBtn').addEventListener('click', async ev => {
+  const btn = ev.currentTarget;
+  // 抬頭還沒建檔：先問要不要補統編等資料，補完再複製（沒建表／沒權限／拒絕過則直接複製）
+  await acctMaybeAddInvoiceTitle(document.getElementById('acctCompanyInput').value);
+  copyText(acctBuildShengbaText_(), btn);
+});
 
 // ----- 新增／編輯 -----
 // 團購後台快速連結。rec 可能沒有 adminUrl（舊後端、或這團行事曆沒填「後台網址」），
@@ -1111,6 +1274,12 @@ function openAcctEditModal(rec) {
   v('acctInvoiceInput', rec ? rec.invoice : '');
   v('acctNoteInput', rec ? rec.note : '');
   document.getElementById('acctTaxAddedInput').checked = rec ? !!rec.taxAdded : false;
+  // 自購：欄位還沒 db push 時反灰＋提示（勾了也存不進去）
+  const spIn = document.getElementById('acctSelfPurchaseInput');
+  spIn.checked = rec ? !!rec.selfPurchase : false;
+  spIn.disabled = !acctSelfPurchaseReady;
+  document.getElementById('acctSelfPurchaseHint').textContent = acctSelfPurchaseReady ? '' : '　（待 db push）';
+  document.getElementById('acctCopyBtn').style.display = (acctCan.revenue || acctCan.commission) ? 'inline-block' : 'none';
 
   const audit = [];
   if (rec && rec.updatedBy) audit.push('最後修改：' + rec.updatedBy + '　' + (rec.updatedAt || ''));
@@ -1152,6 +1321,7 @@ function openAcctEditModal(rec) {
   // 新增時才自動帶抬頭；編輯既有紀錄一律照原值，不要偷改助理已經對過的帳
   acctSyncCompanyOptions(!rec);
 
+  acctUpdateRateHint();
   document.getElementById('acctEditModal').classList.add('show');
 }
 function closeAcctEditModal() {
@@ -1186,6 +1356,7 @@ document.getElementById('acctSaveBtn').addEventListener('click', async () => {
     payload.fee = val('acctFeeInput');
     payload.note = val('acctNoteInput');
     payload.taxAdded = document.getElementById('acctTaxAddedInput').checked;
+    if (acctSelfPurchaseReady) payload.selfPurchase = document.getElementById('acctSelfPurchaseInput').checked;
     payload.reconStatus = document.getElementById('acctReconStatusSelect').value;
   }
   if (acctCan.commission) {
@@ -1196,6 +1367,11 @@ document.getElementById('acctSaveBtn').addEventListener('click', async () => {
   }
   // 從行事曆虛擬列轉正：帶上原本的事件 id，讓後端把這筆帳務跟行事曆事件關聯起來
   if (acctEditCtx.rec && acctEditCtx.rec.eventId) payload.eventId = acctEditCtx.rec.eventId;
+
+  // 抬頭不在清單裡 → 問要不要加入（新增一律問；編輯既有紀錄只有「改了抬頭」才問，避免每次存舊帳都被問歷史抬頭）
+  const origCompany = acctEditCtx.isNew ? '' : String((acctEditCtx.rec && acctEditCtx.rec.company) || '').trim();
+  if (payload.company && payload.company !== origCompany) await acctMaybeAddInvoiceTitle(payload.company);
+  if (!acctEditCtx) return; // 問答期間視窗被關掉
 
   const btn = document.getElementById('acctSaveBtn');
   btn.disabled = true;

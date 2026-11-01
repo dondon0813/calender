@@ -91,6 +91,43 @@ function pmTagInput(value, disabled) {
   return sel;
 }
 
+// 一行一筆（2026-11-01 雪莉定）：新增表單的文字框每個非空行各自成一筆優惠。
+// 行首「【XXX】」剛好等於某個標籤預設值 → 該筆 tag＝XXX 並把【XXX】去掉；其餘原文保留（tag 空字串＝沿用表單選的標籤）。
+function pmSplitLines(raw, presets) {
+  return String(raw || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+    const m = /^【([^】]+)】\s*(.*)$/.exec(line);
+    if (m) {
+      const name = m[1].trim();
+      const rest = m[2].trim();
+      if (rest && presets.includes(name)) return { text: rest, tag: name };
+    }
+    return { text: line, tag: '' };
+  });
+}
+// 逐筆呼叫 promo-upsert（順序照行序）；中途失敗停下，沒送出的行（含失敗那行）留回文字框。回傳成功筆數，失敗回 -1
+async function pmAddMany(state, kind, ta, tagInp, extra) {
+  const items = pmSplitLines(ta.value, state.tagReady ? PM_TAG_PRESETS : []);
+  let done = 0;
+  const warnings = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const tag = it.tag || tagInp.value.trim();
+    try {
+      const res = await promoApi('promo-upsert', Object.assign({ eventId: state.eventId, kind, text: it.text }, extra || {}, state.tagReady ? { tag } : {}));
+      done++;
+      if (res.warning && warnings.indexOf(res.warning) < 0) warnings.push(res.warning);
+    } catch (err) {
+      ta.value = items.slice(i).map(x => (x.tag ? '【' + x.tag + '】' : '') + x.text).join('\n');
+      if (done) { await promoReload(state.el.list.parentNode); }
+      pmSetStatus(state, '已新增 ' + done + ' 筆，第 ' + (i + 1) + ' 行失敗：' + (err.message || '新增失敗'), true);
+      if (warnings.length) alert('注意：' + warnings.join('\n'));
+      return -1;
+    }
+  }
+  if (warnings.length) alert('注意：' + warnings.join('\n'));
+  return done;
+}
+
 function pmTextarea(rows, placeholder, value) {
   const ta = document.createElement('textarea');
   ta.rows = rows;
@@ -268,7 +305,7 @@ async function promoReload(container) {
 function pmBuildWeeklyForm(state) {
   const box = pmEl('div', 'promo-form');
   box.appendChild(pmEl('div', 'promo-form-title', '限時優惠'));
-  const ta = pmTextarea(2, '例如：六日奶酥買一送一／開團前兩天滿千折百（一行一段，前台保留換行）');
+  const ta = pmTextarea(4, '一行＝一筆優惠，貼整段每行會各自成一筆\n例如：\n六日奶酥買一送一\n開團前兩天滿千折百');
   box.appendChild(ta);
   const row = pmEl('div', 'promo-form-row');
   row.appendChild(pmEl('span', 'promo-form-label', '優惠日'));
@@ -284,12 +321,11 @@ function pmBuildWeeklyForm(state) {
   const btn = pmBtn('新增限時優惠', 'plus', 'promo-add-btn');
   row.appendChild(btn);
   box.appendChild(row);
-  box.appendChild(pmEl('div', 'promo-form-hint', '打上去就開始顯示（預告優惠日有優惠），顯示到優惠日最後一天。'));
+  box.appendChild(pmEl('div', 'promo-form-hint', '一行＝一筆優惠，貼整段每行會各自成一筆（日期、標籤套到每一筆；行首寫「【標籤名】」且在標籤清單裡，會自動設成該筆的標籤）。打上去就開始顯示（預告優惠日有優惠），顯示到優惠日最後一天。'));
   state.el.addBtns = (state.el.addBtns || []).concat([btn]);
 
   btn.addEventListener('click', async () => {
-    const text = ta.value.trim();
-    if (!text) { pmSetStatus(state, '請先輸入限時優惠的內容', true); return; }
+    if (!pmSplitLines(ta.value, []).length) { pmSetStatus(state, '請先輸入限時優惠的內容', true); return; }
     if (from.value && to.value && from.value > to.value) { pmSetStatus(state, '優惠日的起日不能晚於迄日', true); return; }
     if (from.value && state.promos.some(p => p.kind === 'weekly' && p.promoFrom === from.value)) {
       if (!confirm('同一天起已有一筆限時優惠，要另外再加一筆嗎？')) return;
@@ -297,15 +333,12 @@ function pmBuildWeeklyForm(state) {
     btn.disabled = true;
     pmSetStatus(state, '新增中…');
     try {
-      const res = await promoApi('promo-upsert', {
-        eventId: state.eventId, kind: 'weekly', text,
-        promoFrom: from.value || null, promoTo: to.value || null,
-        ...(state.tagReady ? { tag: tagInp.value.trim() } : {})
-      });
-      ta.value = '';
-      tagInp.value = '';
-      await pmAfterChange(state, '已新增限時優惠（還沒通知粉絲，要通知請按該筆的「確認並通知」）');
-      if (res.warning) alert('注意：' + res.warning);
+      const n = await pmAddMany(state, 'weekly', ta, tagInp, { promoFrom: from.value || null, promoTo: to.value || null });
+      if (n > 0) {
+        ta.value = '';
+        tagInp.value = '';
+        await pmAfterChange(state, n > 1 ? '已新增 ' + n + ' 筆限時優惠（還沒通知粉絲，要通知請按各筆的「確認並通知」）' : '已新增限時優惠（還沒通知粉絲，要通知請按該筆的「確認並通知」）');
+      }
     } catch (err) {
       pmSetStatus(state, err.message || '新增失敗', true);
     } finally {
@@ -318,7 +351,7 @@ function pmBuildWeeklyForm(state) {
 function pmBuildLongForm(state) {
   const box = pmEl('div', 'promo-form');
   box.appendChild(pmEl('div', 'promo-form-title', '整團優惠'));
-  const ta = pmTextarea(2, '例如：滿 1000 免運（整團期間都有效，不帶日期）');
+  const ta = pmTextarea(3, '一行＝一筆優惠，貼整段每行會各自成一筆\n例如：滿 1000 免運（整團期間都有效，不帶日期）');
   box.appendChild(ta);
   const row = pmEl('div', 'promo-form-row');
   row.appendChild(pmEl('span', 'promo-form-label', '小標籤'));
@@ -327,19 +360,20 @@ function pmBuildLongForm(state) {
   const btn = pmBtn('新增', 'plus', 'promo-add-btn');
   row.appendChild(btn);
   box.appendChild(row);
+  box.appendChild(pmEl('div', 'promo-form-hint', '一行＝一筆優惠，貼整段每行會各自成一筆（行首寫「【標籤名】」且在標籤清單裡，會自動設成該筆的標籤）。'));
   state.el.addBtns = (state.el.addBtns || []).concat([btn]);
 
   btn.addEventListener('click', async () => {
-    const text = ta.value.trim();
-    if (!text) { pmSetStatus(state, '請先輸入整團優惠的內容', true); return; }
+    if (!pmSplitLines(ta.value, []).length) { pmSetStatus(state, '請先輸入整團優惠的內容', true); return; }
     btn.disabled = true;
     pmSetStatus(state, '新增中…');
     try {
-      const res = await promoApi('promo-upsert', { eventId: state.eventId, kind: 'long', text, ...(state.tagReady ? { tag: tagInp.value.trim() } : {}) });
-      ta.value = '';
-      tagInp.value = '';
-      await pmAfterChange(state, '已新增整團優惠');
-      if (res.warning) alert('注意：' + res.warning);
+      const n = await pmAddMany(state, 'long', ta, tagInp, {});
+      if (n > 0) {
+        ta.value = '';
+        tagInp.value = '';
+        await pmAfterChange(state, n > 1 ? '已新增 ' + n + ' 筆整團優惠' : '已新增整團優惠');
+      }
     } catch (err) {
       pmSetStatus(state, err.message || '新增失敗', true);
     } finally {
