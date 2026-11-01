@@ -1668,6 +1668,13 @@ async function tryUnlock() {
     });
     const result = await res.json();
 
+    // 2026-11-01 員工登入加 Google 驗證器（docs/26）：這個舊登入框不處理驗證碼，請員工改到新後台登入（共用同一個 admin_token）
+    if (result.needOtp || result.needEnroll) {
+      errEl.textContent = '請先到 sheridondon.com.tw/admin 登入（現在登入需要 Google 驗證器的 6 位數碼，登入後這頁會自動變成已登入）';
+      input.value = '';
+      btn.disabled = false;
+      return;
+    }
     if (result.success) {
       currentUser = result.name;
       currentToken = result.token;

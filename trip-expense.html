@@ -1112,6 +1112,8 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   const btn = document.getElementById('loginBtn'); btn.disabled = true;
   try {
     const res = await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'login', name, password: pw }) }).then(r => r.json());
+    // 2026-11-01 員工登入加 Google 驗證器（docs/26）：這頁不處理驗證碼，請先到新後台登入（共用同一個 admin_token）
+    if (res && (res.needOtp || res.needEnroll)) { errEl.textContent = '請先到 sheridondon.com.tw/admin 登入（現在登入需要 Google 驗證器的 6 位數碼，登入後回到這頁即可）'; return; }
     if (!res || !res.success) { errEl.textContent = (res && res.error) || '登入失敗'; return; }
     try {
       localStorage.setItem('admin_token', res.token);
