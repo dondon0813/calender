@@ -605,6 +605,60 @@
   --mh-pl-fl-2: #ffe58a;                    /* 想像力廣場：小花黃 */
   --mh-pl-fl-3: #9ef0e0;                    /* 想像力廣場：小花薄荷 */
   --mh-pl-fl-4: #ffb3e6;                    /* 想像力廣場：小花淺粉 */
+  --mh-sp-rk-1: #f2aa6a;                    /* 靈感之泉：島身切面１（受光面最亮） */
+  --mh-sp-rk-2: #e58f55;                    /* 靈感之泉：島身切面２ */
+  --mh-sp-rk-3: #d27a47;                    /* 靈感之泉：島身切面３（中間調） */
+  --mh-sp-rk-4: #bb663c;                    /* 靈感之泉：島身切面４ */
+  --mh-sp-rk-5: #955030;                    /* 靈感之泉：島身切面５（背光） */
+  --mh-sp-rk-6: #703a22;                    /* 靈感之泉：島身切面６（最深） */
+  --mh-sp-rk-edge: #f8c38e;                 /* 靈感之泉：切面亮邊 */
+  --mh-sp-soil-1: #9a5a34;                  /* 靈感之泉：草邊下土層１ */
+  --mh-sp-soil-2: #7e4527;                  /* 靈感之泉：草邊下土層２ */
+  --mh-sp-soil-3: #a8683d;                  /* 靈感之泉：草邊下土層３ */
+  --mh-sp-grass-d: #7fd16a;                 /* 靈感之泉：草地側 */
+  --mh-sp-grass: #a9ee80;                   /* 靈感之泉：草地 */
+  --mh-sp-grass-hi: #c4f7a0;                /* 靈感之泉：草地亮 */
+  --mh-sp-edge-d: #6fc85f;                  /* 靈感之泉：草邊蓬團暗 */
+  --mh-sp-edge: #9be979;                    /* 靈感之泉：草邊蓬團 */
+  --mh-sp-rim: #f6ebd0;                     /* 靈感之泉：池塘岸 */
+  --mh-sp-pond-a: #9fe0f8;                  /* 靈感之泉：池水淺 */
+  --mh-sp-pond-b: #6ec4ec;                  /* 靈感之泉：池水深 */
+  --mh-sp-pond-hi: #c9f0ff;                 /* 靈感之泉：池水反光 */
+  --mh-sp-fall-a: #6ec4ec;                  /* 靈感之泉：瀑布頂 */
+  --mh-sp-fall-b: #a9e0f6;                  /* 靈感之泉：瀑布上段 */
+  --mh-sp-fall-c: #b8e6f8;                  /* 靈感之泉：瀑布中段 */
+  --mh-sp-fall-d: #94d2ef;                  /* 靈感之泉：瀑布下段 */
+  --mh-sp-fall-side: #8ccbee;               /* 靈感之泉：瀑布兩側 */
+  --mh-sp-pad: #6fcf7a;                     /* 靈感之泉：荷葉 */
+  --mh-sp-pad-hi: #8fe58a;                  /* 靈感之泉：荷葉亮 */
+  --mh-sp-pad-cut: #78c9ee;                 /* 靈感之泉：荷葉缺口 */
+  --mh-sp-cr-1: #ffc3dc;                    /* 靈感之泉：水晶淺粉 */
+  --mh-sp-cr-2: #e5699b;                    /* 靈感之泉：水晶深粉 */
+  --mh-sp-cr-3: #ffe3ef;                    /* 靈感之泉：水晶頂面 */
+  --mh-sp-cr-4: #f58bb6;                    /* 靈感之泉：水晶中粉 */
+  --mh-sp-st-1: #cbc0d8;                    /* 靈感之泉：圓石亮 */
+  --mh-sp-st-2: #a99bbb;                    /* 靈感之泉：圓石中 */
+  --mh-sp-st-3: #8a7aa4;                    /* 靈感之泉：圓石暗 */
+  --mh-sp-st-hi: #e3dbee;                   /* 靈感之泉：圓石反光 */
+  --mh-sp-moss: #82da5c;                    /* 靈感之泉：青苔 */
+  --mh-sp-moss-hi: #b9f28c;                 /* 靈感之泉：青苔亮 */
+  --mh-sp-moss-d: #63bd46;                  /* 靈感之泉：青苔點 */
+  --mh-sp-shadow: #4d9a52;                  /* 靈感之泉：落地影 */
+  --mh-sp-trunk: #c98a5a;                   /* 靈感之泉：樹幹 */
+  --mh-sp-trunk-d: #a96f44;                 /* 靈感之泉：樹幹暗 */
+  --mh-sp-leaf-d: #58b86a;                  /* 靈感之泉：樹冠深 */
+  --mh-sp-leaf: #78d27c;                    /* 靈感之泉：樹冠 */
+  --mh-sp-leaf-hi: #9fe891;                 /* 靈感之泉：樹冠亮 */
+  --mh-sp-leaf-dot: #d4f9c0;                /* 靈感之泉：樹冠小點 */
+  --mh-sp-stem: #4fbf8a;                    /* 靈感之泉：花莖 */
+  --mh-sp-gold: #ffd84a;                    /* 靈感之泉：花心 */
+  --mh-sp-lf-1: #4fbf6a;                    /* 靈感之泉：小葉１ */
+  --mh-sp-lf-2: #3fae6c;                    /* 靈感之泉：小葉２ */
+  --mh-sp-lf-3: #5fcf7a;                    /* 靈感之泉：小葉３ */
+  --mh-sp-cloud: #cdebf8;                   /* 靈感之泉：水花霧暗 */
+  --mh-sp-cloud-2: #e3f5fd;                 /* 靈感之泉：水花霧中 */
+  --mh-sp-soil-4: #c98a55;                  /* 靈感之泉：島底土層（最淺，土層條紋款） */
+  --mh-sp-root: #5d3320;                    /* 靈感之泉：島底樹根（垂岩樹根款） */
 }
 /* END GENERATED */
 
